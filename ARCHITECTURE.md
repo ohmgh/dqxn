@@ -14,7 +14,7 @@ Packs (widgets, themes, data providers) are fully decoupled from the dashboard s
 
 | Category | Choice |
 |---|---|
-| Language | Kotlin (no Java) |
+| Language | Kotlin 2.3+ (no Java) |
 | UI | Jetpack Compose + Material 3 |
 | Architecture | MVVM + MVI-style sealed events, single-Activity |
 | DI | Hilt + KSP |
@@ -28,6 +28,7 @@ Packs (widgets, themes, data providers) are fully decoupled from the dashboard s
 | Build | AGP 9.0.1, Gradle 9.3.1, JDK 25 |
 | Perf | Baseline Profiles, Macrobenchmarks, Compose compiler metrics |
 | Debug | LeakCanary, StrictMode (debug builds), Firebase Crashlytics |
+| NDK Crash | firebase-crashlytics-ndk for GPU driver crashes, Skia native crashes, JNI errors from RenderEffect operations |
 
 ## 3. Module Structure
 
@@ -130,7 +131,8 @@ This strict boundary means adding or removing a pack never requires changes to t
 │  PRESENTATION                                           │
 │  DashboardScreen / DashboardGrid / OverlayNavHost       │
 │  Jetpack Compose — stateless renderers                  │
-│  collectAsStateWithLifecycle() everywhere                │
+│  Layer 0: collectAsState() — Layer 1: collectAsState-   │
+│  WithLifecycle()                                        │
 ├─────────────────────────────────────────────────────────┤
 │  COORDINATION                                           │
 │  Focused coordinators (NOT a monolithic ViewModel)      │
@@ -159,6 +161,12 @@ This strict boundary means adding or removing a pack never requires changes to t
 │  ErrorReporter, CrashContextProvider                    │
 └─────────────────────────────────────────────────────────┘
 ```
+
+### State Collection Policy
+
+- **Dashboard Layer 0 (always present)**: Use `collectAsState()` (no lifecycle awareness) for widget data flows. The dashboard is always active when visible — lifecycle pausing causes a jank spike when all 12+ widgets resume simultaneously as flows restart and emit initial values.
+- **Overlay Layer 1**: Use `collectAsStateWithLifecycle()` for overlay-specific state (settings, pickers). These composables come and go with navigation — lifecycle-aware collection correctly stops work when overlays are dismissed.
+- **Manual pause/resume**: Suspend widget data collection explicitly when CPU-heavy overlays are open (via `WidgetBindingCoordinator.pauseAll()`/`resumeAll()`), not via lifecycle. This gives the shell precise control over when data collection pauses, avoiding the thundering-herd resume problem.
 
 ### Design Principles
 
@@ -223,49 +231,75 @@ A single `DashboardState` containing all widget data means:
 
 With decomposed flows, each widget composable collects only `widgetData(myId)`. The speedometer doesn't recompose when the clock ticks.
 
-### MVI Event Flow
+### Split Event Channels
 
-Sealed `DashboardEvent` variants are routed to the appropriate coordinator:
+High-frequency positional updates (drag, resize) and discrete commands (add, remove, set theme) have fundamentally different delivery semantics. Mixing them in a single channel means 60Hz drag events get serialized behind slow commands (theme change triggering DataStore write, etc.):
 
 ```kotlin
-sealed interface DashboardEvent {
-    // → LayoutCoordinator
-    data class AddWidget(...) : DashboardEvent
-    data class RemoveWidget(...) : DashboardEvent
-    data class MoveWidget(...) : DashboardEvent
-    data class ResizeWidget(...) : DashboardEvent
+// Discrete commands — serialized, ordered, transactional
+private val commandChannel = Channel<DashboardCommand>(capacity = 64)
 
-    // → ThemeCoordinator
-    data class SetTheme(...) : DashboardEvent
-    data class PreviewTheme(...) : DashboardEvent
+sealed interface DashboardCommand {
+    val traceId: String? // propagated from sender's coroutine context for trace correlation
+    data class AddWidget(val widget: DashboardWidgetInstance, override val traceId: String? = null) : DashboardCommand
+    data class RemoveWidget(val widgetId: String, override val traceId: String? = null) : DashboardCommand
+    data class SetTheme(val themeId: String, override val traceId: String? = null) : DashboardCommand
+    data object EnterEditMode : DashboardCommand { override val traceId: String? = null }
+    data object ExitEditMode : DashboardCommand { override val traceId: String? = null }
+    data class FocusWidget(val widgetId: String?, override val traceId: String? = null) : DashboardCommand
+    data class PreviewTheme(val theme: DashboardThemeDefinition?, override val traceId: String? = null) : DashboardCommand
+    // ... all non-continuous operations
+}
 
-    // → EditModeCoordinator
-    data object EnterEditMode : DashboardEvent
-    data object ExitEditMode : DashboardEvent
-    data class FocusWidget(...) : DashboardEvent
+// Continuous gestures — conflated, latest-value-wins
+private val _dragState = MutableStateFlow<DragUpdate?>(null)
+val dragState: StateFlow<DragUpdate?> = _dragState.asStateFlow()
+
+data class DragUpdate(
+    val widgetId: String,
+    val currentPosition: IntOffset,
+    val isDragging: Boolean,
+)
+
+// Resize uses the same pattern
+private val _resizeState = MutableStateFlow<ResizeUpdate?>(null)
+val resizeState: StateFlow<ResizeUpdate?> = _resizeState.asStateFlow()
+```
+
+Discrete commands go through the `commandChannel` for ordered processing. Drag/resize update a `MutableStateFlow` directly on the main thread — latest value wins, no queuing.
+
+### Command Processing & Error Handling
+
+All command processing happens on `Dispatchers.Main` via the `commandChannel` processed sequentially. This guarantees thread-safe state mutation without locks. The processing loop is protected against coordinator failures:
+
+```kotlin
+// In DashboardViewModel command loop
+for (command in commandChannel) {
+    val ctx = command.traceId?.let { TraceContext(it, generateSpanId(), null) }
+    try {
+        withContext(ctx ?: EmptyCoroutineContext) {
+            val start = SystemClock.elapsedRealtimeNanos()
+            routeCommand(command)
+            val elapsed = SystemClock.elapsedRealtimeNanos() - start
+            if (elapsed > 1_000_000_000L) { // > 1s
+                logger.warn(LogTag.LAYOUT, "command" to command::class.simpleName, "elapsedMs" to elapsed / 1_000_000) {
+                    "Slow command handler"
+                }
+            }
+            if (BuildConfig.DEBUG) {
+                StrictMode.noteSlowCall("DashboardCommand: ${command::class.simpleName}")
+            }
+        }
+    } catch (e: CancellationException) {
+        throw e // don't swallow cancellation
+    } catch (e: Exception) {
+        logger.error(LogTag.LAYOUT, "command" to command::class.simpleName) { "Command handler failed" }
+        errorReporter.reportNonFatal(e, ErrorContext.Coordinator(command))
+    }
 }
 ```
 
-All event processing happens on `Dispatchers.Main` via a single `Channel<DashboardEvent>` processed sequentially. This guarantees thread-safe state mutation without locks.
-
-#### ANR Prevention
-
-The event processing channel must not silently stall. Wrap each event handler with a timeout check:
-
-```kotlin
-// In DashboardViewModel event loop
-for (event in eventChannel) {
-    val start = SystemClock.elapsedRealtimeNanos()
-    routeEvent(event)
-    val elapsed = SystemClock.elapsedRealtimeNanos() - start
-    if (elapsed > 1_000_000_000L) { // > 1s
-        logger.warn(LogTag.LAYOUT, "Slow event handler: ${event::class.simpleName} took ${elapsed / 1_000_000}ms")
-    }
-    if (BuildConfig.DEBUG) {
-        StrictMode.noteSlowCall("DashboardEvent: ${event::class.simpleName}")
-    }
-}
-```
+A coordinator throwing an unhandled exception must NOT kill the command processing loop. Errors are reported and the loop continues processing the next command.
 
 All disk I/O (DataStore reads/writes, Proto serialization) MUST run on `Dispatchers.IO`. Proto DataStore serialization must never run on `Dispatchers.Main` — use `withContext(Dispatchers.IO)` in repository implementations.
 
@@ -295,17 +329,29 @@ class WidgetBindingCoordinator @Inject constructor(
     private val bindingScope = scope + bindingSupervisor
 
     private val bindings = mutableMapOf<String, Job>()
+    private val errorCounts = ConcurrentHashMap<String, AtomicInteger>()
 
     fun bind(widget: DashboardWidgetInstance) {
         bindings[widget.id]?.cancel()
         bindings[widget.id] = bindingScope.launch(
             CoroutineExceptionHandler { _, e ->
-                logger.error(LogTag.SENSOR, "Provider failed for ${widget.typeId}", e)
-                updateStatus(widget.id, WidgetStatusCache.ProviderError(e))
+                logger.error(LogTag.SENSOR, "widgetTypeId" to widget.typeId, "widgetId" to widget.id) {
+                    "Provider failed"
+                }
+                val attempts = errorCounts.getOrPut(widget.id) { AtomicInteger(0) }.incrementAndGet()
+                if (attempts <= 3) {
+                    bindingScope.launch {
+                        delay(1000L * (1 shl (attempts - 1))) // 1s, 2s, 4s exponential backoff
+                        bind(widget) // retry
+                    }
+                } else {
+                    updateStatus(widget.id, WidgetStatusCache.ProviderError(e, retriesExhausted = true))
+                }
                 errorReporter.reportNonFatal(e, widgetContext(widget))
             }
         ) {
             binder.bind(widget).collect { data ->
+                errorCounts[widget.id]?.set(0) // reset on successful emission
                 emitWidgetData(widget.id, data)
             }
         }
@@ -313,7 +359,29 @@ class WidgetBindingCoordinator @Inject constructor(
 }
 ```
 
-A failed provider reports the error via `widgetStatus` but does not cancel sibling bindings. Without `SupervisorJob`, a `CancellationException` from one child propagates up and cancels all siblings sharing the same parent `Job`.
+A failed provider reports the error via `widgetStatus` but does not cancel sibling bindings. Without `SupervisorJob`, a `CancellationException` from one child propagates up and cancels all siblings sharing the same parent `Job`. Automatic retry with exponential backoff (1s, 2s, 4s) attempts recovery up to 3 times before marking the widget as permanently errored.
+
+#### Thermal-Aware Data Throttling
+
+Under thermal pressure, `WidgetBindingCoordinator` throttles data emission rate to match the target frame rate. This controls the data rate feeding Compose — by changing state less often, we reduce frame work without fighting the framework:
+
+```kotlin
+fun bind(widget: DashboardWidgetInstance, renderConfig: StateFlow<RenderConfig>): StateFlow<WidgetData> {
+    val providerFlows = widget.compatibleSnapshots.mapNotNull { snapshotType ->
+        resolveProvider(snapshotType)?.let { provider ->
+            provider.provideState()
+                .throttle { 1000L / renderConfig.value.targetFps }
+                .map { snapshot -> snapshotType to snapshot }
+        }
+    }
+
+    return combine(providerFlows) { results ->
+        WidgetData(results.toMap().toImmutableMap(), SystemClock.elapsedRealtimeNanos())
+    }.stateIn(bindingScope, SharingStarted.WhileSubscribed(timeout), WidgetData.Empty)
+}
+```
+
+Compose draws when state changes. Throttling data emissions is the correct lever for reducing frame work on API 31-33 where system-level frame rate control is unavailable.
 
 #### Stuck Provider Watchdog
 
@@ -337,7 +405,7 @@ This prevents widgets from sitting in an ambiguous "loading" state indefinitely 
 
 ### Typed DataSnapshot
 
-Widget data uses typed sealed subtypes per data type instead of `ImmutableMap<String, Any>`. This eliminates boxing of primitives and provides compile-time safety:
+Widget data uses typed sealed subtypes per data type instead of `Map<String, Any?>`. This eliminates boxing of primitives and provides compile-time safety. Each sealed subtype aligns 1:1 with a provider boundary — a provider emits exactly one snapshot type:
 
 ```kotlin
 @Immutable
@@ -348,8 +416,19 @@ sealed interface DataSnapshot {
 @Immutable
 data class SpeedSnapshot(
     val speed: Float,
+    override val timestamp: Long,
+) : DataSnapshot
+
+@Immutable
+data class AccelerationSnapshot(
     val acceleration: Float,
-    val speedLimit: Float?,
+    override val timestamp: Long,
+) : DataSnapshot
+
+@Immutable
+data class SpeedLimitSnapshot(
+    val speedLimit: Float,
+    val source: SpeedLimitSource, // MAP, SIGN_RECOGNITION, NETWORK
     override val timestamp: Long,
 ) : DataSnapshot
 
@@ -377,10 +456,67 @@ data class BatterySnapshot(
 ) : DataSnapshot
 
 // Additional subtypes: TripSnapshot, MediaSnapshot, WeatherSnapshot,
-// SolarSnapshot, AmbientLightSnapshot, AltitudeSnapshot, AccelerationSnapshot
+// SolarSnapshot, AmbientLightSnapshot, AltitudeSnapshot
 ```
 
-Target: < 4KB allocation per frame in steady state. No `Map` lookups, no `Any` casting, no boxing. Widgets receive their specific snapshot type via the binding system.
+**Why 1:1 provider-to-snapshot alignment**: Bundling speed + acceleration + speed limit into a single composite type forces a single provider to own data from three independent sources (GPS, accelerometer, map data) with different availability, frequency, and failure modes. When the accelerometer is unavailable, a composite provider must fabricate a zero for `acceleration` — wrong (zero means "not accelerating", not "unknown"). With 1:1 alignment, each snapshot is independently available. A speedometer widget binds to `SpeedSnapshot`, `AccelerationSnapshot`, and `SpeedLimitSnapshot` separately — it renders immediately with just speed, acceleration appears when the sensor is ready, speed limit appears when map data is available. This preserves graceful degradation without boxing overhead.
+
+#### Multi-Slot WidgetData
+
+Widgets that consume multiple data types receive them via `KClass`-keyed multi-slot delivery:
+
+```kotlin
+@Immutable
+data class WidgetData(
+    private val snapshots: ImmutableMap<KClass<out DataSnapshot>, DataSnapshot>,
+    val timestamp: Long,
+) {
+    /** Type-safe snapshot access. Returns null if the data type is not yet available. */
+    inline fun <reified T : DataSnapshot> snapshot(): T? = snapshots[T::class] as? T
+
+    /** Check if any data is available. */
+    fun hasData(): Boolean = snapshots.isNotEmpty()
+
+    companion object {
+        val Empty = WidgetData(persistentMapOf(), 0L)
+        val Unavailable = WidgetData(persistentMapOf(), -1L)
+    }
+}
+```
+
+**Why `KClass` keys instead of string keys**: String-keyed maps (`Map<String, DataSnapshot>` with `"SPEED"`, `"ACCELERATION"`) allow typos, have no compiler enforcement, and require separate `DataTypeDescriptor` registration for validation. `KClass` keys make the type system do the work — `data.snapshot<SpeedSnapshot>()` cannot reference a nonexistent type, and the binder validates at bind time that a provider's output type matches a widget's declared input types. The single `as? T` cast is safe because the map is internally consistent: a `KClass<SpeedSnapshot>` key always maps to a `SpeedSnapshot` value.
+
+**Why not a single-slot `WidgetData`**: A speedometer consuming speed + acceleration + speed limit would require either (a) a composite provider that merges three independent data sources, pushing binding logic into the provider layer and violating IoC, or (b) a single sealed type per widget rather than per data type, creating an explosion of widget-specific snapshot types. Multi-slot preserves independent provider availability while keeping the sealed hierarchy aligned with data sources.
+
+#### Batching
+
+The binder uses `combine()` to merge multiple provider flows into a single `StateFlow<WidgetData>` per widget. If GPS speed and accelerometer emit within the same frame, the widget gets one recomposition with both values updated — not two:
+
+```kotlin
+// In WidgetDataBinder
+fun bind(widget: WidgetInstance): StateFlow<WidgetData> {
+    val providerFlows = widget.compatibleSnapshots.mapNotNull { snapshotType ->
+        resolveProvider(snapshotType)?.let { provider ->
+            provider.provideState().map { snapshot -> snapshotType to snapshot }
+        }
+    }
+
+    if (providerFlows.isEmpty()) return MutableStateFlow(WidgetData.Unavailable)
+
+    return combine(providerFlows) { results ->
+        WidgetData(
+            snapshots = results.toMap().toImmutableMap(),
+            timestamp = SystemClock.elapsedRealtimeNanos(),
+        )
+    }.stateIn(bindingScope, SharingStarted.WhileSubscribed(timeout), WidgetData.Empty)
+}
+```
+
+Each slot is independently nullable via `snapshot<T>()` — a widget renders gracefully with partial data. `combine()` emits only after all flows have emitted at least once; before that, `WidgetData.Empty` is used and `WidgetStatusCache` shows a loading indicator.
+
+**Application-level allocation target: <4KB per frame** (DataSnapshot objects, event routing, state updates — excluding Compose framework overhead). **Total allocation budget: <64KB per frame** including Compose's snapshot system, slot table, and recomposition scope tracking. Validated via allocation tracking in macrobenchmarks using `Debug.startAllocCounting()`. A realistic Compose screen with 12 widgets incurs 20-60KB/frame of framework overhead depending on skip rate.
+
+No `Any` casting, no boxing. Each `Float`/`Int` is stored as a primitive field in its snapshot data class. The only `as?` cast is the type-safe `KClass`-keyed lookup in `WidgetData.snapshot<T>()`.
 
 ### Backpressure Strategy
 
@@ -450,7 +586,35 @@ fun DashboardGrid(widgets: ImmutableList<WidgetInstance>) {
 
 ### State Read Deferral
 
-High-frequency state (needle angle, compass bearing) is read in the draw phase, not the composition phase:
+High-frequency state (needle angle, compass bearing) is read in the draw phase, not the composition phase. Per-widget data is provided via `CompositionLocal` so renderers can defer reads:
+
+```kotlin
+// In WidgetSlot (the container that wraps each widget)
+val widgetData by widgetDataFlow.collectAsState()
+
+CompositionLocalProvider(
+    LocalWidgetData provides widgetData,
+) {
+    renderer.Render(isEditMode, style, settings, modifier)
+}
+```
+
+Widgets access data via `LocalWidgetData.current` and defer high-frequency reads to the draw phase:
+
+```kotlin
+@Composable
+override fun Render(isEditMode: Boolean, style: WidgetStyle, settings: ImmutableMap<String, Any>, modifier: Modifier) {
+    val data = LocalWidgetData.current
+    val speed = remember { derivedStateOf { data.snapshot<SpeedSnapshot>()?.speed ?: 0f } }
+    val accel = remember { derivedStateOf { data.snapshot<AccelerationSnapshot>()?.acceleration } }
+    val limit = remember { derivedStateOf { data.snapshot<SpeedLimitSnapshot>()?.speedLimit } }
+    // speed/accel/limit read in draw phase, not composition phase
+    // Each slot is independently nullable — widget renders with whatever data is available
+    SpeedometerCanvas(speed, accel, limit)
+}
+```
+
+The draw-phase deferral pattern:
 
 ```kotlin
 @Composable
@@ -513,29 +677,43 @@ Modifier.drawWithCache {
 
 ### Stability Annotations
 
-All domain types emitted to the UI layer are annotated `@Immutable` or `@Stable`. Collections use `kotlinx-collections-immutable` (`ImmutableList`, `ImmutableMap`):
-
-```kotlin
-@Immutable
-data class WidgetData(
-    val snapshot: DataSnapshot,
-    val timestamp: Long,
-)
-```
+All domain types emitted to the UI layer are annotated `@Immutable` or `@Stable`. Collections use `kotlinx-collections-immutable` (`ImmutableList`, `ImmutableMap`). `WidgetData` is defined in the Typed DataSnapshot section (Section 5).
 
 A Compose stability configuration file covers cross-module types:
 
 ```
 // compose_compiler_config.txt
 app.dqxn.core.plugin.api.DataSnapshot
+app.dqxn.core.plugin.api.WidgetData
 app.dqxn.core.plugin.api.SpeedSnapshot
+app.dqxn.core.plugin.api.AccelerationSnapshot
+app.dqxn.core.plugin.api.SpeedLimitSnapshot
 app.dqxn.core.plugin.api.TimeSnapshot
 app.dqxn.core.plugin.api.OrientationSnapshot
+app.dqxn.core.plugin.api.BatterySnapshot
 app.dqxn.core.widget.DashboardThemeDefinition
 app.dqxn.data.persistence.SavedWidget
 ```
 
 Compose compiler metrics (`-Pcompose.compiler.metrics=true`) are audited regularly to catch regressions in skippability.
+
+### Derived State
+
+`derivedStateOf` prevents unnecessary recomposition when computing values from state:
+
+```kotlin
+// ThemeState.displayTheme — computed from previewTheme and currentTheme
+val displayTheme by remember {
+    derivedStateOf { themeState.value.previewTheme ?: themeState.value.currentTheme }
+}
+// Only recomposes consumers when the RESULT changes, not when themeState changes
+```
+
+Use `derivedStateOf` for:
+- Filtered widget lists (viewport culling result)
+- Computed theme properties (e.g., `displayTheme` from preview + current)
+- Widget status aggregation (e.g., "N widgets in error state")
+- Any value derived from multiple state sources where the computed result changes less frequently than its inputs
 
 ### Glow Effect Strategy
 
@@ -548,99 +726,180 @@ Strategy:
 
 ### Frame Pacing
 
-Under thermal pressure, the target FPS drops below 60. `FramePacer` uses `Choreographer.postFrameCallback` with a frame skip counter to enforce reduced frame rates:
+The architecture must not assume 60Hz. Many target devices (Pixel 7a, Galaxy A54) have 90Hz displays. Some automotive head units run at 120Hz. Default to the display's native refresh rate at NORMAL thermal level. Track actual display refresh rate via `Display.getRefreshRate()` and adapt frame budgets accordingly.
+
+Under thermal pressure, the target FPS drops below native. Frame pacing uses a two-pronged approach:
+
+**Primary (API 34+):** Use `Window.setFrameRate()` to request a lower display refresh rate from the system. This reduces GPU work at the hardware level:
 
 ```kotlin
-class FramePacer(
-    private val renderConfig: StateFlow<RenderConfig>,
-) {
-    private var lastRenderNanos = 0L
-
-    fun shouldRender(frameTimeNanos: Long): Boolean {
-        val targetIntervalNanos = (1_000_000_000L / renderConfig.value.targetFps).toLong()
-        val delta = frameTimeNanos - lastRenderNanos
-        if (delta < targetIntervalNanos) return false
-        lastRenderNanos = frameTimeNanos
-        return true
-    }
-}
-
-// Usage in DashboardGrid
-@Composable
-fun DashboardGrid(
-    framePacer: FramePacer,
-    // ...
-) {
-    var frameCount by remember { mutableLongStateOf(0L) }
-
-    LaunchedEffect(Unit) {
-        val choreographer = Choreographer.getInstance()
-        suspendCancellableCoroutine<Nothing> { cont ->
-            val callback = object : Choreographer.FrameCallback {
-                override fun doFrame(frameTimeNanos: Long) {
-                    if (framePacer.shouldRender(frameTimeNanos)) {
-                        frameCount = frameTimeNanos // triggers recomposition
-                    }
-                    choreographer.postFrameCallback(this)
-                }
-            }
-            choreographer.postFrameCallback(callback)
-            cont.invokeOnCancellation { choreographer.removeFrameCallback(callback) }
+class FramePacer @Inject constructor() {
+    fun applyFrameRate(window: Window, renderConfig: RenderConfig) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            window.setFrameRate(
+                renderConfig.targetFps,
+                Window.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
+            )
         }
     }
 }
 ```
 
-On API 34+, investigate `SurfaceControl.Transaction.setFrameRate()` for system-level frame rate hints that reduce GPU work without manual frame skipping.
+**Fallback (API 31-33):** Throttle data emission rate in `WidgetBindingCoordinator` (see Section 5, Thermal-Aware Data Throttling). Under thermal pressure, debounce `StateFlow` emissions to match the target frame rate. This controls the data rate feeding Compose, not the render rate itself. Compose draws when state changes — by changing state less often, we reduce frame work without fighting the framework.
 
-### `movableContentOf` for Widget Reordering
+The Choreographer-based approach (manual `postFrameCallback` with frame skip counter) is explicitly NOT used. It fights Compose's own rendering pipeline — setting `frameCount` triggers a second recomposition pass on top of Compose's normal frame, and skipping the callback doesn't prevent Compose from drawing pending `StateFlow` invalidations.
 
-During drag operations in edit mode, widgets are reordered in the grid. Naive reordering causes detach/reattach of composition nodes, losing internal state and triggering full recomposition. Use `movableContentOf` to preserve widget composition across position changes:
+### Widget Reordering During Drag
+
+During drag operations in edit mode, widgets are reordered in the grid. Use `Modifier.offset` with animation — during drag, only the visual position changes via `graphicsLayer` offset while the composition stays in the same slot:
 
 ```kotlin
 @Composable
 fun DashboardGrid(widgets: ImmutableList<WidgetInstance>) {
-    val movableWidgets = remember(widgets) {
-        widgets.associateWith { widget ->
-            movableContentOf {
-                WidgetSlot(widget)
-            }
-        }
-    }
-
     widgets.forEach { widget ->
         key(widget.id) {
-            Box(modifier = Modifier.offset { widget.position }) {
-                movableWidgets[widget]?.invoke()
+            val animatedOffset = animateOffsetAsState(
+                targetValue = widget.position.toOffset(),
+                animationSpec = spring(dampingRatio = 0.8f),
+            )
+            Box(
+                modifier = Modifier
+                    .graphicsLayer {
+                        translationX = animatedOffset.value.x
+                        translationY = animatedOffset.value.y
+                    }
+            ) {
+                WidgetSlot(widget)
             }
         }
     }
 }
 ```
 
-For dashboards with many widgets (>12), consider a custom `LazyLayout` implementation for viewport-only composition — widgets outside the visible area are not composed at all, only measured for placement purposes.
+`movableContentOf` is designed for moving content between different parent composables (e.g., phone/tablet adaptive layouts), not for reordering within the same parent where only position changes. Using it with a `remember(widgets)` key invalidates the entire map on every reorder, defeating the purpose.
+
+### Grid Layout
+
+For a viewport-sized dashboard where most widgets are visible, use a `Layout` composable with a custom `MeasurePolicy` for absolute positioning:
+
+```kotlin
+@Composable
+fun DashboardGrid(
+    widgets: ImmutableList<WidgetInstance>,
+    gridUnit: Dp = 16.dp,
+    content: @Composable () -> Unit,
+) {
+    Layout(content = content) { measurables, constraints ->
+        val placeables = measurables.mapIndexed { i, measurable ->
+            val w = widgets[i]
+            measurable.measure(
+                Constraints.fixed(
+                    (w.widthUnits * gridUnit.roundToPx()),
+                    (w.heightUnits * gridUnit.roundToPx()),
+                )
+            )
+        }
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            placeables.forEachIndexed { i, placeable ->
+                placeable.placeRelative(
+                    x = widgets[i].gridX * gridUnit.roundToPx(),
+                    y = widgets[i].gridY * gridUnit.roundToPx(),
+                    zIndex = widgets[i].zIndex.toFloat(),
+                )
+            }
+        }
+    }
+}
+```
+
+`LazyLayout` adds `SubcomposeLayout` overhead (separate `Composer` per slot, one-frame-behind for new compositions) without benefit when most widgets are visible. Reserve `LazyLayout` only if the canvas becomes scrollable (larger than viewport with significant off-screen widget count).
+
+### Display Refresh Rate Awareness
+
+The architecture must not assume 60Hz. Many target devices (Pixel 7a, Galaxy A54) have 90Hz displays. Some automotive head units run at 120Hz.
+
+- Default to the display's native refresh rate at NORMAL thermal level
+- Under thermal pressure, use `Window.setFrameRate()` to request a lower rate
+- Track actual display refresh rate via `Display.getRefreshRate()` and adapt frame budgets accordingly
+- Frame duration budgets: 16.6ms at 60Hz, 11.1ms at 90Hz, 8.3ms at 120Hz — CI gates must account for the target device's refresh rate
+
+### Pixel Shift for OLED Burn-in
+
+OLED burn-in pixel shift (1-2px every 5 minutes) is applied as a single `graphicsLayer` translation on the outermost `DashboardLayer` composable, NOT per-widget. Per-widget shift invalidates every widget's RenderNode. A single grid-level shift invalidates only the grid container:
+
+```kotlin
+@Composable
+fun DashboardLayer(pixelShift: State<IntOffset>) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                translationX = pixelShift.value.x.toFloat()
+                translationY = pixelShift.value.y.toFloat()
+            }
+    ) {
+        DashboardGrid(...)
+    }
+}
+```
 
 ## 7. Widget Error Isolation
 
-A widget's `Render()` composable throwing an exception must not crash the dashboard:
+### Composition Phase Limitation
+
+**Known limitation**: Jetpack Compose has no equivalent of React's `ErrorBoundary` for the composition phase. If `renderer.Render()` throws during composition (e.g., NPE in a `remember` block), the exception propagates to the parent composition and crashes the app. The error boundary covers:
+- **Draw-phase errors**: Via a wrapped `DrawScope` that delegates all calls inside try/catch
+- **Effect errors**: Via `LocalWidgetScope` with `SupervisorJob` + `CoroutineExceptionHandler`
+- **NOT composition-phase errors**: These are mitigated by contract tests verifying `Render()` with null/empty/malformed data, and by crash recovery (safe mode after 3 crashes in 60s)
+
+### WidgetSlot Error Boundary
 
 ```kotlin
 @Composable
 fun WidgetSlot(widget: WidgetInstance, renderer: WidgetRenderer) {
     var renderError by remember { mutableStateOf<Throwable?>(null) }
+    val crashCount = remember { mutableIntStateOf(0) }
 
-    if (renderError != null) {
-        WidgetErrorFallback(widget, renderError!!)
+    // Supervised scope for widget-internal effects
+    val widgetScope = rememberCoroutineScope().let { parentScope ->
+        remember(parentScope) {
+            CoroutineScope(
+                parentScope.coroutineContext +
+                SupervisorJob(parentScope.coroutineContext.job) +
+                CoroutineExceptionHandler { _, e ->
+                    crashCount.intValue++
+                    renderError = e
+                    errorReporter.reportWidgetCrash(widget, e)
+                }
+            )
+        }
+    }
+
+    if (renderError != null || crashCount.intValue >= 3) {
+        WidgetErrorFallback(
+            widget = widget,
+            error = renderError,
+            onRetry = {
+                renderError = null
+                // Re-invoke renderer on next composition
+            },
+        )
     } else {
-        // Canvas draw-phase errors caught via wrapped DrawScope
         CompositionLocalProvider(
-            LocalWidgetErrorHandler provides { e -> renderError = e }
+            LocalWidgetScope provides widgetScope,
+            LocalWidgetErrorHandler provides { e ->
+                crashCount.intValue++
+                renderError = e
+                errorReporter.reportWidgetCrash(widget, e)
+            },
         ) {
             renderer.Render(...)
         }
     }
 }
 ```
+
+`WidgetErrorFallback` displays "Tap to retry" that resets `renderError` to null. After 3 accumulated crashes, the fallback persists without retry option — the widget is considered broken for this session.
 
 Per-widget data binding jobs use `CoroutineExceptionHandler` — a failed provider reports the error via `widgetStatus` but does not cancel sibling bindings.
 
@@ -651,36 +910,6 @@ Standard composition error boundaries do NOT catch exceptions thrown inside `Lau
 ```kotlin
 val LocalWidgetScope = staticCompositionLocalOf<CoroutineScope> {
     error("No WidgetCoroutineScope provided")
-}
-
-@Composable
-fun WidgetSlot(widget: WidgetInstance, renderer: WidgetRenderer) {
-    var renderError by remember { mutableStateOf<Throwable?>(null) }
-
-    // Supervised scope for widget-internal effects
-    val widgetScope = rememberCoroutineScope().let { parentScope ->
-        remember(parentScope) {
-            CoroutineScope(
-                parentScope.coroutineContext +
-                SupervisorJob(parentScope.coroutineContext.job) +
-                CoroutineExceptionHandler { _, e ->
-                    renderError = e
-                    errorReporter.reportWidgetCrash(widget, e)
-                }
-            )
-        }
-    }
-
-    if (renderError != null) {
-        WidgetErrorFallback(widget, renderError!!)
-    } else {
-        CompositionLocalProvider(
-            LocalWidgetScope provides widgetScope,
-            LocalWidgetErrorHandler provides { e -> renderError = e },
-        ) {
-            renderer.Render(...)
-        }
-    }
 }
 ```
 
@@ -694,16 +923,17 @@ The core architectural pattern. Packs are decoupled feature modules that registe
 
 **`WidgetRenderer`** — extends `WidgetSpec` + `Gated`:
 - `typeId: String` (e.g., `"core:speedometer"`)
-- `compatibleDataTypes: List<String>` — what data types the widget can consume
+- `compatibleSnapshots: Set<KClass<out DataSnapshot>>` — snapshot types this widget can consume (e.g., `setOf(SpeedSnapshot::class, AccelerationSnapshot::class)`)
 - `settingsSchema: List<SettingDefinition<*>>` — declarative settings UI
 - `getDefaults(context: WidgetContext): WidgetDefaults` — context-aware sizing
-- `@Composable Render(widgetData, isEditMode, style, settings, modifier)`
+- `@Composable Render(isEditMode, style, settings, modifier)` — widget data accessed via `LocalWidgetData.current`
 - `supportsTap`, `onTap()`, `priority`
 - `accessibilityDescription(data: WidgetData): String` — semantic description for TalkBack (e.g., "Speed: 65 km/h")
 
 **`DataProvider`** — extends `DataProviderSpec`:
-- `provideState(): Flow<DataSnapshot>` — reactive data stream
-- `schema: DataSchema` — describes output shape, data types, and staleness thresholds
+- `snapshotType: KClass<out DataSnapshot>` — the sealed subtype this provider emits (e.g., `SpeedSnapshot::class`)
+- `provideState(): Flow<DataSnapshot>` — reactive data stream (actual emission type matches `snapshotType`)
+- `schema: DataSchema` — describes output shape, staleness thresholds, and display metadata
 - `setupSchema: List<SetupPageDefinition>` — declarative setup wizard
 - `subscriberTimeout: Duration` — how long to keep alive after last subscriber (default 5s)
 - `firstEmissionTimeout: Duration` — max time to wait for first emission (default 5s)
@@ -760,7 +990,29 @@ data class DataTypeDescriptor(
 )
 ```
 
-Matching between widgets and providers is by string equality on data type IDs. A widget declaring `compatibleDataTypes = listOf("SPEED")` binds to any provider whose `DataSchema` includes `"SPEED"`, regardless of which pack the provider comes from.
+Matching between widgets and providers is by `KClass` equality on snapshot types. A widget declaring `compatibleSnapshots = setOf(SpeedSnapshot::class)` binds to any provider whose `snapshotType == SpeedSnapshot::class`, regardless of which pack the provider comes from. This replaces string-based matching — `KClass` keys are compiler-enforced and cannot contain typos.
+
+### Snapshot Type Validation
+
+Runtime validation in `WidgetRegistry` catches unresolvable snapshot type declarations at startup:
+
+```kotlin
+// At registration time
+fun validateBindings(providers: Set<DataProvider>, widgets: Set<WidgetRenderer>) {
+    val providedTypes = providers.map { it.snapshotType }.toSet()
+    widgets.forEach { widget ->
+        widget.compatibleSnapshots.forEach { type ->
+            if (type !in providedTypes) {
+                logger.warn(LogTag.BINDING, "widgetTypeId" to widget.typeId, "missingSnapshot" to type.simpleName) {
+                    "Widget declares snapshot type '${type.simpleName}' but no provider emits it"
+                }
+            }
+        }
+    }
+}
+```
+
+A CI fitness test validates this exhaustively: after full DI graph assembly, every `compatibleSnapshots` entry must match at least one registered provider's `snapshotType`. Unmatched types fail the build.
 
 ### Setup Schema Types
 
@@ -798,30 +1050,9 @@ No sliders — they interfere with HorizontalPager gestures.
 interface WidgetRenderer { ... }
 ```
 
-- `PackManifest.apiVersion` declares the version the pack was compiled against
-- Shell validates compatibility at registration — incompatible packs log a warning and are excluded
-- Semver: additive changes (new optional methods) are minor; breaking changes (signature changes, removed methods) are major
+`@PluginApiVersion` serves as a documentation annotation marking the current contract version. All packs are first-party compiled modules that ship in the same APK — there will never be a V1 pack running against a V2 shell in production. Adapter patterns and backward-compatibility windows add complexity for a future (third-party plugins) that is explicitly Out of Scope.
 
-#### WidgetRendererAdapter Pattern
-
-When the plugin API evolves (e.g., V1 -> V2), older packs compiled against V1 still work via adapter wrapping:
-
-```kotlin
-// Registry always works with latest version internally
-internal class WidgetRendererV1Adapter(
-    private val v1: WidgetRendererV1,
-) : WidgetRendererV2 {
-    override fun accessibilityDescription(data: WidgetData): String =
-        "${v1.typeId}: data available"  // sensible default for V1 widgets
-
-    // Delegate all V1 methods
-    override val typeId get() = v1.typeId
-    override fun Render(...) = v1.Render(...)
-    // ...
-}
-```
-
-KSP generates code targeting the latest API version. Older packs are wrapped at registration time by the registry. This provides one major version of backward compatibility — packs must upgrade within one major version window.
+If third-party packs are ever introduced, re-introduce versioning with adapter wrapping at that time.
 
 ### KSP Code Generation
 
@@ -840,36 +1071,40 @@ Duplicate `typeId` detection: if two packs register the same `typeId`, the regis
 
 ### Provider Fallback
 
-When a widget's assigned provider becomes unavailable (disconnected, error, uninstalled), `WidgetDataBinder` automatically falls back to the next available provider for the same data type:
+When a widget's assigned provider becomes unavailable (disconnected, error, uninstalled), `WidgetDataBinder` automatically falls back to the next available provider for the same snapshot type:
 
 **Priority order**: user-selected > hardware (BLE device) > device sensor > network
 
 ```kotlin
 class WidgetDataBinder {
     fun bind(widget: WidgetInstance): StateFlow<WidgetData> {
-        // Try user-selected provider first
-        val selected = widget.selectedDataSourceIds.firstNotNullOfOrNull { id ->
-            providerRegistry.get(id)?.takeIf { it.isAvailable }
+        val providerFlows = widget.compatibleSnapshots.mapNotNull { snapshotType ->
+            resolveProvider(snapshotType)?.let { provider ->
+                provider.provideState().map { snapshot -> snapshotType to snapshot }
+            }
         }
 
-        // Fall back through priority chain
-        val provider = selected
-            ?: findByPriority(widget.compatibleDataTypes, ProviderPriority.HARDWARE)
-            ?: findByPriority(widget.compatibleDataTypes, ProviderPriority.DEVICE_SENSOR)
-            ?: findByPriority(widget.compatibleDataTypes, ProviderPriority.NETWORK)
-            ?: return flowOf(WidgetData.Unavailable)
+        if (providerFlows.isEmpty()) return MutableStateFlow(WidgetData.Unavailable)
 
-        if (provider != selected) {
-            // Show transient fallback indicator on widget
-            updateStatus(widget.id, WidgetStatusCache.UsingFallbackProvider(provider.displayName))
-        }
+        return combine(providerFlows) { results ->
+            WidgetData(
+                snapshots = results.toMap().toImmutableMap(),
+                timestamp = SystemClock.elapsedRealtimeNanos(),
+            )
+        }.stateIn(bindingScope, SharingStarted.WhileSubscribed(timeout), WidgetData.Empty)
+    }
 
-        return provider.provideState()
+    private fun resolveProvider(snapshotType: KClass<out DataSnapshot>): DataProvider? {
+        // Try user-selected, then fall back through priority chain
+        return userSelectedProviders[snapshotType]?.takeIf { it.isAvailable }
+            ?: findByPriority(snapshotType, ProviderPriority.HARDWARE)
+            ?: findByPriority(snapshotType, ProviderPriority.DEVICE_SENSOR)
+            ?: findByPriority(snapshotType, ProviderPriority.NETWORK)
     }
 }
 ```
 
-The fallback indicator is transient (5s) and non-blocking — the widget renders data from the fallback provider immediately.
+Fallback is per-slot: if the hardware speed provider disconnects but the accelerometer is fine, only the speed slot falls back — acceleration continues from its original provider. The fallback indicator is transient (5s) and non-blocking.
 
 ## 9. Dashboard-as-Shell Pattern
 
@@ -947,14 +1182,14 @@ Android 14+ predictive back is fully supported:
 - **Placement**: `GridPlacementEngine` scans at 2-unit steps, minimizes overlap area, prefers center positioning
 - **Interactions**: drag-to-move, 4-corner resize handles (76dp minimum touch targets, quadrant-based detection), focus animation (translate to center + scale to 38% viewport height)
 - **Edit mode**: wiggle animation (+/-0.5 degree rotation at 150ms via `graphicsLayer`), animated corner brackets, delete/settings buttons with spring animations
-- **Widget limits**: 6 on phone free / 12 phone plus / 20 tablet — enforced
 - **Overlap**: tolerated but not encouraged. Tap targets resolve to the highest z-index widget. Glow effects render independently per z-layer.
+- **Pixel shift**: OLED burn-in mitigation applied at the grid level (see Section 6, Pixel Shift for OLED Burn-in)
 
 ## 12. Widget Container
 
 `WidgetContainer` (`:core:widget-primitives`) — shared wrapper applied to all widgets:
 
-1. **Error boundary** (catches render failures, shows fallback)
+1. **Error boundary** (catches render failures, shows fallback — see Section 7 for scope and limitations)
 2. **`graphicsLayer` isolation** (own RenderNode, hardware-accelerated transforms)
 3. **Glow padding** (4/8/12dp responsive by widget size) — `RenderEffect.createBlurEffect` (GPU shader, always available on minSdk 31). Under thermal pressure, falls back to `RadialGradient` approximation (no blur shader cost).
 4. **Rim padding** (0-15% of min dimension, user-controlled via `rimSizePercent`)
@@ -999,6 +1234,8 @@ Users maintain separate `lightTheme` and `darkTheme` selections. `ThemeAutoSwitc
 - **Free**: 2 themes (Slate, Minimalist)
 - **Themes pack**: 22 premium JSON-driven themes
 - **Custom**: User-created via Theme Studio, max 12, stored in Proto DataStore
+
+**Selector ordering**: Free themes are always listed first in theme selectors, followed by custom themes, then premium themes (gated with preview). This ensures users always see usable options at the top regardless of entitlement state.
 
 ### Theme Definition
 
@@ -1070,6 +1307,25 @@ Benefits over JSON-in-Preferences:
 - Schema evolution via protobuf field addition (non-breaking)
 - Still atomic writes (DataStore guarantee)
 
+### DataStore Corruption Handling
+
+All DataStore instances MUST have explicit corruption handlers. Without them, Proto deserialization failure is an unrecoverable crash:
+
+```kotlin
+val layoutDataStore = DataStoreFactory.create(
+    serializer = DashboardCanvasSerializer,
+    corruptionHandler = ReplaceFileCorruptionHandler { exception ->
+        logger.error(LogTag.DATASTORE, "corruption" to true, "file" to "dashboard_layouts") {
+            "Layout DataStore corrupted, resetting"
+        }
+        errorReporter.reportDataStoreCorruption("dashboard_layouts", exception)
+        DashboardCanvas.getDefaultInstance() // safe fallback
+    },
+)
+```
+
+This pattern applies to ALL DataStore instances (`dashboard_layouts`, `paired_devices`, `custom_themes`). Each corruption handler resets to its respective default instance and reports the corruption as a non-fatal error with the file name and exception for diagnosis.
+
 ### Store Organization
 
 | Store | Type | Contents |
@@ -1083,7 +1339,7 @@ Benefits over JSON-in-Preferences:
 
 ### Layout Persistence
 
-Layout saves are debounced at 500ms with atomic writes (write to temp file, rename on success). Corruption detection: if Proto deserialization fails, fall back to last-known-good backup or default preset.
+Layout saves are debounced at 500ms with atomic writes (write to temp file, rename on success). Corruption detection: if Proto deserialization fails, the `ReplaceFileCorruptionHandler` resets to default and reports via `ErrorReporter`.
 
 ### Schema Migration
 
@@ -1101,21 +1357,51 @@ JSON preset files define default widget layouts. `PresetLoader` selects region-a
 class ThermalManager(private val powerManager: PowerManager) {
     val thermalLevel: StateFlow<ThermalLevel>  // NORMAL, WARM, DEGRADED, CRITICAL
 
-    // Based on PowerManager.getThermalHeadroom(30):
-    // headroom > 0.95 → CRITICAL
-    // headroom > 0.85 → DEGRADED
-    // headroom > 0.70 → WARM
-    // else → NORMAL
+    init {
+        val headroom = powerManager.getThermalHeadroom(10) // 10s for reactive decisions
+        if (headroom < 0) {
+            // Device doesn't support thermal headroom — fall back to discrete listener
+            powerManager.addThermalStatusListener(executor) { status ->
+                thermalLevel.value = when (status) {
+                    THERMAL_STATUS_NONE, THERMAL_STATUS_LIGHT -> ThermalLevel.NORMAL
+                    THERMAL_STATUS_MODERATE -> ThermalLevel.WARM
+                    THERMAL_STATUS_SEVERE -> ThermalLevel.DEGRADED
+                    else -> ThermalLevel.CRITICAL
+                }
+            }
+        } else {
+            // headroom > 0.95 → CRITICAL
+            // headroom > 0.85 → DEGRADED
+            // headroom > 0.70 → WARM
+            // else → NORMAL
+        }
+    }
 }
 
 data class RenderConfig(
     val targetFps: Float,      // 60 → 45 → 30 → 24
     val glowEnabled: Boolean,  // disabled at DEGRADED
-    val maxWidgets: Int,       // reduced at CRITICAL
 )
 ```
 
 `RenderConfig` is consumed by `DashboardGrid` and `WidgetContainer` to adapt rendering quality before the OS forces thermal throttling.
+
+### Thermal Headroom Usage
+
+- **`getThermalHeadroom(10)`**: Used for reactive frame pacing decisions — 10s lookahead is responsive enough to trigger FPS reduction before hitting a tier boundary
+- **`getThermalHeadroom(30)`**: Used only by `ThermalTrendAnalyzer` for predictive degradation analysis where a longer trend window produces more stable predictions
+
+### Supplementary Thermal Signals
+
+Monitor battery temperature via `BatteryManager.EXTRA_TEMPERATURE` as a supplementary signal. Car-mounted phones in sunlight can hit battery thermal limits while the SoC is fine — `getThermalHeadroom()` may report NORMAL while the battery is dangerously hot.
+
+### GPU vs CPU Bottleneck Differentiation
+
+Under thermal pressure, differentiate the bottleneck source to apply the correct mitigation:
+- **GPU bottleneck** (long frame time + low CPU time): Reduce shaders/layers — disable glow, reduce `graphicsLayer` usage, simplify gradients
+- **CPU bottleneck** (long frame time + high CPU time): Reduce emission rate — throttle provider data, increase debounce intervals
+
+Frame duration analysis uses `FrameMetrics` (API 31+) to separate CPU and GPU work phases.
 
 ### Glow Under Thermal Pressure
 
@@ -1151,7 +1437,7 @@ When `isDriving == true`:
 | ID | Scope |
 |---|---|
 | `free` | Core pack — all users (speedometer, clock, date, compass, battery, speed limit, shortcuts) |
-| `plus` | Plus pack — trip computer, media controller, G-force, altimeter, weather + widget limit increase |
+| `plus` | Plus pack — trip computer, media controller, G-force, altimeter, weather |
 | `themes` | Themes pack — premium themes + Theme Studio + Solar/Illuminance auto-switch |
 
 Regional packs define their own entitlement IDs as needed.
@@ -1265,6 +1551,15 @@ App Startup is retained ONLY for non-DI components that genuinely need ContentPr
 
 Expected improvement: 20-40% reduction in cold-start jank (per Android team benchmarks with Reddit, etc.).
 
+### Shader Prewarming
+
+On first launch (and after GPU driver updates), every `RenderEffect`, `Brush.sweepGradient`, and custom `Path` render triggers shader compilation — 50-200ms per unique shader. With 12 widget types, first-frame jank can reach 600ms+.
+
+Mitigation:
+1. **Pre-warm shaders during the splash screen** by rendering a 1x1dp version of each widget type's draw operations in an offscreen `Canvas`. This triggers shader compilation before the dashboard is visible.
+2. **Defer glow enable** — `RenderEffect.createBlurEffect()` is not applied until 2-3 frames after first meaningful paint. The blur shader is the most expensive to compile, and deferring it prevents a visible hitch on the first dashboard frame.
+3. **Track first-frame-after-install duration** separately from steady-state metrics in macrobenchmarks. This metric captures shader compilation overhead that disappears on subsequent launches (shaders are cached by the GPU driver).
+
 ### Crash Recovery / Safe Mode
 
 Track crash counts in `SharedPreferences` (NOT DataStore — `SharedPreferences` is readable synchronously before DataStore initializes):
@@ -1342,26 +1637,76 @@ Transient bars appear on swipe from edge and auto-hide after a few seconds.
 
 A non-Compose module providing structured logging, distributed tracing, metrics collection, and health monitoring. No Compose compiler applied.
 
+### Self-Protection
+
+Every `LogSink.write()` implementation is wrapped in try/catch. The observability system must never crash the app:
+
+```kotlin
+class SafeLogSink(private val delegate: LogSink) : LogSink {
+    override fun write(entry: LogEntry) {
+        try {
+            delegate.write(entry)
+        } catch (_: Exception) {
+            // Swallow — observability must not crash the app
+        }
+    }
+}
+```
+
+The `AnrWatchdog` thread uses `Thread.setDefaultUncaughtExceptionHandler` to log the exception and restart the watchdog loop rather than crashing.
+
 ### DqxnLogger
 
 ```kotlin
 interface DqxnLogger {
-    fun log(level: LogLevel, tag: LogTag, message: String, throwable: Throwable? = null)
+    fun log(level: LogLevel, tag: LogTag, message: String, throwable: Throwable? = null, fields: ImmutableMap<String, Any> = persistentMapOf())
 }
 
-// Zero-allocation inline extensions — disabled calls are free
-inline fun DqxnLogger.debug(tag: LogTag, message: () -> String) {
-    if (isEnabled(LogLevel.DEBUG, tag)) log(LogLevel.DEBUG, tag, message())
+// Zero-allocation inline extensions with structured fields — disabled calls are free
+inline fun DqxnLogger.debug(tag: LogTag, vararg fields: Pair<String, Any>, message: () -> String) {
+    if (isEnabled(LogLevel.DEBUG, tag)) {
+        log(LogLevel.DEBUG, tag, message(), fields = fields.toMap().toImmutableMap())
+    }
 }
 
-inline fun DqxnLogger.warn(tag: LogTag, message: () -> String) {
-    if (isEnabled(LogLevel.WARN, tag)) log(LogLevel.WARN, tag, message())
+inline fun DqxnLogger.warn(tag: LogTag, vararg fields: Pair<String, Any>, message: () -> String) {
+    if (isEnabled(LogLevel.WARN, tag)) {
+        log(LogLevel.WARN, tag, message(), fields = fields.toMap().toImmutableMap())
+    }
 }
 
-inline fun DqxnLogger.error(tag: LogTag, message: () -> String, throwable: Throwable? = null) {
-    if (isEnabled(LogLevel.ERROR, tag)) log(LogLevel.ERROR, tag, message(), throwable)
+inline fun DqxnLogger.error(tag: LogTag, vararg fields: Pair<String, Any>, message: () -> String, throwable: Throwable? = null) {
+    if (isEnabled(LogLevel.ERROR, tag)) {
+        log(LogLevel.ERROR, tag, message(), throwable, fields = fields.toMap().toImmutableMap())
+    }
+}
+
+// Usage:
+logger.debug(LogTag.BINDING, "providerId" to "core:gps-speed", "widgetId" to "def456", "elapsedMs" to 12) {
+    "Provider bound"
 }
 ```
+
+### Structured LogEntry
+
+```kotlin
+@Immutable
+data class LogEntry(
+    val timestamp: Long,
+    val level: LogLevel,
+    val tag: LogTag,
+    val message: String,
+    val throwable: Throwable? = null,
+    val traceId: String? = null,
+    val spanId: String? = null,
+    val fields: ImmutableMap<String, Any> = persistentMapOf(),
+    val sessionId: String? = null,
+)
+```
+
+`sessionId` is generated per cold start and appears in all `LogEntry`, `AnalyticsTracker.setUserProperty("session_id", ...)`, and `CrashContextProvider.setCustomKey("session_id", ...)` — a single join key across all telemetry systems.
+
+The `JsonFileLogSink` writes `fields` as top-level JSON keys alongside standard fields. The `RingBufferSink` stores the full `LogEntry` for agentic dump.
 
 ### LogTag Enum
 
@@ -1387,9 +1732,37 @@ interface LogSink {
 // LogcatSink — standard Logcat output (debug builds)
 // JsonFileLogSink — JSON-lines format, agent-parseable (debug builds)
 // RedactingSink — wraps any sink, scrubs GPS coordinates, BLE MAC addresses
+// SamplingLogSink — per-tag rate limiting (see Log Sampling below)
 ```
 
 `RingBufferSink` uses a lock-free `AtomicReferenceArray` with atomic index increment. No allocations on the write path beyond the `LogEntry` itself.
+
+### Log Sampling
+
+High-frequency tags (SENSOR, WIDGET_RENDER) can produce thousands of entries per second. Per-tag rate limiting prevents log flooding while preserving visibility:
+
+```kotlin
+class SamplingLogSink(
+    private val delegate: LogSink,
+    private val samplingRates: Map<LogTag, Int>, // e.g., SENSOR -> 100 (1 in 100)
+) : LogSink {
+    private val counters = ConcurrentHashMap<LogTag, AtomicLong>()
+    override fun write(entry: LogEntry) {
+        val rate = samplingRates[entry.tag] ?: 1
+        if (rate <= 1 || counters.getOrPut(entry.tag) { AtomicLong() }.incrementAndGet() % rate == 0L) {
+            delegate.write(entry)
+        }
+    }
+}
+```
+
+### Breadcrumb Strategy
+
+Explicit criteria for what enters the Crashlytics breadcrumb trail:
+
+- **Always**: Event dispatch, state transitions (thermal, driving, connection FSM), widget add/remove, theme change, provider bind/unbind, overlay navigation
+- **Never**: Per-frame metrics, sensor data emissions, draw-phase logs
+- **Conditional**: Errors/warnings always; debug-level only when diagnostics mode is active
 
 ### TraceContext
 
@@ -1403,24 +1776,54 @@ class TraceContext(
 }
 ```
 
-Cross-coordinator correlation: when an event flows from `DashboardViewModel` through `LayoutCoordinator` to `WidgetBindingCoordinator` to `DataStore`, all log entries share the same `traceId`. Visible in JSON log output and agentic trace dumps.
+Cross-coordinator correlation: when a command flows from `DashboardViewModel` through `LayoutCoordinator` to `WidgetBindingCoordinator` to `DataStore`, all log entries share the same `traceId`. Visible in JSON log output and agentic trace dumps.
+
+### Trace Context Propagation
+
+`Channel.send()` does not carry the sender's coroutine context. Trace context is propagated explicitly via `DashboardCommand.traceId`:
+
+```kotlin
+sealed interface DashboardCommand {
+    val traceId: String? // propagated from sender context
+}
+```
+
+When processing a command, the trace context is restored:
+
+```kotlin
+for (command in commandChannel) {
+    val ctx = command.traceId?.let { TraceContext(it, generateSpanId(), null) }
+    withContext(ctx ?: EmptyCoroutineContext) {
+        routeCommand(command)
+    }
+}
+```
 
 ### DqxnTracer
 
+`DqxnTracer.withSpan` is a suspend function that reads and propagates `TraceContext` from `coroutineContext`:
+
 ```kotlin
 class DqxnTracer @Inject constructor(private val logger: DqxnLogger) {
-    inline fun <T> withSpan(
+    suspend inline fun <T> withSpan(
         name: String,
         tag: LogTag,
-        block: () -> T,
+        crossinline block: suspend () -> T,
     ): T {
-        val spanId = generateSpanId()
-        val start = SystemClock.elapsedRealtimeNanos()
-        return try {
-            block()
-        } finally {
-            val elapsed = SystemClock.elapsedRealtimeNanos() - start
-            logger.debug(tag) { "span=$name elapsed=${elapsed / 1_000_000}ms" }
+        val parent = currentCoroutineContext()[TraceContext]
+        val ctx = TraceContext(
+            traceId = parent?.traceId ?: generateTraceId(),
+            spanId = generateSpanId(),
+            parentSpanId = parent?.spanId,
+        )
+        return withContext(ctx) {
+            val start = SystemClock.elapsedRealtimeNanos()
+            try {
+                block()
+            } finally {
+                val elapsed = SystemClock.elapsedRealtimeNanos() - start
+                logger.debug(tag, "span" to name, "elapsedMs" to elapsed / 1_000_000) { name }
+            }
         }
     }
 }
@@ -1428,22 +1831,39 @@ class DqxnTracer @Inject constructor(private val logger: DqxnLogger) {
 
 ### MetricsCollector
 
-Pre-allocated counters with atomic operations:
+Pre-allocated counters with atomic operations. All known keys are pre-allocated at init from the widget/provider registry — no lazy allocation on hot paths:
 
 ```kotlin
-class MetricsCollector @Inject constructor() {
+class MetricsCollector @Inject constructor(
+    widgetRegistry: WidgetRegistry,
+    providerRegistry: DataProviderRegistry,
+) {
     // Frame timing histogram (buckets: <8ms, <12ms, <16ms, <24ms, <33ms, >33ms)
-    private val frameHistogram = LongArray(6)
+    // AtomicLongArray for thread safety (data race fix vs plain LongArray)
+    private val frameHistogram = AtomicLongArray(6)
+    private val totalFrameCount = AtomicLong(0) // for P99 percentile computation
 
-    // Recomposition counter per widget typeId
-    private val recompositionCounts = ConcurrentHashMap<String, AtomicLong>()
+    // Recomposition counter per widget typeId — pre-allocated from registry
+    private val recompositionCounts = ConcurrentHashMap<String, AtomicLong>().also { map ->
+        widgetRegistry.all().forEach { map[it.typeId] = AtomicLong(0) }
+    }
 
     // Provider latency (last N samples per provider)
-    private val providerLatency = ConcurrentHashMap<String, RingBuffer<Long>>()
+    // LongArray-backed ring buffer — RingBuffer<Long> boxes every value
+    private val providerLatency = ConcurrentHashMap<String, LongArrayRingBuffer>().also { map ->
+        providerRegistry.all().forEach { map[it.providerId] = LongArrayRingBuffer(64) }
+    }
 
-    fun recordFrame(durationMs: Long) { /* atomic bucket increment */ }
+    // Memory watermark — periodic reads on health check
+    private val memoryWatermarkBytes = AtomicLong(0)
+
+    fun recordFrame(durationMs: Long) { /* atomic bucket increment + totalFrameCount++ */ }
     fun recordRecomposition(typeId: String) { /* atomic increment */ }
     fun recordProviderLatency(providerId: String, latencyMs: Long) { /* ring buffer write */ }
+    fun recordMemoryWatermark() {
+        val used = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
+        memoryWatermarkBytes.updateAndGet { maxOf(it, used) }
+    }
 
     fun snapshot(): MetricsSnapshot { /* read-only copy for dump */ }
 }
@@ -1460,6 +1880,27 @@ Periodic liveness checks (every 10s):
 
 Linear regression on recent thermal headroom samples (last 60s at 5s intervals). Predicts time-to-threshold for the next thermal tier. Enables preemptive degradation — start reducing FPS before hitting the threshold, smoothing the visual transition.
 
+```kotlin
+class ThermalTrendAnalyzer @Inject constructor(
+    private val thermalManager: ThermalManager,
+) {
+    // Last 12 samples at 5s intervals = 60s window
+    private val headroomSamples = RingBuffer<Pair<Long, Float>>(12)
+
+    fun predictTimeToThreshold(targetHeadroom: Float): Duration? {
+        if (headroomSamples.size < 3) return null
+        // Simple linear regression on (timestamp, headroom) pairs
+        val slope = linearRegressionSlope(headroomSamples)
+        if (slope <= 0) return null // cooling or stable
+        val current = headroomSamples.last().second
+        val remaining = targetHeadroom - current
+        return (remaining / slope).seconds
+    }
+}
+```
+
+This enables the `FramePacer` to preemptively reduce FPS 10-15s before hitting a thermal tier boundary, smoothing the visual transition instead of an abrupt quality drop. Uses `getThermalHeadroom(30)` for trend analysis (longer window for stable predictions).
+
 ### ErrorReporter
 
 Non-fatal reporting for:
@@ -1470,9 +1911,31 @@ Non-fatal reporting for:
 
 Forwards to Crashlytics via `FirebaseCrashlytics.recordException()` with structured custom keys.
 
+### DeduplicatingErrorReporter
+
+Prevents report flooding when a provider fails repeatedly or a widget crashes on every frame:
+
+```kotlin
+class DeduplicatingErrorReporter(private val delegate: ErrorReporter) {
+    private val recentErrors = ConcurrentHashMap<String, Long>()
+
+    fun reportNonFatal(e: Throwable, context: ErrorContext) {
+        val key = "${context.sourceId}:${e::class.simpleName}"
+        val now = SystemClock.elapsedRealtime()
+        val last = recentErrors[key]
+        if (last == null || now - last > 60_000) {
+            recentErrors[key] = now
+            delegate.reportNonFatal(e, context)
+        }
+    }
+}
+```
+
+Deduplication window: 60 seconds per unique `(sourceId, exceptionType)` pair.
+
 ### AnrWatchdog
 
-Dedicated background thread that pings the main thread every 3s:
+Dedicated background thread that pings the main thread every 2s with a 2.5s timeout (gives warning 2.5s before Android's 5s ANR threshold):
 
 ```kotlin
 class AnrWatchdog @Inject constructor(
@@ -1486,21 +1949,64 @@ class AnrWatchdog @Inject constructor(
             while (true) {
                 val responded = CountDownLatch(1)
                 mainHandler.post { responded.countDown() }
-                if (!responded.await(3, TimeUnit.SECONDS)) {
+                if (!responded.await(2500, TimeUnit.MILLISECONDS)) {
                     // Main thread stalled — capture diagnostics
+                    val allStacks = Thread.getAllStackTraces() // all threads, not just main — to identify lock holders
                     val mainStack = Looper.getMainLooper().thread.stackTrace
                     val ringBuffer = ringBufferSink.snapshot()
-                    logger.error(LogTag.STARTUP) {
+                    val fdCount = File("/proc/self/fd/").listFiles()?.size ?: -1
+
+                    logger.error(LogTag.STARTUP, "fdCount" to fdCount) {
                         "ANR detected: main thread blocked\n" +
                         mainStack.joinToString("\n") { "  at $it" }
                     }
+
+                    // Write diagnostic snapshot to SharedPreferences (survives process death)
+                    diagnosticPrefs.edit()
+                        .putString("last_anr_stack", mainStack.joinToString("\n"))
+                        .putLong("last_anr_time", System.currentTimeMillis())
+                        .apply()
+
                     // Report non-fatal with full context
+                    // Immediately post next ping — no Thread.sleep after detection
                 }
-                Thread.sleep(3_000)
+                Thread.sleep(2_000) // 2s ping interval
             }
         }
     }
 }
+```
+
+### OOM Detection
+
+OOM kills don't trigger Crashlytics. Detection uses a `session_active` flag:
+
+- Set `session_active = true` in `SharedPreferences` in `onStart()`, `false` in `onStop()`
+- On cold start, if `session_active == true` AND Crashlytics has no crash for that session → likely OOM or force-stop
+- Register `ComponentCallbacks2.onTrimMemory(TRIM_MEMORY_RUNNING_CRITICAL)` and report as non-fatal with memory stats (`Runtime.totalMemory()`, `Runtime.freeMemory()`, native heap via `Debug.getNativeHeapAllocatedSize()`)
+- Track memory watermark in `MetricsCollector` via periodic `Runtime.totalMemory() - freeMemory()` reads on health check cycle
+
+### Network Observability
+
+Weather API calls need observability:
+- OkHttp `HttpLoggingInterceptor` (debug builds) routed to `DqxnLogger` with `LogTag.PROVIDER`
+- Custom interceptor recording request latency to `MetricsCollector`
+- Retry with exponential backoff (max 3 attempts, 1s/2s/4s)
+- `Cache` with 30min `max-age` matching the weather refresh interval
+
+```kotlin
+val weatherClient = OkHttpClient.Builder()
+    .cache(Cache(cacheDir / "weather", 5 * 1024 * 1024)) // 5MB
+    .addInterceptor(MetricsInterceptor(metricsCollector, "weather"))
+    .addInterceptor(RetryInterceptor(maxRetries = 3))
+    .apply {
+        if (BuildConfig.DEBUG) {
+            addInterceptor(HttpLoggingInterceptor { msg ->
+                logger.debug(LogTag.PROVIDER, "source" to "weather-http") { msg }
+            }.setLevel(HttpLoggingInterceptor.Level.BASIC))
+        }
+    }
+    .build()
 ```
 
 ### CrashContextProvider
@@ -1514,6 +2020,9 @@ class CrashContextProvider @Inject constructor(
     private val metricsCollector: MetricsCollector,
 ) {
     fun install() {
+        // Set session ID for cross-telemetry correlation
+        crashlytics.setCustomKey("session_id", sessionId)
+
         // Observe and update crash context
         scope.launch {
             thermalManager.thermalLevel.collect { level ->
@@ -1562,6 +2071,8 @@ sealed interface AnalyticsEvent {
 ```
 
 All feature modules depend on the `:core:analytics` interface. Implementation lives in a separate module (e.g., `:core:analytics-firebase`) wired via Hilt. Debug builds use a no-op or logging implementation.
+
+On init, `AnalyticsTracker.setUserProperty("session_id", sessionId)` is called with the same `sessionId` used in `LogEntry` and `CrashContextProvider` for cross-telemetry correlation.
 
 Privacy: no PII in events. PDPA-compliant. User opt-out toggle in settings kills the tracker at the interface level.
 
@@ -1621,28 +2132,7 @@ Release-build smoke test in CI: assemble release APK, install on managed device,
 
 ## 27. Thermal Management (continued)
 
-### ThermalTrendAnalyzer Details
-
-```kotlin
-class ThermalTrendAnalyzer @Inject constructor(
-    private val thermalManager: ThermalManager,
-) {
-    // Last 12 samples at 5s intervals = 60s window
-    private val headroomSamples = RingBuffer<Pair<Long, Float>>(12)
-
-    fun predictTimeToThreshold(targetHeadroom: Float): Duration? {
-        if (headroomSamples.size < 3) return null
-        // Simple linear regression on (timestamp, headroom) pairs
-        val slope = linearRegressionSlope(headroomSamples)
-        if (slope <= 0) return null // cooling or stable
-        val current = headroomSamples.last().second
-        val remaining = targetHeadroom - current
-        return (remaining / slope).seconds
-    }
-}
-```
-
-This enables the `FramePacer` to preemptively reduce FPS 10-15s before hitting a thermal tier boundary, smoothing the visual transition instead of an abrupt quality drop.
+(Covered fully in Section 15.)
 
 ## 28. DI Scoping (continued)
 
@@ -1667,7 +2157,7 @@ fun `adding widget triggers binding and persists layout`() = dashboardTest {
     val speedometer = testWidget(typeId = "core:speedometer")
 
     // Act
-    dispatch(DashboardEvent.AddWidget(speedometer))
+    dispatch(DashboardCommand.AddWidget(speedometer))
 
     // Assert
     assertThat(layoutState().widgets).hasSize(1)
@@ -1681,10 +2171,19 @@ fun `adding widget triggers binding and persists layout`() = dashboardTest {
 `testFixtures` source sets per module share fakes and builders:
 - `testWidget(typeId, size, position, ...)` — widget instance builder
 - `testTheme(name, isDark, colors, ...)` — theme definition builder
-- `testDataSnapshot(type, values, ...)` — typed snapshot builder
+- `testSnapshot<T>()` — typed snapshot builder (e.g., `testSnapshot<SpeedSnapshot>(speed = 65f)`)
 - `FakeLayoutRepository`, `FakeWidgetDataBinder`, `SpyActionProviderRegistry`, `TestDataProvider`
 
 All tests use `StandardTestDispatcher` — no `Thread.sleep`, no real-time delays. Deterministic, fast, agent-friendly.
+
+### Test Tags
+
+Tests are tagged for tiered execution:
+- `@Tag("fast")` — pure logic, <100ms per test
+- `@Tag("compose")` — requires `ComposeTestRule`
+- `@Tag("visual")` — Roborazzi screenshot tests
+- `@Tag("integration")` — full DI graph
+- `@Tag("benchmark")` — device required
 
 ### Test Layers
 
@@ -1700,10 +2199,13 @@ All tests use `StandardTestDispatcher` — no `Thread.sleep`, no real-time delay
 - Coordinator state emissions in response to events
 
 **Visual Regression Tests** (Roborazzi + Robolectric):
-- Screenshot comparison for every widget renderer at multiple sizes
-- Theme rendering (all 24 themes at representative widget)
-- Edit mode visual states (wiggle, focus, brackets)
-- WidgetContainer layer stack (glow, rim, border combinations)
+- Baselines stored in `src/test/resources/screenshots/{testClass}/{testName}.png`
+- Use Roborazzi `compare` mode in CI, `record` mode for baseline updates
+- Screenshot matrix:
+  - Every widget at default size with Cyberpunk + Minimalist themes (34 screenshots)
+  - Every theme with speedometer widget (24 screenshots)
+  - Error/stale/edit states with reference theme (~50 screenshots)
+  - Total: ~108 manageable screenshots
 
 **Interaction Tests** (compose.ui.test + Robolectric):
 - Drag-to-move widget gesture sequences
@@ -1742,8 +2244,39 @@ abstract class WidgetRendererContractTest {
 
     @Test
     fun `accessibility description is non-empty`() {
-        val desc = createRenderer().accessibilityDescription(testDataSnapshot())
+        val desc = createRenderer().accessibilityDescription(WidgetData.Empty)
         assertThat(desc).isNotEmpty()
+    }
+}
+```
+
+```kotlin
+// In :core:plugin-api testFixtures
+abstract class DataProviderContractTest {
+    abstract fun createProvider(): DataProvider
+
+    @Test
+    fun `emits within firstEmissionTimeout`() = runTest {
+        val provider = createProvider()
+        val first = withTimeoutOrNull(provider.firstEmissionTimeout) {
+            provider.provideState().first()
+        }
+        assertWithMessage("Provider must emit within ${provider.firstEmissionTimeout}")
+            .that(first).isNotNull()
+    }
+
+    @Test
+    fun `respects cancellation without leaking`() = runTest {
+        val provider = createProvider()
+        val job = launch { provider.provideState().collect {} }
+        job.cancelAndJoin()
+        // Assert no lingering coroutines
+    }
+
+    @Test
+    fun `snapshotType is a valid DataSnapshot subtype`() {
+        val provider = createProvider()
+        assertThat(provider.snapshotType).isAssignableTo(DataSnapshot::class)
     }
 }
 ```
@@ -1789,6 +2322,7 @@ fun `connection FSM never reaches illegal state`(
 - Entitlement revocation during theme preview
 - Process death simulation mid-edit
 - Rapid widget add/remove cycles
+- `ChaosEngine` accepts a `seed: Long` parameter. Failed chaos tests include the seed in the failure message. Re-running with the same seed produces the same failure sequence for deterministic reproduction.
 
 ### Mutation Testing
 
@@ -1816,13 +2350,70 @@ Compilation tests for `@DashboardWidget` and `@DashboardDataProvider`:
 
 | Gate | Threshold |
 |---|---|
+| P50 frame duration | < 8ms |
+| P95 frame duration | < 12ms |
 | P99 frame duration | < 16ms |
+| Jank rate (frames > 16ms) | < 2% |
 | Cold startup time | < 1.5s |
 | Compose stability | max 0 unstable classes |
 | Non-skippable composables | max 5 |
 | Mutation kill rate (critical modules) | > 80% |
 | Unit test coverage (coordinators) | > 90% line |
 | Release smoke test | Dashboard renders with data |
+| P50 trend detection | Alert when P50 increases >20% from 7-day rolling average |
+
+### Agentic Validation Pipeline
+
+Tiered validation for fast feedback loops during development:
+
+```
+Tier 1 — Compile Check (~8s):
+  ./gradlew :affected:module:compileDebugKotlin --console=plain
+
+Tier 2 — Fast Unit Tests (~12s):
+  ./gradlew :affected:module:testDebugUnitTest --console=plain -PincludeTags=fast
+
+Tier 3 — Full Module Tests (~30s):
+  ./gradlew :affected:module:testDebugUnitTest --console=plain
+
+Tier 4 — Dependent Module Tests (~60s):
+  ./gradlew :dep1:test :dep2:test --console=plain
+
+Tier 5 — Visual Regression (if UI changed, ~45s):
+  ./gradlew :affected:module:verifyRoborazzi --console=plain
+
+Tier 6 — Full Suite (before commit):
+  ./gradlew assembleDebug test lintDebug --console=plain
+```
+
+Agent stops at the first failing tier and fixes before proceeding.
+
+### Agentic Debug Runbook
+
+Structured patterns for diagnosing and fixing common failures:
+
+**Compile Errors**:
+- Parse build output for `e:` prefixed lines (Kotlin compiler errors)
+- Extract file path and line number from `e: file:///path/File.kt:42:15`
+- Read the offending file, fix the error, re-run Tier 1
+
+**Test Failures**:
+- Parse output for `FAILED` test names: `> Task :module:testDebugUnitTest FAILED`
+- Extract test class and method from JUnit XML or console output
+- Read the test file and the source file under test
+- Fix the source (not the test) unless the test expectation is wrong
+- Re-run Tier 2 or 3
+
+**Visual Regressions**:
+- Roborazzi outputs diff images to `build/outputs/roborazzi/`
+- Compare `_actual.png` vs `_expected.png` vs `_diff.png`
+- If intentional: re-run with `./gradlew :module:recordRoborazzi` to update baselines
+- If unintentional: fix the rendering code, re-run Tier 5
+
+**Verification After Fix**:
+- Always re-run the failing tier before proceeding to the next
+- On success, continue from the next tier (don't restart from Tier 1)
+- On new failure in a higher tier, fix and re-run that tier
 
 ### Test Principles
 
@@ -1893,8 +2484,20 @@ fun `no pack module depends on dashboard`() {
 fun `all registered widgets pass contract tests`() {
     widgetRegistry.all().forEach { renderer ->
         assertThat(renderer.typeId).matches("[a-z]+:[a-z][a-z0-9-]+")
-        assertThat(renderer.compatibleDataTypes).isNotEmpty()
-        assertThat(renderer.accessibilityDescription(emptyData)).isNotEmpty()
+        assertThat(renderer.compatibleSnapshots).isNotEmpty()
+        assertThat(renderer.accessibilityDescription(WidgetData.Empty)).isNotEmpty()
+    }
+}
+
+// SnapshotTypeValidationTest — runs in :app with full DI graph
+@Test
+fun `all widget snapshot types have at least one provider`() {
+    val providedTypes = providerRegistry.all().map { it.snapshotType }.toSet()
+    widgetRegistry.all().forEach { widget ->
+        widget.compatibleSnapshots.forEach { type ->
+            assertWithMessage("Widget ${widget.typeId} declares '${type.simpleName}' but no provider emits it")
+                .that(providedTypes).contains(type)
+        }
     }
 }
 ```
@@ -1903,10 +2506,10 @@ fun `all registered widgets pass contract tests`() {
 
 ```bash
 # Generate a new widget skeleton in a pack
-./gradlew :feature:packs:free:scaffoldWidget --name=altimeter --dataTypes=ALTITUDE
+./gradlew :feature:packs:free:scaffoldWidget --name=altimeter --snapshots=AltitudeSnapshot
 
 # Generate a new provider skeleton
-./gradlew :feature:packs:plus:scaffoldProvider --name=weather --dataTypes=WEATHER
+./gradlew :feature:packs:plus:scaffoldProvider --name=weather --snapshot=WeatherSnapshot
 
 # Generate a new theme JSON
 ./gradlew :feature:packs:themes:scaffoldTheme --name="Ocean Breeze" --isDark=false
@@ -1962,9 +2565,22 @@ adb shell am broadcast \
 | `dump-connections` | ConnectionStateMachine state, paired devices, retry counts |
 | `simulate-thermal` | Force thermal level to specified tier (for testing degradation) |
 
+### Large Payload Handling
+
+For large payloads (`dump-state`, `dump-log-buffer`, `dump-metrics`), write to a temp file and return the file path via broadcast result data:
+
+```kotlin
+val file = File(context.cacheDir, "dump_${System.currentTimeMillis()}.json")
+file.writeText(jsonPayload)
+setResultData(file.absolutePath)
+// Agent reads via: adb pull /data/data/app.dqxn.android.debug/cache/dump_xxx.json
+```
+
+This avoids the broadcast result extras size limit (~1MB) and handles arbitrarily large state dumps.
+
 ### Structured State Dumps
 
-All dump commands return JSON via broadcast result extras:
+All dump commands return JSON. Small payloads use broadcast result extras directly; large payloads use the temp file pattern above:
 
 ```json
 {
@@ -2009,11 +2625,11 @@ Located in `:app:src/debug/`. Activated via agentic command or debug settings to
 
 ### Machine-Readable Log Format
 
-`JsonFileLogSink` writes JSON-lines to `${filesDir}/debug/dqxn.jsonl` (debug builds only):
+`JsonFileLogSink` writes JSON-lines to `${filesDir}/debug/dqxn.jsonl` (debug builds only). Structured fields from `LogEntry` appear as top-level JSON keys:
 
 ```json
-{"ts":1708444800123,"level":"DEBUG","tag":"BINDING","trace":"abc123","span":"bind-speedometer","msg":"Provider bound: core:gps-speed → widget:def456","elapsed_ms":12}
-{"ts":1708444800456,"level":"WARN","tag":"THERMAL","trace":"xyz789","span":null,"msg":"Headroom trending up: 0.72 → 0.78, predicted DEGRADED in 45s"}
+{"ts":1708444800123,"level":"DEBUG","tag":"BINDING","trace":"abc123","span":"bind-speedometer","session":"sess-001","msg":"Provider bound","providerId":"core:gps-speed","widgetId":"def456","elapsedMs":12}
+{"ts":1708444800456,"level":"WARN","tag":"THERMAL","trace":"xyz789","span":null,"session":"sess-001","msg":"Headroom trending up: 0.72 → 0.78, predicted DEGRADED in 45s"}
 ```
 
 ### Crash Report Enrichment
@@ -2046,6 +2662,7 @@ The receiver is restricted to debug builds only. Demo providers are gated to deb
 | BT scan permission | `neverForLocation="true"` — scan data not used for location |
 | Deep links | Digital Asset Links verification, parameter validation at NavHost |
 | R8 rules | Per-module `consumer-proguard-rules.pro`, release smoke test in CI |
+| NDK crash reporting | `firebase-crashlytics-ndk` enabled for GPU driver crashes, Skia native crashes, and JNI errors from RenderEffect operations |
 
 ## 34. Permissions
 
