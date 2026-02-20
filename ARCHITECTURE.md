@@ -27,8 +27,8 @@ Packs (widgets, themes, data providers) are fully decoupled from the dashboard s
 | Android SDK | compileSdk 36, minSdk 31, targetSdk 36 |
 | Build | AGP 9.0.1, Gradle 9.3.1, JDK 25 |
 | Perf | Baseline Profiles, Macrobenchmarks, Compose compiler metrics |
-| Debug | LeakCanary, StrictMode (debug builds), Firebase Crashlytics |
-| NDK Crash | firebase-crashlytics-ndk for GPU driver crashes, Skia native crashes, JNI errors from RenderEffect operations |
+| Firebase | Crashlytics, Analytics, Performance Monitoring — all behind interfaces in `:core:observability` / `:core:analytics`, implementations in `:core:firebase` |
+| Debug | LeakCanary, StrictMode (debug builds) |
 
 ## 3. Module Structure
 
@@ -49,6 +49,7 @@ android/
 │   ├── thermal/                  # ThermalManager, RenderConfig, adaptive frame rate
 │   ├── observability/            # Logging, tracing, metrics, health monitoring, ANR watchdog
 │   ├── analytics/                # AnalyticsTracker interface, sealed AnalyticsEvent hierarchy
+│   ├── firebase/                 # Firebase implementations (Crashlytics, Analytics, Perf) — sole Firebase dependency point
 │   ├── agentic/                  # ADB broadcast debug automation
 │   └── agentic-processor/        # KSP: route listing generation
 ├── data/
@@ -68,7 +69,7 @@ android/
 
 Regional packs (e.g., Singapore ERP integration) plug in as additional `:feature:packs:*` modules without any changes to the shell or core.
 
-Convention plugins enforce shared defaults across all modules: compileSdk 36, minSdk 31, JVM target matching AGP/Gradle requirements. **Compose compiler is only applied to modules with UI** (not `:data:*`, not `:core:common`, not `:core:plugin-processor`, not `:core:observability`, not `:core:analytics`).
+Convention plugins enforce shared defaults across all modules: compileSdk 36, minSdk 31, JVM target matching AGP/Gradle requirements. **Compose compiler is only applied to modules with UI** (not `:data:*`, not `:core:common`, not `:core:plugin-processor`, not `:core:observability`, not `:core:analytics`, not `:core:firebase`).
 
 ### Module Dependency Rules
 
@@ -86,6 +87,7 @@ Packs depend on `:core:plugin-api`, never on `:feature:dashboard`. The shell imp
   → :core:thermal (thermal management)
   → :core:observability (logging, tracing, metrics)
   → :core:analytics (analytics abstraction)
+  → :core:firebase (Firebase implementations — sole Firebase import point)
   → :data:persistence (DataStore)
 
 :feature:packs:*
@@ -109,6 +111,11 @@ Packs depend on `:core:plugin-api`, never on `:feature:dashboard`. The shell imp
   → :core:common
   → :core:observability
 
+:core:firebase
+  → :core:observability (CrashReporter, CrashMetadataWriter, ErrorReporter interfaces)
+  → :core:analytics (AnalyticsTracker interface)
+  → :core:common
+
 :core:observability
   → :core:common
 
@@ -121,6 +128,8 @@ Packs depend on `:core:plugin-api`, never on `:feature:dashboard`. The shell imp
 
 Every module → :core:observability
 ```
+
+No module other than `:core:firebase` and `:app` depends on Firebase SDKs. Feature modules, packs, and all core modules interact exclusively through the interfaces in `:core:observability` and `:core:analytics`.
 
 This strict boundary means adding or removing a pack never requires changes to the shell.
 
@@ -1460,7 +1469,10 @@ Debug builds provide `StubEntitlementManager` with a "Simulate Free User" toggle
 | `ThermalManager` | `@Singleton` | System-level, survives config changes |
 | `DrivingModeDetector` | `@Singleton` | Continuous GPS monitoring |
 | `DqxnLogger` / sinks | `@Singleton` | Available before ViewModel creation |
+| `CrashReporter` / `CrashMetadataWriter` | `@Singleton` | Bound to Firebase impl via `:core:firebase` Hilt module |
+| `ErrorReporter` | `@Singleton` | Wraps `CrashReporter`, deduplication decorator |
 | `MetricsCollector` | `@Singleton` | Pre-allocated counters, app-wide |
+| `PerformanceTracer` | `@Singleton` | Bound to Firebase Perf impl via `:core:firebase` Hilt module |
 | `AnrWatchdog` | `@Singleton` | Dedicated thread, started at app init |
 | Coordinators (Layout, Theme, etc.) | `@ViewModelScoped` | Tied to dashboard ViewModel lifecycle |
 | Per-widget data bindings | ViewModel-scoped Jobs | Created/cancelled by WidgetBindingCoordinator |
@@ -1540,7 +1552,7 @@ class DqxnApplication : Application() {
 }
 ```
 
-App Startup is retained ONLY for non-DI components that genuinely need ContentProvider-phase initialization: WorkManager configuration and Crashlytics early init.
+App Startup is retained ONLY for non-DI components that genuinely need ContentProvider-phase initialization: WorkManager configuration and Firebase Crashlytics early init (mapping provider must initialize before Hilt to capture DI graph construction crashes).
 
 ### Baseline Profiles
 
@@ -1635,7 +1647,63 @@ Transient bars appear on swipe from edge and auto-hide after a few seconds.
 
 ## 23. Observability (`:core:observability`)
 
-A non-Compose module providing structured logging, distributed tracing, metrics collection, and health monitoring. No Compose compiler applied.
+A non-Compose, Firebase-free module providing structured logging, distributed tracing, metrics collection, health monitoring, and crash/error reporting **interfaces**. No Compose compiler applied. No Firebase dependency — all Firebase-specific implementations live in `:core:firebase`.
+
+This module defines:
+- `DqxnLogger` + `LogSink` — structured logging with sink pipeline
+- `DqxnTracer` + `TraceContext` — coroutine-context-propagated tracing
+- `MetricsCollector` — pre-allocated atomic counters
+- `CrashReporter` — interface for crash/non-fatal reporting (Firebase Crashlytics impl in `:core:firebase`)
+- `CrashMetadataWriter` — interface for custom key setting on crash reports
+- `ErrorReporter` — interface for structured non-fatal error reporting with context
+- `PerformanceTracer` — interface for network/custom trace recording (Firebase Perf impl in `:core:firebase`)
+- `WidgetHealthMonitor`, `ThermalTrendAnalyzer`, `AnrWatchdog` — health monitoring
+
+### Crash & Error Reporting Interfaces
+
+```kotlin
+// In :core:observability — no Firebase dependency
+
+interface CrashReporter {
+    fun recordNonFatal(e: Throwable, keys: ImmutableMap<String, String> = persistentMapOf())
+    fun log(message: String)
+    fun setUserId(id: String)
+}
+
+interface CrashMetadataWriter {
+    fun setKey(key: String, value: String)
+    fun setKey(key: String, value: Int)
+    fun setKey(key: String, value: Float)
+    fun setKey(key: String, value: Boolean)
+}
+
+interface ErrorReporter {
+    fun reportNonFatal(e: Throwable, context: ErrorContext)
+    fun reportWidgetCrash(typeId: String, widgetId: String, throwable: Throwable, context: WidgetErrorContext)
+}
+
+interface PerformanceTracer {
+    fun newTrace(name: String): PerfTrace
+    fun newHttpMetric(url: String, method: String): HttpMetric
+}
+
+interface PerfTrace : AutoCloseable {
+    fun start()
+    fun stop()
+    fun putAttribute(key: String, value: String)
+    fun incrementMetric(name: String, value: Long)
+}
+
+interface HttpMetric : AutoCloseable {
+    fun setRequestPayloadSize(bytes: Long)
+    fun setResponsePayloadSize(bytes: Long)
+    fun setHttpResponseCode(code: Int)
+    fun start()
+    fun stop()
+}
+```
+
+Feature modules call these interfaces. `:core:firebase` provides the Firebase-backed implementations. Debug builds can swap in logging/no-op implementations via Hilt module override.
 
 ### Self-Protection
 
@@ -1728,7 +1796,7 @@ interface LogSink {
 
 // Implementations:
 // RingBufferSink — 512-entry lock-free circular buffer, queryable via agentic dump
-// CrashlyticsBreadcrumbSink — forwards to Crashlytics custom log
+// CrashReporterBreadcrumbSink — forwards to CrashReporter.log() (interface, not Firebase)
 // LogcatSink — standard Logcat output (debug builds)
 // JsonFileLogSink — JSON-lines format, agent-parseable (debug builds)
 // RedactingSink — wraps any sink, scrubs GPS coordinates, BLE MAC addresses
@@ -1758,7 +1826,7 @@ class SamplingLogSink(
 
 ### Breadcrumb Strategy
 
-Explicit criteria for what enters the Crashlytics breadcrumb trail:
+Explicit criteria for what enters the crash report breadcrumb trail (via `CrashReporter.log()`):
 
 - **Always**: Event dispatch, state transitions (thermal, driving, connection FSM), widget add/remove, theme change, provider bind/unbind, overlay navigation
 - **Never**: Per-frame metrics, sensor data emissions, draw-phase logs
@@ -1903,23 +1971,23 @@ This enables the `FramePacer` to preemptively reduce FPS 10-15s before hitting a
 
 ### ErrorReporter
 
-Non-fatal reporting for:
+`ErrorReporter` is an interface in `:core:observability`. Non-fatal reporting for:
 - Widget render crashes (with typeId, last data snapshot, widget settings, stack trace)
 - Provider failures (with providerId, connection state, last successful emission)
 - DataStore corruption (with file path, schema version, byte count)
 - Binding timeouts (with widgetId, providerId, elapsed time)
 
-Forwards to Crashlytics via `FirebaseCrashlytics.recordException()` with structured custom keys.
+Forwards to `CrashReporter` — the Firebase-backed implementation in `:core:firebase` calls `FirebaseCrashlytics.recordException()` with structured custom keys.
 
 ### DeduplicatingErrorReporter
 
-Prevents report flooding when a provider fails repeatedly or a widget crashes on every frame:
+Decorator wrapping any `ErrorReporter`. Prevents report flooding when a provider fails repeatedly or a widget crashes on every frame:
 
 ```kotlin
-class DeduplicatingErrorReporter(private val delegate: ErrorReporter) {
+class DeduplicatingErrorReporter(private val delegate: ErrorReporter) : ErrorReporter {
     private val recentErrors = ConcurrentHashMap<String, Long>()
 
-    fun reportNonFatal(e: Throwable, context: ErrorContext) {
+    override fun reportNonFatal(e: Throwable, context: ErrorContext) {
         val key = "${context.sourceId}:${e::class.simpleName}"
         val now = SystemClock.elapsedRealtime()
         val last = recentErrors[key]
@@ -1979,10 +2047,10 @@ class AnrWatchdog @Inject constructor(
 
 ### OOM Detection
 
-OOM kills don't trigger Crashlytics. Detection uses a `session_active` flag:
+OOM kills don't trigger crash reporters. Detection uses a `session_active` flag:
 
 - Set `session_active = true` in `SharedPreferences` in `onStart()`, `false` in `onStop()`
-- On cold start, if `session_active == true` AND Crashlytics has no crash for that session → likely OOM or force-stop
+- On cold start, if `session_active == true` AND the crash reporter has no crash for that session → likely OOM or force-stop
 - Register `ComponentCallbacks2.onTrimMemory(TRIM_MEMORY_RUNNING_CRITICAL)` and report as non-fatal with memory stats (`Runtime.totalMemory()`, `Runtime.freeMemory()`, native heap via `Debug.getNativeHeapAllocatedSize()`)
 - Track memory watermark in `MetricsCollector` via periodic `Runtime.totalMemory() - freeMemory()` reads on health check cycle
 
@@ -1990,6 +2058,7 @@ OOM kills don't trigger Crashlytics. Detection uses a `session_active` flag:
 
 Weather API calls need observability:
 - OkHttp `HttpLoggingInterceptor` (debug builds) routed to `DqxnLogger` with `LogTag.PROVIDER`
+- `PerformanceTracerInterceptor` records HTTP metrics via `PerformanceTracer.newHttpMetric()` — the Firebase Perf implementation reports to Firebase console; debug builds log locally
 - Custom interceptor recording request latency to `MetricsCollector`
 - Retry with exponential backoff (max 3 attempts, 1s/2s/4s)
 - `Cache` with 30min `max-age` matching the weather refresh interval
@@ -1997,7 +2066,8 @@ Weather API calls need observability:
 ```kotlin
 val weatherClient = OkHttpClient.Builder()
     .cache(Cache(cacheDir / "weather", 5 * 1024 * 1024)) // 5MB
-    .addInterceptor(MetricsInterceptor(metricsCollector, "weather"))
+    .addInterceptor(PerformanceTracerInterceptor(performanceTracer)) // HTTP metrics via PerformanceTracer interface
+    .addInterceptor(MetricsInterceptor(metricsCollector, "weather")) // local MetricsCollector
     .addInterceptor(RetryInterceptor(maxRetries = 3))
     .apply {
         if (BuildConfig.DEBUG) {
@@ -2011,22 +2081,24 @@ val weatherClient = OkHttpClient.Builder()
 
 ### CrashContextProvider
 
-Sets Crashlytics custom keys on every significant state transition:
+Sets crash report custom keys on every significant state transition via the `CrashMetadataWriter` interface (no direct Firebase dependency):
 
 ```kotlin
 class CrashContextProvider @Inject constructor(
-    private val crashlytics: FirebaseCrashlytics,
+    private val crashMetadata: CrashMetadataWriter,
+    private val crashReporter: CrashReporter,
     private val thermalManager: ThermalManager,
     private val metricsCollector: MetricsCollector,
 ) {
     fun install() {
         // Set session ID for cross-telemetry correlation
-        crashlytics.setCustomKey("session_id", sessionId)
+        crashMetadata.setKey("session_id", sessionId)
+        crashReporter.setUserId(sessionId)
 
         // Observe and update crash context
         scope.launch {
             thermalManager.thermalLevel.collect { level ->
-                crashlytics.setCustomKey("thermal_level", level.name)
+                crashMetadata.setKey("thermal_level", level.name)
             }
         }
         // Also tracks: widget_count, driving_state, jank_percent,
@@ -2070,13 +2142,149 @@ sealed interface AnalyticsEvent {
 }
 ```
 
-All feature modules depend on the `:core:analytics` interface. Implementation lives in a separate module (e.g., `:core:analytics-firebase`) wired via Hilt. Debug builds use a no-op or logging implementation.
+All feature modules depend on the `:core:analytics` interface. The Firebase Analytics implementation lives in `:core:firebase`, wired via Hilt `@Binds`. Debug builds use a logging implementation that routes events to `DqxnLogger` with `LogTag.ANALYTICS`.
 
 On init, `AnalyticsTracker.setUserProperty("session_id", sessionId)` is called with the same `sessionId` used in `LogEntry` and `CrashContextProvider` for cross-telemetry correlation.
 
 Privacy: no PII in events. PDPA-compliant. User opt-out toggle in settings kills the tracker at the interface level.
 
-## 25. Memory Leak Prevention
+## 25. Firebase Integration (`:core:firebase`)
+
+The sole Firebase dependency point. This module implements all observability and analytics interfaces defined in `:core:observability` and `:core:analytics`. No other module imports Firebase SDKs.
+
+### Dependencies
+
+```
+:core:firebase
+  → :core:observability (CrashReporter, CrashMetadataWriter, ErrorReporter, PerformanceTracer interfaces)
+  → :core:analytics (AnalyticsTracker interface)
+  → :core:common
+  → firebase-crashlytics
+  → firebase-analytics
+  → firebase-perf
+```
+
+### Hilt Wiring
+
+```kotlin
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class FirebaseModule {
+    @Binds @Singleton
+    abstract fun crashReporter(impl: FirebaseCrashReporter): CrashReporter
+
+    @Binds @Singleton
+    abstract fun crashMetadata(impl: FirebaseCrashMetadataWriter): CrashMetadataWriter
+
+    @Binds @Singleton
+    abstract fun errorReporter(impl: FirebaseErrorReporter): ErrorReporter
+
+    @Binds @Singleton
+    abstract fun analytics(impl: FirebaseAnalyticsTracker): AnalyticsTracker
+
+    @Binds @Singleton
+    abstract fun performanceTracer(impl: FirebasePerformanceTracer): PerformanceTracer
+}
+```
+
+Debug builds override with a separate Hilt module in `:app:src/debug/`. The `FirebaseModule` lives in `:core:firebase` (release classpath only) while `DebugObservabilityModule` lives in `:app:src/debug/` — Hilt sees exactly one binding per interface per build variant because `:core:firebase` is excluded from debug dependencies via Gradle `releaseImplementation`:
+
+```kotlin
+// In :app:src/debug/
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class DebugObservabilityModule {
+    @Binds @Singleton
+    abstract fun crashReporter(impl: LoggingCrashReporter): CrashReporter
+
+    @Binds @Singleton
+    abstract fun crashMetadata(impl: LoggingCrashMetadataWriter): CrashMetadataWriter
+
+    @Binds @Singleton
+    abstract fun errorReporter(impl: LoggingErrorReporter): ErrorReporter
+
+    @Binds @Singleton
+    abstract fun analytics(impl: LoggingAnalyticsTracker): AnalyticsTracker
+
+    @Binds @Singleton
+    abstract fun performanceTracer(impl: NoOpPerformanceTracer): PerformanceTracer
+}
+```
+
+### Firebase Crashlytics
+
+`FirebaseCrashReporter` wraps `FirebaseCrashlytics`:
+
+```kotlin
+class FirebaseCrashReporter @Inject constructor() : CrashReporter {
+    private val crashlytics = FirebaseCrashlytics.getInstance()
+
+    override fun recordNonFatal(e: Throwable, keys: ImmutableMap<String, String>) {
+        keys.forEach { (k, v) -> crashlytics.setCustomKey(k, v) }
+        crashlytics.recordException(e)
+    }
+
+    override fun log(message: String) {
+        crashlytics.log(message)
+    }
+
+    override fun setUserId(id: String) {
+        crashlytics.setUserId(id)
+    }
+}
+```
+
+`FirebaseErrorReporter` wraps `CrashReporter` with structured `ErrorContext` serialization into custom keys and deduplication via `DeduplicatingErrorReporter` decorator.
+
+### Firebase Performance Monitoring
+
+`FirebasePerformanceTracer` implements the `PerformanceTracer` interface:
+
+```kotlin
+class FirebasePerformanceTracer @Inject constructor() : PerformanceTracer {
+    override fun newTrace(name: String): PerfTrace = FirebasePerfTrace(Firebase.performance.newTrace(name))
+    override fun newHttpMetric(url: String, method: String): HttpMetric =
+        FirebaseHttpMetric(Firebase.performance.newHttpMetric(url, method))
+}
+```
+
+**What it covers:**
+
+| Trace | What it measures |
+|---|---|
+| `cold_start` | App launch → first dashboard frame with widget data |
+| `warm_start` | Activity recreate → first dashboard frame |
+| `theme_switch` | Theme change command → all widgets re-rendered in new theme |
+| `widget_bind` | Widget add → first data emission received (per-widget, attribute: typeId) |
+| `layout_save` | Layout mutation → DataStore write complete |
+| `preset_load` | Preset selection → layout fully restored with bindings |
+| `overlay_open` | Overlay nav event → overlay first frame |
+| `weather_fetch` | HTTP metric for weather API (via `PerformanceTracerInterceptor`) |
+
+Custom traces use attributes for segmentation:
+
+```kotlin
+performanceTracer.newTrace("widget_bind").apply {
+    putAttribute("type_id", widget.typeId)
+    putAttribute("pack_id", widget.packId)
+    putAttribute("thermal_level", thermalLevel.name)
+    start()
+}
+```
+
+**What it does NOT cover:** Per-frame timing (too high frequency, would overwhelm Firebase Perf — that's `MetricsCollector`'s job). Provider emission latency at sensor frequency (same reason — `MetricsCollector` handles this locally). Firebase Perf is for coarse-grained operation timing visible in the Firebase console, not hot-path instrumentation.
+
+**Sampling:** Firebase Perf automatically samples traces on the server side. No client-side sampling needed — the trace creation overhead is negligible (~1μs per `newTrace()` call) and traces are only created for discrete operations, not per-frame.
+
+### Package Structure
+
+```
+app.dqxn.core.firebase                — Hilt module, FirebaseCrashReporter, FirebaseCrashMetadataWriter
+app.dqxn.core.firebase.analytics      — FirebaseAnalyticsTracker
+app.dqxn.core.firebase.perf           — FirebasePerformanceTracer, PerformanceTracerInterceptor
+```
+
+## 26. Memory Leak Prevention
 
 Provider `provideState()` flows MUST use `callbackFlow` with `awaitClose` for all sensor and BLE callbacks:
 
@@ -2107,7 +2315,7 @@ fun provideState(): Flow<OrientationSnapshot> = callbackFlow {
 
 **Debug-build periodic heap analysis**: LeakCanary watches all `WidgetRenderer` instances, `DataProvider` instances, and foreground service binders. Periodic heap dumps (every 5min in debug) check for retained widget-related objects.
 
-## 26. Persistence Security
+## 27. Persistence Security
 
 ### R8 / ProGuard Rules
 
@@ -2130,21 +2338,21 @@ Each module owns a `consumer-proguard-rules.pro` file that travels with the modu
 
 Release-build smoke test in CI: assemble release APK, install on managed device, verify dashboard loads with at least one widget rendering data. Catches R8 over-stripping.
 
-## 27. Thermal Management (continued)
+## 28. Thermal Management (continued)
 
 (Covered fully in Section 15.)
 
-## 28. DI Scoping (continued)
+## 29. DI Scoping (continued)
 
 ### Edge-to-Edge & Insets
 
 All DI-scoped components that interact with WindowInsets receive the insets via constructor injection of a `WindowInsetsProvider` interface, not by reading from the Activity directly. This keeps components testable.
 
-## 29. Background Lifecycle (continued)
+## 30. Background Lifecycle (continued)
 
 (Covered fully in Section 19.)
 
-## 30. Testing Strategy
+## 31. Testing Strategy
 
 ### Test Infrastructure
 
@@ -2422,7 +2630,7 @@ Structured patterns for diagnosing and fixing common failures:
 - **Fast**: < 10s per module for unit tests. Visual tests batched but parallelized.
 - **Self-contained**: No test depends on device state, network, or file system outside the test sandbox.
 
-## 31. Build System
+## 32. Build System
 
 ### AGP 9.0 — Key Build Changes
 
@@ -2439,7 +2647,7 @@ Convention plugins (`:build-logic/convention`) enforce shared defaults using AGP
 // Modules WITH Compose: :app, :feature:*, :core:widget-primitives, :core:design-system
 id("dqxn.android.compose")
 
-// Modules WITHOUT Compose: :core:common, :core:plugin-api, :core:observability, :core:analytics, :data:*, :core:thermal
+// Modules WITHOUT Compose: :core:common, :core:plugin-api, :core:observability, :core:analytics, :core:firebase, :data:*, :core:thermal
 // No Compose compiler overhead
 ```
 
@@ -2453,7 +2661,7 @@ All annotation processing uses KSP (Hilt, plugin-processor, agentic-processor). 
 |---|---|---|
 | `ModuleBoundaryViolation` | Error | Pack modules importing `:feature:dashboard` |
 | `KaptDetection` | Error | Any module applying `kapt` plugin |
-| `ComposeInNonUiModule` | Error | Compose imports in `:core:common`, `:core:plugin-api`, `:data:*`, `:core:thermal`, `:core:observability`, `:core:analytics` |
+| `ComposeInNonUiModule` | Error | Compose imports in `:core:common`, `:core:plugin-api`, `:data:*`, `:core:thermal`, `:core:observability`, `:core:analytics`, `:core:firebase` |
 | `MutableCollectionInImmutable` | Warning | `MutableList`/`MutableMap` inside `@Immutable`-annotated types |
 | `WidgetScopeBypass` | Error | `LaunchedEffect` without `LocalWidgetScope` in widget renderers |
 | `MainThreadDiskIo` | Warning | DataStore/SharedPreferences access without `Dispatchers.IO` |
@@ -2532,7 +2740,7 @@ Agent builds use `--console=plain --warning-mode=summary` for machine-parseable 
 - Clean build: < 120s
 - Measured on reference dev machine, tracked in CI
 
-## 32. Agentic Framework (Debug Only)
+## 33. Agentic Framework (Debug Only)
 
 ADB broadcast-based automation for testing and development:
 
@@ -2634,7 +2842,7 @@ Located in `:app:src/debug/`. Activated via agentic command or debug settings to
 
 ### Crash Report Enrichment
 
-Widget crashes include structured context in Crashlytics:
+Widget crashes include structured context via `ErrorReporter` (routed to Crashlytics in release builds):
 
 ```kotlin
 errorReporter.reportWidgetCrash(
@@ -2652,7 +2860,7 @@ errorReporter.reportWidgetCrash(
 
 The receiver is restricted to debug builds only. Demo providers are gated to debug builds to prevent unintended discovery in release.
 
-## 33. Security Requirements
+## 34. Security Requirements
 
 | Requirement | Approach |
 |---|---|
@@ -2662,9 +2870,9 @@ The receiver is restricted to debug builds only. Demo providers are gated to deb
 | BT scan permission | `neverForLocation="true"` — scan data not used for location |
 | Deep links | Digital Asset Links verification, parameter validation at NavHost |
 | R8 rules | Per-module `consumer-proguard-rules.pro`, release smoke test in CI |
-| NDK crash reporting | `firebase-crashlytics-ndk` enabled for GPU driver crashes, Skia native crashes, and JNI errors from RenderEffect operations |
+| No NDK | No first-party native code. Compose/Skia/HWUI native paths are standard framework code — `RenderEffect.createBlurEffect()` is the only non-trivial GPU path. If unexplained silent process deaths appear post-launch via `session_active` flag detection, add `firebase-crashlytics-ndk` then. |
 
-## 34. Permissions
+## 35. Permissions
 
 | Permission | Purpose |
 |---|---|

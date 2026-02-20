@@ -49,6 +49,7 @@ android/
 │   ├── design-system/            # Theme tokens, spacing, typography, shared overlay composables
 │   ├── observability/            # Structured logging, tracing, metrics, health monitoring
 │   ├── analytics/                # AnalyticsTracker interface, sealed event hierarchy
+│   ├── firebase/                 # Firebase implementations (Crashlytics, Analytics, Perf) — sole Firebase dependency point
 │   ├── thermal/                  # ThermalManager, RenderConfig, FramePacer
 │   ├── agentic/                  # ADB broadcast debug automation contracts
 │   └── agentic-processor/        # KSP: route listing generation
@@ -77,6 +78,7 @@ android/
 :feature:dashboard  → :core:plugin-api, :core:common, :core:widget-primitives, :core:design-system,
                       :core:thermal, :core:observability, :core:analytics, :data:persistence
 :feature:driving    → :core:plugin-api, :core:common, :core:observability
+:core:firebase      → :core:observability, :core:analytics, :core:common (sole Firebase SDK dependency point)
 :core:observability → :core:common
 :core:design-system → :core:common, :core:widget-primitives
 :core:analytics     → :core:common, :core:observability
@@ -95,6 +97,11 @@ android/
 - CANNOT import from: any `:feature:packs:*` module
 - If you need a widget-specific type → the design is wrong, use contracts
 
+**When working in `:core:firebase`:**
+- CAN import from: `:core:observability`, `:core:analytics`, `:core:common`
+- Implements interfaces defined in observability/analytics — this is the ONLY module that imports Firebase SDKs
+- CANNOT be imported by: any module other than `:app`
+
 **When working in `:core:plugin-api`:**
 - CAN import from: `:core:common` only
 - No Compose dependencies, no Android framework types (pure Kotlin + coroutines)
@@ -104,7 +111,7 @@ android/
 
 Convention plugins control which modules get the Compose compiler:
 - `dqxn.android.compose` — modules WITH UI: `:app`, `:feature:*`, `:core:widget-primitives`, `:core:design-system`
-- Modules WITHOUT Compose: `:core:common`, `:core:plugin-api`, `:core:plugin-processor`, `:core:observability`, `:core:analytics`, `:core:thermal`, `:data:*`
+- Modules WITHOUT Compose: `:core:common`, `:core:plugin-api`, `:core:plugin-processor`, `:core:observability`, `:core:analytics`, `:core:firebase`, `:core:thermal`, `:data:*`
 
 ## Critical Constraints
 
@@ -304,8 +311,12 @@ app.dqxn.core.observability.log       — DqxnLogger, LogEntry, LogTag
 app.dqxn.core.observability.trace     — DqxnTracer, TraceContext, Span
 app.dqxn.core.observability.metrics   — MetricsCollector, FrameTracer
 app.dqxn.core.observability.health    — WidgetHealthMonitor, ThermalTrendAnalyzer
-app.dqxn.core.observability.crash     — CrashContextProvider, AnrWatchdog, ErrorReporter
+app.dqxn.core.observability.crash     — CrashReporter, CrashMetadataWriter, ErrorReporter interfaces, CrashContextProvider, AnrWatchdog
+app.dqxn.core.observability.perf      — PerformanceTracer, PerfTrace, HttpMetric interfaces
 app.dqxn.core.analytics               — AnalyticsTracker, AnalyticsEvent
+app.dqxn.core.firebase                — Hilt module, FirebaseCrashReporter, FirebaseCrashMetadataWriter, FirebaseErrorReporter
+app.dqxn.core.firebase.analytics      — FirebaseAnalyticsTracker
+app.dqxn.core.firebase.perf           — FirebasePerformanceTracer, PerformanceTracerInterceptor
 app.dqxn.core.thermal                 — ThermalManager, RenderConfig, FramePacer
 app.dqxn.data.persistence             — DataStore implementations
 app.dqxn.feature.dashboard            — dashboard shell root
@@ -389,3 +400,7 @@ For agents that wonder "why not just...":
 | Why 1:1 provider-to-snapshot, not composite snapshots? | GPS speed, accelerometer, and map speed-limit have different availability, frequency, and failure modes. Composites push binding logic into providers and lose independent availability. 1:1 alignment means each provider emits its own type; the binder `combine()`s them. |
 | Why plain `Layout`, not `LazyLayout` or `LazyGrid`? | Grid placement is absolute-position, not flow-based. `LazyLayout` adds `SubcomposeLayout` overhead without benefit for viewport-sized grids. Plain `Layout` + custom `MeasurePolicy` is lighter. |
 | Why `callbackFlow` for sensor providers? | Ensures proper cleanup via `awaitClose`. Direct `SensorEventListener` without it leaks the registration. |
+| Why `:core:firebase` module, not Firebase in `:core:observability`? | `:core:observability` is a transitive dependency of every module. Putting Firebase there means the entire Firebase SDK becomes a transitive dependency of packs, plugin-api, and data modules. Interfaces in observability, implementations in `:core:firebase`, wired via Hilt `@Binds`. |
+| Why no Crashlytics NDK? | No first-party native code. `RenderEffect.createBlurEffect()` is the only non-trivial GPU path, but it's a standard Android API — Compose/Skia/HWUI native code is framework-level, not app-specific risk. If unexplained silent process deaths appear post-launch (via `session_active` flag), add `firebase-crashlytics-ndk` then. |
+| Why Firebase Perf alongside MetricsCollector? | Different scopes. `MetricsCollector` handles hot-path instrumentation (per-frame timing, atomic counters) locally. Firebase Perf provides remote-visible coarse-grained operation traces (startup, theme switch, widget bind) in the Firebase console. They complement, not overlap. |
+| Why not KSP for Firebase provider discovery? | Exactly one crash reporter and one analytics tracker per build variant. No set to discover, no manifest to generate. Standard Hilt `@Binds` is the right tool — KSP adds complexity for zero value here. |
