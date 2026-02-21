@@ -185,11 +185,11 @@ Benefits:
 
 | Document | Scope |
 |---|---|
-| [State Management](docs/arch/state-management.md) | Decomposed coordinators, data binding, typed DataSnapshot, backpressure, DI scoping, background lifecycle |
-| [Compose Performance](docs/arch/compose-performance.md) | Recomposition isolation, state read deferral, grid layout, thermal management, startup optimization, edge-to-edge, memory leaks |
-| [Plugin System](docs/arch/plugin-system.md) | Widget/provider/theme contracts, error isolation, KSP generation, theme system, entitlement gating |
-| [Observability](docs/arch/observability.md) | Structured logging, distributed tracing, metrics, health monitoring, crash/error reporting, analytics, Firebase integration |
-| [Persistence](docs/arch/persistence.md) | Proto DataStore, corruption handling, schema migration, preset system, R8 rules |
-| [Testing](docs/arch/testing.md) | Test infrastructure, framework choices, test layers, CI gates, agentic validation pipeline |
-| [Build System](docs/arch/build-system.md) | Convention plugins, lint rules, agentic framework, CI configuration |
-| [Platform Integration](docs/arch/platform.md) | Navigation, driving mode, alerts, security, permissions |
+| [State Management](arch/state-management.md) | Decomposed coordinators, data binding, typed DataSnapshot, backpressure, DI scoping, background lifecycle |
+| [Compose Performance](arch/compose-performance.md) | Recomposition isolation, state read deferral, grid layout, thermal management, startup optimization, edge-to-edge, memory leaks |
+| [Plugin System](arch/plugin-system.md) | Widget/provider/theme contracts, error isolation, KSP generation, theme system, entitlement gating |
+| [Observability](arch/observability.md) | Structured logging, distributed tracing, metrics, health monitoring, crash/error reporting, analytics, Firebase integration |
+| [Persistence](arch/persistence.md) | Proto DataStore, corruption handling, schema migration, preset system, R8 rules |
+| [Testing](arch/testing.md) | Test infrastructure, framework choices, test layers, CI gates, agentic validation pipeline |
+| [Build System](arch/build-system.md) | Convention plugins, lint rules, agentic framework, CI configuration |
+| [Platform Integration](arch/platform.md) | Navigation, driving mode, alerts, security, permissions |
