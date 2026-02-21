@@ -110,16 +110,16 @@ A Compose stability configuration file covers cross-module types:
 
 ```
 // compose_compiler_config.txt
-app.dqxn.core.plugin.api.DataSnapshot
-app.dqxn.core.plugin.api.WidgetData
-app.dqxn.core.plugin.api.SpeedSnapshot
-app.dqxn.core.plugin.api.AccelerationSnapshot
-app.dqxn.core.plugin.api.SpeedLimitSnapshot
-app.dqxn.core.plugin.api.TimeSnapshot
-app.dqxn.core.plugin.api.OrientationSnapshot
-app.dqxn.core.plugin.api.BatterySnapshot
-app.dqxn.core.widget.DashboardThemeDefinition
-app.dqxn.data.SavedWidget
+app.dqxn.android.sdk.contracts.DataSnapshot
+app.dqxn.android.sdk.contracts.WidgetData
+app.dqxn.android.sdk.contracts.SpeedSnapshot
+app.dqxn.android.sdk.contracts.AccelerationSnapshot
+app.dqxn.android.sdk.contracts.SpeedLimitSnapshot
+app.dqxn.android.sdk.contracts.TimeSnapshot
+app.dqxn.android.sdk.contracts.OrientationSnapshot
+app.dqxn.android.sdk.contracts.BatterySnapshot
+app.dqxn.android.core.design.DashboardThemeDefinition
+app.dqxn.android.data.SavedWidget
 ```
 
 Compose compiler metrics (`-Pcompose.compiler.metrics=true`) are audited regularly to catch regressions in skippability.

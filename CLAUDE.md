@@ -4,7 +4,7 @@
 
 DQXN — modular Android automotive dashboard. Phone/tablet in a vehicle shows real-time telemetry through configurable widgets on a grid canvas. Pack-based plugin architecture: packs register widgets, providers, and themes via contracts; the shell discovers them at runtime via Hilt multibinding.
 
-Pre-launch greenfield. Source under `android/`. Package namespace: `app.dqxn`. Read `docs/ARCHITECTURE.md` for full technical design, `docs/REQUIREMENTS.md` for product requirements.
+Pre-launch greenfield. Source under `android/`. Package namespace: `app.dqxn.android`. Read `docs/ARCHITECTURE.md` for full technical design, `docs/REQUIREMENTS.md` for product requirements.
 
 ## Tech Stack
 
@@ -125,10 +125,10 @@ These are non-negotiable. Violations cause real performance/correctness issues.
 ### New Widget (in an existing pack)
 
 Files to create (example: `core:battery-temp` in free pack):
-1. `android/pack/free/src/main/kotlin/app/dqxn/pack/free/widgets/batterytemp/BatteryTempRenderer.kt`
-2. `android/pack/free/src/test/kotlin/app/dqxn/pack/free/widgets/batterytemp/BatteryTempRendererTest.kt`
+1. `android/pack/free/src/main/kotlin/app/dqxn/android/pack/free/widgets/batterytemp/BatteryTempRenderer.kt`
+2. `android/pack/free/src/test/kotlin/app/dqxn/android/pack/free/widgets/batterytemp/BatteryTempRendererTest.kt`
 
-Package: `app.dqxn.pack.{packId}.widgets.{widgetname}` (flat, no hyphens in package)
+Package: `app.dqxn.android.pack.{packId}.widgets.{widgetname}` (flat, no hyphens in package)
 TypeId: `{packId}:{widget-name}` (hyphens in typeId, not in package)
 
 Widget skeleton:
@@ -185,7 +185,7 @@ class BatteryTempRendererTest : WidgetRendererContractTest() {
 
 ### New Data Provider (in an existing pack)
 
-Files: `android/pack/{packId}/src/main/kotlin/app/dqxn/pack/{packId}/providers/{Name}Provider.kt` + test.
+Files: `android/pack/{packId}/src/main/kotlin/app/dqxn/android/pack/{packId}/providers/{Name}Provider.kt` + test.
 
 Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listeners. Accumulation providers (Trip) handle high-frequency accumulation internally on `Dispatchers.Default`, emit aggregated snapshots at reduced rate.
 
@@ -250,7 +250,7 @@ Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listener
 
 ## Package & File Naming
 
-Package pattern: `app.dqxn.{group}.{module}[.subpackage]`. Pack widgets: `app.dqxn.pack.{packId}.widgets.{name}`. Full listing in `docs/ARCHITECTURE.md`.
+Package pattern: `app.dqxn.android.{group}.{module}[.subpackage]`. Pack widgets: `app.dqxn.android.pack.{packId}.widgets.{name}`. Full listing in `docs/ARCHITECTURE.md`.
 
 ```
 Widgets:           {PascalCaseName}Renderer.kt     (SpeedometerRenderer.kt)

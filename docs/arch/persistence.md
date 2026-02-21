@@ -86,10 +86,10 @@ Each module owns a `consumer-proguard-rules.pro` file:
 
 ```proguard
 # :data — keep proto-generated classes (proto schemas are an implementation detail of persistence)
--keep class app.dqxn.data.proto.** { *; }
+-keep class app.dqxn.android.data.proto.** { *; }
 
 # :sdk:contracts — keep @Serializable classes
--keepclassmembers class app.dqxn.** {
+-keepclassmembers class app.dqxn.android.** {
     @kotlinx.serialization.Serializable <methods>;
 }
 
