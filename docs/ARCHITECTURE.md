@@ -47,9 +47,10 @@ android/
 │   ├── thermal/                  # ThermalManager, RenderConfig, adaptive frame rate
 │   ├── driving/                  # DrivingStateDetector — platform safety gate + DataProvider (DrivingSnapshot)
 │   ├── firebase/                 # Firebase implementations (Crashlytics, Analytics, Perf) — sole Firebase dependency point
-│   └── agentic/                  # ADB broadcast debug automation (debugImplementation only)
+│   └── agentic/                  # Agentic command handlers + annotations (debugImplementation only)
 ├── codegen/                      # KSP processors (build-time only)
-│   └── plugin/                   # KSP: @DashboardWidget → pack manifests, settings, themes, entitlements, validation
+│   ├── plugin/                   # KSP: @DashboardWidget → pack manifests, settings, themes, entitlements, validation
+│   └── agentic/                  # KSP: @AgenticCommand → param validation, schema generation, handler wiring (debugKsp only)
 ├── data/                         # Proto DataStore (layouts, devices), Preferences DataStore (settings), .proto schemas
 ├── feature/
 │   ├── dashboard/                # Dashboard shell — coordinators, grid, theme engine, presets
@@ -65,7 +66,7 @@ android/
 ├── baselineprofile/              # Baseline Profile generation
 ├── benchmark/                    # Macrobenchmark tests
 └── app/                          # Single-activity entry, DI assembly, nav host
-    ├── src/debug/                # Debug overlays, LeakCanary, StrictMode
+    ├── src/debug/                # AgenticContentProvider, debug overlays, LeakCanary, StrictMode
     └── src/release/
 ```
 
@@ -128,6 +129,9 @@ Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The s
 
 :codegen:plugin
   → :sdk:contracts (reads annotations, no runtime dependency)
+
+:codegen:agentic
+  → :core:agentic (reads annotations, debugKsp only)
 
 Every module → :sdk:observability
 ```

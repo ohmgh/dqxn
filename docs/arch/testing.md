@@ -266,7 +266,7 @@ fun `entitlement revoked after 7-day offline grace period`() = runTest {
 ## Mutation Testing
 
 JVM-only modules via `info.solidsoft.pitest` (v1.19.0+) with `pitest-kotlin` extension:
-- **Scope**: `:sdk:common`, `:sdk:contracts` domain types, `:codegen:plugin`, pure Kotlin domain logic
+- **Scope**: `:sdk:common`, `:sdk:contracts` domain types, `:codegen:plugin`, `:codegen:agentic`, pure Kotlin domain logic
 - **Not in scope for v1**: Android library modules. `pl.droidsonroids.pitest` AGP 9 compatibility is unverified (Feb 2026) and Android Compose modules produce noisy false positives (UI rendering mutations). Reassess post-launch.
 - Kill rate target: > 80%
 
@@ -379,13 +379,13 @@ Stop at the first failing tier and fix before proceeding.
 
 **Safe Mode**: If `dump-state` shows `safeMode.active: true`, the app crashed >3 times in 60s. Use `safeMode.lastCrashWidgetTypeId` to identify the culprit. `diagnose-crash` for that widget type to get the crash evidence.
 
-**Main Thread Deadlock**: If agentic broadcast commands are unresponsive, use the non-main-thread diagnostic path: `adb shell content query --uri content://app.dqxn.android.debug.diagnostics/health`. If that also hangs, the process is fully deadlocked — `adb pull` the `anr_latest.json` file written by `AnrWatchdog` on its dedicated thread.
+**Main Thread Deadlock**: Agentic commands run on binder threads, so they work even when the main thread is blocked. If `call()`-based commands stall (e.g., handler waiting on main-thread state), use the lock-free `query()` paths: `adb shell content query --uri content://app.dqxn.android.debug.agentic/health`. If that also hangs (full process deadlock), `adb pull` the `anr_latest.json` file written by `AnrWatchdog` on its dedicated thread.
 
 **Verification After Fix**: Re-run the failing tier before proceeding. On success, continue from next tier.
 
 ## Agentic Chaos Testing
 
-ChaosEngine is accessible via agentic broadcast commands for agent-driven fault injection. This bridges the gap between programmatic chaos tests (unit/integration) and agentic E2E verification.
+ChaosEngine is accessible via agentic commands for agent-driven fault injection. This bridges the gap between programmatic chaos tests (unit/integration) and agentic E2E verification.
 
 ### ChaosEngine Injection Architecture
 
@@ -529,19 +529,20 @@ fun `dashboard survives 30s combined chaos with seed 42`() {
 
 ## Agentic E2E Protocol
 
-Instrumented E2E tests reuse the agentic broadcast protocol. `AgenticTestClient` wraps ADB broadcasts with assertion helpers:
+Instrumented E2E tests reuse the agentic ContentProvider protocol. `AgenticTestClient` wraps `adb shell content call` with assertion helpers:
 
 ```kotlin
 class AgenticTestClient(private val device: UiDevice) {
     fun send(command: String, params: Map<String, Any> = emptyMap()): JsonObject {
         val paramsJson = Json.encodeToString(params)
-        device.executeShellCommand(
-            "am broadcast -a app.dqxn.android.AGENTIC.$command " +
-            "-n app.dqxn.android.debug/.debug.AgenticReceiver " +
-            "--es params '$paramsJson'"
+        val output = device.executeShellCommand(
+            "content call --uri content://app.dqxn.android.debug.agentic " +
+            "--method $command --arg '$paramsJson'"
         )
-        // Read result envelope from broadcast or file
-        val response = parseResponse(command)
+        // Bundle contains filePath — read the response file
+        val filePath = output.substringAfter("filePath=").substringBefore("}")
+        val json = device.executeShellCommand("cat $filePath")
+        val response = Json.parseToJsonElement(json).jsonObject
         val status = response["status"]?.jsonPrimitive?.content
         check(status == "ok") { "Command '$command' failed: ${response["message"]}" }
         return response

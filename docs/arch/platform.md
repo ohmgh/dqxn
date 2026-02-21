@@ -90,7 +90,7 @@ Configurable per-alert: SILENT / VIBRATE / SOUND mode. Custom sound URIs support
 | Requirement | Approach |
 |---|---|
 | No hardcoded secrets | SDK keys via `local.properties` / secrets gradle plugin |
-| Agentic receiver | Debug builds only |
+| Agentic ContentProvider | Debug builds only (`src/debug/AndroidManifest.xml`) |
 | Demo providers | Gated to debug builds |
 | BT scan permission | `neverForLocation="true"` |
 | Deep links | Digital Asset Links verification, parameter validation |

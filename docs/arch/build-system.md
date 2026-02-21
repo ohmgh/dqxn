@@ -37,6 +37,7 @@ All annotation processing uses KSP. No KAPT — enables Gradle configuration cac
 | `MutableCollectionInImmutable` | Warning | `MutableList`/`MutableMap` inside `@Immutable` types |
 | `WidgetScopeBypass` | Error | `LaunchedEffect` without `LocalWidgetScope` in widget renderers |
 | `MainThreadDiskIo` | Warning | DataStore/SharedPreferences access without `Dispatchers.IO` |
+| `AgenticMainThreadBan` | Error | `CommandHandler` implementations using `Dispatchers.Main` |
 
 ## Pre-commit Hooks
 
@@ -102,13 +103,13 @@ Agent builds use `--console=plain --warning-mode=summary` for machine-parseable 
 
 ## Agentic Framework (Debug Only)
 
-ADB broadcast-based automation:
+ContentProvider-based debug automation:
 
 ```
-adb shell am broadcast \
-  -a app.dqxn.android.AGENTIC.{command} \
-  -n app.dqxn.android.debug/.debug.AgenticReceiver \
-  --es params '{"widgetType":"core:speedometer"}'
+adb shell content call \
+  --uri content://app.dqxn.android.debug.agentic \
+  --method {command} \
+  --arg '{"widgetType":"core:speedometer"}'
 ```
 
 ### Commands
@@ -142,16 +143,22 @@ adb shell am broadcast \
 | `chaos-stop` | Stop ChaosEngine, return session summary (injected faults + system responses) |
 | `chaos-inject` | Inject a specific fault: `provider-failure`, `thermal`, `entitlement-revoke`, `anr-simulate` |
 
-### Large Payload Handling
+### Response Protocol
 
-Large payloads write to temp file and return the path via broadcast result data:
+All responses are written to temp files. The ContentProvider `call()` returns a `Bundle` containing only the file path:
 
-```kotlin
-val file = File(context.cacheDir, "dump_${System.currentTimeMillis()}.json")
-file.writeText(jsonPayload)
-setResultData(file.absolutePath)
-// Agent reads via: adb pull /data/data/app.dqxn.android.debug/cache/dump_xxx.json
 ```
+Result: Bundle[{filePath=/data/data/app.dqxn.android.debug/cache/agentic_xxx.json}]
+```
+
+Agent reads clean JSON via:
+```bash
+path=$(adb shell content call --uri content://app.dqxn.android.debug.agentic \
+  --method dump-state | grep -oP 'filePath=\K[^}]+')
+adb shell cat "$path"
+```
+
+This avoids `Bundle.toString()` parsing ambiguity (nested JSON in `Result: Bundle[{response=...}]` has quoting issues) and stays well under the Binder ~1MB transaction limit for all payload sizes.
 
 ### Structured State Dumps
 
@@ -211,9 +218,9 @@ errorReporter.reportWidgetCrash(
 )
 ```
 
-`CaptureSessionRegistry` is an injectable singleton (see [observability.md](observability.md#capturesessionregistry)) that records TAP, WIDGET_MOVE, WIDGET_RESIZE, NAVIGATION events in a bounded ring buffer during active capture sessions. `capture-start` / `capture-stop` agentic commands delegate to this registry.
+`CaptureSessionRegistry` is an injectable singleton (see [observability.md](observability.md#capturesessionregistry)) that records TAP, WIDGET_MOVE, WIDGET_RESIZE, NAVIGATION events in a bounded ring buffer during active capture sessions. `capture-start` / `capture-stop` agentic commands delegate to this registry via `AgenticCommandRouter`.
 
-The receiver is restricted to debug builds only. Demo providers are gated to debug builds.
+The ContentProvider is restricted to debug builds only (registered in `src/debug/AndroidManifest.xml`). Demo providers are gated to debug builds.
 
 ### Command Result Envelope
 
@@ -226,37 +233,95 @@ All commands return a standardized JSON envelope:
 
 `status` is always present. `data` is present on success. `message` is present on error. Large payloads still write to temp file — the envelope contains the file path in `data.filePath`.
 
-### Error Handling
-
-`AgenticReceiver.onReceive()` wraps all command processing in structured error handling:
+### AgenticContentProvider (`:app/src/debug/`)
 
 ```kotlin
-override fun onReceive(context: Context, intent: Intent) {
-    try {
-        val params = parseParams(intent) // can throw on malformed JSON
-        val result = routeCommand(action, params) // can throw on bad widgetId, etc.
-        setResultCode(Activity.RESULT_OK)
-        setResultData(envelope("ok", result))
-    } catch (e: JsonParseException) {
-        setResultCode(Activity.RESULT_FIRST_USER + 1)
-        setResultData(envelope("error", "Malformed params: ${e.message}"))
-    } catch (e: TargetNotFoundException) {
-        setResultCode(Activity.RESULT_FIRST_USER + 2)
-        setResultData(envelope("error", "Not found: ${e.message}"))
-    } catch (e: Exception) {
-        setResultCode(Activity.RESULT_FIRST_USER + 3)
-        setResultData(envelope("error", "Internal: ${e.message}"))
-        logger.error(LogTags.AGENTIC) { "Command failed: ${e.message}" }
+class AgenticContentProvider : ContentProvider() {
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface AgenticEntryPoint {
+        fun commandRouter(): AgenticCommandRouter
+        fun logger(): DqxnLogger
     }
+
+    override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
+        // Runs on binder thread — NOT main thread. No ANR timeout.
+        val entryPoint = try {
+            EntryPointAccessors.fromApplication(
+                context!!.applicationContext, AgenticEntryPoint::class.java)
+        } catch (e: IllegalStateException) {
+            return bundleOf("filePath" to writeResponse(
+                envelope("error", "App initializing, retry after ping returns ok")))
+        }
+
+        val traceId = "agentic-${SystemClock.elapsedRealtimeNanos()}"
+        val resultJson = runBlocking(Dispatchers.Default) {
+            withTimeout(8_000) {
+                try {
+                    val params = parseParams(arg, traceId)
+                    entryPoint.commandRouter().route(method, params)
+                        .let { envelope("ok", it) }
+                } catch (e: CancellationException) { throw e }
+                catch (e: TimeoutCancellationException) { envelope("error", "Command timed out after 8s") }
+                catch (e: JsonParseException) { envelope("error", "Malformed params: ${e.message}") }
+                catch (e: TargetNotFoundException) { envelope("error", "Not found: ${e.message}") }
+                catch (e: Exception) {
+                    entryPoint.logger().error(LogTags.AGENTIC, e) { "Command '$method' failed" }
+                    envelope("error", "Internal: ${e.message}")
+                }
+            }
+        }
+        return bundleOf("filePath" to writeResponse(resultJson))
+    }
+
+    // Deadlock-safe direct reads — no runBlocking, no coroutines
+    override fun query(uri: Uri, projection: Array<String>?, selection: String?,
+                       selectionArgs: Array<String>?, sortOrder: String?): Cursor? {
+        return when (uri.pathSegments.firstOrNull()) {
+            "health" -> buildHealthCursor() // WidgetHealthMonitor + thermal + safe mode
+            "anr" -> buildAnrCursor()       // AnrWatchdog latest state
+            else -> null
+        }
+    }
+
+    private fun writeResponse(json: String): String {
+        val file = File(context!!.cacheDir, "agentic_${SystemClock.elapsedRealtimeNanos()}.json")
+        file.writeText(json)
+        return file.absolutePath
+    }
+
+    override fun onCreate(): Boolean = true
+    override fun getType(uri: Uri): String? = null
+    override fun insert(uri: Uri, values: ContentValues?): Uri? = null
+    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<String>?): Int = 0
+    override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<String>?): Int = 0
 }
 ```
 
-Error semantics:
-- **Malformed params**: Invalid JSON in `--es params`. Agent should fix the command syntax.
+### Threading Model
+
+`ContentProvider.call()` runs on a binder thread (pool of ~15 threads), not the main thread. This eliminates the threading mismatch that `BroadcastReceiver.onReceive()` had:
+
+- **Suspend handlers work naturally**: `runBlocking(Dispatchers.Default)` bridges to the suspend `CommandHandler.handle()`. The binder thread blocks, but the main thread is free.
+- **`Channel.send()` in mutation handlers**: Suspends the coroutine on `Dispatchers.Default`, not the binder thread or main thread. No deadlock.
+- **No ANR timeout**: Binder threads have no broadcast-style ANR window. The `withTimeout(8_000)` is a safety net, not a system constraint.
+- **Concurrent commands**: Each `content call` gets its own binder thread. `AgenticCommandRouter` and all data sources (`MetricsCollector`, `RingBufferSink`, etc.) are thread-safe by design.
+
+**Critical constraint**: `CommandHandler.handle()` must NEVER use `Dispatchers.Main`. If the main thread is busy (Compose rendering) and a handler calls `withContext(Dispatchers.Main)`, the handler blocks until main is free. This is not a deadlock (the main thread isn't waiting on the handler), but it couples handler latency to main-thread load. Enforced via lint rule `AgenticMainThreadBan`.
+
+### Hilt Integration
+
+`ContentProvider.onCreate()` runs before `Application.onCreate()`. Hilt's `SingletonComponent` is created in `Application.onCreate()`. The provider uses `@EntryPoint` + `EntryPointAccessors.fromApplication()` in `call()`, not `onCreate()`, so the Hilt graph is available. If `call()` races with cold start (rare), the try-catch returns an "App initializing" error — the agent retries after `ping` succeeds.
+
+### Error Semantics
+
+Error semantics (included in JSON envelope):
+- **Malformed params**: Invalid JSON in `--arg`. Agent should fix the command syntax.
 - **Not found**: Target widget/provider/preset doesn't exist. Agent should verify IDs via `dump-state`.
 - **Internal**: Unexpected failure. Logged for investigation.
-
-Commands during app initialization (before registries are populated) return `{"status": "error", "message": "App initializing, retry after ping returns ok"}`.
+- **Timeout**: Command exceeded 8s. Likely the dashboard coordinator is stuck.
+- **App initializing**: Hilt graph not ready. Retry after `ping` returns ok.
 
 ### Compound Diagnostic Commands
 
@@ -321,55 +386,55 @@ Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`
 
 Replaces fragile `adb shell ls` with structured, filterable metadata. Agent can find "most recent thermal snapshot" or "all crash snapshots for widget X" without parsing filenames.
 
-### Non-Main-Thread Diagnostic Path
+### Deadlock-Safe Diagnostic Paths
 
-`AgenticReceiver.onReceive()` runs on the main thread. If the main thread is deadlocked, the entire agentic broadcast protocol is unresponsive. A debug-only `ContentProvider` on a binder thread provides an escape hatch:
+The primary `AgenticContentProvider.call()` runs on binder threads, so it works even when the main thread is blocked. However, `call()` uses `runBlocking(Dispatchers.Default)` — if `Dispatchers.Default` is also saturated, it could stall.
+
+For true deadlock diagnosis, `AgenticContentProvider.query()` provides lock-free direct reads:
+
+```bash
+adb shell content query --uri content://app.dqxn.android.debug.agentic/health
+adb shell content query --uri content://app.dqxn.android.debug.agentic/anr
+```
+
+These `query()` methods read directly from `WidgetHealthMonitor` and `AnrWatchdog` without `runBlocking` or coroutines — pure concurrent data structure reads on the binder thread.
+
+If the binder thread pool itself is exhausted (full process deadlock), `AnrWatchdog` writes `anr_latest.json` via direct `FileOutputStream` on its dedicated thread. Agent retrieves via `adb pull`.
+
+### Command Registry (`:codegen:agentic`)
+
+KSP processor generates command routing, param validation, and schema metadata from `@AgenticCommand` annotations. Runs as `debugKsp` only — zero presence in release builds.
 
 ```kotlin
-// In :app:src/debug/
-class DiagnosticContentProvider : ContentProvider() {
-    override fun query(uri: Uri, ...): Cursor? {
-        // Runs on binder thread, NOT main thread
-        return when (uri.pathSegments.firstOrNull()) {
-            "health" -> buildHealthCursor() // WidgetHealthMonitor + thermal + safe mode
-            "anr" -> buildAnrCursor()       // AnrWatchdog latest state
-            else -> null
-        }
+// In :core:agentic — annotation + handler colocated
+@AgenticCommand(
+    name = "widget-add",
+    params = [Param("widgetType", String::class, required = true)],
+)
+class WidgetAddHandler @Inject constructor(
+    private val commandChannel: Channel<DashboardCommand>,
+) : CommandHandler {
+    override suspend fun handle(params: TypedParams): JsonObject {
+        val typeId = params.require<String>("widgetType")
+        commandChannel.send(DashboardCommand.AddWidget(typeId = typeId, traceId = params.traceId))
+        return jsonObject { "added" to typeId }
     }
 }
 ```
 
-Agent queries via: `adb shell content query --uri content://app.dqxn.android.debug.diagnostics/health`
-
-If the binder thread is also stuck (full deadlock, not just main-thread ANR), the `adb shell` call times out — which is itself diagnostic (confirmed full deadlock). `AnrWatchdog` also writes `anr_latest.json` via direct `FileOutputStream` on its dedicated thread for `adb pull` access.
-
-### Command Registry
-
-Commands are registered via a sealed interface with exhaustive `when` matching in `:core:agentic`. No KSP processor — ~30 commands in a single module don't justify code generation. The sealed interface gives compile-time exhaustive matching: adding a command without handling it is a compiler error.
-
-```kotlin
-sealed interface AgenticCommand {
-    data class Ping(val params: JsonObject) : AgenticCommand
-    data class WidgetAdd(val params: JsonObject) : AgenticCommand
-    data class DiagnoseWidget(val params: JsonObject) : AgenticCommand
-    // ... ~30 commands total
-}
-
-fun routeCommand(command: AgenticCommand): JsonObject = when (command) {
-    is AgenticCommand.Ping -> handlePing(command)
-    is AgenticCommand.WidgetAdd -> handleWidgetAdd(command)
-    is AgenticCommand.DiagnoseWidget -> handleDiagnoseWidget(command)
-    // Exhaustive — compiler enforces all commands are handled
-}
-```
+KSP generates:
+- `AgenticCommandRouter` — maps command name strings to handler instances, injected via Hilt
+- Param validation with typed extraction and clear error messages on missing/wrong-type params
+- `list-commands` schema output from annotation metadata
+- Compilation error if `@AgenticCommand` exists without a `CommandHandler` implementation
 
 ### Agentic Trace Correlation
 
 Every agentic command receives a trace ID that propagates through the entire command chain:
 
 ```
-Agent sends: widget-add --params '{"widgetType":"core:speedometer"}'
-  → AgenticReceiver generates traceId: "agentic-1708444800123"
+Agent sends: content call --method widget-add --arg '{"widgetType":"core:speedometer"}'
+  → AgenticContentProvider.call() generates traceId: "agentic-1708444800123"
   → DashboardCommand.AddWidget(traceId = "agentic-1708444800123")
   → WidgetBindingCoordinator.bind() runs under TraceContext(traceId)
   → If anomaly occurs: DiagnosticSnapshot.agenticTraceId = "agentic-1708444800123"
@@ -426,10 +491,10 @@ When `traceContext` is `null` (user-initiated widget, no agentic command) — ze
 ChaosEngine is exposed via agentic commands for agent-driven fault injection and verification:
 
 ```
-adb shell am broadcast \
-  -a app.dqxn.android.AGENTIC.chaos-start \
-  -n app.dqxn.android.debug/.debug.AgenticReceiver \
-  --es params '{"seed":42,"profile":"provider-stress"}'
+adb shell content call \
+  --uri content://app.dqxn.android.debug.agentic \
+  --method chaos-start \
+  --arg '{"seed":42,"profile":"provider-stress"}'
 ```
 
 **Chaos profiles** (predefined fault injection patterns):
@@ -446,16 +511,16 @@ adb shell am broadcast \
 
 ```
 # Kill a specific provider
-adb shell am broadcast -a app.dqxn.android.AGENTIC.chaos-inject \
-  --es params '{"fault":"provider-failure","providerId":"core:gps-speed","duration":10}'
+adb shell content call --uri content://app.dqxn.android.debug.agentic \
+  --method chaos-inject --arg '{"fault":"provider-failure","providerId":"core:gps-speed","duration":10}'
 
 # Force thermal level
-adb shell am broadcast -a app.dqxn.android.AGENTIC.chaos-inject \
-  --es params '{"fault":"thermal","level":"DEGRADED"}'
+adb shell content call --uri content://app.dqxn.android.debug.agentic \
+  --method chaos-inject --arg '{"fault":"thermal","level":"DEGRADED"}'
 
 # Revoke entitlement
-adb shell am broadcast -a app.dqxn.android.AGENTIC.chaos-inject \
-  --es params '{"fault":"entitlement-revoke","entitlementId":"plus"}'
+adb shell content call --uri content://app.dqxn.android.debug.agentic \
+  --method chaos-inject --arg '{"fault":"entitlement-revoke","entitlementId":"plus"}'
 ```
 
 **`chaos-stop`** returns a session summary:
@@ -490,7 +555,7 @@ All agent-accessible diagnostic artifacts in debug builds:
 | `${filesDir}/debug/diagnostics/snap_perf_*.json` | Jank, timeout, staleness, binding stall snapshots | 10 files max |
 | `${filesDir}/debug/diagnostics/anr_latest.json` | Most recent ANR state (direct file write, no IO dispatcher) | 1 file, overwritten |
 | `${filesDir}/debug/anomaly_events.jsonl` | Push-notification anomaly event stream | 1MB, 2 files |
-| `${cacheDir}/dump_*.json` | On-demand state dumps (from dump commands) | Cleared on app restart |
+| `${cacheDir}/agentic_*.json` | Command response files | Cleared on app restart |
 | `${cacheDir}/chaos_*.json` | Chaos session summaries | Cleared on app restart |
 
 Agent pulls via `adb pull /data/data/app.dqxn.android.debug/...`. Use `list-diagnostics` command for enriched metadata instead of raw `ls`.

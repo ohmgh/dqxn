@@ -645,7 +645,7 @@ Debug builds write snapshots to `${filesDir}/debug/diagnostics/` with **separate
 
 Separate pools prevent frequent thermal oscillation (common in vehicles) from evicting crash snapshots. Agent pulls via `adb pull`. The `diagnose-crash` agentic command returns the most recent snapshot for a given widget (see [build-system.md](build-system.md#compound-diagnostic-commands)).
 
-Release builds: only the `AnomalyTrigger` type and timestamp are forwarded to `CrashMetadataWriter` as custom keys. `agenticTraceId` is always `null` in release — the agentic receiver is debug-only. No full diagnostic dump in production.
+Release builds: only the `AnomalyTrigger` type and timestamp are forwarded to `CrashMetadataWriter` as custom keys. `agenticTraceId` is always `null` in release — the agentic framework is debug-only. No full diagnostic dump in production.
 
 ### CaptureSessionRegistry
 
@@ -725,16 +725,16 @@ These events are the primary diagnostic data source for binding-related issues. 
 
 ### Agentic Trace Correlation
 
-When an agentic command triggers a `DashboardCommand`, the `AgenticReceiver` attaches a trace ID:
+When an agentic command triggers a `DashboardCommand`, the `AgenticContentProvider` attaches a trace ID:
 
 ```kotlin
-// In AgenticReceiver
-val agenticTraceId = "agentic-${SystemClock.elapsedRealtimeNanos()}"
-val command = parseCommand(intent).copy(traceId = agenticTraceId)
-commandChannel.send(command)
-logger.debug(LogTags.AGENTIC, "traceId" to agenticTraceId, "command" to command::class.simpleName) {
-    "Agentic command dispatched"
-}
+// In AgenticContentProvider.call()
+val traceId = "agentic-${SystemClock.elapsedRealtimeNanos()}"
+// traceId is passed to handler via TypedParams, then attached to DashboardCommand
+val params = parseParams(arg, traceId)
+val result = router.route(method, params)
+// Handler attaches traceId to DashboardCommand:
+// commandChannel.send(DashboardCommand.AddWidget(typeId = typeId, traceId = params.traceId))
 ```
 
 If that command triggers a downstream anomaly, `DiagnosticSnapshotCapture` receives the `agenticTraceId` from the active `TraceContext`. The agent can now correlate: "I sent `widget-add`, trace `agentic-1708444800123`, and DiagnosticSnapshot `snap_1708444800456.json` has `agenticTraceId = agentic-1708444800123`" — causal link established.
