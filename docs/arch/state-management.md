@@ -212,26 +212,31 @@ bindingScope.launch {
 
 ## Typed DataSnapshot
 
-Widget data uses typed sealed subtypes per data type instead of `Map<String, Any?>`. Each sealed subtype aligns 1:1 with a provider boundary:
+Widget data uses typed subtypes per data type instead of `Map<String, Any?>`. Each subtype aligns 1:1 with a provider boundary. `DataSnapshot` is a non-sealed interface in `:sdk:contracts` — concrete subtypes live with their producing module (pack or core), validated at compile time by the `:codegen:plugin` KSP processor via `@DashboardSnapshot`.
 
 ```kotlin
+// :sdk:contracts — interface only, no concrete subtypes
 @Immutable
-sealed interface DataSnapshot {
+interface DataSnapshot {
     val timestamp: Long
 }
 
+// :pack:free — snapshot types owned by the free pack's providers
+@DashboardSnapshot(dataType = "speed")
 @Immutable
 data class SpeedSnapshot(
     val speed: Float,
     override val timestamp: Long,
 ) : DataSnapshot
 
+@DashboardSnapshot(dataType = "acceleration")
 @Immutable
 data class AccelerationSnapshot(
     val acceleration: Float,
     override val timestamp: Long,
 ) : DataSnapshot
 
+@DashboardSnapshot(dataType = "speed-limit")
 @Immutable
 data class SpeedLimitSnapshot(
     val speedLimit: Float,
@@ -239,6 +244,7 @@ data class SpeedLimitSnapshot(
     override val timestamp: Long,
 ) : DataSnapshot
 
+@DashboardSnapshot(dataType = "time")
 @Immutable
 data class TimeSnapshot(
     val epochMillis: Long,
@@ -246,6 +252,7 @@ data class TimeSnapshot(
     override val timestamp: Long,
 ) : DataSnapshot
 
+@DashboardSnapshot(dataType = "orientation")
 @Immutable
 data class OrientationSnapshot(
     val bearing: Float,
@@ -254,6 +261,7 @@ data class OrientationSnapshot(
     override val timestamp: Long,
 ) : DataSnapshot
 
+@DashboardSnapshot(dataType = "battery")
 @Immutable
 data class BatterySnapshot(
     val level: Int,
@@ -262,9 +270,13 @@ data class BatterySnapshot(
     override val timestamp: Long,
 ) : DataSnapshot
 
-// Additional subtypes: TripSnapshot, MediaSnapshot, WeatherSnapshot,
+// Additional subtypes in :pack:free: TripSnapshot, MediaSnapshot, WeatherSnapshot,
 // SolarSnapshot, AmbientLightSnapshot, AltitudeSnapshot
+// OBU-specific subtypes in :pack:sg-erp2: ObuTrafficSnapshot, BalanceSnapshot, etc.
+// Core subtypes in :core:driving: DrivingSnapshot
 ```
+
+**Snapshot type ownership:** Each snapshot type lives in the module that produces it. Free pack snapshots in `:pack:free`, OBU snapshots in `:pack:sg-erp2`, `DrivingSnapshot` in `:core:driving`. If a second pack needs a snapshot type defined in another pack, that type is promoted to `:sdk:contracts` at that point — not preemptively. The KSP processor (`@DashboardSnapshot`) enforces: no duplicate `dataType` strings, `@Immutable` annotation required, only `val` properties, implements `DataSnapshot`.
 
 **Why 1:1 provider-to-snapshot alignment**: Bundling speed + acceleration + speed limit into a single composite type forces a single provider to own data from three independent sources with different availability, frequency, and failure modes. When the accelerometer is unavailable, a composite provider must fabricate a zero — wrong (zero means "not accelerating", not "unknown"). With 1:1 alignment, each snapshot is independently available. A speedometer widget binds to all three separately and renders gracefully with whatever data is available.
 

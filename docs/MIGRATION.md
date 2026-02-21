@@ -13,7 +13,7 @@ Incremental migration of the old codebase into the new architecture. Bottom-up, 
 | Problem in Old | New Design Fix | Migration Impact |
 |---|---|---|
 | God-object `DashboardState` | Per-coordinator `StateFlow` slices | Dashboard must be decomposed, not ported |
-| `Map<String, Any?>` snapshots | Typed sealed `DataSnapshot` subtypes | Every provider + widget changes |
+| `Map<String, Any?>` snapshots | Typed `@DashboardSnapshot` subtypes (KSP-validated) | Every provider + widget changes |
 | String-keyed `WidgetData` | `KClass`-keyed `snapshot<T>()` | Every widget data access changes |
 | Data passed to `Render()` param | `LocalWidgetData` CompositionLocal | Every widget signature changes |
 | Regular `List`/`Map` in UI | `ImmutableList`/`ImmutableMap` | Every UI state surface changes |
@@ -99,7 +99,7 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 - `WidgetRenderer` — new signature with `ImmutableMap<String, Any>` settings, no `widgetData` param
 - `DataProvider` — new contract emitting typed `DataSnapshot` subtypes
 - `DataProviderInterceptor` — interface for chaos/debug interception of provider flows, registered via Hilt multibinding
-- `DataSnapshot` sealed interface + typed subtypes (`SpeedSnapshot`, `TimeSnapshot`, `DateSnapshot`, `OrientationSnapshot`, `SolarSnapshot`, `AmbientLightSnapshot`, `BalanceSnapshot`, `TrafficSnapshot`, `HistorySnapshot`, `ChargingSnapshot`, `DeviceSnapshot`, `DrivingSnapshot`, `SpeedLimitSnapshot`, `AccelerationSnapshot`)
+- `DataSnapshot` non-sealed interface (base only — no concrete subtypes here). `@DashboardSnapshot` annotation for KSP validation. Concrete subtypes live with their producing module: free pack snapshots in `:pack:free`, OBU snapshots in `:pack:sg-erp2`, `DrivingSnapshot` in `:core:driving`. If a second pack needs a snapshot from another pack, promote it to `:sdk:contracts` at that point
 - `WidgetData` with `KClass`-keyed multi-slot: `snapshot<T : DataSnapshot>()`
 - `WidgetContext`, `WidgetDefaults`, `WidgetStyle`
 - `SettingDefinition<T>` sealed interface (port + tighten types)
@@ -116,7 +116,7 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 - `TestDataProvider` — configurable fake that applies `ProviderFault` transformations to a base flow
 - `testWidget()`, `testTheme()`, `testDataSnapshot()` factories
 
-**Ported from old:** `core/plugin-api/*` — but every interface changes signature. The `DataSnapshot` transformation from `Map<String, Any?>` to typed sealed subtypes is new design work informed by old data shapes. `SettingDefinition` ports cleanly. `ConnectionStateMachine` ports nearly verbatim.
+**Ported from old:** `core/plugin-api/*` — but every interface changes signature. The `DataSnapshot` transformation from `Map<String, Any?>` to typed `@DashboardSnapshot` subtypes is new design work informed by old data shapes. `SettingDefinition` ports cleanly. `ConnectionStateMachine` ports nearly verbatim.
 
 **Tests:** Contract test abstract classes (in testFixtures), `ConnectionStateMachineTest` (port from old + expand to jqwik property-based). `ProviderFault` transformation tests.
 
@@ -173,10 +173,11 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 
 ### `:codegen:plugin`
 
-- KSP processor for `@DashboardWidget` / `@DashboardDataProvider`
+- KSP processor for `@DashboardWidget` / `@DashboardDataProvider` / `@DashboardSnapshot`
 - Generates `PackManifest` implementations
 - Generates Hilt multibinding modules (replaces old manual `@Binds @IntoSet`)
 - `typeId` format validation: `{packId}:{widget-name}`
+- `@DashboardSnapshot` validation: no duplicate `dataType` strings across modules, `@Immutable` required, only `val` properties, implements `DataSnapshot`
 
 ### `:codegen:agentic`
 
@@ -188,7 +189,7 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 
 **Ported from old:** `core:plugin-processor` → `:codegen:plugin` (adapt for new annotation shapes, add manifest generation). `core:agentic-processor` → `:codegen:agentic` (expand from simple dispatch to full schema generation).
 
-**Tests:** KSP processor tests with compile-testing. Verify generated `list-commands` output. Verify compilation failure on malformed `typeId`.
+**Tests:** KSP processor tests with compile-testing. Verify generated `list-commands` output. Verify compilation failure on malformed `typeId`. Verify `@DashboardSnapshot` rejects: duplicate `dataType`, mutable properties, missing `@Immutable`, non-`DataSnapshot` class.
 
 ---
 
@@ -386,6 +387,8 @@ From this point forward, the agent can autonomously debug on a connected device:
 
 **Convention plugin validation** — `dqxn.pack` auto-wires deps, no manual `:sdk:*` imports.
 
+**Snapshot types defined in `:pack:free`** — `SpeedSnapshot`, `TimeSnapshot`, `DateSnapshot`, `OrientationSnapshot`, `SolarSnapshot`, `AmbientLightSnapshot`, `SpeedLimitSnapshot`, `AccelerationSnapshot`, `BatterySnapshot`. Each annotated with `@DashboardSnapshot`, validated by KSP. This is the first real test of the non-sealed `DataSnapshot` + KSP validation approach.
+
 **11 widgets** migrated to new contracts:
 
 | Widget | Snapshot Type | Notes |
@@ -517,7 +520,7 @@ Mutation kill rate > 80% for critical modules (deferred to post-launch — track
 
 - Old manual `@Binds @IntoSet` DI wiring (replaced by KSP codegen)
 - `DashboardState` god object (decomposed, not migrated)
-- `Map<String, Any?>` DataSnapshot (replaced by typed sealed hierarchy)
+- `Map<String, Any?>` DataSnapshot (replaced by typed `@DashboardSnapshot` subtypes, KSP-validated)
 - String-keyed `WidgetData` (replaced by `KClass`-keyed)
 - BroadcastReceiver transport (replaced by ContentProvider)
 - JSON-in-Preferences layout storage (replaced by Proto DataStore)
@@ -532,7 +535,7 @@ Mutation kill rate > 80% for critical modules (deferred to post-launch — track
 
 1. **Phase 7 is the bottleneck.** The dashboard decomposition is the highest-risk, highest-effort phase. The old 1040-line ViewModel carries implicit coupling that won't surface until you try to split it. Full agentic debug infrastructure is available to help — use it.
 
-2. **Typed DataSnapshot design may need iteration.** The sealed hierarchy is designed in docs but untested. The free pack migration (Phase 8) will pressure-test it — be ready to revise contracts.
+2. **Typed DataSnapshot design may need iteration.** The `@DashboardSnapshot` + KSP approach is designed in docs but untested. The free pack migration (Phase 8) will pressure-test it — be ready to revise contracts. Cross-pack snapshot promotion (from pack to `:sdk:contracts`) is the escape hatch if a snapshot type needs sharing.
 
 3. **sg-erp2 pack depends on a proprietary SDK** (`sg.gov.lta:extol`). Verify it builds against AGP 9.0.1 / Kotlin 2.3+ / JDK 25 before committing to porting it. If it doesn't, quarantine it.
 

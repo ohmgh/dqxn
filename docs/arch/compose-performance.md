@@ -110,14 +110,22 @@ A Compose stability configuration file covers cross-module types:
 
 ```
 // compose_compiler_config.txt
+// sdk:contracts — base interface
 app.dqxn.android.sdk.contracts.DataSnapshot
 app.dqxn.android.sdk.contracts.WidgetData
-app.dqxn.android.sdk.contracts.SpeedSnapshot
-app.dqxn.android.sdk.contracts.AccelerationSnapshot
-app.dqxn.android.sdk.contracts.SpeedLimitSnapshot
-app.dqxn.android.sdk.contracts.TimeSnapshot
-app.dqxn.android.sdk.contracts.OrientationSnapshot
-app.dqxn.android.sdk.contracts.BatterySnapshot
+
+// Snapshot subtypes live with their producing module.
+// Each pack/core module adds its own entries:
+// :pack:free
+app.dqxn.android.pack.free.snapshots.SpeedSnapshot
+app.dqxn.android.pack.free.snapshots.AccelerationSnapshot
+app.dqxn.android.pack.free.snapshots.SpeedLimitSnapshot
+app.dqxn.android.pack.free.snapshots.TimeSnapshot
+app.dqxn.android.pack.free.snapshots.OrientationSnapshot
+app.dqxn.android.pack.free.snapshots.BatterySnapshot
+// :core:driving
+app.dqxn.android.core.driving.DrivingSnapshot
+
 app.dqxn.android.core.design.DashboardThemeDefinition
 app.dqxn.android.data.SavedWidget
 ```

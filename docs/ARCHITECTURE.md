@@ -37,7 +37,7 @@ Packs (widgets, themes, data providers) are fully decoupled from the dashboard s
 android/
 ├── build-logic/convention/       # Gradle convention plugins (composite build)
 ├── sdk/                          # Pack-accessible API surface
-│   ├── contracts/                # Plugin contracts (WidgetRenderer, DataProvider, DataSnapshot subtypes, annotations)
+│   ├── contracts/                # Plugin contracts (WidgetRenderer, DataProvider, DataSnapshot interface, @DashboardSnapshot annotation)
 │   ├── common/                   # AppResult, AppError, coroutine dispatchers, stability config
 │   ├── ui/                       # WidgetContainer, WidgetStyle, LocalWidgetData, DashboardThemeDefinition
 │   ├── observability/            # Structured logging, tracing, metrics, health monitoring, ANR watchdog

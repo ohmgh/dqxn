@@ -101,7 +101,7 @@ These are non-negotiable. Violations cause real performance/correctness issues.
 - **`derivedStateOf`**: Use for all computed values from state (filtered lists, theme display, aggregations). Prevents unnecessary recomposition when inputs change but output doesn't.
 - **Draw object caching**: `Path`, `Paint`, `Brush` via `remember` or `drawWithCache` — never allocate per frame
 - **Glow**: `RenderEffect.createBlurEffect()` (GPU shader) — NOT `BlurMaskFilter` with offscreen buffers
-- **Typed DataSnapshot**: Sealed subtypes per data type, 1:1 with provider boundaries (no `Map<String, Any>` boxing). `WidgetData` uses `KClass`-keyed multi-slot delivery — `data.snapshot<SpeedSnapshot>()`. Target <4KB app-level allocation/frame (excluding Compose overhead). Total budget <64KB/frame.
+- **Typed DataSnapshot**: `@DashboardSnapshot`-annotated subtypes per data type, 1:1 with provider boundaries (no `Map<String, Any>` boxing). Non-sealed `DataSnapshot` interface in `:sdk:contracts`; concrete subtypes live with their producing module (pack or core), validated by KSP. `WidgetData` uses `KClass`-keyed multi-slot delivery — `data.snapshot<SpeedSnapshot>()`. Target <4KB app-level allocation/frame (excluding Compose overhead). Total budget <64KB/frame.
 - **Drag reordering**: Use `graphicsLayer` offset animation — NOT `movableContentOf` (wrong tool for same-parent reordering)
 - **Grid layout**: Use `Layout` composable with custom `MeasurePolicy` for absolute positioning — NOT `LazyLayout` (adds SubcomposeLayout overhead without benefit for viewport-sized grids)
 - **Dashboard lifecycle**: Layer 0 uses `collectAsState()` (no lifecycle awareness). Layer 1 overlays use `collectAsStateWithLifecycle()`. Manual pause/resume for CPU-heavy overlays.
@@ -312,6 +312,7 @@ Check `:codegen:plugin` and `:codegen:agentic` run as single pass. Verify `ksp.i
 | Why no Timber? | Varargs allocation, no structured data, no trace correlation. `DqxnLogger` is zero-allocation when disabled. |
 | Why `SupervisorJob` for bindings? | Without it, one provider crash propagates and kills all widget bindings. |
 | Why typed DataSnapshot, not Map? | `Map<String, Any?>` boxes primitives. 60 emissions/sec × 12 widgets = 720 garbage objects/sec. |
+| Why non-sealed DataSnapshot? | Sealed forces all subtypes into `:sdk:contracts` — packs can't define snapshot types without modifying SDK. KSP `@DashboardSnapshot` gives compile-time validation (no duplicate dataType, `@Immutable` required) without same-module restriction. `KClass`-keyed `WidgetData.snapshot<T>()` doesn't need sealed. |
 | Why `KClass` keys in `WidgetData`? | String keys allow typos, no compiler enforcement. `snapshot<SpeedSnapshot>()` can't reference a nonexistent type. |
 | Why multi-slot `WidgetData`? | Speedometer consumes 3 independent providers. Single-slot loses independent availability and graceful degradation. |
 | Why plain `Layout`, not `LazyLayout`? | Absolute-position grid. `LazyLayout` adds `SubcomposeLayout` overhead without benefit. |

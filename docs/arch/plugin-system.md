@@ -14,7 +14,7 @@
 - `accessibilityDescription(data: WidgetData): String` — semantic description for TalkBack
 
 **`DataProvider`** — extends `DataProviderSpec`:
-- `snapshotType: KClass<out DataSnapshot>` — the sealed subtype this provider emits
+- `snapshotType: KClass<out DataSnapshot>` — the `@DashboardSnapshot`-annotated subtype this provider emits
 - `provideState(): Flow<DataSnapshot>` — reactive data stream
 - `schema: DataSchema` — describes output shape, staleness thresholds, and display metadata
 - `setupSchema: List<SetupPageDefinition>` — declarative setup wizard
