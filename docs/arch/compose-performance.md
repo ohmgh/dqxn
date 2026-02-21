@@ -106,29 +106,21 @@ Modifier.drawWithCache {
 
 All domain types emitted to the UI layer are annotated `@Immutable` or `@Stable`. Collections use `kotlinx-collections-immutable`.
 
-A Compose stability configuration file covers cross-module types:
+Stability configuration uses two layers — a static base config and auto-generated entries:
+
+**Static base config** (`sdk/common/compose_compiler_config.txt`) — SDK and shell types in known locations:
 
 ```
-// compose_compiler_config.txt
-// sdk:contracts — base interface
+// Base stability config — types with fixed locations that don't need generation
 app.dqxn.android.sdk.contracts.DataSnapshot
 app.dqxn.android.sdk.contracts.WidgetData
-
-// Snapshot subtypes live with their producing module.
-// Each pack/core module adds its own entries:
-// :pack:free
-app.dqxn.android.pack.free.snapshots.SpeedSnapshot
-app.dqxn.android.pack.free.snapshots.AccelerationSnapshot
-app.dqxn.android.pack.free.snapshots.SpeedLimitSnapshot
-app.dqxn.android.pack.free.snapshots.TimeSnapshot
-app.dqxn.android.pack.free.snapshots.OrientationSnapshot
-app.dqxn.android.pack.free.snapshots.BatterySnapshot
-// :core:driving
-app.dqxn.android.core.driving.DrivingSnapshot
-
 app.dqxn.android.core.design.DashboardThemeDefinition
 app.dqxn.android.data.SavedWidget
 ```
+
+**Auto-generated entries** — the `:codegen:plugin` KSP processor already validates `@DashboardSnapshot`-annotated types. It additionally outputs a stability config file listing every discovered snapshot subtype's fully-qualified class name. The `dqxn.pack` convention plugin wires this generated file into the Compose compiler's `stabilityConfigurationFile` option alongside the static base config via `dqxn.android.compose`.
+
+This eliminates a silent failure mode: adding a new `@DashboardSnapshot` type without a stability config entry would cause the Compose compiler to treat it as unstable → unnecessary recomposition → frame drops. With generation, coverage is automatic — no manual maintenance, no missed types.
 
 Compose compiler metrics (`-Pcompose.compiler.metrics=true`) are audited regularly to catch regressions in skippability.
 

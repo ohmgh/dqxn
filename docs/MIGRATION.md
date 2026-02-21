@@ -176,6 +176,7 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 - KSP processor for `@DashboardWidget` / `@DashboardDataProvider` / `@DashboardSnapshot`
 - Generates `PackManifest` implementations
 - Generates Hilt multibinding modules (replaces old manual `@Binds @IntoSet`)
+- Generates Compose stability config file listing all `@DashboardSnapshot`-annotated types (wired into Compose compiler by `dqxn.pack` convention plugin)
 - `typeId` format validation: `{packId}:{widget-name}`
 - `@DashboardSnapshot` validation: no duplicate `dataType` strings across modules, `@Immutable` required, only `val` properties, implements `DataSnapshot`
 

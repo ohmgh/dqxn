@@ -16,7 +16,7 @@ Convention plugins (`:build-logic/convention`) enforce shared defaults. Compose 
 // Modules WITH Compose: :app, :feature:*, :sdk:ui, :core:design
 id("dqxn.android.compose")
 
-// Pack modules: auto-wires all :sdk:* dependencies
+// Pack modules: auto-wires all :sdk:* dependencies, wires KSP-generated stability config
 id("dqxn.pack")
 
 // Modules WITHOUT Compose: :sdk:contracts, :sdk:common, :sdk:observability, :sdk:analytics,
