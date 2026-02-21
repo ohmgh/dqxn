@@ -243,12 +243,15 @@ Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listener
 ## Observability
 
 - `:sdk:observability` provides structured logging, tracing, metrics, and anomaly auto-capture. No Timber — custom `DqxnLogger` with inline zero-allocation extensions. Designed domain-free for reusability — no DQXN-specific types in public API.
-- `LogTag` as a `@JvmInline value class LogTag(val value: String)` — each module defines its own tags without modifying `:sdk:observability`. Core tags in `LogTags` companion object (LAYOUT, THEME, SENSOR, BLE, CONNECTION_FSM, DATASTORE, THERMAL, AGENTIC, DIAGNOSTIC, etc.)
-- `DiagnosticSnapshotCapture` auto-captures correlated state (ring buffer tail, metrics, thermal, widget health, active traces) on anomalies (widget crash, ANR, thermal escalation, jank spike, provider timeout). Debug builds persist to `${filesDir}/debug/diagnostics/`. Agentic `diagnose-*` commands expose these snapshots.
-- `TraceContext` via `CoroutineContext.Key` for cross-coordinator correlation
+- `LogTag` as a `@JvmInline value class LogTag(val value: String)` — each module defines its own tags without modifying `:sdk:observability`. Core tags in `LogTags` companion object (LAYOUT, THEME, SENSOR, BLE, CONNECTION_FSM, DATASTORE, THERMAL, BINDING, ANR, AGENTIC, DIAGNOSTIC, etc.)
+- `DiagnosticSnapshotCapture` auto-captures correlated state (ring buffer tail, metrics, thermal, widget health, active traces) on anomalies (widget crash, ANR, thermal escalation, jank spike, provider timeout, escalated staleness). Debug builds persist to `${filesDir}/debug/diagnostics/` with separate rotation pools per trigger severity (crash: 20, thermal: 10, performance: 10). Reentrance guard prevents recursive capture.
+- `TraceContext` via `CoroutineContext.Key` for cross-coordinator correlation. Propagates to widget effects via `LocalWidgetTraceContext` — widget `LaunchedEffect` crashes carry originating agentic `traceId`.
+- `JankDetector` monitors consecutive jank frames, fires `DiagnosticSnapshotCapture` at ≥5 consecutive >16ms frames
 - `MetricsCollector` with pre-allocated counters — frame histograms, recomposition counts, provider latency
 - `AnrWatchdog` on dedicated thread — 2s ping / 2.5s timeout, captures stack + ring buffer context on stall
-- Debug overlays in `:app:src/debug/` — frame stats, recomposition viz, provider flow DAG, thermal trending
+- Binding lifecycle events (`BIND_STARTED`, `BIND_CANCELLED`, `REBIND_SCHEDULED`, `PROVIDER_FALLBACK`, `FIRST_EMISSION`) logged at INFO — never sampled, always in ring buffer for `diagnose-widget` history
+- Debug: anomaly event file (`anomaly_events.jsonl`) for push-based agent notification; debug overlays in `:app:src/debug/`
+- Chaos injection via DI seams: `FakeThermalManager`, `StubEntitlementManager.simulateRevocation()`, `DataProviderInterceptor` + `ChaosProviderInterceptor`. Each injection carries `injectionId` correlated to resulting `DiagnosticSnapshot`.
 
 ## Security
 
@@ -398,3 +401,10 @@ For agents that wonder "why not just...":
 | Why `codegen/` folder for KSP processors? | Plugin processor alone runs 7 handlers (settings, themes, entitlements, resources, 3 validators). Substantial shared KSP/KotlinPoet infrastructure. Build-time only with zero runtime presence. Grouping separates build-time from runtime modules. |
 | Why analytics accessible to packs? | Packs know their interaction semantics (Media Controller play/pause, Trip reset). Shell shouldn't proxy every pack interaction. `PackAnalytics` is a scoped interface — packs fire structured events, implementation prepends pack namespace. |
 | Why observability and analytics not split into api + impl? | Both have the same pattern (packs use a subset, shell uses the whole thing). Splitting each into two modules doubles module count for marginal enforcement. `sdk/` vs `core/` handles the big boundary; within-module access uses Kotlin visibility. Consistent treatment for both. |
+| Why separate snapshot rotation pools? | Thermal oscillation in vehicles is frequent (sun exposure, AC cycling). A shared 20-file pool would evict crash snapshots within one drive session. Separate pools (crash: 20, thermal: 10, perf: 10) guarantee crash data survives. |
+| Why file-based anomaly events, not logcat? | Logcat is a lossy ring buffer (256KB-1MB system-wide), truncates at ~4096 bytes, and couples debug concerns into production code. File-based (`anomaly_events.jsonl`) gives durable delivery, no size limits, and stays in `:app:src/debug/`. |
+| Why `DataProviderInterceptor`, not `@VisibleForTesting` on `WidgetDataBinder`? | `@VisibleForTesting` is a lint annotation, not access control. `internal` doesn't cross module boundaries. An interceptor interface via Hilt multibinding is a clean seam — production builds register nothing (zero overhead), debug builds register `ChaosProviderInterceptor`. |
+| Why `EscalatedStaleness` at 3x threshold, not 1x? | 1x staleness is routine and transient (brief provider hiccup, thermal throttling). 3x while provider reports CONNECTED indicates a genuine data flow breakdown — worth capturing diagnostics for. |
+| Why no `OnDemandCapture` in `AnomalyTrigger`? | Pollutes the production sealed hierarchy with a test concern. Every `when` expression matching `AnomalyTrigger` gains a branch. `diagnose-crash` falls back to assembling live state from existing components — same data, no production code change. |
+| Why reentrance guard on `DiagnosticSnapshotCapture`? | `capture()` calls `DqxnTracer.activeSpans()` which may log. If logging triggers another anomaly detection, recursive capture would stack overflow. `AtomicBoolean` guard returns `null` on reentry. |
+| Why `CompositionLocal` for TraceContext in widgets, not injecting into `WidgetData`? | `WidgetData` is the data model consumed by every widget renderer. Adding trace metadata to it pollutes the data contract with debug concerns. A `CompositionLocal` is zero-cost when null and invisible to widget implementations that don't use it. |

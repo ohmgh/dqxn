@@ -139,6 +139,7 @@ object LogTags {
     val ANALYTICS = LogTag("ANALYTICS")
     val AGENTIC = LogTag("AGENTIC")
     val DIAGNOSTIC = LogTag("DIAGNOSTIC")
+    val ANR = LogTag("ANR")
 }
 
 // Pack-defined tags — no changes to :sdk:observability needed
@@ -210,27 +211,32 @@ class TraceContext(
 
 ```kotlin
 class DqxnTracer @Inject constructor(private val logger: DqxnLogger) {
-    suspend inline fun <T> withSpan(
-        name: String,
-        tag: LogTag,
-        crossinline block: suspend () -> T,
-    ): T {
+    private val activeSpanMap = ConcurrentHashMap<String, SpanInfo>()
+
+    fun activeSpans(): List<SpanSummary> = activeSpanMap.values.map { it.toSummary() }
+
+    suspend inline fun <T> withSpan(name: String, tag: LogTag, crossinline block: suspend () -> T): T {
         val parent = currentCoroutineContext()[TraceContext]
         val ctx = TraceContext(
             traceId = parent?.traceId ?: generateTraceId(),
             spanId = generateSpanId(),
             parentSpanId = parent?.spanId,
         )
+        activeSpanMap[ctx.spanId] = SpanInfo(name, tag, ctx, SystemClock.elapsedRealtimeNanos())
         return withContext(ctx) {
-            val start = SystemClock.elapsedRealtimeNanos()
             try { block() } finally {
-                val elapsed = SystemClock.elapsedRealtimeNanos() - start
-                logger.debug(tag, "span" to name, "elapsedMs" to elapsed / 1_000_000) { name }
+                activeSpanMap.remove(ctx.spanId)
+                val elapsed = SystemClock.elapsedRealtimeNanos() - activeSpanMap[ctx.spanId]?.startNanos
+                logger.debug(tag, "span" to name, "elapsedMs" to (elapsed ?: 0) / 1_000_000) { name }
             }
         }
     }
 }
 ```
+
+### Span Registry
+
+`DqxnTracer` tracks active spans for diagnostic capture via `activeSpans()`. The span is removed from the registry *before* the completion log is written — this prevents a span from appearing "active" in a `DiagnosticSnapshot` captured during its own completion logging.
 
 ## MetricsCollector
 
@@ -334,7 +340,7 @@ class AnrWatchdog @Inject constructor(
                     val mainStack = Looper.getMainLooper().thread.stackTrace
                     val fdCount = File("/proc/self/fd/").listFiles()?.size ?: -1
 
-                    logger.error(LogTag.STARTUP, "fdCount" to fdCount) {
+                    logger.error(LogTags.ANR, "fdCount" to fdCount) {
                         "ANR detected: main thread blocked\n" +
                         mainStack.joinToString("\n") { "  at $it" }
                     }
@@ -346,6 +352,44 @@ class AnrWatchdog @Inject constructor(
     }
 }
 ```
+
+### JankDetector
+
+Monitors consecutive jank frames and fires `DiagnosticSnapshotCapture` on sustained jank:
+
+```kotlin
+class JankDetector @Inject constructor(
+    private val metricsCollector: MetricsCollector,
+    private val diagnosticCapture: DiagnosticSnapshotCapture,
+    private val logger: DqxnLogger,
+) {
+    private val consecutiveJankFrames = AtomicInteger(0)
+
+    fun onFrame(durationMs: Long) {
+        metricsCollector.recordFrame(durationMs)
+        if (durationMs > 16) {
+            val count = consecutiveJankFrames.incrementAndGet()
+            if (count == 5) {
+                val snapshot = metricsCollector.snapshot()
+                diagnosticCapture.capture(
+                    AnomalyTrigger.JankSpike(
+                        consecutiveJankFrames = count,
+                        p99Ms = snapshot.frameP99Ms,
+                        worstWidgetTypeId = snapshot.topRecomposingWidget(),
+                    )
+                )
+                logger.warn(LogTags.DIAGNOSTIC, "consecutiveJank" to count) {
+                    "Jank spike detected: $count consecutive frames >16ms"
+                }
+            }
+        } else {
+            consecutiveJankFrames.set(0)
+        }
+    }
+}
+```
+
+Sits between `FrameMetrics` callbacks and `MetricsCollector`. The threshold of 5 consecutive frames ensures transient single-frame drops don't trigger captures.
 
 ### OOM Detection
 
@@ -467,6 +511,14 @@ sealed interface AnomalyTrigger {
         val widgetId: String,
         val timeoutMs: Long,
     ) : AnomalyTrigger
+
+    data class EscalatedStaleness(
+        val widgetId: String,
+        val typeId: String,
+        val actualFreshnessMs: Long,
+        val stalenessThresholdMs: Long,
+        val providerState: String, // "CONNECTED", "DISCONNECTED", etc.
+    ) : AnomalyTrigger
 }
 ```
 
@@ -476,9 +528,10 @@ sealed interface AnomalyTrigger {
 |---|---|---|
 | Widget crash | `WidgetSlot` error boundary triggered | Capture full snapshot, persist to file |
 | ANR | `AnrWatchdog` timeout fired | Capture, persist to SharedPreferences (survives process death) |
-| Thermal escalation | `ThermalManager` → DEGRADED or CRITICAL | Capture, log summary |
-| Jank spike | ≥5 consecutive frames >16ms | Capture, include worst-recomposing widget |
+| Thermal escalation | `ThermalManager` → DEGRADED or CRITICAL | Capture, persist to file (thermal rotation pool) |
+| Jank spike | `JankDetector`: ≥5 consecutive frames >16ms | Capture, include worst-recomposing widget |
 | Provider timeout | `firstEmissionTimeout` exceeded | Partial capture (affected widget only) |
+| Escalated staleness | Widget data freshness exceeds 3x staleness threshold while provider reports CONNECTED | Capture, include binding lifecycle events |
 
 ### DiagnosticSnapshotCapture
 
@@ -489,30 +542,122 @@ class DiagnosticSnapshotCapture @Inject constructor(
     private val thermalManager: ThermalManager,
     private val widgetHealthMonitor: WidgetHealthMonitor,
     private val tracer: DqxnTracer,
+    private val captureSessionRegistry: CaptureSessionRegistry,
     private val logger: DqxnLogger,
 ) {
-    fun capture(trigger: AnomalyTrigger, agenticTraceId: String? = null): DiagnosticSnapshot {
-        return DiagnosticSnapshot(
-            timestamp = SystemClock.elapsedRealtimeNanos(),
-            trigger = trigger,
-            ringBufferTail = ringBufferSink.tail(50).toImmutableList(),
-            metricsSnapshot = metricsCollector.snapshot(),
-            thermalState = thermalManager.currentState(),
-            widgetHealth = widgetHealthMonitor.allStatuses(),
-            activeTraces = tracer.activeSpans().toImmutableList(),
-            captureEvents = CaptureSessionRegistry.currentEvents(),
-            agenticTraceId = agenticTraceId,
-            sessionId = sessionId,
-        )
+    private val capturing = AtomicBoolean(false)
+
+    fun capture(trigger: AnomalyTrigger, agenticTraceId: String? = null): DiagnosticSnapshot? {
+        if (!capturing.compareAndSet(false, true)) return null // reentrance guard
+        return try {
+            DiagnosticSnapshot(
+                timestamp = SystemClock.elapsedRealtimeNanos(),
+                trigger = trigger,
+                ringBufferTail = ringBufferSink.tail(50).toImmutableList(),
+                metricsSnapshot = metricsCollector.snapshot(),
+                thermalState = thermalManager.currentState(),
+                widgetHealth = widgetHealthMonitor.allStatuses(),
+                activeTraces = tracer.activeSpans().toImmutableList(),
+                captureEvents = captureSessionRegistry.currentEvents(),
+                agenticTraceId = agenticTraceId,
+                sessionId = sessionId,
+            )
+        } finally {
+            capturing.set(false)
+        }
     }
 }
 ```
 
 ### Persistence
 
-Debug builds write snapshots to `${filesDir}/debug/diagnostics/snap_{timestamp}.json`. Rotating 20 files max. Agent pulls via `adb pull`. The `diagnose-crash` agentic command returns the most recent snapshot for a given widget (see [build-system.md](build-system.md#compound-diagnostic-commands)).
+Debug builds write snapshots to `${filesDir}/debug/diagnostics/` with **separate rotation pools** by trigger severity:
 
-Release builds: only the `AnomalyTrigger` type, timestamp, and `agenticTraceId` are forwarded to `CrashMetadataWriter` as custom keys. No full diagnostic dump in production.
+| Pool | Path pattern | Max files | Trigger types |
+|---|---|---|---|
+| Crash | `snap_crash_{timestamp}.json` | 20 | `WidgetCrash`, `AnrDetected` |
+| Thermal | `snap_thermal_{timestamp}.json` | 10 | `ThermalEscalation` |
+| Performance | `snap_perf_{timestamp}.json` | 10 | `JankSpike`, `ProviderTimeout`, `EscalatedStaleness` |
+
+Separate pools prevent frequent thermal oscillation (common in vehicles) from evicting crash snapshots. Agent pulls via `adb pull`. The `diagnose-crash` agentic command returns the most recent snapshot for a given widget (see [build-system.md](build-system.md#compound-diagnostic-commands)).
+
+Release builds: only the `AnomalyTrigger` type and timestamp are forwarded to `CrashMetadataWriter` as custom keys. `agenticTraceId` is always `null` in release — the agentic receiver is debug-only. No full diagnostic dump in production.
+
+### CaptureSessionRegistry
+
+Records UI interaction events during an active capture session. Used by `DiagnosticSnapshotCapture` to include recent user actions in anomaly snapshots:
+
+```kotlin
+interface CaptureSessionRegistry {
+    fun startCapture()
+    fun stopCapture(): ImmutableList<CaptureEvent>
+    fun recordEvent(event: CaptureEvent)
+    fun currentEvents(): ImmutableList<CaptureEvent>?
+    val isCapturing: Boolean
+}
+
+@Singleton
+class CaptureSessionRegistryImpl @Inject constructor() : CaptureSessionRegistry {
+    private val events = RingBuffer<CaptureEvent>(100) // bounded, no unbounded growth
+    @Volatile private var capturing = false
+
+    override fun startCapture() { capturing = true; events.clear() }
+    override fun stopCapture(): ImmutableList<CaptureEvent> {
+        capturing = false
+        return events.toList().toImmutableList()
+    }
+    override fun recordEvent(event: CaptureEvent) { if (capturing) events.add(event) }
+    override fun currentEvents(): ImmutableList<CaptureEvent>? =
+        if (capturing) events.toList().toImmutableList() else null
+    override val isCapturing: Boolean get() = capturing
+}
+
+sealed interface CaptureEvent {
+    val timestamp: Long
+    data class Tap(override val timestamp: Long, val widgetId: String) : CaptureEvent
+    data class WidgetMove(override val timestamp: Long, val widgetId: String, val fromPosition: GridPosition, val toPosition: GridPosition) : CaptureEvent
+    data class WidgetResize(override val timestamp: Long, val widgetId: String) : CaptureEvent
+    data class Navigation(override val timestamp: Long, val route: String) : CaptureEvent
+}
+```
+
+Wired as `@Singleton` via Hilt. `capture-start` / `capture-stop` agentic commands delegate to this registry. The ring buffer prevents unbounded memory growth during long capture sessions.
+
+### Anomaly Event File (Debug Only)
+
+A debug extension of `DiagnosticSnapshotCapture` appends structured anomaly events to a dedicated file for push-based agent notification:
+
+```
+${filesDir}/debug/anomaly_events.jsonl
+```
+
+Format (one JSON object per line):
+```json
+{"trigger":"WidgetCrash","typeId":"core:speedometer","widgetId":"abc-123","traceId":"agentic-1708444800123","snapshotPath":"snap_crash_1708444800456.json","timestamp":1708444800456}
+```
+
+Agent tails via `adb shell tail -f` for real-time push notification of anomalies — eliminates polling overhead. Rotation: 1MB, 2 files. Deduplication: same `(trigger type, sourceId)` pair suppressed within 60s, consistent with `DeduplicatingErrorReporter`.
+
+This extension is wired in `:app:src/debug/`, not in `:sdk:observability` — no debug concerns leak into the production module.
+
+### Binding Lifecycle Events
+
+`WidgetBindingCoordinator` emits guaranteed log entries at `INFO` level for all binding state transitions. These are never sampled and always captured by `RingBufferSink`, ensuring `diagnose-widget` log tail always contains the binding history that led to the current state.
+
+**Required events:**
+
+| Event | Tag | Required fields |
+|---|---|---|
+| `BIND_STARTED` | `BINDING` | `widgetId`, `providerId`, `traceId`, `snapshotType` |
+| `BIND_CANCELLED` | `BINDING` | `widgetId`, `providerId`, `traceId`, `reason` |
+| `BIND_TIMEOUT` | `BINDING` | `widgetId`, `providerId`, `traceId`, `timeoutMs` |
+| `REBIND_SCHEDULED` | `BINDING` | `widgetId`, `providerId`, `traceId`, `attempt`, `delayMs` |
+| `PROVIDER_FALLBACK` | `BINDING` | `widgetId`, `fromProviderId`, `toProviderId`, `traceId` |
+| `FIRST_EMISSION` | `BINDING` | `widgetId`, `providerId`, `traceId`, `latencyMs` |
+
+All events include `widgetId` and `traceId` in `LogEntry.fields`, making them filterable by the `diagnose-widget` command's log tail query. The `traceId` field enables correlation back to the originating agentic command (if any) or user action.
+
+These events are the primary diagnostic data source for binding-related issues. Without them, `diagnose-widget` can report current state but not the *sequence of transitions* that led to it — which is where most binding bugs manifest.
 
 ### Agentic Trace Correlation
 

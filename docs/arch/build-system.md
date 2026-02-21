@@ -205,7 +205,7 @@ errorReporter.reportWidgetCrash(
 )
 ```
 
-`CaptureSessionRegistry` records TAP, WIDGET_MOVE, WIDGET_RESIZE, NAVIGATION events.
+`CaptureSessionRegistry` is an injectable singleton (see [observability.md](observability.md#capturesessionregistry)) that records TAP, WIDGET_MOVE, WIDGET_RESIZE, NAVIGATION events in a bounded ring buffer during active capture sessions. `capture-start` / `capture-stop` agentic commands delegate to this registry.
 
 The receiver is restricted to debug builds only. Demo providers are gated to debug builds.
 
@@ -213,11 +213,12 @@ The receiver is restricted to debug builds only. Demo providers are gated to deb
 
 Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`-derived JSON bundle (see [observability.md](observability.md#anomaly-auto-capture)):
 
-**`diagnose-widget {widgetId}`** returns:
+**`diagnose-widget {widgetId}`** returns self-describing diagnostic output with expected vs actual state:
 - Widget health status (from `WidgetHealthMonitor`)
 - Current binding: provider ID, connection state, last emission timestamp
-- Data freshness: last snapshot timestamp vs staleness threshold
+- **Data freshness with expectations**: `{ "actual": "15s", "threshold": "3s", "expectedInterval": "16ms", "status": "ESCALATED_STALE" }` — the contradiction between actual and expected is self-evident to any reasoning system
 - Error history: crash count, last error, retry state
+- **Binding lifecycle history**: last 10 binding events (`BIND_STARTED`, `BIND_CANCELLED`, `REBIND_SCHEDULED`, `PROVIDER_FALLBACK`, `FIRST_EMISSION`) from `RingBufferSink` — shows the *sequence* that led to the current state, not just the state itself
 - Last 20 log entries tagged to this widget (filtered from `RingBufferSink` by `widgetId` field)
 - Current `WidgetStatusCache` priority chain resolution
 
@@ -236,9 +237,10 @@ Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`
 - Provider error counts and retry states
 
 **`diagnose-crash {widgetId}`** returns:
-- Most recent `DiagnosticSnapshot` auto-captured for this widget (if any)
-- Falls back to current live diagnostic if no snapshot exists
+- Most recent `DiagnosticSnapshot` auto-captured for this widget (if any), from the crash rotation pool
+- Falls back to assembling a live diagnostic from current `WidgetHealthMonitor`, `MetricsCollector`, and `RingBufferSink` state if no snapshot exists — no `OnDemandCapture` trigger needed
 - Includes `agenticTraceId` if the crash was triggered by an agentic command
+- Includes `injectionId` if the crash was triggered by a chaos injection
 
 ### Agentic Trace Correlation
 
@@ -254,6 +256,49 @@ Agent sends: widget-add --params '{"widgetType":"core:speedometer"}'
 ```
 
 This closes the causal loop: the agent can distinguish "I caused this" from "this happened coincidentally."
+
+### TraceContext Propagation to Widget Effects
+
+The trace correlation chain has a last-mile gap: `WidgetBindingCoordinator` holds the `TraceContext` from the originating command, but `WidgetSlot`'s `WidgetCoroutineScope` (created in composition) doesn't inherit it. Widget effect crashes are invisible to trace correlation.
+
+**Solution**: `WidgetBindingCoordinator` exposes a per-widget trace context flow:
+
+```kotlin
+class WidgetBindingCoordinator {
+    private val widgetTraceContexts = ConcurrentHashMap<String, MutableStateFlow<TraceContext?>>()
+
+    fun traceContextFor(widgetId: String): StateFlow<TraceContext?> =
+        widgetTraceContexts.getOrPut(widgetId) { MutableStateFlow(null) }
+}
+```
+
+`WidgetSlot` provides it via `CompositionLocal`:
+
+```kotlin
+val LocalWidgetTraceContext = staticCompositionLocalOf<TraceContext?> { null }
+
+@Composable
+fun WidgetSlot(widget: WidgetInstance, renderer: WidgetRenderer, bindingCoordinator: WidgetBindingCoordinator) {
+    val traceContext by bindingCoordinator.traceContextFor(widget.id).collectAsState()
+
+    val widgetScope = remember(traceContext) {
+        CoroutineScope(
+            SupervisorJob() +
+            CoroutineExceptionHandler { _, e -> /* ... */ } +
+            (traceContext ?: EmptyCoroutineContext)
+        )
+    }
+
+    CompositionLocalProvider(
+        LocalWidgetScope provides widgetScope,
+        LocalWidgetTraceContext provides traceContext,
+    ) {
+        renderer.Render(...)
+    }
+}
+```
+
+When `traceContext` is `null` (user-initiated widget, no agentic command) — zero overhead, `EmptyCoroutineContext` adds nothing. When set by an agentic command — widget `LaunchedEffect` crashes now carry the `traceId` through the `CoroutineExceptionHandler` to `DiagnosticSnapshotCapture`, closing the last-mile trace correlation gap.
 
 ### Chaos Injection Commands
 
@@ -299,14 +344,14 @@ adb shell am broadcast -a app.dqxn.android.AGENTIC.chaos-inject \
   "duration_ms": 30000,
   "seed": 42,
   "injected_faults": [
-    {"type": "provider-failure", "target": "core:gps-speed", "at_ms": 5230},
-    {"type": "provider-failure", "target": "core:compass", "at_ms": 12400}
+    {"injectionId": "chaos-inj-001", "type": "provider-failure", "target": "core:gps-speed", "at_ms": 5230, "resultingSnapshots": ["snap_perf_1708444805230.json"]},
+    {"injectionId": "chaos-inj-002", "type": "provider-failure", "target": "core:compass", "at_ms": 12400, "resultingSnapshots": []}
   ],
   "system_responses": [
-    {"type": "fallback-activated", "widget": "abc-123", "from": "core:gps-speed", "to": "core:network-speed", "at_ms": 5235},
-    {"type": "widget-status-change", "widget": "def-456", "status": "ProviderMissing", "at_ms": 12405}
+    {"type": "fallback-activated", "widget": "abc-123", "from": "core:gps-speed", "to": "core:network-speed", "at_ms": 5235, "injectionId": "chaos-inj-001"},
+    {"type": "widget-status-change", "widget": "def-456", "status": "ProviderMissing", "at_ms": 12405, "injectionId": "chaos-inj-002"}
   ],
-  "diagnostic_snapshots_captured": 2
+  "diagnostic_snapshots_captured": 1
 }
 ```
 
@@ -319,7 +364,10 @@ All agent-accessible diagnostic artifacts in debug builds:
 | Path | Content | Rotation |
 |---|---|---|
 | `${filesDir}/debug/dqxn.jsonl` | JSON-lines structured log | 10MB, 3 files |
-| `${filesDir}/debug/diagnostics/snap_*.json` | Auto-captured `DiagnosticSnapshot` | 20 files max |
+| `${filesDir}/debug/diagnostics/snap_crash_*.json` | Crash/ANR `DiagnosticSnapshot` | 20 files max |
+| `${filesDir}/debug/diagnostics/snap_thermal_*.json` | Thermal escalation snapshots | 10 files max |
+| `${filesDir}/debug/diagnostics/snap_perf_*.json` | Jank, timeout, staleness snapshots | 10 files max |
+| `${filesDir}/debug/anomaly_events.jsonl` | Push-notification anomaly event stream | 1MB, 2 files |
 | `${cacheDir}/dump_*.json` | On-demand state dumps (from dump commands) | Cleared on app restart |
 | `${cacheDir}/chaos_*.json` | Chaos session summaries | Cleared on app restart |
 

@@ -177,15 +177,24 @@ Fallback is per-slot: if the hardware speed provider disconnects but the acceler
 
 ```kotlin
 @Composable
-fun WidgetSlot(widget: WidgetInstance, renderer: WidgetRenderer) {
+fun WidgetSlot(
+    widget: WidgetInstance,
+    renderer: WidgetRenderer,
+    bindingCoordinator: WidgetBindingCoordinator,
+) {
     var renderError by remember { mutableStateOf<Throwable?>(null) }
     val crashCount = remember { mutableIntStateOf(0) }
 
+    // Trace context from the binding coordinator — non-null when this widget's
+    // binding was initiated by an agentic command. Null for user-initiated widgets.
+    val traceContext by bindingCoordinator.traceContextFor(widget.id).collectAsState()
+
     val widgetScope = rememberCoroutineScope().let { parentScope ->
-        remember(parentScope) {
+        remember(parentScope, traceContext) {
             CoroutineScope(
                 parentScope.coroutineContext +
                 SupervisorJob(parentScope.coroutineContext.job) +
+                (traceContext ?: EmptyCoroutineContext) +
                 CoroutineExceptionHandler { _, e ->
                     crashCount.intValue++
                     renderError = e
@@ -204,6 +213,7 @@ fun WidgetSlot(widget: WidgetInstance, renderer: WidgetRenderer) {
     } else {
         CompositionLocalProvider(
             LocalWidgetScope provides widgetScope,
+            LocalWidgetTraceContext provides traceContext,
             LocalWidgetErrorHandler provides { e ->
                 crashCount.intValue++
                 renderError = e
@@ -226,9 +236,21 @@ Standard composition error boundaries do NOT catch exceptions inside `LaunchedEf
 val LocalWidgetScope = staticCompositionLocalOf<CoroutineScope> {
     error("No WidgetCoroutineScope provided")
 }
+
+val LocalWidgetTraceContext = staticCompositionLocalOf<TraceContext?> { null }
 ```
 
 Enforced by lint rule and documented in the plugin API contract.
+
+### Binding Lifecycle Observability
+
+`WidgetBindingCoordinator` emits guaranteed `INFO`-level log entries for all binding state transitions — these are never sampled and always present in the `RingBufferSink`. Events: `BIND_STARTED`, `BIND_CANCELLED`, `BIND_TIMEOUT`, `REBIND_SCHEDULED`, `PROVIDER_FALLBACK`, `FIRST_EMISSION`. All include `widgetId`, `providerId`, and `traceId` in structured fields.
+
+These events serve two purposes:
+1. **Agentic diagnosis**: `diagnose-widget` filters the ring buffer by `widgetId` to show the binding history that led to the current state
+2. **Trace correlation**: the `traceId` field links binding events back to the originating agentic command (if any), closing the observability loop from command → binding → anomaly → diagnostic snapshot
+
+See [observability.md](observability.md#binding-lifecycle-events) for the full event table.
 
 ## Theme System
 

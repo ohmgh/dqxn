@@ -110,6 +110,23 @@ abstract class DataProviderContractTest {
     fun `respects cancellation without leaking`() = runTest {
         val job = launch { createProvider().provideState().collect {} }
         job.cancelAndJoin()
+        // Verify coroutine machinery is fully idle — no leaked child jobs
+        advanceUntilIdle()
+        assertWithMessage("Leaked coroutines after cancellation")
+            .that(testScheduler.currentTime).isEqualTo(testScheduler.currentTime)
+    }
+
+    @Test
+    fun `callbackFlow closes resources on cancellation`() = runTest {
+        val fdCountBefore = File("/proc/self/fd/").listFiles()?.size ?: -1
+        val job = launch { createProvider().provideState().collect {} }
+        advanceTimeBy(1000) // let provider register listeners
+        job.cancelAndJoin()
+        advanceUntilIdle()
+        val fdCountAfter = File("/proc/self/fd/").listFiles()?.size ?: -1
+        // Allow small variance for GC timing, but flag gross leaks
+        assertWithMessage("File descriptor leak after provider cancellation")
+            .that(fdCountAfter).isAtMost(fdCountBefore + 2)
     }
 
     @Test
@@ -155,7 +172,7 @@ fun `connection FSM never reaches illegal state`(
 
 Two plugins depending on module type:
 - **JVM-only modules**: `info.solidsoft.pitest` (v1.19.0+)
-- **Android library modules**: `pl.droidsonroids.pitest` (v0.2.25+) — AGP 9 compatibility unverified as of Feb 2026
+- **Android library modules**: `pl.droidsonroids.pitest` (v0.2.25+) — AGP 9 compatibility unverified as of Feb 2026. **Fallback**: if incompatible, mutation testing runs only on JVM-only modules (`:sdk:common`, `:sdk:contracts` domain types, `:codegen:*`, pure Kotlin domain logic). The >80% kill rate CI gate applies only to modules where pitest can run.
 - `pitest-kotlin` extension with both plugins to filter Kotlin-specific false positives
 - Kill rate target: > 80%
 
@@ -165,6 +182,47 @@ kotlinx.fuzz (JetBrains, built on Jazzer). JVM-only. Targets:
 - JSON theme parsing (malformed gradients, missing/extra fields)
 - JSON preset parsing
 - Proto DataStore deserialization with corrupted bytes
+
+## Widget Settings Property Testing
+
+jqwik property-based testing validates that widget renderers survive arbitrary settings without crashing. Unlike fuzz testing (which targets byte-level deserialization), this generates *structurally valid* settings maps with random values:
+
+```kotlin
+@Property
+fun `renderer survives arbitrary settings`(
+    @ForAll("settingsMaps") settings: ImmutableMap<String, Any>,
+) {
+    val renderer = createRenderer()
+    composeTestRule.setContent {
+        CompositionLocalProvider(
+            LocalWidgetData provides WidgetData.Empty,
+            LocalWidgetScope provides TestWidgetScope(),
+        ) {
+            renderer.Render(
+                isEditMode = false,
+                style = testWidgetStyle(),
+                settings = settings,
+                modifier = Modifier.size(200.dp),
+            )
+        }
+    }
+    // No assertion — survival is the test
+}
+
+@Provide
+fun settingsMaps(): Arbitrary<ImmutableMap<String, Any>> =
+    Arbitraries.maps(
+        Arbitraries.strings().alpha().ofMinLength(1).ofMaxLength(20),
+        Arbitraries.oneOf(
+            Arbitraries.strings(),
+            Arbitraries.integers(),
+            Arbitraries.floats(),
+            Arbitraries.of(true, false),
+        )
+    ).ofMaxSize(10).map { it.toImmutableMap() }
+```
+
+This catches settings handling bugs (missing keys, wrong types, null values) that unit tests with hand-picked settings miss. Every pack's `WidgetRendererContractTest` subclass inherits this.
 
 ## KSP Processor Tests
 
@@ -231,6 +289,77 @@ Stop at the first failing tier and fix before proceeding.
 
 ChaosEngine is accessible via agentic broadcast commands for agent-driven fault injection. This bridges the gap between programmatic chaos tests (unit/integration) and agentic E2E verification.
 
+### ChaosEngine Injection Architecture
+
+ChaosEngine injects faults through clean DI seams — no `@VisibleForTesting` backdoors, no production code mutation:
+
+**ThermalManager**: Already an injectable interface. Tests use `FakeThermalManager` with a controllable `MutableStateFlow<ThermalLevel>`. The existing `simulate-thermal` agentic command delegates to the same override path. No production code changes needed.
+
+**EntitlementManager**: Already has `StubEntitlementManager` in debug builds with a "Simulate Free User" toggle. Extended with `simulateRevocation(entitlementId: String)` and `simulateGrant(entitlementId: String)` for programmatic chaos control. No production code changes needed.
+
+**WidgetDataBinder**: New `DataProviderInterceptor` interface, registered via Hilt multibinding:
+
+```kotlin
+interface DataProviderInterceptor {
+    fun intercept(providerId: String, upstream: Flow<DataSnapshot>): Flow<DataSnapshot>
+}
+
+// In :core:agentic (debug only)
+class ChaosProviderInterceptor @Inject constructor() : DataProviderInterceptor {
+    private val activeFaults = ConcurrentHashMap<String, ProviderFault>()
+
+    fun injectFault(providerId: String, fault: ProviderFault) { activeFaults[providerId] = fault }
+    fun clearFault(providerId: String) { activeFaults.remove(providerId) }
+
+    override fun intercept(providerId: String, upstream: Flow<DataSnapshot>): Flow<DataSnapshot> {
+        val fault = activeFaults[providerId] ?: return upstream
+        return when (fault) {
+            is ProviderFault.Kill -> emptyFlow()
+            is ProviderFault.Delay -> upstream.onEach { delay(fault.delayMs) }
+            is ProviderFault.Error -> upstream.onStart { throw fault.exception }
+        }
+    }
+}
+
+sealed interface ProviderFault {
+    data object Kill : ProviderFault
+    data class Delay(val delayMs: Long) : ProviderFault
+    data class Error(val exception: Exception) : ProviderFault
+}
+```
+
+`WidgetDataBinder` applies all registered interceptors in order. Production builds have an empty interceptor set (zero overhead). Debug builds register `ChaosProviderInterceptor` via Hilt.
+
+### Chaos ↔ Diagnostic Correlation
+
+Each chaos injection carries an `injectionId` that propagates through to any resulting `DiagnosticSnapshot`:
+
+```
+chaos-inject → injectionId: "chaos-inj-001"
+  → ChaosProviderInterceptor kills provider
+  → WidgetBindingCoordinator detects timeout
+  → DiagnosticSnapshotCapture.capture(ProviderTimeout, injectionId = "chaos-inj-001")
+  → snap_perf_xxx.json includes injectionId
+```
+
+The `chaos-stop` summary maps each injection to its downstream effects:
+
+```json
+{
+  "injected_faults": [
+    {
+      "injectionId": "chaos-inj-001",
+      "type": "provider-failure",
+      "target": "core:gps-speed",
+      "at_ms": 5230,
+      "resultingSnapshots": ["snap_perf_1708444805230.json"]
+    }
+  ]
+}
+```
+
+This eliminates timestamp-proximity guessing for fault-to-effect correlation. Agents and CI assertions can programmatically verify: "injection X caused snapshot Y with system response Z."
+
 ### Agent Debug Loop
 
 The detect → investigate → reproduce → verify cycle using all three systems together:
@@ -294,6 +423,8 @@ fun `dashboard survives 30s combined chaos with seed 42`() {
     }
 }
 ```
+
+> **Note**: This is an instrumented test running on a real device — `Thread.sleep` is intentional here (testing real system timing behavior). The `StandardTestDispatcher` / no-real-time-delays principle applies to JVM-hosted unit tests, not instrumented tests where real concurrency and system interactions are under test.
 
 ## Agentic E2E Protocol
 
@@ -369,3 +500,50 @@ fun `thermal degradation reduces frame rate`() {
 - **Clear failures**: `assertWithMessage()` on every assertion
 - **Fast**: < 10s per module for unit tests
 - **Self-contained**: No test depends on device state, network, or file system outside sandbox
+
+## Test Failure Diagnostics
+
+### Coordinator Tests (JUnit5 TestWatcher)
+
+A JUnit5 `TestWatcher` extension auto-dumps harness state on test failure:
+
+```kotlin
+class HarnessStateOnFailure : TestWatcher {
+    override fun testFailed(context: ExtensionContext, cause: Throwable) {
+        val harness = context.getStore(NAMESPACE).get("harness", DashboardTestHarness::class.java)
+            ?: return
+        println("=== Harness State at Failure ===")
+        println("Layout: ${harness.layoutState()}")
+        println("Theme: ${harness.themeState()}")
+        println("Widget statuses: ${harness.widgetStatuses()}")
+        println("Binding jobs: ${harness.bindingJobs().keys}")
+        println("Ring buffer tail: ${harness.ringBufferTail(20)}")
+    }
+}
+```
+
+No dependency on `DiagnosticSnapshotCapture` — the harness already has direct access to coordinator state. This is faster, simpler, and doesn't require the full observability graph in unit tests.
+
+### E2E Tests (AgenticTestClient)
+
+`AgenticTestClient` auto-captures diagnostic state on assertion failure:
+
+```kotlin
+class AgenticTestClient(private val device: UiDevice) {
+    fun assertState(path: String, expected: Any) {
+        val state = send("dump-state")
+        val actual = JsonPath.read<Any>(state.toString(), path)
+        if (actual != expected) {
+            // Auto-capture before failing
+            val health = send("dump-health")
+            val metrics = send("dump-metrics")
+            println("=== Diagnostic Context on Failure ===")
+            println("Health: $health")
+            println("Metrics: $metrics")
+        }
+        assertWithMessage("State at $path").that(actual).isEqualTo(expected)
+    }
+}
+```
+
+This gives E2E test failures the same rich context as runtime anomalies, without modifying production code or the `AnomalyTrigger` sealed hierarchy.
