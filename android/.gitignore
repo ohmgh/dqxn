@@ -1,0 +1,49 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# AGP / Android
+local.properties
+*.apk
+*.aab
+*.ap_
+
+# Signing
+*.jks
+*.keystore
+keystore.properties
+
+# Kotlin
+*.kotlin_module
+
+# KSP
+build/generated/ksp/
+
+# Compose compiler metrics (generated on demand)
+**/compose_metrics/
+**/compose_reports/
+
+# Proto DataStore generated
+**/generated/source/proto/
+
+# Baseline profiles (generated, checked in selectively)
+**/generated/baselineProfiles/
+
+# Test outputs
+**/test-results/
+**/reports/
+
+# Roborazzi diffs (keep references, ignore failures)
+**/build/outputs/roborazzi/
+**/*_compare.png
+
+# Benchmark results
+**/benchmarkData/
+
+# Lint
+lint-results*
+
+# Secrets
+secrets.properties
+google-services.json

@@ -4,7 +4,7 @@
 
 DQXN — modular Android automotive dashboard. Phone/tablet in a vehicle shows real-time telemetry through configurable widgets on a grid canvas. Pack-based plugin architecture: packs register widgets, providers, and themes via contracts; the shell discovers them at runtime via Hilt multibinding.
 
-Pre-launch greenfield. Source under `android/`. Package namespace: `app.dqxn`. Read `ARCHITECTURE.md` for full technical design, `PRD.md` for product requirements.
+Pre-launch greenfield. Source under `android/`. Package namespace: `app.dqxn`. Read `docs/ARCHITECTURE.md` for full technical design, `docs/PRD.md` for product requirements.
 
 ## Tech Stack
 
@@ -20,7 +20,7 @@ compileSdk 36, minSdk 31, targetSdk 36. AGP 9.0.1, Gradle 9.3.1, JDK 25. AGP 9 m
 ./gradlew assembleRelease                  # Release build
 ./gradlew :app:installDebug                # Install on connected device
 ./gradlew test                             # All unit tests
-./gradlew :feature:dashboard:test          # Single module tests
+./gradlew :feature:dashboard:test                                     # Single module tests
 ./gradlew :feature:dashboard:testDebugUnitTest --tests "*.ClassName"  # Single test class
 ./gradlew connectedAndroidTest             # Integration tests
 ./gradlew :benchmark:connectedBenchmarkAndroidTest  # Macrobenchmarks
@@ -28,8 +28,8 @@ compileSdk 36, minSdk 31, targetSdk 36. AGP 9.0.1, Gradle 9.3.1, JDK 25. AGP 9 m
 ./gradlew lintDebug                        # Lint
 
 # Fast validation (no device needed)
-./gradlew :feature:packs:free:compileDebugKotlin         # Compile check only (~8s incremental)
-./gradlew :feature:packs:free:testDebugUnitTest           # Compile + unit tests (~12s)
+./gradlew :packs:free:compileDebugKotlin                  # Compile check only (~8s incremental)
+./gradlew :packs:free:testDebugUnitTest                   # Compile + unit tests (~12s)
 ./gradlew assembleDebug -Pcompose.compiler.metrics=true   # Compose stability audit
 ```
 
@@ -38,80 +38,94 @@ compileSdk 36, minSdk 31, targetSdk 36. AGP 9.0.1, Gradle 9.3.1, JDK 25. AGP 9 m
 ```
 android/
 ├── build-logic/convention/       # Gradle convention plugins (composite build)
-├── app/                          # Single-activity entry, DI assembly, nav host
-│   ├── src/debug/                # Debug overlays, agentic framework, LeakCanary
-│   └── src/release/
-├── core/
+├── sdk/                          # Pack-accessible API surface
+│   ├── contracts/                # Plugin contracts (WidgetRenderer, DataProvider, DataSnapshot, annotations)
 │   ├── common/                   # AppResult, AppError, dispatchers, stability config
-│   ├── plugin-api/               # Plugin contracts (WidgetRenderer, DataProvider, etc.)
-│   ├── plugin-processor/         # KSP: @DashboardWidget → generated pack manifests
-│   ├── widget-primitives/        # WidgetContainer, glow, error boundary wrapper
-│   ├── design-system/            # Theme tokens, spacing, typography, shared overlay composables
+│   ├── ui/                       # WidgetContainer, WidgetStyle, LocalWidgetData, glow, error boundary
 │   ├── observability/            # Structured logging, tracing, metrics, health monitoring
-│   ├── analytics/                # AnalyticsTracker interface, sealed event hierarchy
-│   ├── firebase/                 # Firebase implementations (Crashlytics, Analytics, Perf) — sole Firebase dependency point
+│   └── analytics/                # AnalyticsTracker, PackAnalytics, sealed event hierarchy
+├── core/                         # Shell internals (packs never depend on these)
+│   ├── design-system/            # Theme tokens, spacing, typography, shared overlay composables
 │   ├── thermal/                  # ThermalManager, RenderConfig, FramePacer
-│   ├── agentic/                  # ADB broadcast debug automation contracts
-│   └── agentic-processor/        # KSP: route listing generation
+│   ├── driving/                  # DrivingStateDetector — platform safety gate + DataProvider
+│   ├── firebase/                 # Firebase implementations (Crashlytics, Analytics, Perf) — sole Firebase dependency point
+│   └── agentic/                  # ADB broadcast debug automation contracts (debugImplementation only)
+├── codegen/                      # KSP processors (build-time only)
+│   ├── plugin/                   # KSP: @DashboardWidget → pack manifests, settings, themes, entitlements, validation
+│   └── agentic/                  # KSP: command registry + route listing generation (debugKsp only)
 ├── data/
-│   ├── persistence/              # Proto DataStore, Preferences DataStore
-│   └── proto/                    # .proto schema definitions
+│   └── persistence/              # Proto DataStore, Preferences DataStore, .proto schemas
 ├── feature/
 │   ├── dashboard/                # Dashboard shell — coordinators, grid, theme engine, presets
-│   ├── driving/                  # Driving mode detection, safety gating
-│   └── packs/
-│       ├── free/                 # Essentials — core widgets, providers, 2 themes
-│       ├── plus/                 # Plus — trip, media, G-force, altimeter, weather
-│       ├── themes/               # Premium themes (JSON-driven)
-│       └── demo/                 # Hardware simulation for debug/demo
+│   ├── settings/                 # Settings sheet — appearance, behavior, data & privacy, danger zone
+│   ├── diagnostics/              # Provider Health dashboard, connection log, retry actions
+│   └── onboarding/               # Progressive tips, first-launch theme selection, permission flows
+├── packs/                        # Pack extensions (own convention plugin, own dependency rules)
+│   ├── free/                     # Essentials — core widgets, providers, 2 themes
+│   ├── plus/                     # Plus — trip, media, G-force, altimeter, weather
+│   ├── themes/                   # Premium themes (JSON-driven)
+│   └── demo/                     # Hardware simulation for debug/demo
 ├── lint-rules/                   # Custom lint: module boundaries, KAPT detection, Compose stability
 ├── baselineprofile/              # Baseline Profile generation
-└── benchmark/                    # Macrobenchmark tests
+├── benchmark/                    # Macrobenchmark tests
+└── app/                          # Single-activity entry, DI assembly, nav host
+    ├── src/debug/                # Debug overlays, LeakCanary, StrictMode
+    └── src/release/
 ```
 
 ## Module Dependency Rules
 
-**The single most important rule**: Packs depend on `:core:plugin-api`, never on `:feature:dashboard`. The shell imports nothing from packs at compile time. If you're adding a dashboard import in a pack, the design is wrong.
+**The single most important rule**: Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. If you're adding a dashboard or core import in a pack, the design is wrong. The `dqxn.pack` convention plugin auto-wires all allowed sdk dependencies — packs should not manually add `:sdk:*` project dependencies.
 
 ```
-:feature:packs:*    → :core:plugin-api, :core:common, :core:widget-primitives, :core:observability
-:feature:dashboard  → :core:plugin-api, :core:common, :core:widget-primitives, :core:design-system,
-                      :core:thermal, :core:observability, :core:analytics, :data:persistence
-:feature:driving    → :core:plugin-api, :core:common, :core:observability
-:core:firebase      → :core:observability, :core:analytics, :core:common (sole Firebase SDK dependency point)
-:core:observability → :core:common
-:core:design-system → :core:common, :core:widget-primitives
-:core:analytics     → :core:common, :core:observability
-:app                → everything (assembly point only)
+:packs:*              → :sdk:* only (enforced by convention plugin + validation task)
+:feature:dashboard    → :sdk:*, :core:design-system, :core:thermal, :data:persistence
+:feature:settings     → :sdk:*, :core:design-system, :data:persistence
+:feature:diagnostics  → :sdk:contracts, :sdk:common, :sdk:observability, :sdk:analytics
+:feature:onboarding   → :sdk:*, :data:persistence
+:core:driving         → :sdk:contracts, :sdk:common, :sdk:observability
+:core:firebase        → :sdk:observability, :sdk:analytics, :sdk:common (sole Firebase SDK dependency point)
+:core:design-system   → :sdk:common, :sdk:ui
+:core:thermal         → :sdk:common, :sdk:observability
+:core:agentic         → :sdk:common, :sdk:contracts (debugImplementation in :app only)
+:codegen:plugin       → :sdk:contracts (reads annotations, no runtime dependency)
+:codegen:agentic      → :core:agentic (reads annotations, debugKsp in :app only)
+:app                  → everything (assembly point only)
 ```
 
 ### Module Isolation Guide
 
-**When working in `:feature:packs:{packId}`:**
-- CAN import from: `:core:plugin-api`, `:core:common`, `:core:widget-primitives`, `:core:observability`
-- CANNOT import from: `:feature:dashboard`, `:data:persistence`, `:core:thermal`, `:core:design-system`, other packs
-- If you need something from dashboard → it belongs in `:core:plugin-api` as a contract
+**When working in `:packs:{packId}`:**
+- CAN import from: `:sdk:contracts`, `:sdk:common`, `:sdk:ui`, `:sdk:observability`, `:sdk:analytics`
+- CANNOT import from: `:feature:*`, `:core:*`, `:data:*`, other packs
+- If you need something from dashboard → it belongs in `:sdk:contracts` as a contract
+- Dependencies are auto-wired by the `dqxn.pack` convention plugin
 
 **When working in `:feature:dashboard`:**
-- CAN import from: `:core:plugin-api`, `:core:common`, `:core:widget-primitives`, `:core:design-system`, `:core:thermal`, `:core:observability`, `:core:analytics`, `:data:persistence`
-- CANNOT import from: any `:feature:packs:*` module
+- CAN import from: `:sdk:*`, `:core:design-system`, `:core:thermal`, `:data:persistence`
+- CANNOT import from: any `:packs:*` module
 - If you need a widget-specific type → the design is wrong, use contracts
 
 **When working in `:core:firebase`:**
-- CAN import from: `:core:observability`, `:core:analytics`, `:core:common`
+- CAN import from: `:sdk:observability`, `:sdk:analytics`, `:sdk:common`
 - Implements interfaces defined in observability/analytics — this is the ONLY module that imports Firebase SDKs
 - CANNOT be imported by: any module other than `:app`
 
-**When working in `:core:plugin-api`:**
-- CAN import from: `:core:common` only
+**When working in `:sdk:contracts`:**
+- CAN import from: `:sdk:common` only
 - No Compose dependencies, no Android framework types (pure Kotlin + coroutines)
 - Exception: `@Composable` allowed in `WidgetRenderer.Render()` signature only
+
+**When working in `:core:driving`:**
+- CAN import from: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`
+- Implements `DataProvider` (emits `DrivingSnapshot`) — the sole exception to "providers come from packs"
+- Shell subscribes permanently for safety gating; widgets optionally subscribe for display
 
 ### Compose Compiler Scope
 
 Convention plugins control which modules get the Compose compiler:
-- `dqxn.android.compose` — modules WITH UI: `:app`, `:feature:*`, `:core:widget-primitives`, `:core:design-system`
-- Modules WITHOUT Compose: `:core:common`, `:core:plugin-api`, `:core:plugin-processor`, `:core:observability`, `:core:analytics`, `:core:firebase`, `:core:thermal`, `:data:*`
+- `dqxn.android.compose` — modules WITH UI: `:app`, `:feature:*`, `:sdk:ui`, `:core:design-system`
+- Modules WITHOUT Compose: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:driving`, `:core:firebase`, `:core:agentic`, `:codegen:*`, `:data:*`
 
 ## Critical Constraints
 
@@ -153,10 +167,10 @@ These are non-negotiable. Violations cause real performance/correctness issues.
 ### New Widget (in an existing pack)
 
 Files to create (example: `core:battery-temp` in free pack):
-1. `android/feature/packs/free/src/main/kotlin/app/dqxn/feature/packs/free/widgets/batterytemp/BatteryTempRenderer.kt`
-2. `android/feature/packs/free/src/test/kotlin/app/dqxn/feature/packs/free/widgets/batterytemp/BatteryTempRendererTest.kt`
+1. `android/packs/free/src/main/kotlin/app/dqxn/packs/free/widgets/batterytemp/BatteryTempRenderer.kt`
+2. `android/packs/free/src/test/kotlin/app/dqxn/packs/free/widgets/batterytemp/BatteryTempRendererTest.kt`
 
-Package: `app.dqxn.feature.packs.{packId}.widgets.{widgetname}` (flat, no hyphens in package)
+Package: `app.dqxn.packs.{packId}.widgets.{widgetname}` (flat, no hyphens in package)
 TypeId: `{packId}:{widget-name}` (hyphens in typeId, not in package)
 
 Widget skeleton:
@@ -236,16 +250,16 @@ class BatteryTempRendererTest : WidgetRendererContractTest() {
 
 ### New Data Provider (in an existing pack)
 
-Files: `android/feature/packs/{packId}/src/main/kotlin/app/dqxn/feature/packs/{packId}/providers/{Name}Provider.kt` + test.
+Files: `android/packs/{packId}/src/main/kotlin/app/dqxn/packs/{packId}/providers/{Name}Provider.kt` + test.
 
 Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listeners. Accumulation providers (Trip) handle high-frequency accumulation internally on `Dispatchers.Default`, emit aggregated snapshots at reduced rate.
 
 ### New Pack Module
 
-1. Create `android/feature/packs/{packId}/build.gradle.kts` (copy free pack as template)
-2. Add `include(":feature:packs:{packId}")` to `android/settings.gradle.kts`
-3. Add `implementation(project(":feature:packs:{packId}"))` to `android/app/build.gradle.kts`
-4. **Never** add it to `:feature:dashboard` dependencies
+1. Create `android/packs/{packId}/build.gradle.kts` — apply `id("dqxn.pack")` (auto-wires all sdk dependencies)
+2. Add `include(":packs:{packId}")` to `android/settings.gradle.kts`
+3. Add `implementation(project(":packs:{packId}"))` to `android/app/build.gradle.kts`
+4. **Never** add it to `:feature:dashboard` or `:core:*` dependencies
 
 ## Plugin Conventions
 
@@ -262,14 +276,14 @@ Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listener
 - **Widget error isolation**: Each widget in a catch boundary (effects via `WidgetCoroutineScope`). Compose has NO composition-phase try/catch — mitigated by contract tests, crash count tracking, and safe mode fallback. Failed widget → fallback UI, never app crash.
 - **ConnectionStateMachine**: FSM with validated transitions. No ad-hoc `MutableStateFlow<ConnectionState>`.
 - **Thermal adaptation**: `ThermalManager` → `RenderConfig`. Glow disabled at DEGRADED, frame rate reduced via `Window.setFrameRate()` (API 34+) or data emission throttling (API 31-33).
-- **Driving mode**: `isDriving == true` → edit mode / settings / widget picker disabled. Only tap interactions on interactive widgets.
+- **Driving mode**: `:core:driving` is both a platform safety gate and a `DataProvider` emitting `DrivingSnapshot`. Shell subscribes permanently for safety gating (edit mode / settings / widget picker disabled). Widgets optionally subscribe for display. Only tap interactions on interactive widgets while driving.
 - **Edge-to-edge**: `enableEdgeToEdge()` in onCreate. Dashboard draws behind system bars. Overlays respect `WindowInsets.systemBars`. Status bar toggle via `WindowInsetsControllerCompat`.
 - **Crash recovery**: >3 crashes in 60s → safe mode (clock widget only, reset banner).
 
 ## Observability
 
-- `:core:observability` provides structured logging, tracing, metrics. No Timber — custom `DqxnLogger` with inline zero-allocation extensions.
-- `LogTag` enum for all subsystems (LAYOUT, THEME, SENSOR, BLE, CONNECTION_FSM, DATASTORE, THERMAL, etc.)
+- `:sdk:observability` provides structured logging, tracing, metrics. No Timber — custom `DqxnLogger` with inline zero-allocation extensions. Designed domain-free for reusability — no DQXN-specific types in public API.
+- `LogTag` as a string-based identifier (not a closed enum) — each module defines its own tags (LAYOUT, THEME, SENSOR, BLE, CONNECTION_FSM, DATASTORE, THERMAL, etc.)
 - `TraceContext` via `CoroutineContext.Key` for cross-coordinator correlation
 - `MetricsCollector` with pre-allocated counters — frame histograms, recomposition counts, provider latency
 - `AnrWatchdog` on dedicated thread — 2s ping / 2.5s timeout, captures stack + ring buffer context on stall
@@ -285,15 +299,17 @@ Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listener
 
 ## Testing
 
-- **Unit**: JUnit5 + MockK + Truth
+- **Unit**: JUnit5 (`de.mannodermaus.android-junit` 2.0.1+) + MockK + Truth
 - **Flow**: Turbine + `StandardTestDispatcher` (never `UnconfinedTestDispatcher` for production flow tests)
-- **Visual regression**: Roborazzi + Robolectric
+- **Visual regression**: Roborazzi 1.56.0+ + Robolectric (Paparazzi broken on AGP 9)
 - **Interaction**: `compose.ui.test` + Robolectric for drag, resize, long-press
 - **Performance**: Macrobenchmarks, CI-gated (P99 frame < 16ms, startup < 1.5s)
-- **Contract**: Abstract test classes in `:core:plugin-api` testFixtures — every pack widget/provider extends them
-- **State machine**: Exhaustive transitions + jqwik property-based testing
+- **Contract**: Abstract test classes in `:sdk:contracts` testFixtures — every pack widget/provider extends them
+- **State machine**: Exhaustive transitions + jqwik property-based testing (jqwik is a JUnit5 test engine)
+- **Hilt integration**: JUnit4 + `HiltAndroidRule` (no JUnit5 extension exists for Hilt)
 - **Chaos**: ChaosEngine with random provider failures, thermal spikes, entitlement churn
-- **Fuzz**: Jazzer on JSON theme/preset parsing
+- **Fuzz**: kotlinx.fuzz (JetBrains, built on Jazzer) on JSON theme/preset parsing — better Kotlin coverage than raw Jazzer
+- **Mutation**: Pitest — `info.solidsoft.pitest` for JVM modules, `pl.droidsonroids.pitest` for Android modules + `pitest-kotlin` extension
 - **Coordinators**: `DashboardTestHarness` DSL — `dashboardTest { dispatch(...); assertThat(...) }`
 - **Accessibility**: Semantics assertions for touch targets (76dp automotive), contrast verification per theme
 
@@ -302,32 +318,38 @@ Shared test infrastructure via Gradle `testFixtures` source sets per module. Fac
 ## Package Naming
 
 ```
-app.dqxn.core.plugin.api              — plugin contracts
-app.dqxn.core.common                  — shared utilities
-app.dqxn.core.widget                  — widget primitives (container, theme types)
+app.dqxn.sdk.contracts                — plugin contracts (WidgetRenderer, DataProvider, DataSnapshot subtypes)
+app.dqxn.sdk.common                   — shared utilities (AppResult, AppError, dispatchers)
+app.dqxn.sdk.ui                       — widget primitives (WidgetContainer, WidgetStyle, LocalWidgetData)
+app.dqxn.sdk.observability            — logging, tracing, metrics
+app.dqxn.sdk.observability.log        — DqxnLogger, LogEntry, LogTag
+app.dqxn.sdk.observability.trace      — DqxnTracer, TraceContext, Span
+app.dqxn.sdk.observability.metrics    — MetricsCollector, FrameTracer
+app.dqxn.sdk.observability.health     — WidgetHealthMonitor, ThermalTrendAnalyzer
+app.dqxn.sdk.observability.crash      — CrashReporter, CrashMetadataWriter, ErrorReporter interfaces, CrashContextProvider, AnrWatchdog
+app.dqxn.sdk.observability.perf       — PerformanceTracer, PerfTrace, HttpMetric interfaces
+app.dqxn.sdk.analytics                — AnalyticsTracker, PackAnalytics, AnalyticsEvent
 app.dqxn.core.design                  — design system tokens, shared composables
-app.dqxn.core.observability           — logging, tracing, metrics
-app.dqxn.core.observability.log       — DqxnLogger, LogEntry, LogTag
-app.dqxn.core.observability.trace     — DqxnTracer, TraceContext, Span
-app.dqxn.core.observability.metrics   — MetricsCollector, FrameTracer
-app.dqxn.core.observability.health    — WidgetHealthMonitor, ThermalTrendAnalyzer
-app.dqxn.core.observability.crash     — CrashReporter, CrashMetadataWriter, ErrorReporter interfaces, CrashContextProvider, AnrWatchdog
-app.dqxn.core.observability.perf      — PerformanceTracer, PerfTrace, HttpMetric interfaces
-app.dqxn.core.analytics               — AnalyticsTracker, AnalyticsEvent
+app.dqxn.core.thermal                 — ThermalManager, RenderConfig, FramePacer
+app.dqxn.core.driving                 — DrivingStateDetector, DrivingSnapshot DataProvider
 app.dqxn.core.firebase                — Hilt module, FirebaseCrashReporter, FirebaseCrashMetadataWriter, FirebaseErrorReporter
 app.dqxn.core.firebase.analytics      — FirebaseAnalyticsTracker
 app.dqxn.core.firebase.perf           — FirebasePerformanceTracer, PerformanceTracerInterceptor
-app.dqxn.core.thermal                 — ThermalManager, RenderConfig, FramePacer
+app.dqxn.core.agentic                 — ADB broadcast automation (debug only)
+app.dqxn.codegen.plugin               — KSP plugin processor handlers
+app.dqxn.codegen.agentic              — KSP agentic processor handlers
 app.dqxn.data.persistence             — DataStore implementations
 app.dqxn.feature.dashboard            — dashboard shell root
 app.dqxn.feature.dashboard.coordinator — state coordinators
 app.dqxn.feature.dashboard.ui         — composables
-app.dqxn.feature.driving              — driving mode
-app.dqxn.feature.packs.free           — free pack root
-app.dqxn.feature.packs.free.widgets.{name} — one subpackage per widget
-app.dqxn.feature.packs.free.providers — providers
-app.dqxn.feature.packs.free.themes    — theme definitions
-app.dqxn.feature.packs.free.di        — Hilt modules
+app.dqxn.feature.settings             — settings sheet
+app.dqxn.feature.diagnostics          — provider health, connection log
+app.dqxn.feature.onboarding           — progressive tips, first-launch flows
+app.dqxn.packs.free                   — free pack root
+app.dqxn.packs.free.widgets.{name}    — one subpackage per widget
+app.dqxn.packs.free.providers         — providers
+app.dqxn.packs.free.themes            — theme definitions
+app.dqxn.packs.free.di                — Hilt modules
 ```
 
 ## File Naming
@@ -378,7 +400,7 @@ KAPT leaked in. Check no module uses `kapt()` — only `ksp()` allowed.
 `List`, `Map`, or `Set` parameter instead of `ImmutableList`, `ImmutableMap`, `ImmutableSet`. Or a data class missing `@Immutable`/`@Stable`.
 
 ### Build hangs or OOM in KSP
-Likely two KSP processors conflicting. Ensure `plugin-processor` and `agentic-processor` run as a single pass. Check `ksp.incremental=true` in `gradle.properties`.
+Likely two KSP processors conflicting. Ensure `:codegen:plugin` and `:codegen:agentic` run as a single pass. Check `ksp.incremental=true` in `gradle.properties`.
 
 ## Why Decisions
 
@@ -400,7 +422,17 @@ For agents that wonder "why not just...":
 | Why 1:1 provider-to-snapshot, not composite snapshots? | GPS speed, accelerometer, and map speed-limit have different availability, frequency, and failure modes. Composites push binding logic into providers and lose independent availability. 1:1 alignment means each provider emits its own type; the binder `combine()`s them. |
 | Why plain `Layout`, not `LazyLayout` or `LazyGrid`? | Grid placement is absolute-position, not flow-based. `LazyLayout` adds `SubcomposeLayout` overhead without benefit for viewport-sized grids. Plain `Layout` + custom `MeasurePolicy` is lighter. |
 | Why `callbackFlow` for sensor providers? | Ensures proper cleanup via `awaitClose`. Direct `SensorEventListener` without it leaks the registration. |
-| Why `:core:firebase` module, not Firebase in `:core:observability`? | `:core:observability` is a transitive dependency of every module. Putting Firebase there means the entire Firebase SDK becomes a transitive dependency of packs, plugin-api, and data modules. Interfaces in observability, implementations in `:core:firebase`, wired via Hilt `@Binds`. |
+| Why `:core:firebase` module, not Firebase in `:sdk:observability`? | `:sdk:observability` is a transitive dependency of every module. Putting Firebase there means the entire Firebase SDK becomes a transitive dependency of packs, contracts, and data modules. Interfaces in observability, implementations in `:core:firebase`, wired via Hilt `@Binds`. |
 | Why no Crashlytics NDK? | No first-party native code. `RenderEffect.createBlurEffect()` is the only non-trivial GPU path, but it's a standard Android API — Compose/Skia/HWUI native code is framework-level, not app-specific risk. If unexplained silent process deaths appear post-launch (via `session_active` flag), add `firebase-crashlytics-ndk` then. |
 | Why Firebase Perf alongside MetricsCollector? | Different scopes. `MetricsCollector` handles hot-path instrumentation (per-frame timing, atomic counters) locally. Firebase Perf provides remote-visible coarse-grained operation traces (startup, theme switch, widget bind) in the Firebase console. They complement, not overlap. |
 | Why not KSP for Firebase provider discovery? | Exactly one crash reporter and one analytics tracker per build variant. No set to discover, no manifest to generate. Standard Hilt `@Binds` is the right tool — KSP adds complexity for zero value here. |
+| Why JUnit5 for unit tests but JUnit4 for Hilt integration? | Hilt has no JUnit5 extension — `HiltAndroidRule` is JUnit4-only. No credible community bridge exists. JUnit5 provides `@Tag` filtering (tiered validation) and hosts jqwik as a test engine. Pragmatic split, not an oversight. |
+| Why kotlinx.fuzz over raw Jazzer? | Raw Jazzer has coverage collection failures on Kotlin language features. kotlinx.fuzz (JetBrains, 2025) wraps Jazzer with a Kotlin-native API, Gradle plugin, and better Kotlin coverage. Same engine, better DX. |
+| Why Roborazzi over Paparazzi? | Paparazzi is broken on AGP 9 with no fix merged (Feb 2026). Roborazzi fixed in 1.56.0 (Jan 2026). Roborazzi also supports pre-capture interactions (tap, drag, state changes) via Robolectric, which matters for widget edit/resize/drag states. |
+| Why `sdk/` vs `core/` split? | Packs must depend only on contracts, not shell internals. Flat `core/` mixed pack-visible modules with shell-only modules — boundary was documented but not structural. `sdk/` makes the pack API surface visible in the file tree. |
+| Why packs at top level, not under `feature/`? | Packs are extensions discovered via Hilt multibinding, not features with screens/routes. Nesting them under `feature/` incorrectly implies they're the same module category as dashboard or settings. |
+| Why driving in `core/`, not `feature/`? | Driving detection has no UI — it's a runtime service (GPS speed → threshold → state). It's also a safety gate that must work regardless of which features are present. Cross-cutting platform concern, not a user-facing feature. |
+| Why driving is also a `DataProvider`? | Driving state is a reactive data source derived from sensors — same pattern as every other provider. Widgets (trip computer, driving indicator) should consume it through standard binding, not a parallel side-channel. Shell permanently subscribes for safety; widgets optionally subscribe for display. |
+| Why `codegen/` folder for KSP processors? | Plugin processor alone runs 7 handlers (settings, themes, entitlements, resources, 3 validators). Substantial shared KSP/KotlinPoet infrastructure. Build-time only with zero runtime presence. Grouping separates build-time from runtime modules. |
+| Why analytics accessible to packs? | Packs know their interaction semantics (Media Controller play/pause, Trip reset). Shell shouldn't proxy every pack interaction. `PackAnalytics` is a scoped interface — packs fire structured events, implementation prepends pack namespace. |
+| Why observability and analytics not split into api + impl? | Both have the same pattern (packs use a subset, shell uses the whole thing). Splitting each into two modules doubles module count for marginal enforcement. `sdk/` vs `core/` handles the big boundary; within-module access uses Kotlin visibility. Consistent treatment for both. |
