@@ -28,82 +28,42 @@ compileSdk 36, minSdk 31, targetSdk 36. AGP 9.0.1, Gradle 9.3.1, JDK 25. AGP 9 m
 ./gradlew lintDebug                        # Lint
 
 # Fast validation (no device needed)
-./gradlew :packs:free:compileDebugKotlin                  # Compile check only (~8s incremental)
-./gradlew :packs:free:testDebugUnitTest                   # Compile + unit tests (~12s)
+./gradlew :pack:free:compileDebugKotlin                  # Compile check only (~8s incremental)
+./gradlew :pack:free:testDebugUnitTest                   # Compile + unit tests (~12s)
 ./gradlew assembleDebug -Pcompose.compiler.metrics=true   # Compose stability audit
 ```
 
 ## Module Map
 
+Full annotated tree in `docs/ARCHITECTURE.md` Section 3.
+
 ```
-android/
-├── build-logic/convention/       # Gradle convention plugins (composite build)
-├── sdk/                          # Pack-accessible API surface
-│   ├── contracts/                # Plugin contracts (WidgetRenderer, DataProvider, DataSnapshot, annotations)
-│   ├── common/                   # AppResult, AppError, dispatchers, stability config
-│   ├── ui/                       # WidgetContainer, WidgetStyle, LocalWidgetData, glow, error boundary
-│   ├── observability/            # Structured logging, tracing, metrics, health monitoring
-│   └── analytics/                # AnalyticsTracker, PackAnalytics, sealed event hierarchy
-├── core/                         # Shell internals (packs never depend on these)
-│   ├── design-system/            # Theme tokens, spacing, typography, shared overlay composables
-│   ├── thermal/                  # ThermalManager, RenderConfig, FramePacer
-│   ├── driving/                  # DrivingStateDetector — platform safety gate + DataProvider
-│   ├── firebase/                 # Firebase implementations (Crashlytics, Analytics, Perf) — sole Firebase dependency point
-│   └── agentic/                  # ADB broadcast debug automation contracts (debugImplementation only)
-├── codegen/                      # KSP processors (build-time only)
-│   ├── plugin/                   # KSP: @DashboardWidget → pack manifests, settings, themes, entitlements, validation
-│   └── agentic/                  # KSP: command registry + route listing generation (debugKsp only)
-├── data/
-│   └── persistence/              # Proto DataStore, Preferences DataStore, .proto schemas
-├── feature/
-│   ├── dashboard/                # Dashboard shell — coordinators, grid, theme engine, presets
-│   ├── settings/                 # Settings sheet — appearance, behavior, data & privacy, danger zone
-│   ├── diagnostics/              # Provider Health dashboard, connection log, retry actions
-│   └── onboarding/               # Progressive tips, first-launch theme selection, permission flows
-├── packs/                        # Pack extensions (own convention plugin, own dependency rules)
-│   ├── free/                     # Essentials — core widgets, providers, 2 themes
-│   ├── plus/                     # Plus — trip, media, G-force, altimeter, weather
-│   ├── themes/                   # Premium themes (JSON-driven)
-│   └── demo/                     # Hardware simulation for debug/demo
-├── lint-rules/                   # Custom lint: module boundaries, KAPT detection, Compose stability
-├── baselineprofile/              # Baseline Profile generation
-├── benchmark/                    # Macrobenchmark tests
-└── app/                          # Single-activity entry, DI assembly, nav host
-    ├── src/debug/                # Debug overlays, LeakCanary, StrictMode
-    └── src/release/
+sdk/      — contracts, common, ui, observability, analytics (pack API surface)
+core/     — design, thermal, driving, firebase, agentic (shell internals)
+codegen/  — plugin, agentic (KSP, build-time only)
+data/     — persistence (Proto + Preferences DataStore)
+feature/  — dashboard, settings, diagnostics, onboarding
+pack/     — free, plus, themes, demo
+app/      — single-activity entry, DI assembly
 ```
 
 ## Module Dependency Rules
 
 **The single most important rule**: Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. If you're adding a dashboard or core import in a pack, the design is wrong. The `dqxn.pack` convention plugin auto-wires all allowed sdk dependencies — packs should not manually add `:sdk:*` project dependencies.
 
-```
-:packs:*              → :sdk:* only (enforced by convention plugin + validation task)
-:feature:dashboard    → :sdk:*, :core:design-system, :core:thermal, :data:persistence
-:feature:settings     → :sdk:*, :core:design-system, :data:persistence
-:feature:diagnostics  → :sdk:contracts, :sdk:common, :sdk:observability, :sdk:analytics
-:feature:onboarding   → :sdk:*, :data:persistence
-:core:driving         → :sdk:contracts, :sdk:common, :sdk:observability
-:core:firebase        → :sdk:observability, :sdk:analytics, :sdk:common (sole Firebase SDK dependency point)
-:core:design-system   → :sdk:common, :sdk:ui
-:core:thermal         → :sdk:common, :sdk:observability
-:core:agentic         → :sdk:common, :sdk:contracts (debugImplementation in :app only)
-:codegen:plugin       → :sdk:contracts (reads annotations, no runtime dependency)
-:codegen:agentic      → :core:agentic (reads annotations, debugKsp in :app only)
-:app                  → everything (assembly point only)
-```
+Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference below.
 
 ### Module Isolation Guide
 
-**When working in `:packs:{packId}`:**
+**When working in `:pack:{packId}`:**
 - CAN import from: `:sdk:contracts`, `:sdk:common`, `:sdk:ui`, `:sdk:observability`, `:sdk:analytics`
 - CANNOT import from: `:feature:*`, `:core:*`, `:data:*`, other packs
 - If you need something from dashboard → it belongs in `:sdk:contracts` as a contract
 - Dependencies are auto-wired by the `dqxn.pack` convention plugin
 
 **When working in `:feature:dashboard`:**
-- CAN import from: `:sdk:*`, `:core:design-system`, `:core:thermal`, `:data:persistence`
-- CANNOT import from: any `:packs:*` module
+- CAN import from: `:sdk:*`, `:core:design`, `:core:thermal`, `:data:persistence`
+- CANNOT import from: any `:pack:*` module
 - If you need a widget-specific type → the design is wrong, use contracts
 
 **When working in `:core:firebase`:**
@@ -124,7 +84,7 @@ android/
 ### Compose Compiler Scope
 
 Convention plugins control which modules get the Compose compiler:
-- `dqxn.android.compose` — modules WITH UI: `:app`, `:feature:*`, `:sdk:ui`, `:core:design-system`
+- `dqxn.android.compose` — modules WITH UI: `:app`, `:feature:*`, `:sdk:ui`, `:core:design`
 - Modules WITHOUT Compose: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:driving`, `:core:firebase`, `:core:agentic`, `:codegen:*`, `:data:*`
 
 ## Critical Constraints
@@ -167,10 +127,10 @@ These are non-negotiable. Violations cause real performance/correctness issues.
 ### New Widget (in an existing pack)
 
 Files to create (example: `core:battery-temp` in free pack):
-1. `android/packs/free/src/main/kotlin/app/dqxn/packs/free/widgets/batterytemp/BatteryTempRenderer.kt`
-2. `android/packs/free/src/test/kotlin/app/dqxn/packs/free/widgets/batterytemp/BatteryTempRendererTest.kt`
+1. `android/pack/free/src/main/kotlin/app/dqxn/pack/free/widgets/batterytemp/BatteryTempRenderer.kt`
+2. `android/pack/free/src/test/kotlin/app/dqxn/pack/free/widgets/batterytemp/BatteryTempRendererTest.kt`
 
-Package: `app.dqxn.packs.{packId}.widgets.{widgetname}` (flat, no hyphens in package)
+Package: `app.dqxn.pack.{packId}.widgets.{widgetname}` (flat, no hyphens in package)
 TypeId: `{packId}:{widget-name}` (hyphens in typeId, not in package)
 
 Widget skeleton:
@@ -250,15 +210,15 @@ class BatteryTempRendererTest : WidgetRendererContractTest() {
 
 ### New Data Provider (in an existing pack)
 
-Files: `android/packs/{packId}/src/main/kotlin/app/dqxn/packs/{packId}/providers/{Name}Provider.kt` + test.
+Files: `android/pack/{packId}/src/main/kotlin/app/dqxn/pack/{packId}/providers/{Name}Provider.kt` + test.
 
 Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listeners. Accumulation providers (Trip) handle high-frequency accumulation internally on `Dispatchers.Default`, emit aggregated snapshots at reduced rate.
 
 ### New Pack Module
 
-1. Create `android/packs/{packId}/build.gradle.kts` — apply `id("dqxn.pack")` (auto-wires all sdk dependencies)
-2. Add `include(":packs:{packId}")` to `android/settings.gradle.kts`
-3. Add `implementation(project(":packs:{packId}"))` to `android/app/build.gradle.kts`
+1. Create `android/pack/{packId}/build.gradle.kts` — apply `id("dqxn.pack")` (auto-wires all sdk dependencies)
+2. Add `include(":pack:{packId}")` to `android/settings.gradle.kts`
+3. Add `implementation(project(":pack:{packId}"))` to `android/app/build.gradle.kts`
 4. **Never** add it to `:feature:dashboard` or `:core:*` dependencies
 
 ## Plugin Conventions
@@ -345,11 +305,11 @@ app.dqxn.feature.dashboard.ui         — composables
 app.dqxn.feature.settings             — settings sheet
 app.dqxn.feature.diagnostics          — provider health, connection log
 app.dqxn.feature.onboarding           — progressive tips, first-launch flows
-app.dqxn.packs.free                   — free pack root
-app.dqxn.packs.free.widgets.{name}    — one subpackage per widget
-app.dqxn.packs.free.providers         — providers
-app.dqxn.packs.free.themes            — theme definitions
-app.dqxn.packs.free.di                — Hilt modules
+app.dqxn.pack.free                   — free pack root
+app.dqxn.pack.free.widgets.{name}    — one subpackage per widget
+app.dqxn.pack.free.providers         — providers
+app.dqxn.pack.free.themes            — theme definitions
+app.dqxn.pack.free.di                — Hilt modules
 ```
 
 ## File Naming

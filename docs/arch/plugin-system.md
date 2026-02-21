@@ -258,7 +258,7 @@ Users maintain separate `lightTheme` and `darkTheme` selections. `ThemeAutoSwitc
 
 `DashboardThemeDefinition` (annotated `@Immutable`): `primaryTextColor`, `secondaryTextColor`, `accentColor`, `highlightColor`, `widgetBorderColor`, `backgroundBrush`, `widgetBackgroundBrush`, `isDark`, plus gradient specs for serialization. Default fallback: "Cyberpunk".
 
-Spacing tokens and typography scale defined in `:core:design-system` as theme extension properties, keeping pack rebuilds isolated from settings UI changes.
+Spacing tokens and typography scale defined in `:core:design` as theme extension properties, keeping pack rebuilds isolated from settings UI changes.
 
 ### Theme JSON Format
 

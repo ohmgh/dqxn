@@ -43,7 +43,7 @@ android/
 │   ├── observability/            # Structured logging, tracing, metrics, health monitoring, ANR watchdog
 │   └── analytics/                # AnalyticsTracker, PackAnalytics, sealed AnalyticsEvent hierarchy
 ├── core/                         # Shell internals (packs never depend on these)
-│   ├── design-system/            # Theme tokens, typography, spacing, shared overlay composables
+│   ├── design/            # Theme tokens, typography, spacing, shared overlay composables
 │   ├── thermal/                  # ThermalManager, RenderConfig, adaptive frame rate
 │   ├── driving/                  # DrivingStateDetector — platform safety gate + DataProvider (DrivingSnapshot)
 │   ├── firebase/                 # Firebase implementations (Crashlytics, Analytics, Perf) — sole Firebase dependency point
@@ -58,7 +58,7 @@ android/
 │   ├── settings/                 # Settings sheet — appearance, behavior, data & privacy, danger zone
 │   ├── diagnostics/              # Provider Health dashboard, connection log, retry actions
 │   └── onboarding/               # Progressive tips, first-launch theme selection, permission flows
-├── packs/                        # Pack extensions (own convention plugin, own dependency rules)
+├── pack/                        # Pack extensions (own convention plugin, own dependency rules)
 │   ├── free/                     # "Essentials" — core widgets, providers, themes
 │   ├── plus/                     # "Plus" — trip computer, media, G-force, altimeter, weather
 │   ├── themes/                   # Premium themes (JSON-driven)
@@ -71,9 +71,9 @@ android/
     └── src/release/
 ```
 
-Regional packs (e.g., Singapore ERP integration) plug in as additional `:packs:*` modules without any changes to the shell or core.
+Regional packs (e.g., Singapore ERP integration) plug in as additional `:pack:*` modules without any changes to the shell or core.
 
-Convention plugins enforce shared defaults across all modules: compileSdk 36, minSdk 31, JVM target matching AGP/Gradle requirements. **Compose compiler is only applied to modules with UI** (not `:sdk:contracts`, not `:sdk:common`, not `:sdk:observability`, not `:sdk:analytics`, not `:core:*` except `:core:design-system`, not `:codegen:*`, not `:data:*`). The `dqxn.pack` convention plugin auto-wires all `:sdk:*` dependencies for pack modules — packs should not manually declare them.
+Convention plugins enforce shared defaults across all modules: compileSdk 36, minSdk 31, JVM target matching AGP/Gradle requirements. **Compose compiler is only applied to modules with UI** (not `:sdk:contracts`, not `:sdk:common`, not `:sdk:observability`, not `:sdk:analytics`, not `:core:*` except `:core:design`, not `:codegen:*`, not `:data:*`). The `dqxn.pack` convention plugin auto-wires all `:sdk:*` dependencies for pack modules — packs should not manually declare them.
 
 ### Module Dependency Rules
 
@@ -82,24 +82,24 @@ Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The s
 ```
 :app
   → :feature:* (dashboard, settings, diagnostics, onboarding)
-  → :packs:* (widget/provider/theme implementations)
+  → :pack:* (widget/provider/theme implementations)
   → :sdk:* (contracts, common, ui, observability, analytics)
-  → :core:* (design-system, thermal, driving, firebase)
+  → :core:* (design, thermal, driving, firebase)
   → :core:agentic (debugImplementation only)
   → :data:persistence (DataStore)
 
-:packs:*
+:pack:*
   → :sdk:* only (enforced by dqxn.pack convention plugin + validation task)
 
 :feature:dashboard
   → :sdk:*
-  → :core:design-system
+  → :core:design
   → :core:thermal
   → :data:persistence
 
 :feature:settings
   → :sdk:*
-  → :core:design-system
+  → :core:design
   → :data:persistence
 
 :feature:diagnostics
@@ -117,7 +117,7 @@ Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The s
   → :sdk:analytics (AnalyticsTracker interface)
   → :sdk:common
 
-:core:design-system
+:core:design
   → :sdk:common
   → :sdk:ui
 

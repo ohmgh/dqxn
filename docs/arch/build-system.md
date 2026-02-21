@@ -13,7 +13,7 @@
 Convention plugins (`:build-logic/convention`) enforce shared defaults. Compose compiler is only applied to modules with UI:
 
 ```kotlin
-// Modules WITH Compose: :app, :feature:*, :sdk:ui, :core:design-system
+// Modules WITH Compose: :app, :feature:*, :sdk:ui, :core:design
 id("dqxn.android.compose")
 
 // Pack modules: auto-wires all :sdk:* dependencies
@@ -43,7 +43,7 @@ All annotation processing uses KSP. No KAPT — enables Gradle configuration cac
 ```bash
 # .githooks/pre-commit
 ./gradlew :lint-rules:test --console=plain --warning-mode=summary
-grep -r "feature.dashboard" packs/ && exit 1
+grep -r "feature.dashboard" pack/ && exit 1
 grep -r "kapt" --include="*.kts" */build.gradle.kts && exit 1
 ```
 
@@ -52,7 +52,7 @@ grep -r "kapt" --include="*.kts" */build.gradle.kts && exit 1
 ```kotlin
 @Test
 fun `no pack module depends on dashboard`() {
-    // Parses Gradle module dependencies, asserts no :packs:* -> :feature:dashboard edge
+    // Parses Gradle module dependencies, asserts no :pack:* -> :feature:dashboard edge
 }
 
 @Test
@@ -79,9 +79,9 @@ fun `all widget snapshot types have at least one provider`() {
 ## Gradle Scaffold Tasks
 
 ```bash
-./gradlew :packs:free:scaffoldWidget --name=altimeter --snapshots=AltitudeSnapshot
-./gradlew :packs:plus:scaffoldProvider --name=weather --snapshot=WeatherSnapshot
-./gradlew :packs:themes:scaffoldTheme --name="Ocean Breeze" --isDark=false
+./gradlew :pack:free:scaffoldWidget --name=altimeter --snapshots=AltitudeSnapshot
+./gradlew :pack:plus:scaffoldProvider --name=weather --snapshot=WeatherSnapshot
+./gradlew :pack:themes:scaffoldTheme --name="Ocean Breeze" --isDark=false
 ```
 
 ## Build Configuration
