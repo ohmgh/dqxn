@@ -116,18 +116,10 @@ abstract class DataProviderContractTest {
             .that(testScheduler.currentTime).isEqualTo(testScheduler.currentTime)
     }
 
-    @Test
-    fun `callbackFlow closes resources on cancellation`() = runTest {
-        val fdCountBefore = File("/proc/self/fd/").listFiles()?.size ?: -1
-        val job = launch { createProvider().provideState().collect {} }
-        advanceTimeBy(1000) // let provider register listeners
-        job.cancelAndJoin()
-        advanceUntilIdle()
-        val fdCountAfter = File("/proc/self/fd/").listFiles()?.size ?: -1
-        // Allow small variance for GC timing, but flag gross leaks
-        assertWithMessage("File descriptor leak after provider cancellation")
-            .that(fdCountAfter).isAtMost(fdCountBefore + 2)
-    }
+    // Resource leak detection (fd counting) removed — /proc/self/fd/ is unreliable on
+    // JVM test runners (Robolectric shadows it inconsistently) and silently passes via ?: -1.
+    // Actual resource leaks caught by: cancellation test above, LeakCanary in debug builds,
+    // and WidgetScopeBypass lint rule catching missing cleanup patterns.
 
     @Test
     fun `snapshotType is a valid DataSnapshot subtype`() {
@@ -171,6 +163,8 @@ fun `connection FSM never reaches illegal state`(
 **Safety-Critical Tests** (coordinator-level, no device required):
 
 ```kotlin
+// Safe mode counts total crashes across ALL widgets within the 60s window, not per-widget.
+// 4 different widgets each crashing once triggers safe mode (>3 total).
 @Test
 fun `safe mode activates after 4 crashes in 60s`() = dashboardTest {
     repeat(4) { i ->
@@ -263,12 +257,52 @@ fun `entitlement revoked after 7-day offline grace period`() = runTest {
 }
 ```
 
+**Observability Self-Tests** (JUnit5, JVM-hosted):
+
+```kotlin
+@Test
+fun `AnrWatchdog requires 2 consecutive misses before capture`() {
+    val watchdog = AnrWatchdog(fakeRingBuffer, spyLogger)
+    // Block main handler for one ping cycle (single miss)
+    blockMainHandler(3_000)
+    assertThat(spyLogger.entries(LogTags.ANR)).isEmpty()
+
+    // Block for two consecutive cycles (~5s)
+    blockMainHandler(6_000)
+    assertThat(spyLogger.entries(LogTags.ANR)).hasSize(1)
+    assertThat(diagnosticsDir.resolve("anr_latest.json")).exists()
+}
+
+@Test
+fun `AnrWatchdog skips capture when debugger attached`() {
+    val watchdog = AnrWatchdog(fakeRingBuffer, spyLogger)
+    Debug.setDebuggerConnected(true) // Robolectric shadow
+    blockMainHandler(6_000)
+    assertThat(spyLogger.entries(LogTags.ANR)).isEmpty()
+}
+
+@Test
+fun `CrashEvidenceWriter survives process death via sync commit`() {
+    val prefs = context.getSharedPreferences("crash_evidence", MODE_PRIVATE)
+    val writer = CrashEvidenceWriter(prefs)
+    Thread.setDefaultUncaughtExceptionHandler(writer)
+
+    val exception = RuntimeException("widget crash")
+    writer.uncaughtException(Thread.currentThread(), exception)
+
+    // Verify sync write completed (commit, not apply)
+    assertThat(prefs.getString("last_crash_exception", null))
+        .isEqualTo("RuntimeException: widget crash")
+    assertThat(prefs.getString("last_crash_stack_top5", null)).isNotEmpty()
+    assertThat(prefs.getLong("last_crash_timestamp", 0)).isGreaterThan(0)
+}
+```
+
 ## Mutation Testing
 
-JVM-only modules via `info.solidsoft.pitest` (v1.19.0+) with `pitest-kotlin` extension:
-- **Scope**: `:sdk:common`, `:sdk:contracts` domain types, `:codegen:plugin`, `:codegen:agentic`, pure Kotlin domain logic
-- **Not in scope for v1**: Android library modules. `pl.droidsonroids.pitest` AGP 9 compatibility is unverified (Feb 2026) and Android Compose modules produce noisy false positives (UI rendering mutations). Reassess post-launch.
-- Kill rate target: > 80%
+**Deferred to post-launch.** Pitest (`info.solidsoft.pitest` + `pitest-kotlin`) will target `:sdk:common` and `:sdk:contracts` domain types once they stabilize. Kill rate target: > 80%.
+
+Rationale for deferral: code is still in flux during greenfield development — high mutation kill rate doesn't indicate test quality when both code and tests are written together. KSP processors (`:codegen:*`) are permanently out of scope — compilation tests already verify generated output, and pitest mutates runtime behavior that KSP processors don't have. Android library modules remain out of scope due to `pl.droidsonroids.pitest` AGP 9 compatibility uncertainty and Compose rendering mutation noise.
 
 ## Fuzz Testing
 
@@ -361,27 +395,40 @@ Tier 4 — Dependent Module Tests (~60s):
 Tier 5 — Visual Regression (if UI changed, ~45s):
   ./gradlew :affected:module:verifyRoborazzi --console=plain
 
+Tier 5.5 — On-Device Smoke (if device available, ~30s):
+  ./gradlew :app:installDebug --console=plain
+  adb shell content call --method ping          # wait for ok, max 10s
+  adb shell content call --method dump-health   # all widgets Ready or fallback, none Error
+  adb shell content call --method diagnose-performance  # P99 < 32ms (relaxed for debug)
+  adb shell content call --method chaos-inject --arg '{"fault":"provider-failure","providerId":"core:gps-speed","duration":3}'
+  sleep 5
+  adb shell content call --method dump-health   # affected widget in fallback, not Error
+
 Tier 6 — Full Suite (before commit):
   ./gradlew assembleDebug test lintDebug --console=plain
 ```
 
 Stop at the first failing tier and fix before proceeding.
 
+Tier 5.5 bridges the gap between "JVM tests pass" and "works on device." It verifies app launch, widget binding, and provider fallback under real concurrency. Not a replacement for Tier 6 instrumented tests — it's a quick sanity check the agent runs after fixing on-device bugs.
+
 ## Agentic Debug Runbook
 
 **Compile Errors**: Parse for `e:` prefixed lines, extract file path and line number, fix, re-run Tier 1.
 
-**Test Failures**: Parse for `FAILED` test names, read test + source file, fix the source (not the test) unless the test expectation is wrong, re-run Tier 2/3.
+**Test Failures**: Parse for `FAILED` test names. Run `git diff HEAD~1 --name-only` to identify recently changed files — cross-reference with the failing test's module to narrow the search space. Read test + source file, fix the source (not the test) unless the test expectation is wrong, re-run Tier 2/3.
 
 **Visual Regressions**: Compare `_actual.png` vs `_expected.png` in `build/outputs/roborazzi/`. If intentional: `recordRoborazzi`. If not: fix rendering, re-run Tier 5.
 
-**Runtime Crashes (on-device)**: Use `list-diagnostics` to find auto-captured `DiagnosticSnapshot` files, or `diagnose-crash {widgetId}` for a specific widget. Snapshots contain correlated ring buffer tail, metrics, thermal state, and widget health at the moment of the anomaly. If no snapshot file exists (process died before async write completed), `diagnose-crash` falls back to `SharedPreferences` crash evidence written synchronously by `CrashEvidenceWriter`. If `agenticTraceId` is present, the snapshot was triggered by an agentic command and the causal chain is traceable. If `injectionId` is present, it was caused by a chaos injection.
+**Runtime Crashes (on-device)**: Poll `list-diagnostics` with `since` param to find new auto-captured `DiagnosticSnapshot` files. Each `list-diagnostics` entry includes `recommendedCommand` — call it. Snapshots contain correlated ring buffer tail, metrics, thermal state, and widget health at the moment of the anomaly. For widget-specific diagnosis, call `diagnose-widget` which computes `WidgetExpectations` on demand (expected vs actual behavior). If no snapshot file exists (process died before async write completed), `diagnose-crash` falls back to `SharedPreferences` crash evidence written synchronously by `CrashEvidenceWriter`. If `agenticTraceId` is present, the snapshot was triggered by an agentic command and the causal chain is traceable. Chaos-injected faults are correlated temporally via `list-diagnostics since=` rather than propagated IDs.
 
 **Safe Mode**: If `dump-state` shows `safeMode.active: true`, the app crashed >3 times in 60s. Use `safeMode.lastCrashWidgetTypeId` to identify the culprit. `diagnose-crash` for that widget type to get the crash evidence.
 
 **Main Thread Deadlock**: Agentic commands run on binder threads, so they work even when the main thread is blocked. If `call()`-based commands stall (e.g., handler waiting on main-thread state), use the lock-free `query()` paths: `adb shell content query --uri content://app.dqxn.android.debug.agentic/health`. If that also hangs (full process deadlock), `adb pull` the `anr_latest.json` file written by `AnrWatchdog` on its dedicated thread.
 
-**Verification After Fix**: Re-run the failing tier before proceeding. On success, continue from next tier.
+**Verification After Fix**: Re-run the failing tier. For on-device bugs, run Tier 5.5 smoke validation. On success, continue from next tier.
+
+**Regression Guard**: After fixing a runtime bug found via agentic debugging, create a `DashboardTestHarness` regression test using the same `ProviderFault` / `FakeThermalManager` / fault primitives. The `DiagnosticSnapshot` provides all reproduction inputs: trigger type → fault primitive, `lastSnapshot` → test data, `settings` → widget config. Verify the test fails without the fix and passes with it.
 
 ## Agentic Chaos Testing
 
@@ -415,6 +462,9 @@ class ChaosProviderInterceptor @Inject constructor() : DataProviderInterceptor {
             is ProviderFault.Kill -> emptyFlow()
             is ProviderFault.Delay -> upstream.onEach { delay(fault.delayMs) }
             is ProviderFault.Error -> upstream.onStart { throw fault.exception }
+            is ProviderFault.ErrorOnNext -> upstream.map { throw fault.exception }
+            is ProviderFault.Corrupt -> upstream.map { fault.transform(it) }
+            is ProviderFault.Flap -> upstream.flapTransform(fault.intervalMs, fault.durationMs)
         }
     }
 }
@@ -423,7 +473,10 @@ class ChaosProviderInterceptor @Inject constructor() : DataProviderInterceptor {
 sealed interface ProviderFault {
     data object Kill : ProviderFault
     data class Delay(val delayMs: Long) : ProviderFault
-    data class Error(val exception: Exception) : ProviderFault
+    data class Error(val exception: Exception) : ProviderFault                    // cold-flow: throws on first collection
+    data class ErrorOnNext(val exception: Exception) : ProviderFault              // hot-flow: throws on next emission
+    data class Corrupt(val transform: (DataSnapshot) -> DataSnapshot) : ProviderFault  // valid-but-wrong data (NaN, negatives, overflow)
+    data class Flap(val intervalMs: Long, val durationMs: Long) : ProviderFault   // rapid connect/disconnect cycling
 }
 ```
 
@@ -433,14 +486,15 @@ sealed interface ProviderFault {
 
 ### Chaos ↔ Diagnostic Correlation
 
-Each chaos injection carries an `injectionId` that propagates through to any resulting `DiagnosticSnapshot`:
+Chaos-to-diagnostic correlation uses temporal matching — faults and snapshots are linked by timestamp proximity rather than propagated IDs:
 
 ```
-chaos-inject → injectionId: "chaos-inj-001"
+chaos-inject at timestamp T
   → ChaosProviderInterceptor kills provider
   → WidgetBindingCoordinator detects timeout
-  → DiagnosticSnapshotCapture.capture(ProviderTimeout, injectionId = "chaos-inj-001")
-  → snap_perf_xxx.json includes injectionId
+  → DiagnosticSnapshotCapture.capture(ProviderTimeout)
+  → snap_perf_xxx.json with timestamp > T
+  → Agent polls: list-diagnostics {"since": T} → finds the resulting snapshot
 ```
 
 The `chaos-stop` summary maps each injection to its downstream effects:
@@ -448,29 +502,43 @@ The `chaos-stop` summary maps each injection to its downstream effects:
 ```json
 {
   "injected_faults": [
-    {
-      "injectionId": "chaos-inj-001",
-      "type": "provider-failure",
-      "target": "core:gps-speed",
-      "at_ms": 5230,
-      "resultingSnapshots": ["snap_perf_1708444805230.json"]
-    }
-  ]
+    {"type": "provider-failure", "target": "core:gps-speed", "at_ms": 5230, "resultingSnapshots": ["snap_perf_1708444805230.json"]},
+    {"type": "provider-failure", "target": "core:compass", "at_ms": 12400, "resultingSnapshots": []}
+  ],
+  "system_responses": [
+    {"type": "fallback-activated", "widget": "abc-123", "from": "core:gps-speed", "to": "core:network-speed", "at_ms": 5235},
+    {"type": "widget-status-change", "widget": "def-456", "status": "ProviderMissing", "at_ms": 12405}
+  ],
+  "diagnostic_snapshots_captured": 1
 }
 ```
 
-This eliminates timestamp-proximity guessing for fault-to-effect correlation. Agents and CI assertions can programmatically verify: "injection X caused snapshot Y with system response Z."
+Agents and CI assertions correlate faults to effects via `list-diagnostics` with `since` timestamps.
 
 ### Agent Debug Loop
 
-The detect → investigate → reproduce → verify cycle using all three systems together:
+The detect → investigate → reproduce → verify → guard cycle using all three systems together:
 
 ```
-1. DETECT    — Observability auto-captures DiagnosticSnapshot on anomaly
-2. INVESTIGATE — Agent calls `diagnose-widget {id}` for correlated context
-3. REPRODUCE  — Agent calls `chaos-inject` to trigger the same fault deterministically
-4. VERIFY     — Agent calls `dump-health` / `diagnose-widget` to confirm recovery
+1. DETECT      — Observability auto-captures DiagnosticSnapshot on anomaly.
+                 Agent polls `list-diagnostics` with `since` param every 2-5s.
+                 Each entry includes `recommendedCommand` routing hint.
+2. INVESTIGATE — Agent calls the recommended diagnose-* command for correlated context.
+                 `diagnose-widget` includes expected vs actual values, binding history, throttle metadata.
+                 On test failure: `git diff HEAD~1 --name-only` to identify recently changed files.
+3. REPRODUCE   — Agent calls `chaos-inject` to trigger the same fault deterministically.
+                 Temporal correlation via `list-diagnostics since=` confirms the fault caused the snapshot.
+                 For code bugs: write a failing DashboardTestHarness test first.
+4. FIX + VERIFY — Fix the code. Re-run failing tier.
+                 For on-device bugs: run Tier 5.5 smoke validation (see below).
+                 Call `dump-health` / `diagnose-widget` to confirm recovery on device.
+5. GUARD       — Create a DashboardTestHarness regression test using the same ProviderFault /
+                 FakeThermalManager / fault primitives that reproduced the bug.
+                 Verify: test fails without fix, passes with fix.
+                 Include the chaos-inject command in the test's doc comment for traceability.
 ```
+
+Step 5 is optional for configuration issues or device-specific limitations. It is mandatory for code bugs found via agentic debugging — the fix is worthless without a regression guard.
 
 ### Chaos Test Examples
 
@@ -507,6 +575,37 @@ diagnose-widget {plusWidgetId}
   → verify: status is "EntitlementRevoked", fallback UI shown
 ```
 
+**Provider flap** (agent verifies rebind stability under oscillation):
+```
+chaos-inject {"fault":"provider-flap","providerId":"core:gps-speed","intervalMs":500,"durationMs":10000}
+  → wait 12s
+dump-health
+  → verify: widget in Ready or fallback state, NOT in rapid rebind loop
+  → verify: retry count did not exhaust (exponential backoff absorbs oscillation)
+```
+
+**Corrupt data** (agent verifies widget data validation):
+```
+chaos-inject {"fault":"corrupt","providerId":"core:gps-speed","corruption":"nan-speed"}
+  → wait 2s
+diagnose-widget {speedometerWidgetId}
+  → verify: widget renders fallback/safe value, NOT NaN display
+```
+
+**Process death recovery** (agent verifies persistence + rebinding):
+```
+dump-state → record current layout
+chaos-inject {"fault":"process-death"}
+  → returns {"status":"ok","data":{"willTerminate":true,"delayMs":500}}
+  → process dies after 500ms delay
+  → am start app.dqxn.android.debug/.MainActivity
+  → wait for ping ok (max 10s)
+dump-state
+  → verify: layout matches pre-death state
+dump-health
+  → verify: all widgets re-bound and receiving data
+```
+
 ### Chaos in CI
 
 Deterministic chaos runs as part of Tier 6 (full suite) using seed-based reproduction:
@@ -517,15 +616,60 @@ fun `dashboard survives 30s combined chaos with seed 42`() {
     client.send("chaos-start", mapOf("seed" to 42, "profile" to "combined"))
     Thread.sleep(30_000)
     val summary = client.send("chaos-stop")
-    // All widgets should be in Ready or fallback state — none in error
+
+    // 1. No widget in unrecovered error state
     val health = client.send("dump-health")
     health.widgets.forEach { (id, status) ->
         assertThat(status).isNotInstanceOf(WidgetHealthStatus.Error::class.java)
     }
+
+    // 2. Verify chaos → diagnostic correlation (every fault produced expected system response)
+    client.assertChaosCorrelation(summary)
 }
 ```
 
 > **Note**: This is an instrumented test running on a real device — `Thread.sleep` is intentional here (testing real system timing behavior). The `StandardTestDispatcher` / no-real-time-delays principle applies to JVM-hosted unit tests, not instrumented tests where real concurrency and system interactions are under test.
+
+### Chaos Correlation Assertions
+
+`AgenticTestClient.assertChaosCorrelation()` validates that the observability pipeline correctly captured and correlated chaos-injected faults:
+
+```kotlin
+fun assertChaosCorrelation(summary: JsonObject) {
+    val faults = summary.injectedFaults
+    faults.forEach { fault ->
+        // Provider failures that persisted long enough should produce a diagnostic snapshot
+        if (fault.type == "provider-failure" && fault.durationMs > 5000) {
+            assertWithMessage("Fault at ${fault.atMs} produced no snapshot")
+                .that(fault.resultingSnapshots).isNotEmpty()
+            // Snapshot timestamp is after fault injection time
+            fault.resultingSnapshots.forEach { snapPath ->
+                val diagnostics = client.send("list-diagnostics", mapOf("since" to fault.atMs))
+                val match = diagnostics.snapshots.find { it.file == snapPath }
+                assertWithMessage("Snapshot $snapPath not found in diagnostics after ${fault.atMs}")
+                    .that(match).isNotNull()
+            }
+        }
+    }
+}
+```
+
+This closes the gap between "chaos happened" and "the right diagnostic was captured" using temporal correlation.
+
+### CI Diagnostic Artifact Collection
+
+When instrumented tests fail, CI collects on-device diagnostic artifacts alongside JUnit XML:
+
+```bash
+# After connectedAndroidTest failure:
+adb pull /data/data/app.dqxn.android.debug/files/debug/diagnostics/ artifacts/diagnostics/
+adb shell content call --method dump-state \
+  --uri content://app.dqxn.android.debug.agentic > artifacts/diagnostics/final_state.json
+adb shell content call --method dump-health \
+  --uri content://app.dqxn.android.debug.agentic > artifacts/diagnostics/final_health.json
+```
+
+Published as CI artifacts. The agent then has both the test failure message (JUnit XML) and the correlated diagnostic context (system state at failure) without needing a live device to investigate.
 
 ## Agentic E2E Protocol
 
@@ -585,7 +729,8 @@ fun `widget add persists across process death`() {
     // Simulate process death
     device.executeShellCommand("am force-stop app.dqxn.android.debug")
     device.executeShellCommand("am start app.dqxn.android.debug/.MainActivity")
-    Thread.sleep(3000) // cold start
+    // Poll ping until app is ready — avoids flaky raw Thread.sleep
+    client.awaitCondition("ping", "$.status", "ok", timeoutMs = 10_000)
 
     client.assertState("$.data.layout.widgetCount", 1)
 }
@@ -617,17 +762,22 @@ class HarnessStateOnFailure : TestWatcher {
     override fun testFailed(context: ExtensionContext, cause: Throwable) {
         val harness = context.getStore(NAMESPACE).get("harness", DashboardTestHarness::class.java)
             ?: return
-        println("=== Harness State at Failure ===")
-        println("Layout: ${harness.layoutState()}")
-        println("Theme: ${harness.themeState()}")
-        println("Widget statuses: ${harness.widgetStatuses()}")
-        println("Binding jobs: ${harness.bindingJobs().keys}")
-        println("Ring buffer tail: ${harness.ringBufferTail(20)}")
+        // JSON output for structural parity with diagnose-* response format.
+        // Agent parses the same shape whether reading a test failure or a runtime diagnostic.
+        val dump = buildJsonObject {
+            put("layout", harness.layoutState().toJson())
+            put("theme", harness.themeState().toJson())
+            put("widgetStatuses", harness.widgetStatuses().toJson())
+            put("bindingJobs", JsonArray(harness.bindingJobs().keys.map { JsonPrimitive(it) }))
+            put("ringBufferTail", harness.ringBufferTail(20).toJson())
+        }
+        println("=== Harness Diagnostic Dump ===")
+        println(dump.toString())
     }
 }
 ```
 
-No dependency on `DiagnosticSnapshotCapture` — the harness already has direct access to coordinator state. This is faster, simpler, and doesn't require the full observability graph in unit tests.
+No dependency on `DiagnosticSnapshotCapture` — the harness already has direct access to coordinator state. This is faster, simpler, and doesn't require the full observability graph in unit tests. The JSON output aligns structurally with diagnose-* response shapes so the agent processes both with the same parsing logic.
 
 ### E2E Tests (AgenticTestClient)
 

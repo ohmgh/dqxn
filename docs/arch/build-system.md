@@ -34,10 +34,8 @@ All annotation processing uses KSP. No KAPT — enables Gradle configuration cac
 | `ModuleBoundaryViolation` | Error | Pack modules importing outside `:sdk:*` boundary |
 | `KaptDetection` | Error | Any module applying `kapt` plugin |
 | `ComposeInNonUiModule` | Error | Compose imports in non-UI modules |
-| `MutableCollectionInImmutable` | Warning | `MutableList`/`MutableMap` inside `@Immutable` types |
-| `WidgetScopeBypass` | Error | `LaunchedEffect` without `LocalWidgetScope` in widget renderers |
-| `MainThreadDiskIo` | Warning | DataStore/SharedPreferences access without `Dispatchers.IO` |
-| `AgenticMainThreadBan` | Error | `CommandHandler` implementations using `Dispatchers.Main` |
+
+Additional rules (`WidgetScopeBypass`, `AgenticMainThreadBan`) added when the first widget renderer and agentic command handler are implemented. `MutableCollectionInImmutable` deferred — caught by Compose stability report. `MainThreadDiskIo` deferred — standard Android discipline enforced by code review.
 
 ## Pre-commit Hooks
 
@@ -77,14 +75,6 @@ fun `all widget snapshot types have at least one provider`() {
 }
 ```
 
-## Gradle Scaffold Tasks
-
-```bash
-./gradlew :pack:free:scaffoldWidget --name=altimeter --snapshots=AltitudeSnapshot
-./gradlew :pack:plus:scaffoldProvider --name=weather --snapshot=WeatherSnapshot
-./gradlew :pack:themes:scaffoldTheme --name="Ocean Breeze" --isDark=false
-```
-
 ## Build Configuration
 
 ```properties
@@ -116,32 +106,44 @@ adb shell content call \
 
 | Command | Description |
 |---|---|
+| **Lifecycle** | |
 | `ping` | Health check, returns app state summary |
 | `navigate` | Navigate to a Route |
 | `back` | Trigger back navigation |
-| `query-state` | Return current dashboard state as JSON |
-| `capture-start/stop` | Start/stop event capture session |
-| `widget-add/remove/move/resize/focus/tap/settings-set` | Widget manipulation |
+| **Widget manipulation** | |
+| `widget-add/remove/move/resize/focus/tap/settings-set` | Widget CRUD and interaction |
 | `dashboard-reset` | Reset to default preset |
+| **Theme / Presets** | |
 | `theme-set-mode/apply-preset` | Theme operations |
 | `preset-load/save/list/remove` | Preset management |
+| **State inspection** | |
 | `list-commands` | List all available commands with parameter schemas |
+| `list-widgets` | Registry of available widget types + providers with metadata (typeId, compatibleSnapshots, settingsSchema) |
 | `dump-state` | Full dashboard state as structured JSON |
 | `dump-metrics` | MetricsCollector snapshot |
 | `dump-log-buffer` | RingBufferSink contents as JSON-lines |
 | `dump-traces` | Active and recent TraceContext spans |
-| `dump-health` | WidgetHealthMonitor status per widget |
+| `dump-health` | Widget health + system context + recent diagnostic snapshot references (enriched) |
 | `dump-connections` | ConnectionStateMachine state, paired devices |
-| `simulate-thermal` | Force thermal level for testing |
-| `diagnose-widget` | Correlated health, binding, data, errors, and log tail for one widget |
+| **Diagnostics** | |
+| `diagnose-widget` | Correlated health, binding, data, errors, widget expectations, and log tail for one widget |
 | `diagnose-performance` | Frame histogram + per-widget draw time + thermal trend + jank widgets + slow commands + memory |
 | `diagnose-bindings` | All widget→provider bindings, stuck providers, stalled bindings, fallback activations |
 | `diagnose-crash` | Most recent `DiagnosticSnapshot` for a widget (auto-captured on crash, fallback to SharedPrefs crash evidence) |
 | `diagnose-thermal` | Thermal headroom history + frame rate adaptation history + glow toggle history + thermal snapshots |
-| `list-diagnostics` | List diagnostic snapshot files with metadata (trigger type, timestamp, widgetId) |
+| `list-diagnostics` | Diagnostic snapshot files with metadata; supports `since` timestamp param for polling |
+| **Remediation** | |
+| `rebind-widget` | Cancel current binding job and re-run `WidgetBindingCoordinator.bind()` for a widget |
+| `clear-widget-errors` | Reset error counts and `WidgetStatusCache` for a widget |
+| `restart-provider` | Cancel and restart a provider's `provideState()` flow |
+| **Simulation / Testing** | |
+| `simulate-thermal` | Force thermal level for testing |
+| `trigger-anomaly` | Directly fire `DiagnosticSnapshotCapture.capture()` with a synthetic trigger (tests the observability pipeline) |
+| `reset-diagnostics` | Clear diagnostic state: `snapshots` / `ring-buffer` / `all` (clean state between test runs) |
+| **Chaos** | |
 | `chaos-start` | Start ChaosEngine with optional seed for deterministic reproduction |
 | `chaos-stop` | Stop ChaosEngine, return session summary (injected faults + system responses) |
-| `chaos-inject` | Inject a specific fault: `provider-failure`, `thermal`, `entitlement-revoke`, `anr-simulate` |
+| `chaos-inject` | Inject a fault: `provider-failure`, `provider-flap`, `corrupt`, `thermal`, `entitlement-revoke`, `process-death`, `anr-simulate` |
 
 ### Response Protocol
 
@@ -210,15 +212,17 @@ Widget crashes include structured context via `ErrorReporter`:
 errorReporter.reportWidgetCrash(
     typeId = "core:speedometer",
     widgetId = "abc-123",
-    lastSnapshot = SpeedSnapshot(speed = 65f, ...),
-    settings = mapOf("showArcs" to "true", "speedUnit" to "KMH"),
-    stackTrace = throwable,
-    thermalLevel = ThermalLevel.NORMAL,
-    drivingState = false,
+    throwable = throwable,
+    context = WidgetErrorContext(
+        lastSnapshot = SpeedSnapshot(speed = 65f, ...),
+        settings = mapOf("showArcs" to "true", "speedUnit" to "KMH"),
+        thermalLevel = ThermalLevel.NORMAL,
+        drivingState = false,
+    ),
 )
 ```
 
-`CaptureSessionRegistry` is an injectable singleton (see [observability.md](observability.md#capturesessionregistry)) that records TAP, WIDGET_MOVE, WIDGET_RESIZE, NAVIGATION events in a bounded ring buffer during active capture sessions. `capture-start` / `capture-stop` agentic commands delegate to this registry via `AgenticCommandRouter`.
+UI interaction events (TAP, WIDGET_MOVE, WIDGET_RESIZE, NAVIGATION) are logged as structured `LogEntry` items into the standard `RingBufferSink` pipeline (see [observability.md](observability.md#interaction-event-logging)). They appear automatically in `DiagnosticSnapshot.ringBufferTail` and `diagnose-widget` log tail — no separate capture session required.
 
 The ContentProvider is restricted to debug builds only (registered in `src/debug/AndroidManifest.xml`). Demo providers are gated to debug builds.
 
@@ -238,11 +242,16 @@ All commands return a standardized JSON envelope:
 ```kotlin
 class AgenticContentProvider : ContentProvider() {
 
+    @Volatile private var cachedHealthMonitor: WidgetHealthMonitor? = null
+    @Volatile private var cachedAnrWatchdog: AnrWatchdog? = null
+
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface AgenticEntryPoint {
         fun commandRouter(): AgenticCommandRouter
         fun logger(): DqxnLogger
+        fun healthMonitor(): WidgetHealthMonitor
+        fun anrWatchdog(): AnrWatchdog
     }
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
@@ -254,6 +263,9 @@ class AgenticContentProvider : ContentProvider() {
             return bundleOf("filePath" to writeResponse(
                 envelope("error", "App initializing, retry after ping returns ok")))
         }
+
+        if (cachedHealthMonitor == null) cachedHealthMonitor = entryPoint.healthMonitor()
+        if (cachedAnrWatchdog == null) cachedAnrWatchdog = entryPoint.anrWatchdog()
 
         val traceId = "agentic-${SystemClock.elapsedRealtimeNanos()}"
         val resultJson = runBlocking(Dispatchers.Default) {
@@ -279,8 +291,8 @@ class AgenticContentProvider : ContentProvider() {
     override fun query(uri: Uri, projection: Array<String>?, selection: String?,
                        selectionArgs: Array<String>?, sortOrder: String?): Cursor? {
         return when (uri.pathSegments.firstOrNull()) {
-            "health" -> buildHealthCursor() // WidgetHealthMonitor + thermal + safe mode
-            "anr" -> buildAnrCursor()       // AnrWatchdog latest state
+            "health" -> cachedHealthMonitor?.let { buildHealthCursor(it) }  // null if app still initializing
+            "anr" -> cachedAnrWatchdog?.let { buildAnrCursor(it) }
             else -> null
         }
     }
@@ -291,7 +303,11 @@ class AgenticContentProvider : ContentProvider() {
         return file.absolutePath
     }
 
-    override fun onCreate(): Boolean = true
+    override fun onCreate(): Boolean {
+        // Clean up response files from previous session
+        context?.cacheDir?.listFiles { f -> f.name.startsWith("agentic_") }?.forEach { it.delete() }
+        return true
+    }
     override fun getType(uri: Uri): String? = null
     override fun insert(uri: Uri, values: ContentValues?): Uri? = null
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<String>?): Int = 0
@@ -330,6 +346,18 @@ Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`
 **`diagnose-widget {widgetId}`** returns self-describing diagnostic output with expected vs actual state:
 - Widget health status (from `WidgetHealthMonitor`)
 - Current binding: provider ID, connection state, last emission timestamp
+- **Widget expectations** (computed on-demand): expected emission interval, staleness threshold, first emission timeout, required vs available snapshots. Uses `KClass.qualifiedName` for snapshot type identification. Computed at query time from `WidgetRegistry` and `DataProviderRegistry` — not stored in `DiagnosticSnapshot` since expectations may change between anomaly time and investigation time
+
+```kotlin
+@Immutable
+data class WidgetExpectations(
+    val expectedEmissionIntervalMs: Long,
+    val stalenessThresholdMs: Long,
+    val firstEmissionTimeoutMs: Long,
+    val requiredSnapshots: ImmutableSet<String>,      // KClass.qualifiedName
+    val availableSnapshots: ImmutableSet<String>,      // KClass.qualifiedName
+)
+```
 - **Throttle metadata**: `{ "nativeEmissionRateHz": 60, "effectiveEmissionRateHz": 30, "throttleReason": "thermal:DEGRADED" }` — disambiguates "provider slow because thermal" from "provider broken"
 - **Data freshness with expectations**: `{ "actual": "15s", "threshold": "3s", "expectedInterval": "16ms", "status": "ESCALATED_STALE" }` — the contradiction between actual and expected is self-evident to any reasoning system
 - Error history: crash count, last error, retry state
@@ -358,7 +386,6 @@ Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`
 - Falls back to `SharedPreferences` crash evidence (typeId, exception, top 5 stack frames, thermal level, timestamp) written synchronously by `CrashEvidenceWriter` — survives process death when async snapshot write doesn't complete
 - Final fallback: assembles a live diagnostic from current `WidgetHealthMonitor`, `MetricsCollector`, and `RingBufferSink` state — no `OnDemandCapture` trigger needed
 - Includes `agenticTraceId` if the crash was triggered by an agentic command
-- Includes `injectionId` if the crash was triggered by a chaos injection
 
 **`diagnose-thermal`** returns correlated thermal diagnostics — thermal is the primary automotive failure mode requiring cross-source correlation:
 - Current thermal level + headroom + `ThermalTrendAnalyzer` prediction (time to next tier)
@@ -368,15 +395,73 @@ Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`
 - **Thermal snapshot references**: list of `snap_thermal_*.json` files with timestamps, from `list-diagnostics`
 - Current `RenderConfig` state (target FPS, glow enabled, pixel shift active)
 
-**`list-diagnostics`** returns enriched metadata for all diagnostic snapshot files:
+**`dump-health`** returns enriched health overview — widget health plus system context, replacing the need for a separate "anomaly summary" command:
 ```json
 {
   "status": "ok",
   "data": {
+    "widgets": {
+      "abc-123": {"typeId": "core:speedometer", "status": "Ready", "providerId": "core:gps-speed", "lastEmissionMs": 150},
+      "def-456": {"typeId": "plus:trip", "status": "BindingStalled", "providerId": "core:trip-accumulator", "lastEmissionMs": null}
+    },
+    "systemContext": {
+      "thermalLevel": "NORMAL",
+      "thermalHeadroom": 0.45,
+      "safeMode": false,
+      "drivingState": false,
+      "widgetCount": 12,
+      "healthyWidgetCount": 10,
+      "recentCrashes": 0
+    },
+    "recentSnapshots": [
+      {"file": "snap_perf_1708444802000.json", "trigger": "BindingStalled", "typeId": "plus:trip", "timestamp": 1708444802000}
+    ]
+  }
+}
+```
+
+The agent's first call after detecting an issue should be `dump-health` — it provides the complete picture needed to decide which `diagnose-*` command to drill into.
+
+**`list-widgets`** returns the full registry of available widget types and providers:
+```json
+{
+  "status": "ok",
+  "data": {
+    "widgets": [
+      {
+        "typeId": "core:speedometer",
+        "displayName": "Speedometer",
+        "packId": "core",
+        "compatibleSnapshots": ["SpeedSnapshot", "AccelerationSnapshot", "SpeedLimitSnapshot"],
+        "requiredAnyEntitlement": null,
+        "settingsSchema": ["speedUnit", "showArcs", "showDigital", "limitOffset"]
+      }
+    ],
+    "providers": [
+      {
+        "providerId": "core:gps-speed",
+        "snapshotType": "SpeedSnapshot",
+        "packId": "core",
+        "isAvailable": true,
+        "connectionState": "CONNECTED"
+      }
+    ]
+  }
+}
+```
+
+Essential for agent autonomy — the agent needs this to verify widget-add results, construct regression tests with correct `testWidget()` parameters, and understand the provider→snapshot→widget compatibility graph.
+
+**`list-diagnostics`** returns enriched metadata for all diagnostic snapshot files. Supports `since` timestamp param for efficient polling:
+```json
+// list-diagnostics {"since": 1708444800000}
+{
+  "status": "ok",
+  "data": {
     "snapshots": [
-      {"file": "snap_crash_1708444800456.json", "trigger": "WidgetCrash", "typeId": "core:speedometer", "widgetId": "abc-123", "timestamp": 1708444800456},
-      {"file": "snap_thermal_1708444801000.json", "trigger": "ThermalEscalation", "from": "NORMAL", "to": "DEGRADED", "timestamp": 1708444801000},
-      {"file": "snap_perf_1708444802000.json", "trigger": "BindingStalled", "typeId": "plus:trip", "widgetId": "def-456", "timestamp": 1708444802000}
+      {"file": "snap_crash_1708444800456.json", "trigger": "WidgetCrash", "typeId": "core:speedometer", "widgetId": "abc-123", "timestamp": 1708444800456, "recommendedCommand": "diagnose-crash"},
+      {"file": "snap_thermal_1708444801000.json", "trigger": "ThermalEscalation", "from": "NORMAL", "to": "DEGRADED", "timestamp": 1708444801000, "recommendedCommand": "diagnose-thermal"},
+      {"file": "snap_perf_1708444802000.json", "trigger": "BindingStalled", "typeId": "plus:trip", "widgetId": "def-456", "timestamp": 1708444802000, "recommendedCommand": "diagnose-bindings"}
     ],
     "anrLatest": "anr_latest.json",
     "crashEvidence": {"exists": true, "typeId": "core:speedometer", "timestamp": 1708444800456}
@@ -384,13 +469,13 @@ Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`
 }
 ```
 
-Replaces fragile `adb shell ls` with structured, filterable metadata. Agent can find "most recent thermal snapshot" or "all crash snapshots for widget X" without parsing filenames.
+Replaces fragile `adb shell ls` with structured, filterable metadata. Agent can find "most recent thermal snapshot" or "all crash snapshots for widget X" without parsing filenames. Primary notification mechanism for autonomous agent loops. Agent polls every 2-5s during active debugging sessions using the `since` parameter for efficient incremental queries.
 
 ### Deadlock-Safe Diagnostic Paths
 
-The primary `AgenticContentProvider.call()` runs on binder threads, so it works even when the main thread is blocked. However, `call()` uses `runBlocking(Dispatchers.Default)` — if `Dispatchers.Default` is also saturated, it could stall.
+The primary `AgenticContentProvider.call()` runs on binder threads, so it works even when the main thread is blocked. However, if a `CommandHandler` accidentally calls `withContext(Dispatchers.Main)` despite the `AgenticMainThreadBan` lint rule, that specific handler will deadlock when the main thread is busy with Compose rendering. `Dispatchers.Default` saturation is not the real risk in a dashboard app — the risk is handler-touching-Main.
 
-For true deadlock diagnosis, `AgenticContentProvider.query()` provides lock-free direct reads:
+For true deadlock diagnosis, `AgenticContentProvider.query()` provides lock-free direct reads that bypass handler routing entirely:
 
 ```bash
 adb shell content query --uri content://app.dqxn.android.debug.agentic/health
@@ -445,46 +530,7 @@ This closes the causal loop: the agent can distinguish "I caused this" from "thi
 
 ### TraceContext Propagation to Widget Effects
 
-The trace correlation chain has a last-mile gap: `WidgetBindingCoordinator` holds the `TraceContext` from the originating command, but `WidgetSlot`'s `WidgetCoroutineScope` (created in composition) doesn't inherit it. Widget effect crashes are invisible to trace correlation.
-
-**Solution**: `WidgetBindingCoordinator` exposes a per-widget trace context flow:
-
-```kotlin
-class WidgetBindingCoordinator {
-    private val widgetTraceContexts = ConcurrentHashMap<String, MutableStateFlow<TraceContext?>>()
-
-    fun traceContextFor(widgetId: String): StateFlow<TraceContext?> =
-        widgetTraceContexts.getOrPut(widgetId) { MutableStateFlow(null) }
-}
-```
-
-`WidgetSlot` provides it via `CompositionLocal`:
-
-```kotlin
-val LocalWidgetTraceContext = staticCompositionLocalOf<TraceContext?> { null }
-
-@Composable
-fun WidgetSlot(widget: WidgetInstance, renderer: WidgetRenderer, bindingCoordinator: WidgetBindingCoordinator) {
-    val traceContext by bindingCoordinator.traceContextFor(widget.id).collectAsState()
-
-    val widgetScope = remember(traceContext) {
-        CoroutineScope(
-            SupervisorJob() +
-            CoroutineExceptionHandler { _, e -> /* ... */ } +
-            (traceContext ?: EmptyCoroutineContext)
-        )
-    }
-
-    CompositionLocalProvider(
-        LocalWidgetScope provides widgetScope,
-        LocalWidgetTraceContext provides traceContext,
-    ) {
-        renderer.Render(...)
-    }
-}
-```
-
-When `traceContext` is `null` (user-initiated widget, no agentic command) — zero overhead, `EmptyCoroutineContext` adds nothing. When set by an agentic command — widget `LaunchedEffect` crashes now carry the `traceId` through the `CoroutineExceptionHandler` to `DiagnosticSnapshotCapture`, closing the last-mile trace correlation gap.
+Deferred. Widget crash diagnostics include `widgetId` and `typeId`; the agentic command log includes timestamps and target widgets. Temporal correlation by `widgetId` is sufficient for v1. If agentic debugging reveals cases where trace correlation through widget effects would have saved investigation time, add `LocalWidgetTraceContext` CompositionLocal propagation then.
 
 ### Chaos Injection Commands
 
@@ -497,15 +543,17 @@ adb shell content call \
   --arg '{"seed":42,"profile":"provider-stress"}'
 ```
 
-**Chaos profiles** (predefined fault injection patterns):
+**Example chaos sequences** (composed by tests using `chaos-inject`, not built into ChaosEngine):
 
 | Profile | What it does |
 |---|---|
-| `provider-stress` | Random provider failures (1-3 providers, 5-30s intervals) |
-| `thermal-ramp` | Progressive thermal escalation NORMAL → MODERATE → DEGRADED over 60s |
-| `entitlement-churn` | Rapid entitlement grant/revoke cycles (2s intervals) |
-| `widget-storm` | Rapid add/remove of widgets (tests binding cleanup) |
-| `combined` | All of the above simultaneously |
+| `provider-stress` | Example: random provider failures (1-3 providers, 5-30s intervals) |
+| `provider-flap` | Example: rapid connect/disconnect cycling on 1-2 providers (500ms intervals). Tests retry/backoff stability under oscillation — common with real BLE hardware |
+| `thermal-ramp` | Example: progressive thermal escalation NORMAL → MODERATE → DEGRADED over 60s |
+| `entitlement-churn` | Example: rapid entitlement grant/revoke cycles (2s intervals) |
+| `widget-storm` | Example: rapid add/remove of widgets (tests binding cleanup) |
+| `process-death` | Example: `am force-stop` + restart. Tests DataStore persistence, binding re-establishment, safe mode activation |
+| `combined` | Example: all of the above (except process-death) simultaneously |
 
 **`chaos-inject`** for targeted single-fault injection:
 
@@ -521,6 +569,22 @@ adb shell content call --uri content://app.dqxn.android.debug.agentic \
 # Revoke entitlement
 adb shell content call --uri content://app.dqxn.android.debug.agentic \
   --method chaos-inject --arg '{"fault":"entitlement-revoke","entitlementId":"plus"}'
+
+# Provider flap (rapid connect/disconnect)
+adb shell content call --uri content://app.dqxn.android.debug.agentic \
+  --method chaos-inject --arg '{"fault":"provider-flap","providerId":"core:gps-speed","intervalMs":500,"durationMs":10000}'
+
+# Corrupt data (valid-but-wrong snapshots)
+adb shell content call --uri content://app.dqxn.android.debug.agentic \
+  --method chaos-inject --arg '{"fault":"corrupt","providerId":"core:gps-speed","corruption":"nan-speed"}'
+
+# Process death + restart (handler returns response, then kills after 500ms delay)
+adb shell content call --uri content://app.dqxn.android.debug.agentic \
+  --method chaos-inject --arg '{"fault":"process-death"}'
+# Response: {"status":"ok","data":{"willTerminate":true,"delayMs":500}}
+# Process dies after delay — agent waits, then restarts:
+#   adb shell am start app.dqxn.android.debug/.MainActivity
+#   await ping ok (max 10s)
 ```
 
 **`chaos-stop`** returns a session summary:
@@ -530,12 +594,12 @@ adb shell content call --uri content://app.dqxn.android.debug.agentic \
   "duration_ms": 30000,
   "seed": 42,
   "injected_faults": [
-    {"injectionId": "chaos-inj-001", "type": "provider-failure", "target": "core:gps-speed", "at_ms": 5230, "resultingSnapshots": ["snap_perf_1708444805230.json"]},
-    {"injectionId": "chaos-inj-002", "type": "provider-failure", "target": "core:compass", "at_ms": 12400, "resultingSnapshots": []}
+    {"type": "provider-failure", "target": "core:gps-speed", "at_ms": 5230, "resultingSnapshots": ["snap_perf_1708444805230.json"]},
+    {"type": "provider-failure", "target": "core:compass", "at_ms": 12400, "resultingSnapshots": []}
   ],
   "system_responses": [
-    {"type": "fallback-activated", "widget": "abc-123", "from": "core:gps-speed", "to": "core:network-speed", "at_ms": 5235, "injectionId": "chaos-inj-001"},
-    {"type": "widget-status-change", "widget": "def-456", "status": "ProviderMissing", "at_ms": 12405, "injectionId": "chaos-inj-002"}
+    {"type": "fallback-activated", "widget": "abc-123", "from": "core:gps-speed", "to": "core:network-speed", "at_ms": 5235},
+    {"type": "widget-status-change", "widget": "def-456", "status": "ProviderMissing", "at_ms": 12405}
   ],
   "diagnostic_snapshots_captured": 1
 }
@@ -554,8 +618,7 @@ All agent-accessible diagnostic artifacts in debug builds:
 | `${filesDir}/debug/diagnostics/snap_thermal_*.json` | Thermal escalation snapshots | 10 files max |
 | `${filesDir}/debug/diagnostics/snap_perf_*.json` | Jank, timeout, staleness, binding stall snapshots | 10 files max |
 | `${filesDir}/debug/diagnostics/anr_latest.json` | Most recent ANR state (direct file write, no IO dispatcher) | 1 file, overwritten |
-| `${filesDir}/debug/anomaly_events.jsonl` | Push-notification anomaly event stream | 1MB, 2 files |
-| `${cacheDir}/agentic_*.json` | Command response files | Cleared on app restart |
+| `${cacheDir}/agentic_*.json` | Command response files | Cleaned in AgenticContentProvider.onCreate() |
 | `${cacheDir}/chaos_*.json` | Chaos session summaries | Cleared on app restart |
 
 Agent pulls via `adb pull /data/data/app.dqxn.android.debug/...`. Use `list-diagnostics` command for enriched metadata instead of raw `ls`.

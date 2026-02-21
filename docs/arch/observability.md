@@ -10,10 +10,8 @@ This module defines:
 - `DqxnLogger` + `LogSink` — structured logging with sink pipeline
 - `DqxnTracer` + `TraceContext` — coroutine-context-propagated tracing
 - `MetricsCollector` — pre-allocated atomic counters
-- `CrashReporter` — interface for crash/non-fatal reporting
-- `CrashMetadataWriter` — interface for custom key setting on crash reports
+- `CrashReporter` — interface for crash/non-fatal reporting **and custom metadata keys**
 - `ErrorReporter` — interface for structured non-fatal error reporting with context
-- `PerformanceTracer` — interface for network/custom trace recording
 - `WidgetHealthMonitor`, `ThermalTrendAnalyzer`, `AnrWatchdog` — health monitoring
 - `DiagnosticSnapshotCapture` — auto-captures correlated state on anomalies (widget crash, ANR, jank, thermal escalation, binding stall, DataStore corruption)
 
@@ -24,9 +22,6 @@ interface CrashReporter {
     fun recordNonFatal(e: Throwable, keys: ImmutableMap<String, String> = persistentMapOf())
     fun log(message: String)
     fun setUserId(id: String)
-}
-
-interface CrashMetadataWriter {
     fun setKey(key: String, value: String)
     fun setKey(key: String, value: Int)
     fun setKey(key: String, value: Float)
@@ -38,25 +33,8 @@ interface ErrorReporter {
     fun reportWidgetCrash(typeId: String, widgetId: String, throwable: Throwable, context: WidgetErrorContext)
 }
 
-interface PerformanceTracer {
-    fun newTrace(name: String): PerfTrace
-    fun newHttpMetric(url: String, method: String): HttpMetric
-}
-
-interface PerfTrace : AutoCloseable {
-    fun start()
-    fun stop()
-    fun putAttribute(key: String, value: String)
-    fun incrementMetric(name: String, value: Long)
-}
-
-interface HttpMetric : AutoCloseable {
-    fun setRequestPayloadSize(bytes: Long)
-    fun setResponsePayloadSize(bytes: Long)
-    fun setHttpResponseCode(code: Int)
-    fun start()
-    fun stop()
-}
+// PerformanceTracer deferred — Firebase Performance used directly in :core:firebase for v1.
+// Extract interface when a second module needs trace instrumentation.
 ```
 
 Feature modules call these interfaces. `:core:firebase` provides Firebase-backed implementations (`:core:firebase` depends on `:sdk:observability` and `:sdk:analytics`). Debug builds swap in logging/no-op implementations via Hilt module override.
@@ -80,15 +58,30 @@ interface DqxnLogger {
     fun log(level: LogLevel, tag: LogTag, message: String, throwable: Throwable? = null, fields: ImmutableMap<String, Any> = persistentMapOf())
 }
 
-// Zero-allocation inline extensions — disabled calls are free
-inline fun DqxnLogger.debug(tag: LogTag, vararg fields: Pair<String, Any>, message: () -> String) {
+// Inline extensions — zero-allocation when logging is disabled (no vararg array, no lambda invocation)
+
+// Zero-allocation: no-fields overload — disabled calls are truly free (inline + branch only)
+inline fun DqxnLogger.debug(tag: LogTag, message: () -> String) {
     if (isEnabled(LogLevel.DEBUG, tag)) {
-        log(LogLevel.DEBUG, tag, message(), fields = fields.toMap().toImmutableMap())
+        log(LogLevel.DEBUG, tag, message())
     }
 }
 
-inline fun DqxnLogger.warn(tag: LogTag, vararg fields: Pair<String, Any>, message: () -> String) { ... }
-inline fun DqxnLogger.error(tag: LogTag, vararg fields: Pair<String, Any>, message: () -> String, throwable: Throwable? = null) { ... }
+// With-fields overload — fields lambda deferred past isEnabled check
+inline fun DqxnLogger.debug(tag: LogTag, crossinline fields: () -> ImmutableMap<String, Any>, message: () -> String) {
+    if (isEnabled(LogLevel.DEBUG, tag)) {
+        log(LogLevel.DEBUG, tag, message(), fields = fields())
+    }
+}
+
+// Usage:
+// logger.debug(LogTags.BINDING) { "Provider bound" }
+// logger.debug(LogTags.BINDING, { persistentMapOf("widgetId" to id, "latencyMs" to ms) }) { "Provider bound" }
+
+inline fun DqxnLogger.warn(tag: LogTag, message: () -> String) { ... }
+inline fun DqxnLogger.warn(tag: LogTag, crossinline fields: () -> ImmutableMap<String, Any>, message: () -> String) { ... }
+inline fun DqxnLogger.error(tag: LogTag, throwable: Throwable? = null, message: () -> String) { ... }
+inline fun DqxnLogger.error(tag: LogTag, throwable: Throwable? = null, crossinline fields: () -> ImmutableMap<String, Any>, message: () -> String) { ... }
 ```
 
 ### Structured LogEntry
@@ -140,6 +133,7 @@ object LogTags {
     val AGENTIC = LogTag("AGENTIC")
     val DIAGNOSTIC = LogTag("DIAGNOSTIC")
     val ANR = LogTag("ANR")
+    val INTERACTION = LogTag("INTERACTION")
 }
 
 // Pack-defined tags — no changes to :sdk:observability needed
@@ -225,9 +219,9 @@ class DqxnTracer @Inject constructor(private val logger: DqxnLogger) {
         activeSpanMap[ctx.spanId] = SpanInfo(name, tag, ctx, SystemClock.elapsedRealtimeNanos())
         return withContext(ctx) {
             try { block() } finally {
-                activeSpanMap.remove(ctx.spanId)
-                val elapsed = SystemClock.elapsedRealtimeNanos() - activeSpanMap[ctx.spanId]?.startNanos
-                logger.debug(tag, "span" to name, "elapsedMs" to (elapsed ?: 0) / 1_000_000) { name }
+                val spanInfo = activeSpanMap.remove(ctx.spanId)
+                val elapsed = SystemClock.elapsedRealtimeNanos() - (spanInfo?.startNanos ?: 0)
+                logger.debug(tag, { persistentMapOf("span" to name, "elapsedMs" to elapsed / 1_000_000) }) { name }
             }
         }
     }
@@ -260,10 +254,17 @@ class MetricsCollector @Inject constructor(
         widgetRegistry.all().forEach { map[it.typeId] = LongArrayRingBuffer(64) }
     }
 
+    // Pre-populated for known types; getOrPut at recording sites handles late registration.
     fun recordFrame(durationMs: Long) { /* atomic bucket increment */ }
-    fun recordRecomposition(typeId: String) { /* atomic increment */ }
-    fun recordProviderLatency(providerId: String, latencyMs: Long) { /* ring buffer write */ }
-    fun recordWidgetDrawTime(typeId: String, nanos: Long) { /* ring buffer write, ~25ns overhead */ }
+    fun recordRecomposition(typeId: String) {
+        recompositionCounts.getOrPut(typeId) { AtomicLong(0) }.incrementAndGet()
+    }
+    fun recordProviderLatency(providerId: String, latencyMs: Long) {
+        providerLatency.getOrPut(providerId) { LongArrayRingBuffer(64) }.add(latencyMs)
+    }
+    fun recordWidgetDrawTime(typeId: String, nanos: Long) {
+        widgetDrawTimes.getOrPut(typeId) { LongArrayRingBuffer(64) }.add(nanos)
+    }
     fun recordMemoryWatermark() { /* Runtime.totalMemory() - freeMemory() */ }
     fun snapshot(): MetricsSnapshot { /* read-only copy for dump */ }
 }
@@ -280,7 +281,7 @@ Periodic liveness checks (every 10s):
 
 ### ThermalTrendAnalyzer
 
-Linear regression on recent thermal headroom samples (last 60s at 5s intervals). Predicts time-to-threshold for the next thermal tier:
+Records recent thermal headroom samples (last 60s at 5s intervals) for diagnostic visibility:
 
 ```kotlin
 class ThermalTrendAnalyzer @Inject constructor(
@@ -288,18 +289,15 @@ class ThermalTrendAnalyzer @Inject constructor(
 ) {
     private val headroomSamples = RingBuffer<Pair<Long, Float>>(12)
 
-    fun predictTimeToThreshold(targetHeadroom: Float): Duration? {
-        if (headroomSamples.size < 3) return null
-        val slope = linearRegressionSlope(headroomSamples)
-        if (slope <= 0) return null
-        val current = headroomSamples.last().second
-        val remaining = targetHeadroom - current
-        return (remaining / slope).seconds
+    fun recordSample(timestamp: Long, headroom: Float) {
+        headroomSamples.add(timestamp to headroom)
     }
+
+    fun recentSamples(): List<Pair<Long, Float>> = headroomSamples.toList()
 }
 ```
 
-Enables `FramePacer` to preemptively reduce FPS 10-15s before hitting a thermal tier boundary. Uses `getThermalHeadroom(30)` for trend analysis.
+Exposes headroom history for `diagnose-thermal`. Predictive FPS adaptation (linear regression on headroom trend) deferred to post-launch — reactive thermal response via `ThermalManager.registerThermalStatusListener()` tier transitions is the v1 approach. Add prediction when real-world thermal data shows reactive adaptation causes observable jank spikes during transitions.
 
 ### ErrorReporter
 
@@ -310,24 +308,49 @@ Non-fatal reporting for: widget render crashes, provider failures, DataStore cor
 Prevents report flooding — 60-second deduplication window per unique `(sourceId, exceptionType)` pair:
 
 ```kotlin
-class DeduplicatingErrorReporter(private val delegate: ErrorReporter) : ErrorReporter {
-    private val recentErrors = ConcurrentHashMap<String, Long>()
+class DeduplicatingErrorReporter(
+    private val delegate: ErrorReporter,
+    private val defaultWindowMs: Long = 60_000,
+) : ErrorReporter {
+    private data class ErrorRecord(val lastReportedMs: Long, val suppressedCount: Int)
+    private val recentErrors = ConcurrentHashMap<String, ErrorRecord>()
 
     override fun reportNonFatal(e: Throwable, context: ErrorContext) {
-        val key = "${context.sourceId}:${e::class.simpleName}"
-        val now = SystemClock.elapsedRealtime()
-        val last = recentErrors[key]
-        if (last == null || now - last > 60_000) {
-            recentErrors[key] = now
-            delegate.reportNonFatal(e, context)
+        dedupAndReport("${context.sourceId}:${e::class.simpleName}", e, context) {
+            delegate.reportNonFatal(e, it)
         }
+    }
+
+    override fun reportWidgetCrash(typeId: String, widgetId: String, throwable: Throwable, context: WidgetErrorContext) {
+        dedupAndReport("$typeId:${throwable::class.simpleName}", throwable, context) {
+            delegate.reportWidgetCrash(typeId, widgetId, throwable, it as WidgetErrorContext)
+        }
+    }
+
+    private fun <C : ErrorContext> dedupAndReport(key: String, e: Throwable, context: C, report: (C) -> Unit) {
+        val now = SystemClock.elapsedRealtime()
+        var shouldReport = false
+        var enrichedContext = context
+        recentErrors.compute(key) { _, existing ->
+            if (existing == null || now - existing.lastReportedMs > defaultWindowMs) {
+                shouldReport = true
+                if (existing != null && existing.suppressedCount > 0) {
+                    @Suppress("UNCHECKED_CAST")
+                    enrichedContext = context.withField("suppressedCount", existing.suppressedCount) as C
+                }
+                ErrorRecord(now, 0)
+            } else {
+                existing.copy(suppressedCount = existing.suppressedCount + 1)
+            }
+        }
+        if (shouldReport) report(enrichedContext)
     }
 }
 ```
 
 ### AnrWatchdog
 
-Dedicated background thread pinging main thread every 2s with 2.5s timeout:
+Dedicated background thread pinging main thread every 2s with 2.5s timeout. Requires 2 consecutive missed pings (~5s block) before capturing — single misses from GC pauses don't trigger false positives. Skips capture when debugger is attached.
 
 ```kotlin
 class AnrWatchdog @Inject constructor(
@@ -336,22 +359,31 @@ class AnrWatchdog @Inject constructor(
 ) {
     fun start() {
         thread(name = "AnrWatchdog", isDaemon = true) {
+            var consecutiveMisses = 0
             while (true) {
                 val responded = CountDownLatch(1)
                 mainHandler.post { responded.countDown() }
                 if (!responded.await(2500, TimeUnit.MILLISECONDS)) {
-                    val allStacks = Thread.getAllStackTraces()
-                    val mainStack = Looper.getMainLooper().thread.stackTrace
-                    val fdCount = File("/proc/self/fd/").listFiles()?.size ?: -1
-
-                    logger.error(LogTags.ANR, "fdCount" to fdCount) {
-                        "ANR detected: main thread blocked\n" +
-                        mainStack.joinToString("\n") { "  at $it" }
+                    if (Debug.isDebuggerConnected()) {
+                        consecutiveMisses = 0
+                        Thread.sleep(2_000)
+                        continue // skip under debugger
                     }
-                    // Write diagnostic snapshot to SharedPreferences (survives process death)
-                    // Also write anr_latest.json via direct FileOutputStream (no Dispatchers.IO)
-                    // — agent can adb pull this even when main thread is deadlocked
-                    writeAnrFile(mainStack, fdCount, allStacks)
+                    consecutiveMisses++
+                    if (consecutiveMisses >= 2) {
+                        val allStacks = Thread.getAllStackTraces()
+                        val mainStack = Looper.getMainLooper().thread.stackTrace
+                        val fdCount = File("/proc/self/fd/").listFiles()?.size ?: -1
+
+                        logger.error(LogTags.ANR, { persistentMapOf("fdCount" to fdCount) }) {
+                            "ANR detected: main thread blocked for ${consecutiveMisses * 2500}ms\n" +
+                            mainStack.joinToString("\n") { "  at $it" }
+                        }
+                        writeAnrFile(mainStack, fdCount, allStacks)
+                        consecutiveMisses = 0
+                    }
+                } else {
+                    consecutiveMisses = 0
                 }
                 Thread.sleep(2_000)
             }
@@ -386,7 +418,7 @@ class JankDetector @Inject constructor(
         metricsCollector.recordFrame(durationMs)
         if (durationMs > 16) {
             val count = consecutiveJankFrames.incrementAndGet()
-            if (count == 5) {
+            if (count == 5 || count == 20 || count == 100) {
                 val snapshot = metricsCollector.snapshot()
                 diagnosticCapture.capture(
                     AnomalyTrigger.JankSpike(
@@ -395,7 +427,7 @@ class JankDetector @Inject constructor(
                         worstWidgetTypeId = snapshot.topRecomposingWidget(),
                     )
                 )
-                logger.warn(LogTags.DIAGNOSTIC, "consecutiveJank" to count) {
+                logger.warn(LogTags.DIAGNOSTIC, { persistentMapOf("consecutiveJank" to count) }) {
                     "Jank spike detected: $count consecutive frames >16ms"
                 }
             }
@@ -406,14 +438,11 @@ class JankDetector @Inject constructor(
 }
 ```
 
-Sits between `FrameMetrics` callbacks and `MetricsCollector`. The threshold of 5 consecutive frames ensures transient single-frame drops don't trigger captures.
+Sits between `FrameMetrics` callbacks and `MetricsCollector`. Fires at exponential thresholds (5, 20, 100 consecutive frames) to capture both jank onset and sustained jank progression. Single threshold at 5 would miss the evolving state during sustained thermal-induced jank.
 
 ### OOM Detection
 
-OOM kills don't trigger crash reporters. Detection via `session_active` flag in `SharedPreferences`:
-- Set `true` in `onStart()`, `false` in `onStop()`
-- On cold start, if `session_active == true` AND no crash recorded -> likely OOM or force-stop
-- `ComponentCallbacks2.onTrimMemory(TRIM_MEMORY_RUNNING_CRITICAL)` reports as non-fatal with memory stats
+Deferred to post-launch. Firebase Crashlytics tracks crash-free sessions; LeakCanary catches memory leaks during development. Will implement `session_active` flag detection when production data establishes a crash-free baseline to compare against.
 
 ### Crash Evidence Persistence
 
@@ -448,7 +477,6 @@ This follows the same pattern as `AnrWatchdog` writing to SharedPreferences. The
 
 Weather API calls:
 - OkHttp `HttpLoggingInterceptor` (debug builds) routed to `DqxnLogger`
-- `PerformanceTracerInterceptor` records HTTP metrics via `PerformanceTracer` interface
 - Custom interceptor recording request latency to `MetricsCollector`
 - Retry with exponential backoff (max 3 attempts, 1s/2s/4s)
 - `Cache` with 30min `max-age` matching weather refresh interval
@@ -456,13 +484,12 @@ Weather API calls:
 ```kotlin
 val weatherClient = OkHttpClient.Builder()
     .cache(Cache(cacheDir / "weather", 5 * 1024 * 1024))
-    .addInterceptor(PerformanceTracerInterceptor(performanceTracer))
     .addInterceptor(MetricsInterceptor(metricsCollector, "weather"))
     .addInterceptor(RetryInterceptor(maxRetries = 3))
     .apply {
         if (BuildConfig.DEBUG) {
             addInterceptor(HttpLoggingInterceptor { msg ->
-                logger.debug(LogTag.PROVIDER, "source" to "weather-http") { msg }
+                logger.debug(LogTags.PROVIDER, { persistentMapOf("source" to "weather-http") }) { msg }
             }.setLevel(HttpLoggingInterceptor.Level.BASIC))
         }
     }
@@ -475,17 +502,16 @@ Sets crash report custom keys on every significant state transition:
 
 ```kotlin
 class CrashContextProvider @Inject constructor(
-    private val crashMetadata: CrashMetadataWriter,
     private val crashReporter: CrashReporter,
     private val thermalManager: ThermalManager,
     private val metricsCollector: MetricsCollector,
 ) {
     fun install() {
-        crashMetadata.setKey("session_id", sessionId)
+        crashReporter.setKey("session_id", sessionId)
         crashReporter.setUserId(sessionId)
         scope.launch {
             thermalManager.thermalLevel.collect { level ->
-                crashMetadata.setKey("thermal_level", level.name)
+                crashReporter.setKey("thermal_level", level.name)
             }
         }
         // Also tracks: widget_count, driving_state, jank_percent,
@@ -518,14 +544,12 @@ When anomalies are detected, the observability system captures a `DiagnosticSnap
 data class DiagnosticSnapshot(
     val timestamp: Long,
     val trigger: AnomalyTrigger,
-    val ringBufferTail: ImmutableList<LogEntry>,     // last 50 entries from RingBufferSink
+    val ringBufferTail: ImmutableList<LogEntry>,
     val metricsSnapshot: MetricsSnapshot,
-    val thermalState: ThermalState,                   // level + headroom + trend prediction
+    val thermalState: ThermalState,
     val widgetHealth: ImmutableMap<String, WidgetHealthStatus>,
     val activeTraces: ImmutableList<SpanSummary>,
-    val captureEvents: ImmutableList<CaptureEvent>?,  // non-null if capture session active
-    val agenticTraceId: String?,                      // non-null if triggered by agentic command
-    val injectionId: String?,                         // non-null if triggered by chaos injection
+    val agenticTraceId: String?,
     val sessionId: String,
 )
 
@@ -605,13 +629,17 @@ class DiagnosticSnapshotCapture @Inject constructor(
     private val thermalManager: ThermalManager,
     private val widgetHealthMonitor: WidgetHealthMonitor,
     private val tracer: DqxnTracer,
-    private val captureSessionRegistry: CaptureSessionRegistry,
     private val logger: DqxnLogger,
 ) {
     private val capturing = AtomicBoolean(false)
 
-    fun capture(trigger: AnomalyTrigger, agenticTraceId: String? = null, injectionId: String? = null): DiagnosticSnapshot? {
-        if (!capturing.compareAndSet(false, true)) return null // reentrance guard
+    fun capture(trigger: AnomalyTrigger, agenticTraceId: String? = null): DiagnosticSnapshot? {
+        if (!capturing.compareAndSet(false, true)) {
+            logger.warn(LogTags.DIAGNOSTIC, { persistentMapOf("droppedTrigger" to (trigger::class.simpleName ?: "unknown")) }) {
+                "Diagnostic capture already in progress, dropping ${trigger::class.simpleName}"
+            }
+            return null
+        }
         return try {
             DiagnosticSnapshot(
                 timestamp = SystemClock.elapsedRealtimeNanos(),
@@ -621,9 +649,7 @@ class DiagnosticSnapshotCapture @Inject constructor(
                 thermalState = thermalManager.currentState(),
                 widgetHealth = widgetHealthMonitor.allStatuses(),
                 activeTraces = tracer.activeSpans().toImmutableList(),
-                captureEvents = captureSessionRegistry.currentEvents(),
                 agenticTraceId = agenticTraceId,
-                injectionId = injectionId,
                 sessionId = sessionId,
             )
         } finally {
@@ -645,81 +671,31 @@ Debug builds write snapshots to `${filesDir}/debug/diagnostics/` with **separate
 
 Separate pools prevent frequent thermal oscillation (common in vehicles) from evicting crash snapshots. Agent pulls via `adb pull`. The `diagnose-crash` agentic command returns the most recent snapshot for a given widget (see [build-system.md](build-system.md#compound-diagnostic-commands)).
 
-Release builds: only the `AnomalyTrigger` type and timestamp are forwarded to `CrashMetadataWriter` as custom keys. `agenticTraceId` is always `null` in release — the agentic framework is debug-only. No full diagnostic dump in production.
+**Storage pressure handling**: Before writing a diagnostic file, check `StatFs(diagnosticsDir).availableBytes`. If available space is below 10MB, skip the file write and log a warning via `DqxnLogger` at `WARN` level with `LogTags.DIAGNOSTIC`. `list-diagnostics` verifies file existence before including entries in results — stale metadata from failed writes is filtered out.
 
-### CaptureSessionRegistry
+Release builds: only the `AnomalyTrigger` type and timestamp are forwarded to `CrashReporter` as custom keys. `agenticTraceId` is always `null` in release — the agentic framework is debug-only. No full diagnostic dump in production.
 
-Records UI interaction events during an active capture session. Used by `DiagnosticSnapshotCapture` to include recent user actions in anomaly snapshots:
+### Interaction Event Logging
+
+UI interaction events (tap, move, resize, navigation) are logged as structured `LogEntry` items into the standard `RingBufferSink` pipeline. No separate capture session or ring buffer required — the existing `RingBufferSink` (512 entries) captures these alongside binding events, state transitions, and other breadcrumbs. They appear automatically in `DiagnosticSnapshot.ringBufferTail` and `JsonFileLogSink`.
 
 ```kotlin
-interface CaptureSessionRegistry {
-    fun startCapture()
-    fun stopCapture(): ImmutableList<CaptureEvent>
-    fun recordEvent(event: CaptureEvent)
-    fun currentEvents(): ImmutableList<CaptureEvent>?
-    val isCapturing: Boolean
-}
-
-@Singleton
-class CaptureSessionRegistryImpl @Inject constructor() : CaptureSessionRegistry {
-    private val events = RingBuffer<CaptureEvent>(100) // bounded, no unbounded growth
-    @Volatile private var capturing = false
-
-    override fun startCapture() { capturing = true; events.clear() }
-    override fun stopCapture(): ImmutableList<CaptureEvent> {
-        capturing = false
-        return events.toList().toImmutableList()
-    }
-    override fun recordEvent(event: CaptureEvent) { if (capturing) events.add(event) }
-    override fun currentEvents(): ImmutableList<CaptureEvent>? =
-        if (capturing) events.toList().toImmutableList() else null
-    override val isCapturing: Boolean get() = capturing
-}
-
-sealed interface CaptureEvent {
-    val timestamp: Long
-    data class Tap(override val timestamp: Long, val widgetId: String) : CaptureEvent
-    data class WidgetMove(override val timestamp: Long, val widgetId: String, val fromPosition: GridPosition, val toPosition: GridPosition) : CaptureEvent
-    data class WidgetResize(override val timestamp: Long, val widgetId: String) : CaptureEvent
-    data class Navigation(override val timestamp: Long, val route: String) : CaptureEvent
-}
+// Logged by DashboardGrid / EditModeCoordinator / OverlayNavHost
+logger.info(LogTags.INTERACTION, { persistentMapOf("widgetId" to widgetId, "action" to "TAP") }) { "Widget tapped" }
+logger.info(LogTags.INTERACTION, { persistentMapOf("widgetId" to widgetId, "from" to from, "to" to to) }) { "Widget moved" }
+logger.info(LogTags.INTERACTION, { persistentMapOf("widgetId" to widgetId, "action" to "RESIZE") }) { "Widget resized" }
+logger.info(LogTags.NAVIGATION, { persistentMapOf("route" to route) }) { "Overlay navigated" }
 ```
 
-Wired as `@Singleton` via Hilt. `capture-start` / `capture-stop` agentic commands delegate to this registry. The ring buffer prevents unbounded memory growth during long capture sessions.
-
-### Anomaly Event File (Debug Only)
-
-A debug extension of `DiagnosticSnapshotCapture` appends structured anomaly events to a dedicated file for push-based agent notification:
-
-```
-${filesDir}/debug/anomaly_events.jsonl
-```
-
-Format (one JSON object per line):
-```json
-{"trigger":"WidgetCrash","typeId":"core:speedometer","widgetId":"abc-123","traceId":"agentic-1708444800123","snapshotPath":"snap_crash_1708444800456.json","timestamp":1708444800456}
-```
-
-Agent tails via `adb shell tail -f` for real-time push notification of anomalies — eliminates polling overhead. Rotation: 1MB, 2 files. Deduplication: same `(trigger type, sourceId)` pair suppressed within 60s, consistent with `DeduplicatingErrorReporter`.
-
-This extension is wired in `:app:src/debug/`, not in `:sdk:observability` — no debug concerns leak into the production module.
+No `capture-start`/`capture-stop` commands needed — interaction events are always captured as part of the standard log stream. `diagnose-widget` log tail filtering by `widgetId` naturally surfaces recent interactions for that widget.
 
 ### Binding Lifecycle Events
 
-`WidgetBindingCoordinator` emits guaranteed log entries at `INFO` level for all binding state transitions. These are never sampled and always captured by `RingBufferSink`, ensuring `diagnose-widget` log tail always contains the binding history that led to the current state.
+`WidgetBindingCoordinator` logs all binding state transitions at `INFO` level using `LogTags.BINDING`. These entries are never sampled — always captured by `RingBufferSink`, ensuring `diagnose-widget` log tail contains the binding history that led to the current state.
 
-**Required events:**
+**Required fields on all binding log entries**: `widgetId` and `traceId` in `LogEntry.fields`, making them filterable by the `diagnose-widget` command's log tail query. The `traceId` field enables correlation back to the originating agentic command (if any) or user action.
 
-| Event | Tag | Required fields |
-|---|---|---|
-| `BIND_STARTED` | `BINDING` | `widgetId`, `providerId`, `traceId`, `snapshotType` |
-| `BIND_CANCELLED` | `BINDING` | `widgetId`, `providerId`, `traceId`, `reason` |
-| `BIND_TIMEOUT` | `BINDING` | `widgetId`, `providerId`, `traceId`, `timeoutMs` |
-| `REBIND_SCHEDULED` | `BINDING` | `widgetId`, `providerId`, `traceId`, `attempt`, `delayMs` |
-| `PROVIDER_FALLBACK` | `BINDING` | `widgetId`, `fromProviderId`, `toProviderId`, `traceId` |
-| `FIRST_EMISSION` | `BINDING` | `widgetId`, `providerId`, `traceId`, `latencyMs` |
-
-All events include `widgetId` and `traceId` in `LogEntry.fields`, making them filterable by the `diagnose-widget` command's log tail query. The `traceId` field enables correlation back to the originating agentic command (if any) or user action.
+The specific events and their field schemas are defined by the `WidgetBindingCoordinator` implementation. At minimum, the following transitions must be logged: binding started, binding cancelled/failed, provider fallback activation, and first data emission received.
 
 These events are the primary diagnostic data source for binding-related issues. Without them, `diagnose-widget` can report current state but not the *sequence of transitions* that led to it — which is where most binding bugs manifest.
 
@@ -794,10 +770,8 @@ The sole Firebase dependency point. Implements all observability and analytics i
 @InstallIn(SingletonComponent::class)
 abstract class FirebaseModule {
     @Binds @Singleton abstract fun crashReporter(impl: FirebaseCrashReporter): CrashReporter
-    @Binds @Singleton abstract fun crashMetadata(impl: FirebaseCrashMetadataWriter): CrashMetadataWriter
     @Binds @Singleton abstract fun errorReporter(impl: FirebaseErrorReporter): ErrorReporter
     @Binds @Singleton abstract fun analytics(impl: FirebaseAnalyticsTracker): AnalyticsTracker
-    @Binds @Singleton abstract fun performanceTracer(impl: FirebasePerformanceTracer): PerformanceTracer
 }
 ```
 
@@ -814,20 +788,16 @@ class FirebaseCrashReporter @Inject constructor() : CrashReporter {
     }
     override fun log(message: String) { crashlytics.log(message) }
     override fun setUserId(id: String) { crashlytics.setUserId(id) }
+    override fun setKey(key: String, value: String) { crashlytics.setCustomKey(key, value) }
+    override fun setKey(key: String, value: Int) { crashlytics.setCustomKey(key, value) }
+    override fun setKey(key: String, value: Float) { crashlytics.setCustomKey(key, value) }
+    override fun setKey(key: String, value: Boolean) { crashlytics.setCustomKey(key, value) }
 }
 ```
 
 ### Firebase Performance Monitoring
 
-```kotlin
-class FirebasePerformanceTracer @Inject constructor() : PerformanceTracer {
-    override fun newTrace(name: String): PerfTrace = FirebasePerfTrace(Firebase.performance.newTrace(name))
-    override fun newHttpMetric(url: String, method: String): HttpMetric =
-        FirebaseHttpMetric(Firebase.performance.newHttpMetric(url, method))
-}
-```
-
-**Traces:**
+Firebase Performance used directly in `:core:firebase` for v1 — no abstraction layer. Traces are instrumented at the call site within `:core:firebase`:
 
 | Trace | What it measures |
 |---|---|
@@ -841,3 +811,5 @@ class FirebasePerformanceTracer @Inject constructor() : PerformanceTracer {
 | `weather_fetch` | HTTP metric for weather API |
 
 Per-frame timing and provider emission latency are NOT covered by Firebase Perf (too high frequency) — that's `MetricsCollector`'s job.
+
+When a second module needs performance tracing, extract `PerformanceTracer` / `PerfTrace` / `HttpMetric` interfaces into `:sdk:observability` and move implementations behind `@Binds`.

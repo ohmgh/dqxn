@@ -375,10 +375,10 @@ When a widget's last data snapshot exceeds its staleness threshold, `WidgetStatu
 | `ThermalManager` | `@Singleton` | System-level, survives config changes |
 | `DrivingModeDetector` | `@Singleton` | Continuous GPS monitoring |
 | `DqxnLogger` / sinks | `@Singleton` | Available before ViewModel creation |
-| `CrashReporter` / `CrashMetadataWriter` | `@Singleton` | Bound to Firebase impl via `:core:firebase` Hilt module |
+| `CrashReporter` | `@Singleton` | Bound to Firebase impl via `:core:firebase` Hilt module (includes metadata methods: `setKey`, `setUserId`) |
 | `ErrorReporter` | `@Singleton` | Wraps `CrashReporter`, deduplication decorator |
 | `MetricsCollector` | `@Singleton` | Pre-allocated counters, app-wide |
-| `PerformanceTracer` | `@Singleton` | Bound to Firebase Perf impl via `:core:firebase` Hilt module |
+| Firebase Performance | `@Singleton` | Used directly in `:core:firebase` for v1 (extract `PerformanceTracer` interface when a second consumer needs it) |
 | `AnrWatchdog` | `@Singleton` | Dedicated thread, started at app init |
 | Coordinators (Layout, Theme, etc.) | `@ViewModelScoped` | Tied to dashboard ViewModel lifecycle |
 | Per-widget data bindings | ViewModel-scoped Jobs | Created/cancelled by WidgetBindingCoordinator |

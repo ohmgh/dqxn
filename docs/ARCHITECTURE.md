@@ -103,6 +103,8 @@ Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The s
 
 :feature:diagnostics
   → :sdk:contracts, :sdk:common, :sdk:observability, :sdk:analytics
+  → :sdk:ui
+  → :core:design
 
 :feature:onboarding
   → :sdk:*
@@ -112,7 +114,7 @@ Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The s
   → :sdk:contracts, :sdk:common, :sdk:observability
 
 :core:firebase
-  → :sdk:observability (CrashReporter, CrashMetadataWriter, ErrorReporter interfaces)
+  → :sdk:observability (CrashReporter, ErrorReporter interfaces)
   → :sdk:analytics (AnalyticsTracker interface)
   → :sdk:common
 
@@ -147,7 +149,7 @@ No module other than `:core:firebase` and `:app` depends on Firebase SDKs. This 
 | **Domain** | Pure logic, no Android imports | `ThemeAutoSwitchEngine`, `GridPlacementEngine`, `SetupEvaluator`, `EntitlementManager` |
 | **Plugin / Pack** | Runtime-discovered extensions | `DataProvider` → `Flow<DataSnapshot>`, `WidgetRenderer` → `@Composable Render`, `ThemeProvider` |
 | **Data** | Document-style persistence | `LayoutDataStore` (Proto), `UserPreferencesRepository`, `PairedDeviceStore` (Proto), `ProviderSettingsStore` |
-| **Observability** | Cross-cutting, every module depends on this | `DqxnLogger`, `DqxnTracer`, `MetricsCollector`, `WidgetHealthMonitor`, `JankDetector`, `AnrWatchdog`, `ErrorReporter`, `DiagnosticSnapshotCapture`, `CaptureSessionRegistry` |
+| **Observability** | Cross-cutting, every module depends on this | `DqxnLogger`, `DqxnTracer`, `MetricsCollector`, `WidgetHealthMonitor`, `JankDetector`, `AnrWatchdog`, `ErrorReporter`, `DiagnosticSnapshotCapture` |
 
 ### State Collection Policy
 
