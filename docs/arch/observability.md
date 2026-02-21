@@ -15,6 +15,7 @@ This module defines:
 - `ErrorReporter` — interface for structured non-fatal error reporting with context
 - `PerformanceTracer` — interface for network/custom trace recording
 - `WidgetHealthMonitor`, `ThermalTrendAnalyzer`, `AnrWatchdog` — health monitoring
+- `DiagnosticSnapshotCapture` — auto-captures correlated state on anomalies (widget crash, ANR, jank, thermal escalation)
 
 ## Crash & Error Reporting Interfaces
 
@@ -109,16 +110,46 @@ data class LogEntry(
 
 `sessionId` is generated per cold start and appears in all `LogEntry`, `AnalyticsTracker.setUserProperty("session_id", ...)`, and `CrashContextProvider.setCustomKey("session_id", ...)` — a single join key across all telemetry systems.
 
-### LogTag Enum
+### LogTag
+
+String-based identifier — each module defines its own tags without modifying `:sdk:observability`:
 
 ```kotlin
-enum class LogTag {
-    LAYOUT, THEME, SENSOR, BLE, CONNECTION_FSM,
-    DATASTORE, THERMAL, BINDING, EDIT_MODE,
-    ENTITLEMENT, DRIVING, NAVIGATION, STARTUP,
-    WIDGET_RENDER, PROVIDER, PRESET, ANALYTICS,
+@JvmInline
+value class LogTag(val value: String)
+
+// Core tags defined in :sdk:observability
+object LogTags {
+    val LAYOUT = LogTag("LAYOUT")
+    val THEME = LogTag("THEME")
+    val SENSOR = LogTag("SENSOR")
+    val BLE = LogTag("BLE")
+    val CONNECTION_FSM = LogTag("CONNECTION_FSM")
+    val DATASTORE = LogTag("DATASTORE")
+    val THERMAL = LogTag("THERMAL")
+    val BINDING = LogTag("BINDING")
+    val EDIT_MODE = LogTag("EDIT_MODE")
+    val ENTITLEMENT = LogTag("ENTITLEMENT")
+    val DRIVING = LogTag("DRIVING")
+    val NAVIGATION = LogTag("NAVIGATION")
+    val STARTUP = LogTag("STARTUP")
+    val WIDGET_RENDER = LogTag("WIDGET_RENDER")
+    val PROVIDER = LogTag("PROVIDER")
+    val PRESET = LogTag("PRESET")
+    val ANALYTICS = LogTag("ANALYTICS")
+    val AGENTIC = LogTag("AGENTIC")
+    val DIAGNOSTIC = LogTag("DIAGNOSTIC")
+}
+
+// Pack-defined tags — no changes to :sdk:observability needed
+// in :pack:plus
+object PlusLogTags {
+    val TRIP_ACCUMULATOR = LogTag("TRIP_ACCUMULATOR")
+    val WEATHER_API = LogTag("WEATHER_API")
 }
 ```
+
+`SamplingLogSink` keys on `LogTag.value` — pack-defined tags work with sampling without registration.
 
 ### LogSink Architecture
 
@@ -383,6 +414,131 @@ class CrashContextProvider @Inject constructor(
 | Metrics counter increment | < 20ns |
 | Health check cycle (every 10s) | < 1ms |
 | Crash context update | < 5ms (state transitions only) |
+
+## Anomaly Auto-Capture
+
+When anomalies are detected, the observability system captures a `DiagnosticSnapshot` — correlated state from all subsystems at the moment of the anomaly. This eliminates the agent scavenger hunt of calling 5+ dump commands and manually correlating by timestamp.
+
+### DiagnosticSnapshot
+
+```kotlin
+@Immutable
+data class DiagnosticSnapshot(
+    val timestamp: Long,
+    val trigger: AnomalyTrigger,
+    val ringBufferTail: ImmutableList<LogEntry>,     // last 50 entries from RingBufferSink
+    val metricsSnapshot: MetricsSnapshot,
+    val thermalState: ThermalState,                   // level + headroom + trend prediction
+    val widgetHealth: ImmutableMap<String, WidgetHealthStatus>,
+    val activeTraces: ImmutableList<SpanSummary>,
+    val captureEvents: ImmutableList<CaptureEvent>?,  // non-null if capture session active
+    val agenticTraceId: String?,                      // non-null if triggered by agentic command
+    val sessionId: String,
+)
+
+sealed interface AnomalyTrigger {
+    data class WidgetCrash(
+        val typeId: String,
+        val widgetId: String,
+        val throwable: Throwable,
+        val lastSnapshot: DataSnapshot?,
+        val settings: ImmutableMap<String, Any>,
+    ) : AnomalyTrigger
+
+    data class AnrDetected(
+        val mainThreadStack: ImmutableList<StackTraceElement>,
+        val fdCount: Int,
+    ) : AnomalyTrigger
+
+    data class ThermalEscalation(
+        val from: ThermalLevel,
+        val to: ThermalLevel,
+        val predictedTimeToNext: Duration?,
+    ) : AnomalyTrigger
+
+    data class JankSpike(
+        val consecutiveJankFrames: Int,
+        val p99Ms: Long,
+        val worstWidgetTypeId: String?,
+    ) : AnomalyTrigger
+
+    data class ProviderTimeout(
+        val providerId: String,
+        val widgetId: String,
+        val timeoutMs: Long,
+    ) : AnomalyTrigger
+}
+```
+
+### Trigger Conditions
+
+| Trigger | Condition | Auto-action |
+|---|---|---|
+| Widget crash | `WidgetSlot` error boundary triggered | Capture full snapshot, persist to file |
+| ANR | `AnrWatchdog` timeout fired | Capture, persist to SharedPreferences (survives process death) |
+| Thermal escalation | `ThermalManager` → DEGRADED or CRITICAL | Capture, log summary |
+| Jank spike | ≥5 consecutive frames >16ms | Capture, include worst-recomposing widget |
+| Provider timeout | `firstEmissionTimeout` exceeded | Partial capture (affected widget only) |
+
+### DiagnosticSnapshotCapture
+
+```kotlin
+class DiagnosticSnapshotCapture @Inject constructor(
+    private val ringBufferSink: RingBufferSink,
+    private val metricsCollector: MetricsCollector,
+    private val thermalManager: ThermalManager,
+    private val widgetHealthMonitor: WidgetHealthMonitor,
+    private val tracer: DqxnTracer,
+    private val logger: DqxnLogger,
+) {
+    fun capture(trigger: AnomalyTrigger, agenticTraceId: String? = null): DiagnosticSnapshot {
+        return DiagnosticSnapshot(
+            timestamp = SystemClock.elapsedRealtimeNanos(),
+            trigger = trigger,
+            ringBufferTail = ringBufferSink.tail(50).toImmutableList(),
+            metricsSnapshot = metricsCollector.snapshot(),
+            thermalState = thermalManager.currentState(),
+            widgetHealth = widgetHealthMonitor.allStatuses(),
+            activeTraces = tracer.activeSpans().toImmutableList(),
+            captureEvents = CaptureSessionRegistry.currentEvents(),
+            agenticTraceId = agenticTraceId,
+            sessionId = sessionId,
+        )
+    }
+}
+```
+
+### Persistence
+
+Debug builds write snapshots to `${filesDir}/debug/diagnostics/snap_{timestamp}.json`. Rotating 20 files max. Agent pulls via `adb pull`. The `diagnose-crash` agentic command returns the most recent snapshot for a given widget (see [build-system.md](build-system.md#compound-diagnostic-commands)).
+
+Release builds: only the `AnomalyTrigger` type, timestamp, and `agenticTraceId` are forwarded to `CrashMetadataWriter` as custom keys. No full diagnostic dump in production.
+
+### Agentic Trace Correlation
+
+When an agentic command triggers a `DashboardCommand`, the `AgenticReceiver` attaches a trace ID:
+
+```kotlin
+// In AgenticReceiver
+val agenticTraceId = "agentic-${SystemClock.elapsedRealtimeNanos()}"
+val command = parseCommand(intent).copy(traceId = agenticTraceId)
+commandChannel.send(command)
+logger.debug(LogTags.AGENTIC, "traceId" to agenticTraceId, "command" to command::class.simpleName) {
+    "Agentic command dispatched"
+}
+```
+
+If that command triggers a downstream anomaly, `DiagnosticSnapshotCapture` receives the `agenticTraceId` from the active `TraceContext`. The agent can now correlate: "I sent `widget-add`, trace `agentic-1708444800123`, and DiagnosticSnapshot `snap_1708444800456.json` has `agenticTraceId = agentic-1708444800123`" — causal link established.
+
+### Performance Budget (Auto-Capture)
+
+| Operation | Budget |
+|---|---|
+| `DiagnosticSnapshotCapture.capture()` | < 5ms (reads pre-computed state, no allocations beyond the snapshot itself) |
+| File write (debug) | < 10ms (async on `Dispatchers.IO`, never blocks anomaly handling) |
+| Ring buffer tail read | < 100μs (lock-free array copy) |
+
+Auto-capture runs on the thread that detected the anomaly (typically main for widget crashes, watchdog thread for ANR). The capture itself is non-blocking — file persistence is fire-and-forget on IO.
 
 ## Analytics (`:sdk:analytics`)
 

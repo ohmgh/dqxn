@@ -242,8 +242,9 @@ Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listener
 
 ## Observability
 
-- `:sdk:observability` provides structured logging, tracing, metrics. No Timber — custom `DqxnLogger` with inline zero-allocation extensions. Designed domain-free for reusability — no DQXN-specific types in public API.
-- `LogTag` as a string-based identifier (not a closed enum) — each module defines its own tags (LAYOUT, THEME, SENSOR, BLE, CONNECTION_FSM, DATASTORE, THERMAL, etc.)
+- `:sdk:observability` provides structured logging, tracing, metrics, and anomaly auto-capture. No Timber — custom `DqxnLogger` with inline zero-allocation extensions. Designed domain-free for reusability — no DQXN-specific types in public API.
+- `LogTag` as a `@JvmInline value class LogTag(val value: String)` — each module defines its own tags without modifying `:sdk:observability`. Core tags in `LogTags` companion object (LAYOUT, THEME, SENSOR, BLE, CONNECTION_FSM, DATASTORE, THERMAL, AGENTIC, DIAGNOSTIC, etc.)
+- `DiagnosticSnapshotCapture` auto-captures correlated state (ring buffer tail, metrics, thermal, widget health, active traces) on anomalies (widget crash, ANR, thermal escalation, jank spike, provider timeout). Debug builds persist to `${filesDir}/debug/diagnostics/`. Agentic `diagnose-*` commands expose these snapshots.
 - `TraceContext` via `CoroutineContext.Key` for cross-coordinator correlation
 - `MetricsCollector` with pre-allocated counters — frame histograms, recomposition counts, provider latency
 - `AnrWatchdog` on dedicated thread — 2s ping / 2.5s timeout, captures stack + ring buffer context on stall
@@ -287,6 +288,7 @@ app.dqxn.sdk.observability.trace      — DqxnTracer, TraceContext, Span
 app.dqxn.sdk.observability.metrics    — MetricsCollector, FrameTracer
 app.dqxn.sdk.observability.health     — WidgetHealthMonitor, ThermalTrendAnalyzer
 app.dqxn.sdk.observability.crash      — CrashReporter, CrashMetadataWriter, ErrorReporter interfaces, CrashContextProvider, AnrWatchdog
+app.dqxn.sdk.observability.diagnostic — DiagnosticSnapshotCapture, DiagnosticSnapshot, AnomalyTrigger
 app.dqxn.sdk.observability.perf       — PerformanceTracer, PerfTrace, HttpMetric interfaces
 app.dqxn.sdk.analytics                — AnalyticsTracker, PackAnalytics, AnalyticsEvent
 app.dqxn.core.design                  — design system tokens, shared composables

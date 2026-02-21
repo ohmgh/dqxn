@@ -223,7 +223,145 @@ Stop at the first failing tier and fix before proceeding.
 
 **Visual Regressions**: Compare `_actual.png` vs `_expected.png` in `build/outputs/roborazzi/`. If intentional: `recordRoborazzi`. If not: fix rendering, re-run Tier 5.
 
+**Runtime Crashes (on-device)**: Check `${filesDir}/debug/diagnostics/` for auto-captured `DiagnosticSnapshot` files. These contain correlated ring buffer tail, metrics, thermal state, and widget health at the moment of the anomaly — no need to manually call dump commands. If `agenticTraceId` is present, the snapshot was triggered by an agentic command and the causal chain is traceable.
+
 **Verification After Fix**: Re-run the failing tier before proceeding. On success, continue from next tier.
+
+## Agentic Chaos Testing
+
+ChaosEngine is accessible via agentic broadcast commands for agent-driven fault injection. This bridges the gap between programmatic chaos tests (unit/integration) and agentic E2E verification.
+
+### Agent Debug Loop
+
+The detect → investigate → reproduce → verify cycle using all three systems together:
+
+```
+1. DETECT    — Observability auto-captures DiagnosticSnapshot on anomaly
+2. INVESTIGATE — Agent calls `diagnose-widget {id}` for correlated context
+3. REPRODUCE  — Agent calls `chaos-inject` to trigger the same fault deterministically
+4. VERIFY     — Agent calls `dump-health` / `diagnose-widget` to confirm recovery
+```
+
+### Chaos Test Examples
+
+**Provider failure recovery** (agent verifies fallback activation):
+```
+chaos-inject {"fault":"provider-failure","providerId":"core:gps-speed","duration":10}
+  → wait 2s
+dump-health
+  → verify: widget binding fell back to "core:network-speed"
+  → verify: widget status is "Ready", not "ProviderMissing"
+chaos-inject {"fault":"provider-failure","providerId":"core:gps-speed","duration":0}  // clear
+  → wait 2s
+dump-health
+  → verify: widget rebinds to primary "core:gps-speed"
+```
+
+**Thermal degradation** (agent verifies frame pacing):
+```
+chaos-inject {"fault":"thermal","level":"DEGRADED"}
+  → wait 5s
+diagnose-performance
+  → verify: targetFps reduced, glow disabled, frame times within budget
+chaos-inject {"fault":"thermal","level":"NORMAL"}
+  → wait 5s
+diagnose-performance
+  → verify: targetFps restored, glow re-enabled
+```
+
+**Entitlement revocation** (agent verifies reactive downgrade):
+```
+chaos-inject {"fault":"entitlement-revoke","entitlementId":"plus"}
+  → wait 1s
+diagnose-widget {plusWidgetId}
+  → verify: status is "EntitlementRevoked", fallback UI shown
+```
+
+### Chaos in CI
+
+Deterministic chaos runs as part of Tier 6 (full suite) using seed-based reproduction:
+
+```kotlin
+@Test
+fun `dashboard survives 30s combined chaos with seed 42`() {
+    client.send("chaos-start", mapOf("seed" to 42, "profile" to "combined"))
+    Thread.sleep(30_000)
+    val summary = client.send("chaos-stop")
+    // All widgets should be in Ready or fallback state — none in error
+    val health = client.send("dump-health")
+    health.widgets.forEach { (id, status) ->
+        assertThat(status).isNotInstanceOf(WidgetHealthStatus.Error::class.java)
+    }
+}
+```
+
+## Agentic E2E Protocol
+
+Instrumented E2E tests reuse the agentic broadcast protocol. `AgenticTestClient` wraps ADB broadcasts with assertion helpers:
+
+```kotlin
+class AgenticTestClient(private val device: UiDevice) {
+    fun send(command: String, params: Map<String, Any> = emptyMap()): JsonObject {
+        val paramsJson = Json.encodeToString(params)
+        device.executeShellCommand(
+            "am broadcast -a app.dqxn.android.AGENTIC.$command " +
+            "-n app.dqxn.android.debug/.debug.AgenticReceiver " +
+            "--es params '$paramsJson'"
+        )
+        // Read result from broadcast or file
+        return parseResponse(command)
+    }
+
+    fun assertState(path: String, expected: Any) {
+        val state = send("dump-state")
+        val actual = JsonPath.read<Any>(state.toString(), path)
+        assertWithMessage("State at $path").that(actual).isEqualTo(expected)
+    }
+
+    fun awaitCondition(
+        command: String,
+        path: String,
+        expected: Any,
+        timeoutMs: Long = 5000,
+        pollMs: Long = 500,
+    ) {
+        val deadline = SystemClock.elapsedRealtime() + timeoutMs
+        while (SystemClock.elapsedRealtime() < deadline) {
+            val state = send(command)
+            if (JsonPath.read<Any>(state.toString(), path) == expected) return
+            Thread.sleep(pollMs)
+        }
+        fail("Condition not met within ${timeoutMs}ms: $path == $expected")
+    }
+}
+```
+
+This ensures E2E tests exercise the same command paths the agent uses — no parallel infrastructure to maintain.
+
+### E2E Test Examples
+
+```kotlin
+@Test
+fun `widget add persists across process death`() {
+    client.send("widget-add", mapOf("widgetType" to "core:speedometer"))
+    client.assertState("$.data.layout.widgetCount", 1)
+
+    // Simulate process death
+    device.executeShellCommand("am force-stop app.dqxn.android.debug")
+    device.executeShellCommand("am start app.dqxn.android.debug/.MainActivity")
+    Thread.sleep(3000) // cold start
+
+    client.assertState("$.data.layout.widgetCount", 1)
+}
+
+@Test
+fun `thermal degradation reduces frame rate`() {
+    client.send("chaos-inject", mapOf("fault" to "thermal", "level" to "DEGRADED"))
+    client.awaitCondition("diagnose-performance", "$.thermal.targetFps", 30, timeoutMs = 5000)
+    client.send("chaos-inject", mapOf("fault" to "thermal", "level" to "NORMAL"))
+    client.awaitCondition("diagnose-performance", "$.thermal.targetFps", 60, timeoutMs = 5000)
+}
+```
 
 ## Test Principles
 

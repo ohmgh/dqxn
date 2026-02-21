@@ -132,6 +132,13 @@ adb shell am broadcast \
 | `dump-health` | WidgetHealthMonitor status per widget |
 | `dump-connections` | ConnectionStateMachine state, paired devices |
 | `simulate-thermal` | Force thermal level for testing |
+| `diagnose-widget` | Correlated health, binding, data, errors, and log tail for one widget |
+| `diagnose-performance` | Frame histogram + thermal trend + jank widgets + slow commands + memory |
+| `diagnose-bindings` | All widget→provider bindings, stuck providers, fallback activations |
+| `diagnose-crash` | Most recent `DiagnosticSnapshot` for a widget (auto-captured on crash) |
+| `chaos-start` | Start ChaosEngine with optional seed for deterministic reproduction |
+| `chaos-stop` | Stop ChaosEngine, return session summary (injected faults + system responses) |
+| `chaos-inject` | Inject a specific fault: `provider-failure`, `thermal`, `entitlement-revoke`, `anr-simulate` |
 
 ### Large Payload Handling
 
@@ -201,3 +208,119 @@ errorReporter.reportWidgetCrash(
 `CaptureSessionRegistry` records TAP, WIDGET_MOVE, WIDGET_RESIZE, NAVIGATION events.
 
 The receiver is restricted to debug builds only. Demo providers are gated to debug builds.
+
+### Compound Diagnostic Commands
+
+Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`-derived JSON bundle (see [observability.md](observability.md#anomaly-auto-capture)):
+
+**`diagnose-widget {widgetId}`** returns:
+- Widget health status (from `WidgetHealthMonitor`)
+- Current binding: provider ID, connection state, last emission timestamp
+- Data freshness: last snapshot timestamp vs staleness threshold
+- Error history: crash count, last error, retry state
+- Last 20 log entries tagged to this widget (filtered from `RingBufferSink` by `widgetId` field)
+- Current `WidgetStatusCache` priority chain resolution
+
+**`diagnose-performance`** returns:
+- Frame histogram (from `MetricsCollector`)
+- Thermal state + `ThermalTrendAnalyzer` prediction
+- Top 5 widgets by recomposition count
+- Slow command log (commands >100ms from ring buffer)
+- Memory watermark + GC pressure indicator
+- Current `RenderConfig` (target FPS, glow enabled, pixel shift active)
+
+**`diagnose-bindings`** returns:
+- All active widget→provider bindings with status
+- Stuck providers (bound but no emission within `firstEmissionTimeout`)
+- Fallback activations (where primary provider was unavailable)
+- Provider error counts and retry states
+
+**`diagnose-crash {widgetId}`** returns:
+- Most recent `DiagnosticSnapshot` auto-captured for this widget (if any)
+- Falls back to current live diagnostic if no snapshot exists
+- Includes `agenticTraceId` if the crash was triggered by an agentic command
+
+### Agentic Trace Correlation
+
+Every agentic command receives a trace ID that propagates through the entire command chain:
+
+```
+Agent sends: widget-add --params '{"widgetType":"core:speedometer"}'
+  → AgenticReceiver generates traceId: "agentic-1708444800123"
+  → DashboardCommand.AddWidget(traceId = "agentic-1708444800123")
+  → WidgetBindingCoordinator.bind() runs under TraceContext(traceId)
+  → If anomaly occurs: DiagnosticSnapshot.agenticTraceId = "agentic-1708444800123"
+  → Agent queries: diagnose-crash → sees its own traceId in the snapshot
+```
+
+This closes the causal loop: the agent can distinguish "I caused this" from "this happened coincidentally."
+
+### Chaos Injection Commands
+
+ChaosEngine is exposed via agentic commands for agent-driven fault injection and verification:
+
+```
+adb shell am broadcast \
+  -a app.dqxn.android.AGENTIC.chaos-start \
+  -n app.dqxn.android.debug/.debug.AgenticReceiver \
+  --es params '{"seed":42,"profile":"provider-stress"}'
+```
+
+**Chaos profiles** (predefined fault injection patterns):
+
+| Profile | What it does |
+|---|---|
+| `provider-stress` | Random provider failures (1-3 providers, 5-30s intervals) |
+| `thermal-ramp` | Progressive thermal escalation NORMAL → MODERATE → DEGRADED over 60s |
+| `entitlement-churn` | Rapid entitlement grant/revoke cycles (2s intervals) |
+| `widget-storm` | Rapid add/remove of widgets (tests binding cleanup) |
+| `combined` | All of the above simultaneously |
+
+**`chaos-inject`** for targeted single-fault injection:
+
+```
+# Kill a specific provider
+adb shell am broadcast -a app.dqxn.android.AGENTIC.chaos-inject \
+  --es params '{"fault":"provider-failure","providerId":"core:gps-speed","duration":10}'
+
+# Force thermal level
+adb shell am broadcast -a app.dqxn.android.AGENTIC.chaos-inject \
+  --es params '{"fault":"thermal","level":"DEGRADED"}'
+
+# Revoke entitlement
+adb shell am broadcast -a app.dqxn.android.AGENTIC.chaos-inject \
+  --es params '{"fault":"entitlement-revoke","entitlementId":"plus"}'
+```
+
+**`chaos-stop`** returns a session summary:
+
+```json
+{
+  "duration_ms": 30000,
+  "seed": 42,
+  "injected_faults": [
+    {"type": "provider-failure", "target": "core:gps-speed", "at_ms": 5230},
+    {"type": "provider-failure", "target": "core:compass", "at_ms": 12400}
+  ],
+  "system_responses": [
+    {"type": "fallback-activated", "widget": "abc-123", "from": "core:gps-speed", "to": "core:network-speed", "at_ms": 5235},
+    {"type": "widget-status-change", "widget": "def-456", "status": "ProviderMissing", "at_ms": 12405}
+  ],
+  "diagnostic_snapshots_captured": 2
+}
+```
+
+The agent workflow for debugging: inject fault → observe system response → verify recovery → fix if wrong.
+
+### Diagnostic File Index
+
+All agent-accessible diagnostic artifacts in debug builds:
+
+| Path | Content | Rotation |
+|---|---|---|
+| `${filesDir}/debug/dqxn.jsonl` | JSON-lines structured log | 10MB, 3 files |
+| `${filesDir}/debug/diagnostics/snap_*.json` | Auto-captured `DiagnosticSnapshot` | 20 files max |
+| `${cacheDir}/dump_*.json` | On-demand state dumps (from dump commands) | Cleared on app restart |
+| `${cacheDir}/chaos_*.json` | Chaos session summaries | Cleared on app restart |
+
+Agent pulls via `adb pull /data/data/app.dqxn.android.debug/...`.

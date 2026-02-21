@@ -147,7 +147,7 @@ No module other than `:core:firebase` and `:app` depends on Firebase SDKs. This 
 | **Domain** | Pure logic, no Android imports | `ThemeAutoSwitchEngine`, `GridPlacementEngine`, `SetupEvaluator`, `EntitlementManager` |
 | **Plugin / Pack** | Runtime-discovered extensions | `DataProvider` → `Flow<DataSnapshot>`, `WidgetRenderer` → `@Composable Render`, `ThemeProvider` |
 | **Data** | Document-style persistence | `LayoutDataStore` (Proto), `UserPreferencesRepository`, `PairedDeviceStore` (Proto), `ProviderSettingsStore` |
-| **Observability** | Cross-cutting, every module depends on this | `DqxnLogger`, `DqxnTracer`, `MetricsCollector`, `WidgetHealthMonitor`, `AnrWatchdog`, `ErrorReporter` |
+| **Observability** | Cross-cutting, every module depends on this | `DqxnLogger`, `DqxnTracer`, `MetricsCollector`, `WidgetHealthMonitor`, `AnrWatchdog`, `ErrorReporter`, `DiagnosticSnapshotCapture` |
 
 ### State Collection Policy
 
@@ -188,8 +188,8 @@ Benefits:
 | [State Management](arch/state-management.md) | Decomposed coordinators, data binding, typed DataSnapshot, backpressure, DI scoping, background lifecycle |
 | [Compose Performance](arch/compose-performance.md) | Recomposition isolation, state read deferral, grid layout, thermal management, startup optimization, edge-to-edge, memory leaks |
 | [Plugin System](arch/plugin-system.md) | Widget/provider/theme contracts, error isolation, KSP generation, theme system, entitlement gating |
-| [Observability](arch/observability.md) | Structured logging, distributed tracing, metrics, health monitoring, crash/error reporting, analytics, Firebase integration |
+| [Observability](arch/observability.md) | Structured logging, distributed tracing, metrics, health monitoring, crash/error reporting, anomaly auto-capture, analytics, Firebase integration |
 | [Persistence](arch/persistence.md) | Proto DataStore, corruption handling, schema migration, preset system, R8 rules |
-| [Testing](arch/testing.md) | Test infrastructure, framework choices, test layers, CI gates, agentic validation pipeline |
-| [Build System](arch/build-system.md) | Convention plugins, lint rules, agentic framework, CI configuration |
+| [Testing](arch/testing.md) | Test infrastructure, framework choices, test layers, CI gates, agentic validation pipeline, chaos testing, E2E protocol |
+| [Build System](arch/build-system.md) | Convention plugins, lint rules, agentic framework, diagnostic commands, chaos injection, CI configuration |
 | [Platform Integration](arch/platform.md) | Navigation, driving mode, alerts, security, permissions |
