@@ -40,7 +40,7 @@ Full annotated tree in `docs/ARCHITECTURE.md` Section 3.
 ```
 sdk/      — contracts, common, ui, observability, analytics (pack API surface)
 core/     — design, thermal, driving, firebase, agentic (shell internals)
-codegen/  — plugin, agentic (KSP, build-time only)
+codegen/  — plugin (KSP, build-time only)
 data/     — Proto + Preferences DataStore, .proto schemas
 feature/  — dashboard, settings, diagnostics, onboarding
 pack/     — free, plus, themes, demo
@@ -244,14 +244,16 @@ Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listener
 
 - `:sdk:observability` provides structured logging, tracing, metrics, and anomaly auto-capture. No Timber — custom `DqxnLogger` with inline zero-allocation extensions. Designed domain-free for reusability — no DQXN-specific types in public API.
 - `LogTag` as a `@JvmInline value class LogTag(val value: String)` — each module defines its own tags without modifying `:sdk:observability`. Core tags in `LogTags` companion object (LAYOUT, THEME, SENSOR, BLE, CONNECTION_FSM, DATASTORE, THERMAL, BINDING, ANR, AGENTIC, DIAGNOSTIC, etc.)
-- `DiagnosticSnapshotCapture` auto-captures correlated state (ring buffer tail, metrics, thermal, widget health, active traces) on anomalies (widget crash, ANR, thermal escalation, jank spike, provider timeout, escalated staleness). Debug builds persist to `${filesDir}/debug/diagnostics/` with separate rotation pools per trigger severity (crash: 20, thermal: 10, performance: 10). Reentrance guard prevents recursive capture.
+- `DiagnosticSnapshotCapture` auto-captures correlated state (ring buffer tail, metrics, thermal, widget health, active traces) on anomalies (widget crash, ANR, thermal escalation, jank spike, provider timeout, escalated staleness, binding stall, DataStore corruption). Debug builds persist to `${filesDir}/debug/diagnostics/` with separate rotation pools per trigger severity (crash: 20, thermal: 10, performance: 10). `capture()` accepts `agenticTraceId` and `injectionId` for chaos/agentic correlation. Reentrance guard prevents recursive capture.
+- `CrashEvidenceWriter` — `UncaughtExceptionHandler` that synchronously writes minimal crash record (typeId, exception, top 5 frames, thermal, timestamp) to `SharedPreferences` before process death. Ensures `diagnose-crash` always has evidence after safe mode activation, even when async snapshot writes don't complete.
 - `TraceContext` via `CoroutineContext.Key` for cross-coordinator correlation. Propagates to widget effects via `LocalWidgetTraceContext` — widget `LaunchedEffect` crashes carry originating agentic `traceId`.
 - `JankDetector` monitors consecutive jank frames, fires `DiagnosticSnapshotCapture` at ≥5 consecutive >16ms frames
-- `MetricsCollector` with pre-allocated counters — frame histograms, recomposition counts, provider latency
-- `AnrWatchdog` on dedicated thread — 2s ping / 2.5s timeout, captures stack + ring buffer context on stall
+- `MetricsCollector` with pre-allocated counters — frame histograms, recomposition counts, provider latency, per-widget draw time (64-entry ring buffer per widget, ~25ns overhead via `System.nanoTime()` in draw modifier)
+- `AnrWatchdog` on dedicated thread — 2s ping / 2.5s timeout, captures stack + ring buffer context on stall. Writes `anr_latest.json` via direct `FileOutputStream` (survives main-thread deadlock).
 - Binding lifecycle events (`BIND_STARTED`, `BIND_CANCELLED`, `REBIND_SCHEDULED`, `PROVIDER_FALLBACK`, `FIRST_EMISSION`) logged at INFO — never sampled, always in ring buffer for `diagnose-widget` history
-- Debug: anomaly event file (`anomaly_events.jsonl`) for push-based agent notification; debug overlays in `:app:src/debug/`
+- Debug: anomaly event file (`anomaly_events.jsonl`) for push-based agent notification; 3 debug overlays (Frame Stats, Widget Health, Thermal Trending) in `:app:src/debug/`
 - Chaos injection via DI seams: `FakeThermalManager`, `StubEntitlementManager.simulateRevocation()`, `DataProviderInterceptor` + `ChaosProviderInterceptor`. Each injection carries `injectionId` correlated to resulting `DiagnosticSnapshot`.
+- Non-main-thread diagnostic path: debug `ContentProvider` on binder thread at `content://app.dqxn.android.debug.diagnostics/health` — escape hatch when main thread is deadlocked and broadcast protocol is unresponsive.
 
 ## Security
 
@@ -271,13 +273,15 @@ Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listener
 - **Contract**: Abstract test classes in `:sdk:contracts` testFixtures — every pack widget/provider extends them
 - **State machine**: Exhaustive transitions + jqwik property-based testing (jqwik is a JUnit5 test engine)
 - **Hilt integration**: JUnit4 + `HiltAndroidRule` (no JUnit5 extension exists for Hilt)
-- **Chaos**: ChaosEngine with random provider failures, thermal spikes, entitlement churn
+- **Chaos**: ChaosEngine with random provider failures, thermal spikes, entitlement churn. `ProviderFault` sealed interface shared between `ChaosProviderInterceptor` (E2E) and `TestDataProvider` (unit) via `:sdk:contracts:testFixtures` — identical fault primitives across all test layers.
 - **Fuzz**: kotlinx.fuzz (JetBrains, built on Jazzer) on JSON theme/preset parsing — better Kotlin coverage than raw Jazzer
-- **Mutation**: Pitest — `info.solidsoft.pitest` for JVM modules, `pl.droidsonroids.pitest` for Android modules + `pitest-kotlin` extension
+- **Mutation**: Pitest — `info.solidsoft.pitest` for JVM-only modules (`:sdk:common`, `:sdk:contracts`, `:codegen:plugin`) + `pitest-kotlin` extension. Android module mutation testing deferred until `pl.droidsonroids.pitest` confirms AGP 9 compatibility.
 - **Coordinators**: `DashboardTestHarness` DSL — `dashboardTest { dispatch(...); assertThat(...) }`
+- **Safety-critical**: Safe mode activation (>3 crashes in 60s → clock-only + reset banner), driving gate (speed > threshold → edit/settings disabled), entitlement grace period (7-day offline → downgrade) — all coordinator-level tests with `StandardTestDispatcher`
+- **DataStore resilience**: Corruption handler fallback-to-defaults + `ErrorReporter` verification, schema migration N→N+1 roundtrip, corruption-during-migration recovery
 - **Accessibility**: Semantics assertions for touch targets (76dp automotive), contrast verification per theme
 
-Shared test infrastructure via Gradle `testFixtures` source sets per module. Factory functions: `testWidget()`, `testTheme()`, `testDataSnapshot()`.
+Shared test infrastructure via Gradle `testFixtures` source sets per module. Factory functions: `testWidget()`, `testTheme()`, `testDataSnapshot()`. `ProviderFault` in `:sdk:contracts:testFixtures` for shared fault injection.
 
 ## Package Naming
 
@@ -302,7 +306,6 @@ app.dqxn.core.firebase.analytics      — FirebaseAnalyticsTracker
 app.dqxn.core.firebase.perf           — FirebasePerformanceTracer, PerformanceTracerInterceptor
 app.dqxn.core.agentic                 — ADB broadcast automation (debug only)
 app.dqxn.codegen.plugin               — KSP plugin processor handlers
-app.dqxn.codegen.agentic              — KSP agentic processor handlers
 app.dqxn.data                         — DataStore implementations, proto schemas
 app.dqxn.feature.dashboard            — dashboard shell root
 app.dqxn.feature.dashboard.coordinator — state coordinators
@@ -365,7 +368,7 @@ KAPT leaked in. Check no module uses `kapt()` — only `ksp()` allowed.
 `List`, `Map`, or `Set` parameter instead of `ImmutableList`, `ImmutableMap`, `ImmutableSet`. Or a data class missing `@Immutable`/`@Stable`.
 
 ### Build hangs or OOM in KSP
-Likely two KSP processors conflicting. Ensure `:codegen:plugin` and `:codegen:agentic` run as a single pass. Check `ksp.incremental=true` in `gradle.properties`.
+KSP incremental build stalled. Check `ksp.incremental=true` in `gradle.properties`.
 
 ## Why Decisions
 
@@ -398,7 +401,8 @@ For agents that wonder "why not just...":
 | Why packs at top level, not under `feature/`? | Packs are extensions discovered via Hilt multibinding, not features with screens/routes. Nesting them under `feature/` incorrectly implies they're the same module category as dashboard or settings. |
 | Why driving in `core/`, not `feature/`? | Driving detection has no UI — it's a runtime service (GPS speed → threshold → state). It's also a safety gate that must work regardless of which features are present. Cross-cutting platform concern, not a user-facing feature. |
 | Why driving is also a `DataProvider`? | Driving state is a reactive data source derived from sensors — same pattern as every other provider. Widgets (trip computer, driving indicator) should consume it through standard binding, not a parallel side-channel. Shell permanently subscribes for safety; widgets optionally subscribe for display. |
-| Why `codegen/` folder for KSP processors? | Plugin processor alone runs 7 handlers (settings, themes, entitlements, resources, 3 validators). Substantial shared KSP/KotlinPoet infrastructure. Build-time only with zero runtime presence. Grouping separates build-time from runtime modules. |
+| Why `codegen/` folder for KSP processors? | Plugin processor runs 7 handlers (settings, themes, entitlements, resources, 3 validators). Substantial shared KSP/KotlinPoet infrastructure. Build-time only with zero runtime presence. Grouping separates build-time from runtime modules. |
+| Why no KSP for agentic command registry? | ~30 commands in a single module (`:core:agentic`). Manual sealed interface with exhaustive `when` is simpler and gives compile-time enforcement — adding a command without handling it is a compiler error. KSP is justified for widget/provider discovery across module boundaries, not for a flat command list in one module. |
 | Why analytics accessible to packs? | Packs know their interaction semantics (Media Controller play/pause, Trip reset). Shell shouldn't proxy every pack interaction. `PackAnalytics` is a scoped interface — packs fire structured events, implementation prepends pack namespace. |
 | Why observability and analytics not split into api + impl? | Both have the same pattern (packs use a subset, shell uses the whole thing). Splitting each into two modules doubles module count for marginal enforcement. `sdk/` vs `core/` handles the big boundary; within-module access uses Kotlin visibility. Consistent treatment for both. |
 | Why separate snapshot rotation pools? | Thermal oscillation in vehicles is frequent (sun exposure, AC cycling). A shared 20-file pool would evict crash snapshots within one drive session. Separate pools (crash: 20, thermal: 10, perf: 10) guarantee crash data survives. |
@@ -408,3 +412,12 @@ For agents that wonder "why not just...":
 | Why no `OnDemandCapture` in `AnomalyTrigger`? | Pollutes the production sealed hierarchy with a test concern. Every `when` expression matching `AnomalyTrigger` gains a branch. `diagnose-crash` falls back to assembling live state from existing components — same data, no production code change. |
 | Why reentrance guard on `DiagnosticSnapshotCapture`? | `capture()` calls `DqxnTracer.activeSpans()` which may log. If logging triggers another anomaly detection, recursive capture would stack overflow. `AtomicBoolean` guard returns `null` on reentry. |
 | Why `CompositionLocal` for TraceContext in widgets, not injecting into `WidgetData`? | `WidgetData` is the data model consumed by every widget renderer. Adding trace metadata to it pollutes the data contract with debug concerns. A `CompositionLocal` is zero-cost when null and invisible to widget implementations that don't use it. |
+| Why sync crash evidence via SharedPreferences, not just async DiagnosticSnapshot? | `DiagnosticSnapshotCapture` writes files asynchronously on `Dispatchers.IO`. If a crash kills the process (which is exactly when safe mode triggers), the async write may not complete. Sync `SharedPreferences.commit()` in `UncaughtExceptionHandler` ensures the agent always has crash evidence after safe mode. Same pattern as `AnrWatchdog`. |
+| Why `BindingStalled` trigger separate from `ProviderTimeout`? | `ProviderTimeout` fires when a single provider's `firstEmissionTimeout` is exceeded. `BindingStalled` catches the downstream `combine()` starvation case: all providers may have emitted individually, but `combine()` blocks because one of N upstream flows failed initial emission. Different detection point, different root cause. |
+| Why `DataStoreCorruption` in crash pool, not performance pool? | DataStore corruption is a data loss event — the user's layouts/settings are gone. It should have the same retention priority as crash data (20 files), not performance data (10 files) where thermal oscillation could evict it. |
+| Why `ContentProvider` for non-main-thread diagnostics, not a second BroadcastReceiver? | `BroadcastReceiver.onReceive()` runs on the main thread regardless of registration. A `ContentProvider` runs queries on binder threads, providing a genuinely independent thread path. If main thread is deadlocked, broadcasts queue forever but ContentProvider queries still work. |
+| Why per-widget draw time, not just recomposition count? | Recomposition count ≠ frame cost. A widget might recompose frequently but cheaply (text update) while another recomposees rarely but expensively (complex canvas). Per-widget draw time enables performance bisection without trial-and-error widget removal. `System.nanoTime()` overhead is ~25ns — negligible in a 16ms frame budget. |
+| Why command result envelope, not raw JSON? | Without standardized envelope, the agent must poll `dump-state` after every mutation command to verify success. `{"status": "ok\|error", "message": "...", "data": {...}}` gives synchronous confirmation. No error code taxonomy — just human/agent-readable message strings. |
+| Why shared `ProviderFault` in testFixtures, not separate fault types? | `ChaosProviderInterceptor` (E2E via agentic commands) and `TestDataProvider` (unit via `DashboardTestHarness`) must inject identical faults. If fault mechanisms differ, a chaos-discovered bug may not reproduce in unit tests. Shared sealed interface + flow transformation ensures the same fault produces the same system response at both test layers. |
+| Why JVM-only mutation testing for v1? | `pl.droidsonroids.pitest` AGP 9 compatibility is unverified (Feb 2026). Android Compose modules produce noisy false positives (UI rendering mutations). JVM modules (`:sdk:common`, `:sdk:contracts`, `:codegen:plugin`) contain the domain logic where mutation testing has highest signal. |
+| Why 3 debug overlays, not 7? | Frame Stats, Widget Health, and Thermal Trending serve the critical debugging needs. The deferred 4 (Recomposition Visualizer, Provider Flow DAG, State Machine Viewer, Trace Viewer) are human-developer tools — the autonomous agent uses agentic commands (`dump-metrics`, `diagnose-bindings`, `dump-connections`, `dump-traces`) for the same data. Build human-facing UI when a human developer needs it. |

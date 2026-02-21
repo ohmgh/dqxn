@@ -168,12 +168,106 @@ fun `connection FSM never reaches illegal state`(
 - Random provider failures, thermal spikes, entitlement revocation, process death, rapid widget add/remove
 - `ChaosEngine` accepts `seed: Long` for deterministic reproduction
 
+**Safety-Critical Tests** (coordinator-level, no device required):
+
+```kotlin
+@Test
+fun `safe mode activates after 4 crashes in 60s`() = dashboardTest {
+    repeat(4) { i ->
+        dispatch(DashboardCommand.WidgetCrash(
+            widgetId = "widget-$i",
+            typeId = "core:speedometer",
+            throwable = RuntimeException("test crash $i"),
+        ))
+        advanceTimeBy(10_000) // 10s between crashes
+    }
+    assertThat(safeMode().active).isTrue()
+    assertThat(layoutState().widgets).hasSize(1) // clock only
+    assertThat(layoutState().widgets.first().typeId).isEqualTo("core:clock")
+}
+
+@Test
+fun `driving mode disables edit mode and widget picker`() = dashboardTest {
+    // Start in edit mode
+    dispatch(DashboardCommand.ToggleEditMode)
+    assertThat(editModeState()).isTrue()
+
+    // Simulate driving — inject DrivingSnapshot with speed > threshold for 3s
+    emitDrivingSnapshot(DrivingSnapshot(speedMps = 12f)) // ~43 km/h, above threshold
+    advanceTimeBy(3_500) // 3s debounce + margin
+
+    assertThat(editModeState()).isFalse() // auto-exited
+    assertThat(widgetPickerAvailable()).isFalse()
+    assertThat(settingsAccessible()).isFalse()
+}
+```
+
+**DataStore Resilience Tests**:
+
+```kotlin
+@Test
+fun `corruption handler falls back to defaults and reports`() = runTest {
+    // Corrupt the proto file
+    layoutProtoFile.writeBytes(byteArrayOf(0xFF.toByte(), 0xFE.toByte(), 0x00))
+
+    val store = createLayoutDataStore(layoutProtoFile)
+    val layout = store.data.first()
+
+    assertThat(layout).isEqualTo(DashboardLayout.getDefaultInstance())
+    verify(errorReporter).reportNonFatal(any<InvalidProtocolBufferException>(), any())
+}
+
+@Test
+fun `schema migration v1 to v2 preserves widget positions`() = runTest {
+    // Write v1 proto
+    val v1Layout = V1DashboardLayout.newBuilder()
+        .addWidgets(V1WidgetPlacement.newBuilder().setTypeId("core:speedometer").setX(0).setY(0))
+        .build()
+    layoutProtoFile.writeBytes(v1Layout.toByteArray())
+
+    // Open with v2 DataStore (triggers migration)
+    val store = createLayoutDataStore(layoutProtoFile, currentVersion = 2)
+    val layout = store.data.first()
+
+    assertThat(layout.widgetsList).hasSize(1)
+    assertThat(layout.widgetsList[0].typeId).isEqualTo("core:speedometer")
+    // v2 adds gridUnitSize field — verify it got a default
+    assertThat(layout.widgetsList[0].gridUnitSize).isEqualTo(DEFAULT_GRID_UNIT_SIZE)
+}
+```
+
+**Entitlement Grace Period Tests** (coordinator, `StandardTestDispatcher` time control):
+
+```kotlin
+@Test
+fun `entitlement preserved within 7-day offline grace period`() = runTest {
+    // Grant plus entitlement with verification timestamp
+    entitlementManager.grant("plus", verifiedAt = clock.now())
+
+    // Advance 6 days — still within grace period
+    advanceTimeBy(6.days.inWholeMilliseconds)
+    assertThat(entitlementManager.hasEntitlement("plus")).isTrue()
+}
+
+@Test
+fun `entitlement revoked after 7-day offline grace period`() = runTest {
+    entitlementManager.grant("plus", verifiedAt = clock.now())
+
+    // Advance past grace period
+    advanceTimeBy(8.days.inWholeMilliseconds)
+    assertThat(entitlementManager.hasEntitlement("plus")).isFalse()
+    // Verify reactive downgrade propagated
+    turbine(widgetStatuses) {
+        assertThat(awaitItem().filter { it.value is WidgetHealthStatus.EntitlementRevoked }).isNotEmpty()
+    }
+}
+```
+
 ## Mutation Testing
 
-Two plugins depending on module type:
-- **JVM-only modules**: `info.solidsoft.pitest` (v1.19.0+)
-- **Android library modules**: `pl.droidsonroids.pitest` (v0.2.25+) — AGP 9 compatibility unverified as of Feb 2026. **Fallback**: if incompatible, mutation testing runs only on JVM-only modules (`:sdk:common`, `:sdk:contracts` domain types, `:codegen:*`, pure Kotlin domain logic). The >80% kill rate CI gate applies only to modules where pitest can run.
-- `pitest-kotlin` extension with both plugins to filter Kotlin-specific false positives
+JVM-only modules via `info.solidsoft.pitest` (v1.19.0+) with `pitest-kotlin` extension:
+- **Scope**: `:sdk:common`, `:sdk:contracts` domain types, `:codegen:plugin`, pure Kotlin domain logic
+- **Not in scope for v1**: Android library modules. `pl.droidsonroids.pitest` AGP 9 compatibility is unverified (Feb 2026) and Android Compose modules produce noisy false positives (UI rendering mutations). Reassess post-launch.
 - Kill rate target: > 80%
 
 ## Fuzz Testing
@@ -281,7 +375,11 @@ Stop at the first failing tier and fix before proceeding.
 
 **Visual Regressions**: Compare `_actual.png` vs `_expected.png` in `build/outputs/roborazzi/`. If intentional: `recordRoborazzi`. If not: fix rendering, re-run Tier 5.
 
-**Runtime Crashes (on-device)**: Check `${filesDir}/debug/diagnostics/` for auto-captured `DiagnosticSnapshot` files. These contain correlated ring buffer tail, metrics, thermal state, and widget health at the moment of the anomaly — no need to manually call dump commands. If `agenticTraceId` is present, the snapshot was triggered by an agentic command and the causal chain is traceable.
+**Runtime Crashes (on-device)**: Use `list-diagnostics` to find auto-captured `DiagnosticSnapshot` files, or `diagnose-crash {widgetId}` for a specific widget. Snapshots contain correlated ring buffer tail, metrics, thermal state, and widget health at the moment of the anomaly. If no snapshot file exists (process died before async write completed), `diagnose-crash` falls back to `SharedPreferences` crash evidence written synchronously by `CrashEvidenceWriter`. If `agenticTraceId` is present, the snapshot was triggered by an agentic command and the causal chain is traceable. If `injectionId` is present, it was caused by a chaos injection.
+
+**Safe Mode**: If `dump-state` shows `safeMode.active: true`, the app crashed >3 times in 60s. Use `safeMode.lastCrashWidgetTypeId` to identify the culprit. `diagnose-crash` for that widget type to get the crash evidence.
+
+**Main Thread Deadlock**: If agentic broadcast commands are unresponsive, use the non-main-thread diagnostic path: `adb shell content query --uri content://app.dqxn.android.debug.diagnostics/health`. If that also hangs, the process is fully deadlocked — `adb pull` the `anr_latest.json` file written by `AnrWatchdog` on its dedicated thread.
 
 **Verification After Fix**: Re-run the failing tier before proceeding. On success, continue from next tier.
 
@@ -321,12 +419,15 @@ class ChaosProviderInterceptor @Inject constructor() : DataProviderInterceptor {
     }
 }
 
+// In :sdk:contracts testFixtures — shared between ChaosEngine and DashboardTestHarness
 sealed interface ProviderFault {
     data object Kill : ProviderFault
     data class Delay(val delayMs: Long) : ProviderFault
     data class Error(val exception: Exception) : ProviderFault
 }
 ```
+
+`ProviderFault` lives in `:sdk:contracts:testFixtures` so both `ChaosProviderInterceptor` (E2E) and `TestDataProvider` (unit tests) use the same fault primitives and flow transformations. When an agent reproduces a chaos-discovered bug as a unit test, the fault mechanism is identical — same sealed interface, same flow transformation logic.
 
 `WidgetDataBinder` applies all registered interceptors in order. Production builds have an empty interceptor set (zero overhead). Debug builds register `ChaosProviderInterceptor` via Hilt.
 
@@ -439,8 +540,11 @@ class AgenticTestClient(private val device: UiDevice) {
             "-n app.dqxn.android.debug/.debug.AgenticReceiver " +
             "--es params '$paramsJson'"
         )
-        // Read result from broadcast or file
-        return parseResponse(command)
+        // Read result envelope from broadcast or file
+        val response = parseResponse(command)
+        val status = response["status"]?.jsonPrimitive?.content
+        check(status == "ok") { "Command '$command' failed: ${response["message"]}" }
+        return response
     }
 
     fun assertState(path: String, expected: Any) {

@@ -15,7 +15,7 @@ This module defines:
 - `ErrorReporter` — interface for structured non-fatal error reporting with context
 - `PerformanceTracer` — interface for network/custom trace recording
 - `WidgetHealthMonitor`, `ThermalTrendAnalyzer`, `AnrWatchdog` — health monitoring
-- `DiagnosticSnapshotCapture` — auto-captures correlated state on anomalies (widget crash, ANR, jank, thermal escalation)
+- `DiagnosticSnapshotCapture` — auto-captures correlated state on anomalies (widget crash, ANR, jank, thermal escalation, binding stall, DataStore corruption)
 
 ## Crash & Error Reporting Interfaces
 
@@ -256,10 +256,14 @@ class MetricsCollector @Inject constructor(
         providerRegistry.all().forEach { map[it.providerId] = LongArrayRingBuffer(64) }
     }
     private val memoryWatermarkBytes = AtomicLong(0)
+    private val widgetDrawTimes = ConcurrentHashMap<String, LongArrayRingBuffer>().also { map ->
+        widgetRegistry.all().forEach { map[it.typeId] = LongArrayRingBuffer(64) }
+    }
 
     fun recordFrame(durationMs: Long) { /* atomic bucket increment */ }
     fun recordRecomposition(typeId: String) { /* atomic increment */ }
     fun recordProviderLatency(providerId: String, latencyMs: Long) { /* ring buffer write */ }
+    fun recordWidgetDrawTime(typeId: String, nanos: Long) { /* ring buffer write, ~25ns overhead */ }
     fun recordMemoryWatermark() { /* Runtime.totalMemory() - freeMemory() */ }
     fun snapshot(): MetricsSnapshot { /* read-only copy for dump */ }
 }
@@ -345,10 +349,23 @@ class AnrWatchdog @Inject constructor(
                         mainStack.joinToString("\n") { "  at $it" }
                     }
                     // Write diagnostic snapshot to SharedPreferences (survives process death)
+                    // Also write anr_latest.json via direct FileOutputStream (no Dispatchers.IO)
+                    // — agent can adb pull this even when main thread is deadlocked
+                    writeAnrFile(mainStack, fdCount, allStacks)
                 }
                 Thread.sleep(2_000)
             }
         }
+    }
+
+    private fun writeAnrFile(mainStack: Array<StackTraceElement>, fdCount: Int, allStacks: Map<Thread, Array<StackTraceElement>>) {
+        try {
+            val file = File(diagnosticsDir, "anr_latest.json")
+            FileOutputStream(file).bufferedWriter().use { writer ->
+                // Direct file write on watchdog thread — no main thread, no Dispatchers.IO
+                writer.write(buildAnrJson(mainStack, fdCount, allStacks))
+            }
+        } catch (_: Exception) { /* observability must never crash the app */ }
     }
 }
 ```
@@ -397,6 +414,35 @@ OOM kills don't trigger crash reporters. Detection via `session_active` flag in 
 - Set `true` in `onStart()`, `false` in `onStop()`
 - On cold start, if `session_active == true` AND no crash recorded -> likely OOM or force-stop
 - `ComponentCallbacks2.onTrimMemory(TRIM_MEMORY_RUNNING_CRITICAL)` reports as non-fatal with memory stats
+
+### Crash Evidence Persistence
+
+`DiagnosticSnapshotCapture` writes files asynchronously on `Dispatchers.IO`. If a crash kills the process (which is exactly when safe mode triggers), the async write may not complete. Three rapid crashes mean three potentially lost snapshots.
+
+**Sync crash record** in `UncaughtExceptionHandler` writes a minimal crash record to `SharedPreferences` **synchronously** before the process dies:
+
+```kotlin
+class CrashEvidenceWriter @Inject constructor(
+    private val prefs: SharedPreferences, // crash_evidence prefs
+) : Thread.UncaughtExceptionHandler {
+    private val delegate = Thread.getDefaultUncaughtExceptionHandler()
+
+    override fun uncaughtException(t: Thread, e: Throwable) {
+        try {
+            // Sync write — must complete before process death
+            prefs.edit().apply {
+                putString("last_crash_type_id", extractWidgetTypeId(e))
+                putString("last_crash_exception", "${e::class.simpleName}: ${e.message}")
+                putString("last_crash_stack_top5", e.stackTrace.take(5).joinToString("\n"))
+                putLong("last_crash_timestamp", System.currentTimeMillis())
+            }.commit() // commit(), not apply() — synchronous
+        } catch (_: Exception) { /* must not interfere with crash handling */ }
+        delegate?.uncaughtException(t, e)
+    }
+}
+```
+
+This follows the same pattern as `AnrWatchdog` writing to SharedPreferences. The `diagnose-crash` agentic command reads this when no snapshot file exists for the widget — the agent always has something to investigate after safe mode activation.
 
 ### Network Observability
 
@@ -456,8 +502,10 @@ class CrashContextProvider @Inject constructor(
 | Enabled log call | < 500ns |
 | Ring buffer write | < 50ns (atomic) |
 | Metrics counter increment | < 20ns |
+| Widget draw time record | < 25ns (`System.nanoTime()` + ring buffer write) |
 | Health check cycle (every 10s) | < 1ms |
 | Crash context update | < 5ms (state transitions only) |
+| Sync crash evidence write | < 15ms (SharedPreferences.commit(), only on crash path) |
 
 ## Anomaly Auto-Capture
 
@@ -477,6 +525,7 @@ data class DiagnosticSnapshot(
     val activeTraces: ImmutableList<SpanSummary>,
     val captureEvents: ImmutableList<CaptureEvent>?,  // non-null if capture session active
     val agenticTraceId: String?,                      // non-null if triggered by agentic command
+    val injectionId: String?,                         // non-null if triggered by chaos injection
     val sessionId: String,
 )
 
@@ -519,6 +568,18 @@ sealed interface AnomalyTrigger {
         val stalenessThresholdMs: Long,
         val providerState: String, // "CONNECTED", "DISCONNECTED", etc.
     ) : AnomalyTrigger
+
+    data class BindingStalled(
+        val widgetId: String,
+        val typeId: String,
+        val bindingDurationMs: Long,
+        val firstEmissionTimeoutMs: Long,
+    ) : AnomalyTrigger
+
+    data class DataStoreCorruption(
+        val fileName: String,
+        val fallbackApplied: Boolean,
+    ) : AnomalyTrigger
 }
 ```
 
@@ -527,11 +588,13 @@ sealed interface AnomalyTrigger {
 | Trigger | Condition | Auto-action |
 |---|---|---|
 | Widget crash | `WidgetSlot` error boundary triggered | Capture full snapshot, persist to file |
-| ANR | `AnrWatchdog` timeout fired | Capture, persist to SharedPreferences (survives process death) |
+| ANR | `AnrWatchdog` timeout fired | Capture, persist to SharedPreferences + `anr_latest.json` (survives process death) |
 | Thermal escalation | `ThermalManager` → DEGRADED or CRITICAL | Capture, persist to file (thermal rotation pool) |
 | Jank spike | `JankDetector`: ≥5 consecutive frames >16ms | Capture, include worst-recomposing widget |
 | Provider timeout | `firstEmissionTimeout` exceeded | Partial capture (affected widget only) |
 | Escalated staleness | Widget data freshness exceeds 3x staleness threshold while provider reports CONNECTED | Capture, include binding lifecycle events |
+| Binding stall | Binding active >2x `firstEmissionTimeout` and `widgetData` still `Empty` | Capture, include `combine()` upstream status |
+| DataStore corruption | `ReplaceFileCorruptionHandler` invoked | Capture, crash rotation pool (data loss event) |
 
 ### DiagnosticSnapshotCapture
 
@@ -547,7 +610,7 @@ class DiagnosticSnapshotCapture @Inject constructor(
 ) {
     private val capturing = AtomicBoolean(false)
 
-    fun capture(trigger: AnomalyTrigger, agenticTraceId: String? = null): DiagnosticSnapshot? {
+    fun capture(trigger: AnomalyTrigger, agenticTraceId: String? = null, injectionId: String? = null): DiagnosticSnapshot? {
         if (!capturing.compareAndSet(false, true)) return null // reentrance guard
         return try {
             DiagnosticSnapshot(
@@ -560,6 +623,7 @@ class DiagnosticSnapshotCapture @Inject constructor(
                 activeTraces = tracer.activeSpans().toImmutableList(),
                 captureEvents = captureSessionRegistry.currentEvents(),
                 agenticTraceId = agenticTraceId,
+                injectionId = injectionId,
                 sessionId = sessionId,
             )
         } finally {
@@ -575,9 +639,9 @@ Debug builds write snapshots to `${filesDir}/debug/diagnostics/` with **separate
 
 | Pool | Path pattern | Max files | Trigger types |
 |---|---|---|---|
-| Crash | `snap_crash_{timestamp}.json` | 20 | `WidgetCrash`, `AnrDetected` |
+| Crash | `snap_crash_{timestamp}.json` | 20 | `WidgetCrash`, `AnrDetected`, `DataStoreCorruption` |
 | Thermal | `snap_thermal_{timestamp}.json` | 10 | `ThermalEscalation` |
-| Performance | `snap_perf_{timestamp}.json` | 10 | `JankSpike`, `ProviderTimeout`, `EscalatedStaleness` |
+| Performance | `snap_perf_{timestamp}.json` | 10 | `JankSpike`, `ProviderTimeout`, `EscalatedStaleness`, `BindingStalled` |
 
 Separate pools prevent frequent thermal oscillation (common in vehicles) from evicting crash snapshots. Agent pulls via `adb pull`. The `diagnose-crash` agentic command returns the most recent snapshot for a given widget (see [build-system.md](build-system.md#compound-diagnostic-commands)).
 

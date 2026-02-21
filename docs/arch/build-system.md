@@ -133,9 +133,11 @@ adb shell am broadcast \
 | `dump-connections` | ConnectionStateMachine state, paired devices |
 | `simulate-thermal` | Force thermal level for testing |
 | `diagnose-widget` | Correlated health, binding, data, errors, and log tail for one widget |
-| `diagnose-performance` | Frame histogram + thermal trend + jank widgets + slow commands + memory |
-| `diagnose-bindings` | All widget→provider bindings, stuck providers, fallback activations |
-| `diagnose-crash` | Most recent `DiagnosticSnapshot` for a widget (auto-captured on crash) |
+| `diagnose-performance` | Frame histogram + per-widget draw time + thermal trend + jank widgets + slow commands + memory |
+| `diagnose-bindings` | All widget→provider bindings, stuck providers, stalled bindings, fallback activations |
+| `diagnose-crash` | Most recent `DiagnosticSnapshot` for a widget (auto-captured on crash, fallback to SharedPrefs crash evidence) |
+| `diagnose-thermal` | Thermal headroom history + frame rate adaptation history + glow toggle history + thermal snapshots |
+| `list-diagnostics` | List diagnostic snapshot files with metadata (trigger type, timestamp, widgetId) |
 | `chaos-start` | Start ChaosEngine with optional seed for deterministic reproduction |
 | `chaos-stop` | Stop ChaosEngine, return session summary (injected faults + system responses) |
 | `chaos-inject` | Inject a specific fault: `provider-failure`, `thermal`, `entitlement-revoke`, `anr-simulate` |
@@ -155,31 +157,35 @@ setResultData(file.absolutePath)
 
 ```json
 {
-  "command": "dump-state",
-  "timestamp": 1708444800000,
+  "status": "ok",
   "data": {
     "layout": { "widgetCount": 8, "widgets": [...] },
     "theme": { "current": "cyberpunk", "mode": "DARK", "preview": null },
     "thermal": { "level": "NORMAL", "headroom": 0.45, "targetFps": 60 },
     "driving": false,
-    "editMode": false
+    "editMode": false,
+    "safeMode": {
+      "active": false,
+      "crashCount": 0,
+      "windowMs": 60000,
+      "crashes": [],
+      "lastCrashWidgetTypeId": null
+    }
   }
 }
 ```
 
+`safeMode` is always present. When `active: true`, the dashboard shows only the clock widget with a reset banner. `crashes` contains timestamps of recent crashes within the 60s window. `lastCrashWidgetTypeId` identifies the most likely culprit for the agent to investigate.
+
 ### Debug Overlay System
 
-Located in `:app:src/debug/`. Each overlay independently toggleable:
+Located in `:app:src/debug/`. Each overlay independently toggleable. V1 ships three overlays covering the critical debugging needs — additional overlays (Recomposition Visualizer, Provider Flow DAG, State Machine Viewer, Trace Viewer) deferred until specific debugging needs arise:
 
 | Overlay | Content |
 |---|---|
-| Frame Stats | Real-time FPS, frame time histogram, jank count |
-| Recomposition Visualizer | Color flash on recomposing widgets |
-| Provider Flow DAG | Visual graph with live throughput |
-| State Machine Viewer | ConnectionStateMachine state + history |
-| Thermal Trending | Live thermal headroom graph with predicted transition |
-| Widget Health | Per-widget data freshness, error state, binding status |
-| Trace Viewer | Active spans and recent completed spans |
+| Frame Stats | Real-time FPS, frame time histogram, per-widget draw time, jank count |
+| Widget Health | Per-widget data freshness, error state, binding status, throttle info |
+| Thermal Trending | Live thermal headroom graph with predicted transition, FPS adaptation history |
 
 ### Machine-Readable Log Format
 
@@ -209,6 +215,49 @@ errorReporter.reportWidgetCrash(
 
 The receiver is restricted to debug builds only. Demo providers are gated to debug builds.
 
+### Command Result Envelope
+
+All commands return a standardized JSON envelope:
+
+```json
+{"status": "ok", "data": {...}}
+{"status": "error", "message": "Widget def-456 not found"}
+```
+
+`status` is always present. `data` is present on success. `message` is present on error. Large payloads still write to temp file — the envelope contains the file path in `data.filePath`.
+
+### Error Handling
+
+`AgenticReceiver.onReceive()` wraps all command processing in structured error handling:
+
+```kotlin
+override fun onReceive(context: Context, intent: Intent) {
+    try {
+        val params = parseParams(intent) // can throw on malformed JSON
+        val result = routeCommand(action, params) // can throw on bad widgetId, etc.
+        setResultCode(Activity.RESULT_OK)
+        setResultData(envelope("ok", result))
+    } catch (e: JsonParseException) {
+        setResultCode(Activity.RESULT_FIRST_USER + 1)
+        setResultData(envelope("error", "Malformed params: ${e.message}"))
+    } catch (e: TargetNotFoundException) {
+        setResultCode(Activity.RESULT_FIRST_USER + 2)
+        setResultData(envelope("error", "Not found: ${e.message}"))
+    } catch (e: Exception) {
+        setResultCode(Activity.RESULT_FIRST_USER + 3)
+        setResultData(envelope("error", "Internal: ${e.message}"))
+        logger.error(LogTags.AGENTIC) { "Command failed: ${e.message}" }
+    }
+}
+```
+
+Error semantics:
+- **Malformed params**: Invalid JSON in `--es params`. Agent should fix the command syntax.
+- **Not found**: Target widget/provider/preset doesn't exist. Agent should verify IDs via `dump-state`.
+- **Internal**: Unexpected failure. Logged for investigation.
+
+Commands during app initialization (before registries are populated) return `{"status": "error", "message": "App initializing, retry after ping returns ok"}`.
+
 ### Compound Diagnostic Commands
 
 Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`-derived JSON bundle (see [observability.md](observability.md#anomaly-auto-capture)):
@@ -216,6 +265,7 @@ Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`
 **`diagnose-widget {widgetId}`** returns self-describing diagnostic output with expected vs actual state:
 - Widget health status (from `WidgetHealthMonitor`)
 - Current binding: provider ID, connection state, last emission timestamp
+- **Throttle metadata**: `{ "nativeEmissionRateHz": 60, "effectiveEmissionRateHz": 30, "throttleReason": "thermal:DEGRADED" }` — disambiguates "provider slow because thermal" from "provider broken"
 - **Data freshness with expectations**: `{ "actual": "15s", "threshold": "3s", "expectedInterval": "16ms", "status": "ESCALATED_STALE" }` — the contradiction between actual and expected is self-evident to any reasoning system
 - Error history: crash count, last error, retry state
 - **Binding lifecycle history**: last 10 binding events (`BIND_STARTED`, `BIND_CANCELLED`, `REBIND_SCHEDULED`, `PROVIDER_FALLBACK`, `FIRST_EMISSION`) from `RingBufferSink` — shows the *sequence* that led to the current state, not just the state itself
@@ -223,7 +273,8 @@ Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`
 - Current `WidgetStatusCache` priority chain resolution
 
 **`diagnose-performance`** returns:
-- Frame histogram (from `MetricsCollector`)
+- Frame histogram with CI-gate threshold annotations: `{ "p50Ms": 7, "p50ThresholdMs": 8, "p95Ms": 13, "p95ThresholdMs": 12, "p95Status": "EXCEEDED", "p99Ms": 14, "p99ThresholdMs": 16, "jankRate": 0.01, "jankThreshold": 0.02 }` — self-describing for autonomous agents, thresholds sourced from CI gate config
+- **Per-widget draw time**: `{ "core:speedometer": { "p50Ms": 2, "p99Ms": 5 }, "plus:trip": { "p50Ms": 8, "p99Ms": 14 } }` — enables performance bisection without trial-and-error widget removal. Measured via `System.nanoTime()` around widget draw in `WidgetContainer`'s draw modifier.
 - Thermal state + `ThermalTrendAnalyzer` prediction
 - Top 5 widgets by recomposition count
 - Slow command log (commands >100ms from ring buffer)
@@ -233,14 +284,84 @@ Single-call correlated diagnostics. Each command produces a `DiagnosticSnapshot`
 **`diagnose-bindings`** returns:
 - All active widget→provider bindings with status
 - Stuck providers (bound but no emission within `firstEmissionTimeout`)
+- **Stalled bindings**: widgets where binding active >2x `firstEmissionTimeout` and `widgetData` still `Empty` — catches `combine()` starvation where one of N upstream providers fails initial emission and `combine()` blocks forever
 - Fallback activations (where primary provider was unavailable)
 - Provider error counts and retry states
 
 **`diagnose-crash {widgetId}`** returns:
 - Most recent `DiagnosticSnapshot` auto-captured for this widget (if any), from the crash rotation pool
-- Falls back to assembling a live diagnostic from current `WidgetHealthMonitor`, `MetricsCollector`, and `RingBufferSink` state if no snapshot exists — no `OnDemandCapture` trigger needed
+- Falls back to `SharedPreferences` crash evidence (typeId, exception, top 5 stack frames, thermal level, timestamp) written synchronously by `CrashEvidenceWriter` — survives process death when async snapshot write doesn't complete
+- Final fallback: assembles a live diagnostic from current `WidgetHealthMonitor`, `MetricsCollector`, and `RingBufferSink` state — no `OnDemandCapture` trigger needed
 - Includes `agenticTraceId` if the crash was triggered by an agentic command
 - Includes `injectionId` if the crash was triggered by a chaos injection
+
+**`diagnose-thermal`** returns correlated thermal diagnostics — thermal is the primary automotive failure mode requiring cross-source correlation:
+- Current thermal level + headroom + `ThermalTrendAnalyzer` prediction (time to next tier)
+- **Headroom history**: raw samples from `ThermalTrendAnalyzer` ring buffer (last 60s at 5s intervals)
+- **Frame rate adaptation history**: timestamps of `FramePacer` FPS changes (60→30→15→30→60) with reasons
+- **Glow toggle history**: timestamps of glow enable/disable transitions
+- **Thermal snapshot references**: list of `snap_thermal_*.json` files with timestamps, from `list-diagnostics`
+- Current `RenderConfig` state (target FPS, glow enabled, pixel shift active)
+
+**`list-diagnostics`** returns enriched metadata for all diagnostic snapshot files:
+```json
+{
+  "status": "ok",
+  "data": {
+    "snapshots": [
+      {"file": "snap_crash_1708444800456.json", "trigger": "WidgetCrash", "typeId": "core:speedometer", "widgetId": "abc-123", "timestamp": 1708444800456},
+      {"file": "snap_thermal_1708444801000.json", "trigger": "ThermalEscalation", "from": "NORMAL", "to": "DEGRADED", "timestamp": 1708444801000},
+      {"file": "snap_perf_1708444802000.json", "trigger": "BindingStalled", "typeId": "plus:trip", "widgetId": "def-456", "timestamp": 1708444802000}
+    ],
+    "anrLatest": "anr_latest.json",
+    "crashEvidence": {"exists": true, "typeId": "core:speedometer", "timestamp": 1708444800456}
+  }
+}
+```
+
+Replaces fragile `adb shell ls` with structured, filterable metadata. Agent can find "most recent thermal snapshot" or "all crash snapshots for widget X" without parsing filenames.
+
+### Non-Main-Thread Diagnostic Path
+
+`AgenticReceiver.onReceive()` runs on the main thread. If the main thread is deadlocked, the entire agentic broadcast protocol is unresponsive. A debug-only `ContentProvider` on a binder thread provides an escape hatch:
+
+```kotlin
+// In :app:src/debug/
+class DiagnosticContentProvider : ContentProvider() {
+    override fun query(uri: Uri, ...): Cursor? {
+        // Runs on binder thread, NOT main thread
+        return when (uri.pathSegments.firstOrNull()) {
+            "health" -> buildHealthCursor() // WidgetHealthMonitor + thermal + safe mode
+            "anr" -> buildAnrCursor()       // AnrWatchdog latest state
+            else -> null
+        }
+    }
+}
+```
+
+Agent queries via: `adb shell content query --uri content://app.dqxn.android.debug.diagnostics/health`
+
+If the binder thread is also stuck (full deadlock, not just main-thread ANR), the `adb shell` call times out — which is itself diagnostic (confirmed full deadlock). `AnrWatchdog` also writes `anr_latest.json` via direct `FileOutputStream` on its dedicated thread for `adb pull` access.
+
+### Command Registry
+
+Commands are registered via a sealed interface with exhaustive `when` matching in `:core:agentic`. No KSP processor — ~30 commands in a single module don't justify code generation. The sealed interface gives compile-time exhaustive matching: adding a command without handling it is a compiler error.
+
+```kotlin
+sealed interface AgenticCommand {
+    data class Ping(val params: JsonObject) : AgenticCommand
+    data class WidgetAdd(val params: JsonObject) : AgenticCommand
+    data class DiagnoseWidget(val params: JsonObject) : AgenticCommand
+    // ... ~30 commands total
+}
+
+fun routeCommand(command: AgenticCommand): JsonObject = when (command) {
+    is AgenticCommand.Ping -> handlePing(command)
+    is AgenticCommand.WidgetAdd -> handleWidgetAdd(command)
+    is AgenticCommand.DiagnoseWidget -> handleDiagnoseWidget(command)
+    // Exhaustive — compiler enforces all commands are handled
+}
+```
 
 ### Agentic Trace Correlation
 
@@ -364,11 +485,12 @@ All agent-accessible diagnostic artifacts in debug builds:
 | Path | Content | Rotation |
 |---|---|---|
 | `${filesDir}/debug/dqxn.jsonl` | JSON-lines structured log | 10MB, 3 files |
-| `${filesDir}/debug/diagnostics/snap_crash_*.json` | Crash/ANR `DiagnosticSnapshot` | 20 files max |
+| `${filesDir}/debug/diagnostics/snap_crash_*.json` | Crash/ANR/DataStoreCorruption `DiagnosticSnapshot` | 20 files max |
 | `${filesDir}/debug/diagnostics/snap_thermal_*.json` | Thermal escalation snapshots | 10 files max |
-| `${filesDir}/debug/diagnostics/snap_perf_*.json` | Jank, timeout, staleness snapshots | 10 files max |
+| `${filesDir}/debug/diagnostics/snap_perf_*.json` | Jank, timeout, staleness, binding stall snapshots | 10 files max |
+| `${filesDir}/debug/diagnostics/anr_latest.json` | Most recent ANR state (direct file write, no IO dispatcher) | 1 file, overwritten |
 | `${filesDir}/debug/anomaly_events.jsonl` | Push-notification anomaly event stream | 1MB, 2 files |
 | `${cacheDir}/dump_*.json` | On-demand state dumps (from dump commands) | Cleared on app restart |
 | `${cacheDir}/chaos_*.json` | Chaos session summaries | Cleared on app restart |
 
-Agent pulls via `adb pull /data/data/app.dqxn.android.debug/...`.
+Agent pulls via `adb pull /data/data/app.dqxn.android.debug/...`. Use `list-diagnostics` command for enriched metadata instead of raw `ls`.
