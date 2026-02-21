@@ -119,7 +119,7 @@ app.dqxn.core.plugin.api.TimeSnapshot
 app.dqxn.core.plugin.api.OrientationSnapshot
 app.dqxn.core.plugin.api.BatterySnapshot
 app.dqxn.core.widget.DashboardThemeDefinition
-app.dqxn.data.persistence.SavedWidget
+app.dqxn.data.SavedWidget
 ```
 
 Compose compiler metrics (`-Pcompose.compiler.metrics=true`) are audited regularly to catch regressions in skippability.

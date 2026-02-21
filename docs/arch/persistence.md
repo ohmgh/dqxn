@@ -85,8 +85,8 @@ JSON preset files define default widget layouts. `PresetLoader` selects region-a
 Each module owns a `consumer-proguard-rules.pro` file:
 
 ```proguard
-# :data:persistence — keep proto-generated classes (proto schemas are an implementation detail of persistence)
--keep class app.dqxn.data.persistence.proto.** { *; }
+# :data — keep proto-generated classes (proto schemas are an implementation detail of persistence)
+-keep class app.dqxn.data.proto.** { *; }
 
 # :sdk:contracts — keep @Serializable classes
 -keepclassmembers class app.dqxn.** {

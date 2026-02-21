@@ -41,7 +41,7 @@ Full annotated tree in `docs/ARCHITECTURE.md` Section 3.
 sdk/      — contracts, common, ui, observability, analytics (pack API surface)
 core/     — design, thermal, driving, firebase, agentic (shell internals)
 codegen/  — plugin, agentic (KSP, build-time only)
-data/     — persistence (Proto + Preferences DataStore)
+data/     — Proto + Preferences DataStore, .proto schemas
 feature/  — dashboard, settings, diagnostics, onboarding
 pack/     — free, plus, themes, demo
 app/      — single-activity entry, DI assembly
@@ -57,12 +57,12 @@ Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference belo
 
 **When working in `:pack:{packId}`:**
 - CAN import from: `:sdk:contracts`, `:sdk:common`, `:sdk:ui`, `:sdk:observability`, `:sdk:analytics`
-- CANNOT import from: `:feature:*`, `:core:*`, `:data:*`, other packs
+- CANNOT import from: `:feature:*`, `:core:*`, `:data`, other packs
 - If you need something from dashboard → it belongs in `:sdk:contracts` as a contract
 - Dependencies are auto-wired by the `dqxn.pack` convention plugin
 
 **When working in `:feature:dashboard`:**
-- CAN import from: `:sdk:*`, `:core:design`, `:core:thermal`, `:data:persistence`
+- CAN import from: `:sdk:*`, `:core:design`, `:core:thermal`, `:data`
 - CANNOT import from: any `:pack:*` module
 - If you need a widget-specific type → the design is wrong, use contracts
 
@@ -85,7 +85,7 @@ Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference belo
 
 Convention plugins control which modules get the Compose compiler:
 - `dqxn.android.compose` — modules WITH UI: `:app`, `:feature:*`, `:sdk:ui`, `:core:design`
-- Modules WITHOUT Compose: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:driving`, `:core:firebase`, `:core:agentic`, `:codegen:*`, `:data:*`
+- Modules WITHOUT Compose: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:driving`, `:core:firebase`, `:core:agentic`, `:codegen:*`, `:data`
 
 ## Critical Constraints
 
@@ -298,7 +298,7 @@ app.dqxn.core.firebase.perf           — FirebasePerformanceTracer, Performance
 app.dqxn.core.agentic                 — ADB broadcast automation (debug only)
 app.dqxn.codegen.plugin               — KSP plugin processor handlers
 app.dqxn.codegen.agentic              — KSP agentic processor handlers
-app.dqxn.data.persistence             — DataStore implementations
+app.dqxn.data                         — DataStore implementations, proto schemas
 app.dqxn.feature.dashboard            — dashboard shell root
 app.dqxn.feature.dashboard.coordinator — state coordinators
 app.dqxn.feature.dashboard.ui         — composables
