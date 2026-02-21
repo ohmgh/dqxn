@@ -1,6 +1,6 @@
 # Migration Plan: dqxn.old → dqxn
 
-Incremental migration of the old codebase into the new architecture. Bottom-up, compile-verified, with observability and tests concurrent at every phase.
+Incremental migration of the old codebase into the new architecture. Bottom-up, compile-verified, with observability, autonomous debugging, and tests concurrent at every phase.
 
 ## Assessment
 
@@ -32,7 +32,8 @@ Incremental migration of the old codebase into the new architecture. Bottom-up, 
 1. **Bottom-up, compile-verified.** Each phase must produce a compiling, tested module before the next starts. No forward references to unbuilt modules.
 2. **Old code is reference, not source.** Read `dqxn.old` to understand intent and logic, but write to `dqxn`'s architecture. Don't port-then-refactor — build correctly the first time against the new contracts.
 3. **Observability and tests are concurrent, not deferred.** Each phase includes its own test fixtures, logging integration, and metrics hooks. No "add tests later" phase.
-4. **One pack proves the architecture.** The free pack migrates first as validation. If the contracts are wrong, fix them before touching other packs.
+4. **Debug infrastructure before debuggable code.** The agentic framework and observability land early so every subsequent phase benefits from on-device autonomous debugging. You don't build the debugger after the thing you need to debug.
+5. **One pack proves the architecture.** The free pack migrates first as validation. If the contracts are wrong, fix them before touching other packs.
 
 ## Dependency Graph
 
@@ -40,18 +41,19 @@ Incremental migration of the old codebase into the new architecture. Bottom-up, 
 graph TD
     P1[Phase 1: Build System] --> P2[Phase 2: SDK Contracts + Common]
     P2 --> P3[Phase 3: SDK Observability + Analytics + UI]
-    P2 --> P5[Phase 5: KSP Codegen]
-    P3 --> P4[Phase 4: Core Infrastructure]
-    P4 --> P6[Phase 6: Dashboard Shell]
-    P5 --> P6
-    P6 --> P7[Phase 7: Free Pack]
-    P7 --> P8[Phase 8: Remaining Packs]
-    P6 --> P9[Phase 9: App Shell + Agentic]
-    P9 --> P10[Phase 10: Features + Polish]
-    P8 --> P10
+    P2 --> P4[Phase 4: KSP Codegen]
+    P3 --> P5[Phase 5: Core Infrastructure]
+    P3 --> P6[Phase 6: Deployable App + Agentic]
+    P4 --> P6
+    P5 --> P7[Phase 7: Dashboard Shell]
+    P6 --> P7
+    P7 --> P8[Phase 8: Free Pack]
+    P8 --> P9[Phase 9: Remaining Packs]
+    P7 --> P10[Phase 10: Features + Polish]
+    P9 --> P10
 ```
 
-Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Phase 3. Everything converges at Phase 6 (dashboard shell). Phase 7 is the architecture validation gate.
+Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + agentic) gates all subsequent on-device work. Phase 7 (dashboard) is the highest-risk phase and benefits from full agentic debug infrastructure. Phase 8 is the architecture validation gate.
 
 ---
 
@@ -73,6 +75,7 @@ Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Ph
   - `dqxn.android.test` (JUnit5 + MockK + Truth + Turbine)
   - `dqxn.pack` (auto-wires all `:sdk:*` dependencies — packs never manually add them)
   - `dqxn.android.feature`
+- `AgenticMainThreadBan` lint rule (enforced from Phase 6 onward when first handler lands)
 - Gradle wrapper (9.3.1)
 
 **Ported from old:** Convention plugin structure (4 plugins → 7+, significantly expanded). Version catalog (updated versions, added missing deps like kotlinx-collections-immutable, Proto DataStore, JUnit5, jqwik).
@@ -95,6 +98,7 @@ Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Ph
 
 - `WidgetRenderer` — new signature with `ImmutableMap<String, Any>` settings, no `widgetData` param
 - `DataProvider` — new contract emitting typed `DataSnapshot` subtypes
+- `DataProviderInterceptor` — interface for chaos/debug interception of provider flows, registered via Hilt multibinding
 - `DataSnapshot` sealed interface + typed subtypes (`SpeedSnapshot`, `TimeSnapshot`, `DateSnapshot`, `OrientationSnapshot`, `SolarSnapshot`, `AmbientLightSnapshot`, `BalanceSnapshot`, `TrafficSnapshot`, `HistorySnapshot`, `ChargingSnapshot`, `DeviceSnapshot`, `DrivingSnapshot`, `SpeedLimitSnapshot`, `AccelerationSnapshot`)
 - `WidgetData` with `KClass`-keyed multi-slot: `snapshot<T : DataSnapshot>()`
 - `WidgetContext`, `WidgetDefaults`, `WidgetStyle`
@@ -102,12 +106,19 @@ Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Ph
 - `DashboardPackManifest`, `DataTypeDescriptor`
 - `ThemeDefinition`, `ThemeProvider`
 - `EntitlementManager`, `Gated` interface
-- `DashboardWidget` / `DashboardDataProvider` KSP annotations
-- `WidgetRendererContractTest` / `DataProviderContractTest` in `testFixtures` source set
+- `DashboardWidget` / `DashboardDataProvider` / `@AgenticCommand` KSP annotations
+
+### `:sdk:contracts` testFixtures
+
+- `WidgetRendererContractTest` — abstract test base every widget extends
+- `DataProviderContractTest` — abstract test base every provider extends
+- `ProviderFault` sealed interface — shared fault primitives for both `ChaosProviderInterceptor` (E2E) and `TestDataProvider` (unit tests). Includes: `Delay`, `Error`, `Corrupt`, `Stall`, `Flap`, `EmitNull`
+- `TestDataProvider` — configurable fake that applies `ProviderFault` transformations to a base flow
+- `testWidget()`, `testTheme()`, `testDataSnapshot()` factories
 
 **Ported from old:** `core/plugin-api/*` — but every interface changes signature. The `DataSnapshot` transformation from `Map<String, Any?>` to typed sealed subtypes is new design work informed by old data shapes. `SettingDefinition` ports cleanly. `ConnectionStateMachine` ports nearly verbatim.
 
-**Tests:** Contract test abstract classes (in testFixtures), `ConnectionStateMachineTest` (port from old + expand to jqwik property-based).
+**Tests:** Contract test abstract classes (in testFixtures), `ConnectionStateMachineTest` (port from old + expand to jqwik property-based). `ProviderFault` transformation tests.
 
 **Validation:** Module compiles. Contract tests pass. `testFixtures` jar produces.
 
@@ -115,18 +126,19 @@ Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Ph
 
 ## Phase 3: SDK Observability + Analytics + UI
 
-**What:** Remaining SDK modules that packs and features import.
+**What:** Remaining SDK modules that packs and features import. Observability is the foundation for all autonomous debugging — it must be solid before the agentic framework wires to it in Phase 6.
 
 ### `:sdk:observability`
 
 - `DqxnLogger` with inline extensions (migrate from `core:common`, adapt to zero-allocation when disabled)
 - `LogTag` as `@JvmInline value class`
-- `DqxnTracer` — structured tracing with span IDs
-- `MetricsCollector` — per-widget draw time ring buffers, frame histograms, provider latency
-- `DiagnosticSnapshotCapture` — anomaly auto-capture with rotation pools
-- `CrashEvidenceWriter` — sync SharedPrefs in UncaughtExceptionHandler
-- `AnrWatchdog` — dedicated thread, 2-consecutive-miss trigger
-- `WidgetHealthMonitor`
+- `DqxnTracer` — structured tracing with span IDs, `agenticTraceId` field for causal correlation
+- `MetricsCollector` — `AtomicLongArray(6)` frame histogram, `ConcurrentHashMap` + `LongArrayRingBuffer(64)` per-widget draw time and per-provider latency. Pre-populated from registries at construction. Performance budget: record < 25ns (`System.nanoTime()` + ring buffer write)
+- `JankDetector` — wired between `FrameMetrics` callbacks and `MetricsCollector`. Fires `DiagnosticSnapshotCapture` at exponential thresholds (5, 20, 100 consecutive janky frames). Distinct class, not folded into MetricsCollector
+- `DiagnosticSnapshotCapture` — anomaly auto-capture with `AtomicBoolean` capture guard (drops concurrent captures). `AnomalyTrigger` sealed hierarchy: `WidgetCrash`, `AnrDetected`, `ThermalEscalation`, `JankSpike`, `ProviderTimeout`, `EscalatedStaleness`, `BindingStalled`, `DataStoreCorruption`. Three separate rotation pools (crash: 20, thermal: 10, perf: 10) — prevents thermal churn evicting crash snapshots. `StatFs` storage pressure check (skip if <10MB free). `capture()` accepts `agenticTraceId`. Release build: only trigger type + timestamp forwarded to `CrashReporter`, no full dump
+- `CrashEvidenceWriter` — sync `SharedPreferences.commit()` in `UncaughtExceptionHandler`. Captures: `last_crash_type_id`, `last_crash_exception`, `last_crash_stack_top5`, `last_crash_timestamp`. `extractWidgetTypeId()` to pull widget type from exception chain. Fallback for `diagnose-crash` when no snapshot file exists
+- `AnrWatchdog` — dedicated daemon thread with `CountDownLatch`, 2.5s timeout, 2-consecutive-miss trigger. `Thread.getAllStackTraces()` + fdCount in ANR file. `writeAnrFile()` via direct `FileOutputStream` on watchdog thread (no `Dispatchers.IO` — process may die before coroutine dispatches). `Debug.isDebuggerConnected()` guard. Exposed via lock-free `query()` path in `AgenticContentProvider` (`/anr`)
+- `WidgetHealthMonitor` — periodic liveness checks (10s), stale data detection (last data timestamp > staleness threshold), stalled render detection (last draw timestamp > 2x target frame interval). Reports to `CrashContextProvider`. Exposed via lock-free `query()` path (`/health`) with `cachedHealthMonitor` pattern
 
 ### `:sdk:analytics`
 
@@ -141,13 +153,46 @@ Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Ph
 - Shared Compose widget components
 - Theme-aware drawing utilities
 
-**Ported from old:** `core:common/observability/*` (Logger, Metrics, CrashEvidence, AnrWatchdog — adapt to new module boundaries). `core:widget-primitives/*` → `sdk:ui`. Analytics is entirely new.
+**Ported from old:** `core:common/observability/*` (Logger, Metrics, CrashEvidence, AnrWatchdog — adapt to new module boundaries and add missing capabilities: JankDetector, rotation pools, storage pressure, trace IDs). `core:widget-primitives/*` → `sdk:ui`. Analytics is entirely new.
 
-**Tests:** Logger tests, MetricsCollector ring buffer tests, AnrWatchdog tests, WidgetScaffold composition tests.
+**Tests:**
+- `DqxnLogger`: disabled-path zero-allocation test, tag filtering test
+- `MetricsCollector`: ring buffer overflow, histogram bucket boundaries, concurrent write correctness
+- `JankDetector`: exponential threshold firing (5th, 20th, 100th frame triggers capture; 4th, 19th, 99th do not)
+- `CrashEvidenceWriter`: simulated uncaught exception → verify `prefs.getString(...)` persisted. `extractWidgetTypeId()` from nested exception chain
+- `AnrWatchdog`: single miss → no capture; two consecutive misses → capture + file written; debugger attached → no capture
+- `DiagnosticSnapshotCapture`: concurrent capture guard (second capture dropped), rotation pool eviction (thermal doesn't evict crash), storage pressure skip
+- `WidgetHealthMonitor`: stale vs stalled distinction, liveness check period
+- `WidgetScaffold`: composition tests
 
 ---
 
-## Phase 4: Core Infrastructure
+## Phase 4: KSP Codegen
+
+**What:** Build-time code generation that packs and agentic depend on.
+
+### `:codegen:plugin`
+
+- KSP processor for `@DashboardWidget` / `@DashboardDataProvider`
+- Generates `PackManifest` implementations
+- Generates Hilt multibinding modules (replaces old manual `@Binds @IntoSet`)
+- `typeId` format validation: `{packId}:{widget-name}`
+
+### `:codegen:agentic`
+
+- KSP processor for `@AgenticCommand` annotations
+- Generates `AgenticCommandRouter` with command dispatch wiring
+- Generates param validation from annotation schema
+- Generates `list-commands` schema output (self-describing command registry)
+- Compilation error on missing handler (annotated command with no implementation)
+
+**Ported from old:** `core:plugin-processor` → `:codegen:plugin` (adapt for new annotation shapes, add manifest generation). `core:agentic-processor` → `:codegen:agentic` (expand from simple dispatch to full schema generation).
+
+**Tests:** KSP processor tests with compile-testing. Verify generated `list-commands` output. Verify compilation failure on malformed `typeId`.
+
+---
+
+## Phase 5: Core Infrastructure
 
 **What:** Shell internals that features depend on but packs never touch.
 
@@ -162,7 +207,7 @@ Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Ph
 
 - `ThermalManager` → `RenderConfig` (extract from old `feature:dashboard/thermal/`)
 - `Window.setFrameRate()` API 34+, emission throttling API 31-33
-- `FakeThermalManager` for chaos injection
+- `FakeThermalManager` for chaos injection — controllable `MutableStateFlow<ThermalLevel>`
 
 ### `:core:driving` (net-new)
 
@@ -187,35 +232,101 @@ Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Ph
 
 **Ported from old:** `ThermalManager`, `RenderConfig`, `UserPreferencesRepository` (rewritten for Proto), `LayoutDataStore` (rewritten from JSON-in-Preferences to Proto DataStore). Theme JSON loading. `:core:driving` is built from scratch — old `:feature:driving` was Android Auto scaffolding, not a driving mode detector.
 
-**Tests:** Thermal state transition tests, driving mode tests, DataStore corruption recovery tests, layout serialization round-trip tests.
+**Tests:** Thermal state transition tests, driving mode tests, DataStore corruption recovery tests, layout serialization round-trip tests. `FakeThermalManager` flow emission tests.
 
 ---
 
-## Phase 5: KSP Codegen
+## Phase 6: Deployable App + Agentic Framework
 
-**What:** Build-time code generation that packs depend on.
+**What:** First deployable APK with the agentic debug framework. Every subsequent phase can deploy to a device and use structured `adb shell content call` queries for autonomous debugging. This is debugging infrastructure — it lands before the code it will debug.
 
-### `:codegen:plugin`
+### `:app` (minimal shell)
 
-- KSP processor for `@DashboardWidget` / `@DashboardDataProvider`
-- Generates `PackManifest` implementations
-- Generates Hilt multibinding modules (replaces old manual `@Binds @IntoSet`)
-- `typeId` format validation: `{packId}:{widget-name}`
+- `MainActivity` — single activity, `enableEdgeToEdge()`, `WindowInsetsControllerCompat`
+- `DqxnApplication` — Hilt application
+- `AppModule` — DI assembly with empty `Set<WidgetRenderer>` and `Set<DataProvider>` (packs not yet migrated)
+- Blank dashboard canvas (placeholder composable — real dashboard lands in Phase 7)
+- ProGuard/R8 rules
 
-### `:codegen:agentic`
+### `:core:agentic`
 
-- KSP processor for agentic command annotations
-- Generates `CommandDispatcher` wiring
+- `AgenticEngine` — command dispatch (migrate from old, adapt to coordinator APIs as they land)
+- `AgenticContentProvider` — ContentProvider transport on binder thread:
+  - `call()` with `runBlocking(Dispatchers.Default)` + `withTimeout(8_000)`
+  - `query()` lock-free read paths (`/health`, `/anr`) — deadlock-safe escape hatches when main thread is blocked
+  - `@EntryPoint` + Hilt cold-start race handling with retry-after-ping contract
+  - Response file protocol (file path in Bundle, not inline JSON)
+  - `onCreate()` cleanup of previous session response files
+  - 8-second timeout with error envelope semantics
+  - `Binder.getCallingUid()` security validation
+- Agentic trace ID generation and propagation into `DashboardCommand` (wired when coordinators land in Phase 7)
 
-**Ported from old:** `core:plugin-processor` → `:codegen:plugin` (adapt for new annotation shapes, add manifest generation). `core:agentic-processor` → `:codegen:agentic`.
+**Starter diagnostic handlers (read-only — query state, don't mutate it):**
 
-**Tests:** KSP processor tests with compile-testing.
+| Handler | Queries | Available from |
+|---|---|---|
+| `dump-health` | `WidgetHealthMonitor` | Phase 6 (empty initially, populates as widgets land) |
+| `diagnose-crash` | `CrashEvidenceWriter` SharedPrefs, `DiagnosticSnapshotCapture` files | Phase 6 |
+| `diagnose-performance` | `MetricsCollector` snapshot | Phase 6 |
+| `list-diagnostics` | Diagnostic snapshot files with metadata, stale file filtering | Phase 6 |
+| `get-metrics` | `MetricsCollector` frame histogram + per-widget draw times | Phase 6 |
+| `dump-layout` | `:data` layout repository | Phase 6 |
+| `list-widgets` | `Set<WidgetRenderer>` from Hilt | Phase 6 (empty until Phase 8) |
+| `list-providers` | `Set<DataProvider>` from Hilt | Phase 6 (empty until Phase 8) |
+| `list-themes` | `ThemeRegistry` | Phase 6 |
+| `list-commands` | KSP-generated schema from `:codegen:agentic` | Phase 6 |
+| `trigger-anomaly` | Fires `DiagnosticSnapshotCapture` for pipeline self-testing | Phase 6 |
+
+**Mutation handlers (land incrementally as their targets are built):**
+
+| Handler | Target | Available from |
+|---|---|---|
+| `add-widget`, `remove-widget`, `move-widget`, `resize-widget` | `LayoutCoordinator` | Phase 7 |
+| `set-theme` | `ThemeCoordinator` | Phase 7 |
+| `set-data-source` | `BindingCoordinator` | Phase 7 |
+| `set-setting` | Per-widget settings | Phase 7 |
+| `set-driving-mode` | `DrivingModeDetector` | Phase 7 |
+| `get-layout` | `LayoutCoordinator` | Phase 7 |
+| `get-widget-status` | `WidgetStatusCoordinator` | Phase 7 |
+| `get-entitlements` | `EntitlementRegistry` | Phase 7 |
+| `reset-layout` | `LayoutCoordinator` | Phase 7 |
+| `import-preset` | `:data` preset system | Phase 7 |
+| `inject-fault` | `ChaosProviderInterceptor` | Phase 9 |
+| `capture-snapshot` | `DiagnosticSnapshotCapture` | Phase 6 |
+
+**Debug overlays (`:app:src/debug/`):**
+
+- Frame Stats overlay
+- Widget Health overlay
+- Thermal Trending overlay
+
+**Ported from old:** `AgenticEngine`, `CommandDispatcher`, handler structure (adapt from BroadcastReceiver to ContentProvider transport). `AgenticReceiver` deleted — replaced by `AgenticContentProvider`. Old handlers adapted to new coordinator APIs incrementally. Debug overlays ported with UI adaptation.
+
+**Tests:**
+- `AgenticContentProvider`: cold-start race (ping before Hilt ready → retry), timeout (8s exceeded → error envelope), concurrent calls, `query()` lock-free path works when `call()` would block
+- `AgenticEngine`: command routing, unknown command error, trace ID propagation
+- Handler tests for all starter diagnostic handlers against faked observability state
+- E2E: `adb shell content call` round-trip on connected device
+- App startup: blank canvas renders without crash
+
+**Validation:** `./gradlew :app:installDebug` succeeds. `adb shell content call --uri content://app.dqxn.android.debug.agentic --method list-commands` returns handler schema. `trigger-anomaly` creates a diagnostic snapshot file. `diagnose-crash` returns crash evidence (or empty state). Debug overlays toggle on/off.
+
+### Autonomous debug bootstrapping
+
+From this point forward, the agent can autonomously debug on a connected device:
+
+1. **Deploy:** `./gradlew :app:installDebug`
+2. **Detect:** `adb logcat` for crashes/ANRs, `diagnose-crash` for structured crash evidence, `list-diagnostics since=<timestamp>` for anomaly snapshots
+3. **Investigate:** `dump-health` for widget liveness, `get-metrics` for frame timing, `diagnose-performance` for jank analysis
+4. **Fix:** Edit source code
+5. **Verify:** Rebuild, redeploy, re-query — confirm anomaly resolved
+6. **Fallback:** If main thread is deadlocked and `call()` stalls, `query()` paths (`/health`, `/anr`) still work. If binder pool is exhausted, `adb pull` the `anr_latest.json` written by `AnrWatchdog`'s dedicated thread
 
 ---
 
-## Phase 6: Dashboard Shell
+## Phase 7: Dashboard Shell
 
-**What:** The hardest phase. The 1040-line god-ViewModel and god-state must be decomposed into coordinators. This is structural transformation, not porting.
+**What:** The hardest phase. The 1040-line god-ViewModel and god-state must be decomposed into coordinators. This is structural transformation, not porting. Full agentic debug infrastructure is available on-device — use it.
 
 ### `:feature:dashboard`
 
@@ -229,21 +340,45 @@ Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Ph
 
 **Core components:**
 
-- `DashboardCommand` sealed interface + `Channel` routing to coordinators
-- `WidgetDataBinder` — rewrite with `SupervisorJob`, `CoroutineExceptionHandler`, `widgetStatus` reporting
-- `DashboardGrid` — migrate layout logic (custom `MeasurePolicy` ports well), swap data delivery to `LocalWidgetData`, add `graphicsLayer` isolation per widget
+- `DashboardCommand` sealed interface + `Channel` routing to coordinators, with `agenticTraceId` propagation from agentic commands
+- `WidgetDataBinder` — rewrite with `SupervisorJob`, `CoroutineExceptionHandler`, `widgetStatus` reporting. Applies `DataProviderInterceptor` chain (for chaos injection)
+- `DashboardGrid` — migrate layout logic (custom `MeasurePolicy` ports well), swap data delivery to `LocalWidgetData`, add `graphicsLayer` isolation per widget. Wire `MetricsCollector.recordWidgetDrawTime()` in draw modifier (not `LaunchedEffect`) and `MetricsCollector.recordRecomposition()` in widget container
 - `DashboardCanvas` — Layer 0 + Layer 1 overlay structure (ports with adaptation)
 - `OverlayNavHost` — Layer 1 navigation
 - Widget error boundary — `WidgetCoroutineScope` via CompositionLocal, crash count → safe mode
-- `DashboardTestHarness` — rebuild DSL for new coordinator architecture
+
+**`DashboardTestHarness`** — rebuild DSL for new coordinator architecture:
+
+- DSL surface: `dashboardTest { dispatch(...); assertThat(...) }` with `layoutState()`, `bindingJobs()`, `safeMode()`, `editModeState()`, `widgetPickerAvailable()`, `settingsAccessible()`, `widgetStatuses()`, `ringBufferTail()`
+- Fakes for all five coordinators
+- `FakeLayoutRepository`, `FakeWidgetDataBinder`
+- Uses `TestDataProvider` and `ProviderFault` from `:sdk:contracts:testFixtures` for fault injection in unit tests
+
+**`HarnessStateOnFailure`** — JUnit5 `TestWatcher`:
+
+- Auto-dumps harness state as JSON on test failure
+- Format: `layout`, `theme`, `widgetStatuses`, `bindingJobs`, `ringBufferTail(20)`
+- JSON structure matches `diagnose-*` response format — agent parses both with the same logic
+- No `DiagnosticSnapshotCapture` dependency (no observability graph in unit tests)
+
+**Mutation handlers wired:** All mutation handlers listed in Phase 6 table become functional as coordinators land. Agent can now `add-widget`, `set-theme`, `inject-fault` etc. on device.
 
 **Ported from old:** Grid layout geometry, viewport filtering, gesture handling, drag offset animation — these port with moderate adaptation. The ViewModel, state management, and data binding are rewritten from scratch against the new coordinator pattern. Overlay composables (WidgetPicker, Settings, ThemeSelector, Diagnostics) port with UI adaptation.
 
-**Tests:** Coordinator unit tests, `DashboardTestHarness` DSL tests, grid layout tests (compose-ui-test + Robolectric), drag/resize interaction tests. Visual regression baselines.
+**Tests:**
+- Coordinator unit tests for each of the five coordinators
+- Safety-critical tests: 4-crash/60s → safe mode trigger, driving mode gate (edit mode / settings / widget picker disabled), entitlement revocation → auto-revert
+- `DashboardTestHarness` DSL tests with `HarnessStateOnFailure` watcher
+- Grid layout tests (compose-ui-test + Robolectric): widget placement, overlap rejection, viewport filtering
+- Drag/resize interaction tests: `graphicsLayer` offset animation, snap-to-grid
+- `WidgetDataBinder`: `SupervisorJob` isolation (one provider crash doesn't cancel siblings), `CoroutineExceptionHandler` routes to `widgetStatus`
+- `ProviderFault`-based fault injection via `TestDataProvider`: `Delay`, `Error`, `Stall` → verify widget shows fallback UI, not crash
+- Visual regression baselines (Roborazzi)
+- On-device validation: deploy, `dump-layout` confirms grid state, `dump-health` confirms widget liveness, `get-metrics` confirms frame timing
 
 ---
 
-## Phase 7: Free Pack (Architecture Validation Gate)
+## Phase 8: Free Pack (Architecture Validation Gate)
 
 **What:** First pack migration. Proves the entire SDK→Pack contract works end-to-end.
 
@@ -286,13 +421,13 @@ All widgets: `ImmutableMap` settings, `LocalWidgetData.current` data access, `ac
 
 **Ported from old:** Widget rendering logic (Canvas drawing, Compose layouts) ports with moderate adaptation. Provider sensor flows port cleanly (callbackFlow pattern already correct). Theme JSON files port verbatim. Every widget's `Render()` signature changes (no `widgetData` param, add `ImmutableMap`, read from `LocalWidgetData`).
 
-**Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. Roborazzi visual regression baselines. End-to-end: widget appears on grid, receives data, renders correctly.
+**Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. Roborazzi visual regression baselines. On-device: deploy, `list-widgets` confirms all 11 registered, `add-widget` places each on grid, `dump-health` confirms data flowing, `get-metrics` confirms draw times within budget.
 
 **This phase is the gate.** If contracts feel wrong, fix them in Phase 2 before proceeding.
 
 ---
 
-## Phase 8: Remaining Packs
+## Phase 9: Remaining Packs + Chaos
 
 ### `:pack:themes`
 
@@ -313,28 +448,23 @@ All widgets: `ImmutableMap` settings, `LocalWidgetData.current` data access, `ac
 - 4 widgets → new contracts
 - `CompanionDeviceHandler`
 
-**Tests:** Contract tests for all widgets/providers. Connection state machine exhaustive tests.
+### Chaos infrastructure
 
----
+- `ChaosProviderInterceptor` in `:core:agentic` (debug only) — implements `DataProviderInterceptor`, applies `ProviderFault` from `:sdk:contracts:testFixtures`
+- `StubEntitlementManager` with `simulateRevocation()` / `simulateGrant()`
+- Chaos profiles: `provider-stress`, `provider-flap`, `thermal-ramp`, `entitlement-churn`, `widget-storm`, `process-death`, `combined`
+- `ChaosEngine` with seed-based deterministic reproduction (`seed: Long`)
+- `inject-fault` handler wired to `ChaosProviderInterceptor`
+- `chaos-stop` session summary with `injected_faults` + `system_responses` + `resultingSnapshots`
+- Chaos ↔ diagnostic temporal correlation via `list-diagnostics since=<timestamp>`
 
-## Phase 9: App Shell + Agentic
+### `AgenticTestClient`
 
-### `:app`
+- Programmatic wrapper around `adb shell content call` for instrumented tests
+- `assertChaosCorrelation()` — validates every injected fault produced an expected downstream diagnostic snapshot
+- Used in CI chaos gate (deterministic `seed = 42`)
 
-- `MainActivity` — single activity, `enableEdgeToEdge()`, `WindowInsetsControllerCompat`
-- `DqxnApplication` — Hilt application
-- `AppModule` — DI assembly, all pack modules discovered via multibinding
-- Debug overlays (Frame Stats, Widget Health, Thermal Trending)
-- ProGuard/R8 rules
-
-### `:core:agentic`
-
-- `AgenticEngine` — command dispatch (migrate from old)
-- `AgenticContentProvider` — ContentProvider transport (rewrite from BroadcastReceiver)
-- All ~20 handlers migrated to new coordinator APIs
-- `Binder.getCallingUid()` security (works correctly on ContentProvider, unlike old BR)
-
-**Tests:** End-to-end app startup, agentic command round-trips, safe mode trigger.
+**Tests:** Contract tests for all pack widgets/providers. Connection state machine exhaustive tests. Chaos E2E: `inject-fault` → `list-diagnostics since=` → verify correlated snapshot. `assertChaosCorrelation()` integration test. Seed determinism: same seed → same fault sequence → same diagnostics.
 
 ---
 
@@ -354,11 +484,32 @@ All widgets: `ImmutableMap` settings, `LocalWidgetData.current` data access, `ac
 
 - First-run flow
 
+### CI Gates
+
+All nine gates enforced:
+
+| Gate | Threshold |
+|---|---|
+| P50 frame time | < 8ms |
+| P95 frame time | < 12ms |
+| P99 frame time | < 16ms |
+| Jank rate | < 2% |
+| Cold startup | < 1.5s |
+| Compose stability | max 0 unstable classes |
+| Non-skippable composables | max 5 |
+| Unit coverage (coordinators) | > 90% line |
+| Release smoke test | Dashboard renders with data |
+
+P50 trend detection: alert when P50 increases > 20% from 7-day rolling average.
+
+Mutation kill rate > 80% for critical modules (deferred to post-launch — tracked, not gated).
+
 ### Integration Testing
 
 - Full E2E: launch → load layout → bind data → render widgets → edit mode → add/remove/resize → theme switch → driving mode gate
-- Performance: P99 frame <16ms, startup <1.5s
-- Chaos: `ChaosProviderInterceptor` fault injection → verify graceful degradation
+- CI chaos gate: deterministic `seed = 42` chaos profile → `assertChaosCorrelation()` passes
+- CI diagnostic artifact collection: `adb pull` diagnostic snapshots + `list-diagnostics` + `dump-health` as CI artifacts on failure
+- Agentic debug loop validation: inject fault → detect via `list-diagnostics` → investigate via `diagnose-crash` → verify via `dump-health` after fix
 
 ---
 
@@ -372,15 +523,16 @@ All widgets: `ImmutableMap` settings, `LocalWidgetData.current` data access, `ac
 - JSON-in-Preferences layout storage (replaced by Proto DataStore)
 - ~~`app.dqxn.android` package namespace~~ — **retained**, no namespace migration
 - Dashboard's direct pack imports (inverted — shell is pack-blind)
+- `:feature:driving` (Android Auto cruft — `:core:driving` is net-new)
 - Any `var` in data classes, any `GlobalScope`, any `runBlocking` outside tests/debug-CP
 
 ---
 
 ## Risk Flags
 
-1. **Phase 6 is the bottleneck.** The dashboard decomposition is the highest-risk, highest-effort phase. The old 1040-line ViewModel carries implicit coupling that won't surface until you try to split it. Budget accordingly.
+1. **Phase 7 is the bottleneck.** The dashboard decomposition is the highest-risk, highest-effort phase. The old 1040-line ViewModel carries implicit coupling that won't surface until you try to split it. Full agentic debug infrastructure is available to help — use it.
 
-2. **Typed DataSnapshot design may need iteration.** The sealed hierarchy is designed in docs but untested. The free pack migration (Phase 7) will pressure-test it — be ready to revise contracts.
+2. **Typed DataSnapshot design may need iteration.** The sealed hierarchy is designed in docs but untested. The free pack migration (Phase 8) will pressure-test it — be ready to revise contracts.
 
 3. **sg-erp2 pack depends on a proprietary SDK** (`sg.gov.lta:extol`). Verify it builds against AGP 9.0.1 / Kotlin 2.3+ / JDK 25 before committing to porting it. If it doesn't, quarantine it.
 
