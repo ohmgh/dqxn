@@ -4,7 +4,7 @@
 
 DQXN — modular Android automotive dashboard. Phone/tablet in a vehicle shows real-time telemetry through configurable widgets on a grid canvas. Pack-based plugin architecture: packs register widgets, providers, and themes via contracts; the shell discovers them at runtime via Hilt multibinding.
 
-Pre-launch greenfield. Source under `android/`. Package namespace: `app.dqxn`. Read `docs/ARCHITECTURE.md` for full technical design, `docs/PRD.md` for product requirements.
+Pre-launch greenfield. Source under `android/`. Package namespace: `app.dqxn`. Read `docs/ARCHITECTURE.md` for full technical design, `docs/REQUIREMENTS.md` for product requirements.
 
 ## Tech Stack
 
