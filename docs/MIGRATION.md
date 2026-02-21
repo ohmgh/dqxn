@@ -164,10 +164,10 @@ Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Ph
 - `Window.setFrameRate()` API 34+, emission throttling API 31-33
 - `FakeThermalManager` for chaos injection
 
-### `:core:driving`
+### `:core:driving` (net-new)
 
-- `DrivingModeDetector` (migrate from `feature:driving`)
-- Implements `DataProvider` emitting `DrivingSnapshot` (new — old is detection only, not a provider)
+- `DrivingModeDetector` — speed-based safety gate (old `:feature:driving` was Android Auto cruft, not this)
+- Implements `DataProvider` emitting `DrivingSnapshot`
 - Safety gating interface for shell subscription
 
 ### `:data`
@@ -185,7 +185,7 @@ Phases 2→3 and 2→5 can run concurrently. Phase 4 needs observability from Ph
 - Implements observability + analytics interfaces
 - Only imported by `:app`
 
-**Ported from old:** `ThermalManager`, `RenderConfig`, `DrivingModeDetector`, `DrivingModeRepository`, `UserPreferencesRepository` (rewritten for Proto), `LayoutDataStore` (rewritten from JSON-in-Preferences to Proto DataStore). Theme JSON loading.
+**Ported from old:** `ThermalManager`, `RenderConfig`, `UserPreferencesRepository` (rewritten for Proto), `LayoutDataStore` (rewritten from JSON-in-Preferences to Proto DataStore). Theme JSON loading. `:core:driving` is built from scratch — old `:feature:driving` was Android Auto scaffolding, not a driving mode detector.
 
 **Tests:** Thermal state transition tests, driving mode tests, DataStore corruption recovery tests, layout serialization round-trip tests.
 
