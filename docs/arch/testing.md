@@ -30,13 +30,12 @@ All tests use `StandardTestDispatcher` — no `Thread.sleep`, no real-time delay
 
 ## Test Framework Split
 
-JUnit5 for unit tests, flow tests, property-based tests, and visual regression tests. JUnit4 for Hilt integration tests (`HiltAndroidRule` is JUnit4-only).
+JUnit5 for unit tests, flow tests, and property-based tests. JUnit4 for Hilt integration tests (`HiltAndroidRule` is JUnit4-only).
 
 | Test type | Framework | Why |
 |---|---|---|
 | Unit, flow, coordinator | JUnit5 + `de.mannodermaus.android-junit` | `@Tag` filtering, `@Nested`, jqwik requires JUnit5 Platform |
 | Property-based | JUnit5 (jqwik test engine) | jqwik is a JUnit5 test engine, runs alongside Jupiter |
-| Visual regression | JUnit5 + Roborazzi + Robolectric | Roborazzi 1.56.0+ confirmed AGP 9 compatible |
 | Hilt integration | JUnit4 + `HiltAndroidRule` | Only supported path |
 | Instrumented (device) | JUnit4 | Android test runner is JUnit4-native |
 
@@ -44,7 +43,6 @@ JUnit5 for unit tests, flow tests, property-based tests, and visual regression t
 
 - `@Tag("fast")` — pure logic, <100ms per test
 - `@Tag("compose")` — requires `ComposeTestRule`
-- `@Tag("visual")` — Roborazzi screenshot tests
 - `@Tag("integration")` — full DI graph
 - `@Tag("benchmark")` — device required
 
@@ -60,12 +58,6 @@ JUnit5 for unit tests, flow tests, property-based tests, and visual regression t
 - Theme auto-switch transitions
 - Entitlement change propagation
 - Coordinator state emissions
-
-**Visual Regression Tests** (Roborazzi 1.56.0+ + Robolectric):
-- Robolectric 4.15.x — pin for now; upgrade to 4.16 when stable for `compileSdk 36` test coverage
-- Baselines stored in `src/test/resources/screenshots/{testClass}/{testName}.png`
-- Use `compare` mode in CI, `record` mode for baseline updates
-- Screenshot matrix: ~108 manageable screenshots covering all widget/theme/state combinations
 
 **Interaction Tests** (compose.ui.test + Robolectric):
 - Drag-to-move, resize handle detection, long-press, widget focus/unfocus, HorizontalPager swipe
@@ -148,9 +140,9 @@ fun `connection FSM never reaches illegal state`(
 - Full DI graph construction, DataStore read/write roundtrip, registry population, entitlement propagation
 
 **Accessibility Tests**:
-- Semantics: every widget root has `contentDescription`
+- Semantics: every widget root has `contentDescription` — verified on-device via `query-semantics {"testTagPattern":"widget_.*"}` asserting all matched nodes have non-empty `contentDescription`
 - Contrast: WCAG 2.1 AA for critical text
-- Touch targets: all interactive elements >= 76dp
+- Touch targets: all interactive elements >= 76dp — verified on-device via `query-semantics {"hasAction":"OnClick"}` asserting all matched nodes have bounds width/height >= 76dp equivalent
 
 **Schema UI Tests** (parameterized):
 - Every `SettingDefinition` subtype renders correctly
@@ -384,17 +376,19 @@ Tier 3 — Full Module Tests (~30s):
 Tier 4 — Dependent Module Tests (~60s):
   ./gradlew :dep1:test :dep2:test --console=plain
 
-Tier 5 — Visual Regression (if UI changed, ~45s):
-  ./gradlew :affected:module:verifyRoborazzi --console=plain
-
-Tier 5.5 — On-Device Smoke (if device available, ~30s):
+Tier 5 — On-Device Smoke (if device available, ~30s):
   ./gradlew :app:installDebug --console=plain
   adb shell content call --method ping          # wait for ok, max 10s
   adb shell content call --method dump-health   # all widgets Ready or fallback, none Error
   adb shell content call --method diagnose-performance  # P99 < 32ms (relaxed for debug)
+  adb shell content call --method dump-semantics        # verify widget nodes rendered with correct test tags
+  adb shell content call --method query-semantics --arg '{"testTagPattern":"widget_.*","isVisible":true}'
+    # verify: matchCount == widgetCount from dump-health (all healthy widgets actually rendered)
   adb shell content call --method chaos-inject --arg '{"fault":"provider-failure","providerId":"core:gps-speed","duration":3}'
   sleep 5
   adb shell content call --method dump-health   # affected widget in fallback, not Error
+  adb shell content call --method query-semantics --arg '{"testTag":"widget_status_<affected-id>"}'
+    # verify: fallback status overlay visible on the affected widget
 
 Tier 6 — Full Suite (before commit):
   ./gradlew assembleDebug test lintDebug --console=plain
@@ -402,7 +396,7 @@ Tier 6 — Full Suite (before commit):
 
 Stop at the first failing tier and fix before proceeding.
 
-Tier 5.5 bridges the gap between "JVM tests pass" and "works on device." It verifies app launch, widget binding, and provider fallback under real concurrency. Not a replacement for Tier 6 instrumented tests — it's a quick sanity check the agent runs after fixing on-device bugs.
+Tier 5 bridges the gap between "JVM tests pass" and "works on device." It verifies app launch, widget binding, provider fallback, and rendered UI via semantics under real concurrency. Not a replacement for Tier 6 instrumented tests — it's a quick sanity check the agent runs after fixing on-device bugs.
 
 ## Agentic Debug Runbook
 
@@ -410,15 +404,15 @@ Tier 5.5 bridges the gap between "JVM tests pass" and "works on device." It veri
 
 **Test Failures**: Parse for `FAILED` test names. Run `git diff HEAD~1 --name-only` to identify recently changed files — cross-reference with the failing test's module to narrow the search space. Read test + source file, fix the source (not the test) unless the test expectation is wrong, re-run Tier 2/3.
 
-**Visual Regressions**: Compare `_actual.png` vs `_expected.png` in `build/outputs/roborazzi/`. If intentional: `recordRoborazzi`. If not: fix rendering, re-run Tier 5.
+**Runtime Crashes (on-device)**: Poll `list-diagnostics` with `since` param to find new auto-captured `DiagnosticSnapshot` files. Each `list-diagnostics` entry includes `recommendedCommand` — call it. Snapshots contain correlated ring buffer tail, metrics, thermal state, and widget health at the moment of the anomaly. For widget-specific diagnosis, call `diagnose-widget` which computes `WidgetExpectations` on demand (expected vs actual behavior) and includes `semantics` (rendered bounds, visibility, text content) when available. If no snapshot file exists (process died before async write completed), `diagnose-crash` falls back to `SharedPreferences` crash evidence written synchronously by `CrashEvidenceWriter`. If `agenticTraceId` is present, the snapshot was triggered by an agentic command and the causal chain is traceable. Chaos-injected faults are correlated temporally via `list-diagnostics since=` rather than propagated IDs.
 
-**Runtime Crashes (on-device)**: Poll `list-diagnostics` with `since` param to find new auto-captured `DiagnosticSnapshot` files. Each `list-diagnostics` entry includes `recommendedCommand` — call it. Snapshots contain correlated ring buffer tail, metrics, thermal state, and widget health at the moment of the anomaly. For widget-specific diagnosis, call `diagnose-widget` which computes `WidgetExpectations` on demand (expected vs actual behavior). If no snapshot file exists (process died before async write completed), `diagnose-crash` falls back to `SharedPreferences` crash evidence written synchronously by `CrashEvidenceWriter`. If `agenticTraceId` is present, the snapshot was triggered by an agentic command and the causal chain is traceable. Chaos-injected faults are correlated temporally via `list-diagnostics since=` rather than propagated IDs.
+**UI Verification (on-device)**: Use `query-semantics` to verify visual state after any mutation. After `widget-add`, verify the widget's semantics node exists with correct bounds. After provider failure, verify fallback UI text is rendered. After thermal degradation, verify glow effects are absent. Semantics queries answer "is it actually on screen?" — `dump-state` only answers "does the model say it should be?"
 
 **Safe Mode**: If `dump-state` shows `safeMode.active: true`, the app crashed >3 times in 60s. Use `safeMode.lastCrashWidgetTypeId` to identify the culprit. `diagnose-crash` for that widget type to get the crash evidence.
 
 **Main Thread Deadlock**: Agentic commands run on binder threads, so they work even when the main thread is blocked. If `call()`-based commands stall (e.g., handler waiting on main-thread state), use the lock-free `query()` paths: `adb shell content query --uri content://app.dqxn.android.debug.agentic/health`. If that also hangs (full process deadlock), `adb pull` the `anr_latest.json` file written by `AnrWatchdog` on its dedicated thread.
 
-**Verification After Fix**: Re-run the failing tier. For on-device bugs, run Tier 5.5 smoke validation. On success, continue from next tier.
+**Verification After Fix**: Re-run the failing tier. For on-device bugs, run Tier 5 smoke validation. On success, continue from next tier.
 
 **Regression Guard**: After fixing a runtime bug found via agentic debugging, create a `DashboardTestHarness` regression test using the same `ProviderFault` / `FakeThermalManager` / fault primitives. The `DiagnosticSnapshot` provides all reproduction inputs: trigger type → fault primitive, `lastSnapshot` → test data, `settings` → widget config. Verify the test fails without the fix and passes with it.
 
@@ -522,8 +516,10 @@ The detect → investigate → reproduce → verify → guard cycle using all th
                  Temporal correlation via `list-diagnostics since=` confirms the fault caused the snapshot.
                  For code bugs: write a failing DashboardTestHarness test first.
 4. FIX + VERIFY — Fix the code. Re-run failing tier.
-                 For on-device bugs: run Tier 5.5 smoke validation (see below).
+                 For on-device bugs: run Tier 5 smoke validation (see below).
                  Call `dump-health` / `diagnose-widget` to confirm recovery on device.
+                 Call `query-semantics` to verify the fix is visually correct (widget rendered,
+                 correct text, expected bounds). State recovery without rendering is a partial fix.
 5. GUARD       — Create a DashboardTestHarness regression test using the same ProviderFault /
                  FakeThermalManager / fault primitives that reproduced the bug.
                  Verify: test fails without fix, passes with fix.
@@ -541,6 +537,8 @@ chaos-inject {"fault":"provider-failure","providerId":"core:gps-speed","duration
 dump-health
   → verify: widget binding fell back to "core:network-speed"
   → verify: widget status is "Ready", not "ProviderMissing"
+query-semantics {"testTag":"widget_<speedometer-id>"}
+  → verify: widget node isVisible, contentDescription updated (not stale pre-fault text)
 chaos-inject {"fault":"provider-failure","providerId":"core:gps-speed","duration":0}  // clear
   → wait 2s
 dump-health
@@ -581,12 +579,15 @@ dump-health
 chaos-inject {"fault":"corrupt","providerId":"core:gps-speed","corruption":"nan-speed"}
   → wait 2s
 diagnose-widget {speedometerWidgetId}
-  → verify: widget renders fallback/safe value, NOT NaN display
+  → verify: widget health shows data validation issue
+query-semantics {"testTag":"widget_<speedometer-id>","includeChildren":true}
+  → verify: no text node contains "NaN" — widget renders fallback/safe value
 ```
 
 **Process death recovery** (agent verifies persistence + rebinding):
 ```
 dump-state → record current layout
+query-semantics {"testTagPattern":"widget_.*"} → record rendered widget set + bounds
 chaos-inject {"fault":"process-death"}
   → returns {"status":"ok","data":{"willTerminate":true,"delayMs":500}}
   → process dies after 500ms delay
@@ -596,6 +597,8 @@ dump-state
   → verify: layout matches pre-death state
 dump-health
   → verify: all widgets re-bound and receiving data
+query-semantics {"testTagPattern":"widget_.*"}
+  → verify: same widget set rendered, bounds match pre-death positions
 ```
 
 ### Chaos in CI
@@ -659,9 +662,11 @@ adb shell content call --method dump-state \
   --uri content://app.dqxn.android.debug.agentic > artifacts/diagnostics/final_state.json
 adb shell content call --method dump-health \
   --uri content://app.dqxn.android.debug.agentic > artifacts/diagnostics/final_health.json
+adb shell content call --method dump-semantics \
+  --uri content://app.dqxn.android.debug.agentic > artifacts/diagnostics/final_semantics.json
 ```
 
-Published as CI artifacts. The agent then has both the test failure message (JUnit XML) and the correlated diagnostic context (system state at failure) without needing a live device to investigate.
+Published as CI artifacts. The agent then has the test failure message (JUnit XML), correlated diagnostic context (system state at failure), and the semantics tree snapshot (what was actually rendered) without needing a live device to investigate. The semantics dump is particularly valuable for "renders wrong content" bugs where `dump-state` shows correct model state but the UI diverges.
 
 ## Agentic E2E Protocol
 
@@ -705,6 +710,71 @@ class AgenticTestClient(private val device: UiDevice) {
         }
         fail("Condition not met within ${timeoutMs}ms: $path == $expected")
     }
+
+    // --- Semantics helpers ---
+
+    /** Query a single semantics node by test tag. Fails if not found. */
+    fun querySemanticsOne(testTag: String): SemanticsNodeResult {
+        val response = send("query-semantics", mapOf("testTag" to testTag))
+        val nodes = response.data.nodes
+        assertWithMessage("Expected exactly one node with testTag=$testTag, found ${nodes.size}")
+            .that(nodes).hasSize(1)
+        return SemanticsNodeResult(nodes.first())
+    }
+
+    /** Query a single semantics node by test tag. Returns null if not found. */
+    fun querySemanticsOrNull(testTag: String): SemanticsNodeResult? {
+        val response = send("query-semantics", mapOf("testTag" to testTag))
+        val nodes = response.data.nodes
+        return if (nodes.isEmpty()) null else SemanticsNodeResult(nodes.first())
+    }
+
+    /** Query all semantics nodes matching a test tag pattern. */
+    fun querySemanticsAll(testTagPattern: String): List<SemanticsNodeResult> {
+        val response = send("query-semantics", mapOf("testTagPattern" to testTagPattern))
+        return response.data.nodes.map { SemanticsNodeResult(it) }
+    }
+
+    /** Assert a widget is rendered and visible on screen. */
+    fun assertWidgetRendered(widgetId: String) {
+        val node = querySemanticsOrNull("widget_$widgetId")
+        assertWithMessage("Widget $widgetId not found in semantics tree").that(node).isNotNull()
+        assertWithMessage("Widget $widgetId not visible").that(node!!.isVisible).isTrue()
+        assertWithMessage("Widget $widgetId has zero size")
+            .that(node.bounds.width > 0 && node.bounds.height > 0).isTrue()
+    }
+
+    /** Assert a widget is NOT rendered (off-viewport or removed). */
+    fun assertWidgetNotRendered(widgetId: String) {
+        val node = querySemanticsOrNull("widget_$widgetId")
+        assertWithMessage("Widget $widgetId should not be rendered")
+            .that(node?.isVisible ?: false).isFalse()
+    }
+
+    /** Assert widget displays specific text content. */
+    fun assertWidgetText(widgetId: String, expectedText: String) {
+        val response = send("query-semantics", mapOf(
+            "testTag" to "widget_$widgetId", "includeChildren" to true))
+        val allText = response.data.nodes.flatMap { it.allTextRecursive() }
+        assertWithMessage("Widget $widgetId text content")
+            .that(allText.any { expectedText in it }).isTrue()
+    }
+
+    /** Wait for a semantics node to appear (useful after mutations). */
+    fun awaitSemanticsNode(
+        testTag: String,
+        timeoutMs: Long = 3000,
+        pollMs: Long = 200,
+    ): SemanticsNodeResult {
+        val deadline = SystemClock.elapsedRealtime() + timeoutMs
+        while (SystemClock.elapsedRealtime() < deadline) {
+            val node = querySemanticsOrNull(testTag)
+            if (node != null && node.isVisible) return node
+            Thread.sleep(pollMs)
+        }
+        fail("Semantics node with testTag=$testTag not found within ${timeoutMs}ms")
+        throw AssertionError() // unreachable
+    }
 }
 ```
 
@@ -733,6 +803,73 @@ fun `thermal degradation reduces frame rate`() {
     client.awaitCondition("diagnose-performance", "$.thermal.targetFps", 30, timeoutMs = 5000)
     client.send("chaos-inject", mapOf("fault" to "thermal", "level" to "NORMAL"))
     client.awaitCondition("diagnose-performance", "$.thermal.targetFps", 60, timeoutMs = 5000)
+}
+
+@Test
+fun `widget-add renders widget at correct position`() {
+    client.send("widget-add", mapOf("widgetType" to "core:speedometer"))
+    val state = client.send("dump-state")
+    val widgetId = state.firstWidgetId()
+
+    // Verify the widget is actually rendered on screen, not just in model state
+    val node = client.querySemanticsOne("widget_$widgetId")
+    assertThat(node.isVisible).isTrue()
+    assertThat(node.bounds.width).isGreaterThan(0)
+    assertThat(node.contentDescription).contains("Speedometer")
+}
+
+@Test
+fun `provider failure shows fallback UI in widget`() {
+    client.send("widget-add", mapOf("widgetType" to "core:speedometer"))
+    val widgetId = client.send("dump-state").firstWidgetId()
+
+    client.send("chaos-inject", mapOf(
+        "fault" to "provider-failure", "providerId" to "core:gps-speed", "duration" to 10))
+    Thread.sleep(3000)
+
+    // Verify fallback status overlay is rendered
+    val statusNode = client.querySemanticsOrNull("widget_status_$widgetId")
+    assertThat(statusNode).isNotNull()
+    assertThat(statusNode!!.isVisible).isTrue()
+
+    // Verify widget still exists but shows fallback content
+    val widgetNode = client.querySemanticsOne("widget_$widgetId")
+    assertThat(widgetNode.isVisible).isTrue()
+}
+
+@Test
+fun `bottom bar auto-hides and contains expected controls`() {
+    // Tap to reveal bottom bar
+    client.send("widget-tap", mapOf("widgetId" to "any"))
+    Thread.sleep(500)
+
+    val bar = client.querySemanticsOne("bottom_bar")
+    assertThat(bar.isVisible).isTrue()
+
+    // Verify settings button is present
+    val settings = client.querySemanticsOne("settings_button")
+    assertThat(settings.isVisible).isTrue()
+    assertThat(settings.actions).contains("OnClick")
+
+    // Wait for auto-hide
+    Thread.sleep(4000)
+    val barAfter = client.querySemanticsOrNull("bottom_bar")
+    assertThat(barAfter?.isVisible ?: false).isFalse()
+}
+
+@Test
+fun `notification banner renders above widgets`() {
+    // Inject a fault that triggers a banner
+    client.send("chaos-inject", mapOf("fault" to "provider-failure", "providerId" to "core:gps-speed", "duration" to 30))
+    Thread.sleep(3000)
+
+    val banner = client.querySemanticsOrNull("banner_provider_unavailable")
+    if (banner != null) {
+        // Banner should be below the top of the screen and above widgets
+        val grid = client.querySemanticsOne("dashboard_grid")
+        assertThat(banner.bounds.top).isLessThan(grid.bounds.bottom)
+        assertThat(banner.isVisible).isTrue()
+    }
 }
 ```
 
@@ -781,12 +918,14 @@ class AgenticTestClient(private val device: UiDevice) {
         val state = send("dump-state")
         val actual = JsonPath.read<Any>(state.toString(), path)
         if (actual != expected) {
-            // Auto-capture before failing
+            // Auto-capture before failing — include semantics tree for visual context
             val health = send("dump-health")
             val metrics = send("dump-metrics")
+            val semantics = send("dump-semantics", mapOf("maxDepth" to 5))
             println("=== Diagnostic Context on Failure ===")
             println("Health: $health")
             println("Metrics: $metrics")
+            println("Semantics: $semantics")
         }
         assertWithMessage("State at $path").that(actual).isEqualTo(expected)
     }

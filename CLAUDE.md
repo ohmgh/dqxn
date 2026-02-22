@@ -273,7 +273,7 @@ data class SpeedSnapshot(
 - `AnrWatchdog` — dedicated thread, 2-consecutive-miss trigger, writes `anr_latest.json` via direct FileOutputStream.
 - `MetricsCollector` — per-widget draw time (64-entry ring buffer), frame histograms, provider latency.
 - Chaos injection via DI seams: `ChaosProviderInterceptor`, `FakeThermalManager`, `StubEntitlementManager`.
-- Debug: 3 overlays (Frame Stats, Widget Health, Thermal Trending) in `:app:src/debug/`. Agentic via `AgenticContentProvider` on binder threads (debug only), file-based responses.
+- Debug: 3 overlays (Frame Stats, Widget Health, Thermal Trending) in `:app:src/debug/`. Agentic via `AgenticContentProvider` on binder threads (debug only), file-based responses. `dump-semantics`/`query-semantics` expose the Compose semantics tree for UI verification (element bounds, visibility, text, test tags).
 
 ## Security
 
@@ -287,7 +287,7 @@ data class SpeedSnapshot(
 
 - **Unit**: JUnit5 + MockK + Truth. **Hilt integration**: JUnit4 + `HiltAndroidRule` (no JUnit5 extension).
 - **Flow**: Turbine + `StandardTestDispatcher` (never `UnconfinedTestDispatcher` for production flow tests)
-- **Visual regression**: Roborazzi 1.56.0+ + Robolectric (Paparazzi broken on AGP 9)
+- **UI verification**: `dump-semantics`/`query-semantics` via agentic commands (on-device) + `ComposeTestRule` semantics assertions (JVM). No screenshot-matching tests — Canvas-heavy widgets make Robolectric pixel comparison unreliable, and baseline maintenance cost outweighs signal
 - **Interaction**: `compose.ui.test` + Robolectric for drag, resize, long-press
 - **Performance**: Macrobenchmarks, CI-gated (P99 frame < 16ms, startup < 1.5s)
 - **Contract**: Abstract test classes in `:sdk:contracts` testFixtures — every pack widget/provider extends them
@@ -296,7 +296,8 @@ data class SpeedSnapshot(
 - **Coordinators**: `DashboardTestHarness` DSL — `dashboardTest { dispatch(...); assertThat(...) }`
 - **Notifications**: Banner derivation from singleton state combinations (Turbine), priority-based ordering and persistence, toast ordering under concurrent emission, safe mode banner lifecycle (CRITICAL persistence + action routing), `AlertSoundManager` audio focus interaction (MockK)
 - Shared test infra via `testFixtures` source sets. Factories: `testWidget()`, `testTheme()`, `testDataSnapshot()`.
-- **Agentic debug loop**: detect → investigate → reproduce → fix+verify → guard. `HarnessStateOnFailure` outputs JSON matching `diagnose-*` shapes.
+- **Agentic debug loop**: detect → investigate → reproduce → fix+verify → guard. `HarnessStateOnFailure` outputs JSON matching `diagnose-*` shapes. Verification step includes `query-semantics` to confirm visual correctness — state recovery without rendering is a partial fix.
+- **Agentic UI verification**: `dump-semantics`/`query-semantics` give E2E tests and agents pixel-accurate element positions, visibility, text content, and actions via the Compose semantics tree. `SemanticsOwnerHolder` (debug singleton) registered by `DashboardLayer`. Test tags on all key elements: `widget_{id}`, `dashboard_grid`, `bottom_bar`, `banner_{id}`, etc.
 
 ## Package & File Naming
 
@@ -391,5 +392,10 @@ Check `:codegen:plugin` and `:codegen:agentic` run as single pass. Verify `ksp.i
 | Why bottom bar with profile icons, not page dots? | Icons give one-tap direct access to any profile — no intermediary UI. Page dots require sequential swiping. Icon row also works as a visual profile indicator without needing the swipe gesture. |
 | Why bottom bar, not floating action buttons? | Bottom bar composes cleanly: settings + profile icons + add-widget in one auto-hiding strip. FABs scatter across the screen and conflict with widget tap targets. |
 | Why profiles from packs? | The shell can't know all contexts (driving, home, bedtime). Packs define domain-specific `ProfileDescriptor`s with `ProfileTrigger`s. Same discovery pattern as widgets/providers — Hilt multibinding, KSP validation, runtime registration. |
+
+| Why no screenshot-matching tests (Roborazzi)? | DQXN's visual output is mostly custom Canvas drawing (`drawWithCache` arcs, needles, glow shaders). Robolectric's Canvas shadow doesn't faithfully render these — baselines are inaccurate. 108-screenshot maintenance burden with unreliable signal. Replaced by: semantics-based UI verification (structure, text, bounds, visibility), draw-math unit tests, on-device Tier 5 agentic checks. |
+| Why semantics tree, not UiAutomator for agentic UI inspection? | UiAutomator dumps are slow (~500ms), lossy for custom Compose drawing, and require instrumentation test context. Compose's `SemanticsOwner` is what `compose.ui.test` uses — same data, in-process, <5ms. |
+| Why `SemanticsOwnerHolder` singleton, not direct main-thread access? | `AgenticContentProvider` runs on binder threads. Needs a cross-thread reference to the composition's `SemanticsOwner`. Debug-only singleton registered at composition time. |
+| Why always set test tags, not conditional `BuildConfig.DEBUG`? | ~50 nodes, negligible allocation. Unconditional tags enable Espresso matchers and accessibility tooling in release instrumented tests. |
 
 Full rationale in `docs/ARCHITECTURE.md`.

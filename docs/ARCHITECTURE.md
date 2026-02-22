@@ -28,7 +28,7 @@ Packs (widgets, themes, data providers) are fully decoupled from the dashboard s
 | Build | AGP 9.0.1, Gradle 9.3.1, JDK 25 |
 | Perf | Baseline Profiles, Macrobenchmarks, Compose compiler metrics |
 | Firebase | Crashlytics, Analytics, Performance Monitoring — all behind interfaces in `:sdk:observability` / `:sdk:analytics`, implementations in `:core:firebase` |
-| Testing | JUnit5 (unit/flow/property), JUnit4 (Hilt integration), MockK, Truth, Turbine, Roborazzi, jqwik, kotlinx.fuzz |
+| Testing | JUnit5 (unit/flow/property), JUnit4 (Hilt integration), MockK, Truth, Turbine, jqwik, kotlinx.fuzz |
 | Debug | LeakCanary, StrictMode (debug builds) |
 
 ## 3. Module Structure

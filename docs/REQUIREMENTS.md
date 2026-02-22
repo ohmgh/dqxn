@@ -316,8 +316,9 @@ Extended visual customization.
 | F13.6 | Debug overlays: toggleable overlays for frame stats, recomposition visualization, provider data flow DAG, state machine viewer, thermal trending, widget health. Debug builds only | Should   |
 | F13.7 | Machine-readable logs: JSON-lines file log sink (rotated 10MB, max 3 files) for agent-parseable diagnostics. Debug builds only | Should   |
 | F13.8 | Structured test output: all test tasks output JUnit XML to predictable paths. Convention plugin configures `{module}/build/test-results/{variant}/` | Must     |
-| F13.9 | Tiered validation pipeline documented for agentic development: compile check (~8s) → fast tests (~12s) → full module tests (~30s) → dependent tests (~60s) → visual (~45s) → full suite | Must     |
-| F13.10 | Test categorization via JUnit5 tags: `fast`, `compose`, `visual`, `integration`, `benchmark`. Convention plugin provides `fastTest`/`composeTest` tasks | Should   |
+| F13.9 | Tiered validation pipeline documented for agentic development: compile check (~8s) → fast tests (~12s) → full module tests (~30s) → dependent tests (~60s) → on-device smoke with semantics verification (~30s) → full suite | Must     |
+| F13.10 | Test categorization via JUnit5 tags: `fast`, `compose`, `integration`, `benchmark`. Convention plugin provides `fastTest`/`composeTest` tasks | Should   |
+| F13.11 | Semantics tree inspection: ADB-queryable Compose semantics tree — element bounds, visibility, test tags, text content, actions, content descriptions. Enables agentic UI verification and autonomous accessibility auditing. Debug builds only | Should   |
 
 ### F14: Settings
 

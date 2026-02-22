@@ -136,6 +136,8 @@ adb shell content call \
 | `dump-traces` | Active and recent TraceContext spans |
 | `dump-health` | Widget health + system context + recent diagnostic snapshot references (enriched) |
 | `dump-connections` | ConnectionStateMachine state, paired devices |
+| `dump-semantics` | Full Compose semantics tree with bounds, test tags, content descriptions, actions, text |
+| `query-semantics` | Filtered semantics query — find nodes by test tag, text, content description, or bounds region |
 | **Diagnostics** | |
 | `diagnose-widget` | Correlated health, binding, data, errors, widget expectations, and log tail for one widget |
 | `diagnose-performance` | Frame histogram + per-widget draw time + thermal trend + jank widgets + slow commands + memory |
@@ -478,6 +480,239 @@ Essential for agent autonomy — the agent needs this to verify widget-add resul
 ```
 
 Replaces fragile `adb shell ls` with structured, filterable metadata. Agent can find "most recent thermal snapshot" or "all crash snapshots for widget X" without parsing filenames. Primary notification mechanism for autonomous agent loops. Agent polls every 2-5s during active debugging sessions using the `since` parameter for efficient incremental queries.
+
+### Semantics Tree Inspection
+
+`dump-semantics` and `query-semantics` expose the Compose semantics tree — the same data source `compose.ui.test` uses internally. This gives the agent (and E2E tests) pixel-accurate element positions, visibility, text content, and available actions without `UiAutomator` overhead or accessibility service setup.
+
+#### SemanticsOwnerHolder
+
+A debug-only `@Singleton` that the `ComposeView` registers into at composition:
+
+```kotlin
+// In :core:agentic (debug only)
+@Singleton
+class SemanticsOwnerHolder @Inject constructor() {
+    @Volatile var owner: SemanticsOwner? = null
+
+    fun snapshot(): SemanticsSnapshot? {
+        val root = owner?.rootSemanticsNode ?: return null
+        return buildSnapshot(root)
+    }
+
+    fun query(filter: SemanticsFilter): List<SemanticsNodeSnapshot> {
+        val root = owner?.rootSemanticsNode ?: return emptyList()
+        return walkTree(root).filter { filter.matches(it) }
+    }
+}
+```
+
+Registration happens in `DashboardLayer` (the always-present Layer 0):
+
+```kotlin
+// In :app/src/debug/ — DashboardLayerDebugExt.kt
+@Composable
+fun DashboardLayer.RegisterSemanticsOwner(holder: SemanticsOwnerHolder) {
+    val view = LocalView.current
+    LaunchedEffect(view) {
+        // ComposeView exposes SemanticsOwner via ViewTreeSemanticsOwner
+        val composeView = view as? RootForTest
+        holder.owner = composeView?.semanticsOwner
+    }
+}
+```
+
+`RootForTest.semanticsOwner` is a stable Compose testing API (used by `ComposeTestRule` internally). No internal/hidden API access.
+
+#### AgenticEntryPoint Extension
+
+```kotlin
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface AgenticEntryPoint {
+    fun commandRouter(): AgenticCommandRouter
+    fun logger(): DqxnLogger
+    fun healthMonitor(): WidgetHealthMonitor
+    fun anrWatchdog(): AnrWatchdog
+    fun semanticsHolder(): SemanticsOwnerHolder  // <-- new
+}
+```
+
+#### `dump-semantics` Command
+
+Dumps the full semantics tree. Use for initial orientation or when you don't know what to filter on.
+
+```
+adb shell content call \
+  --uri content://app.dqxn.android.debug.agentic \
+  --method dump-semantics \
+  --arg '{"maxDepth":10}'
+```
+
+Parameters:
+- `maxDepth` (Int, optional, default 20): Maximum tree traversal depth. Use lower values for large UIs.
+- `includeUnmerged` (Boolean, optional, default false): Include unmerged semantics nodes. Merged tree (default) matches what accessibility services and test matchers see.
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "rootBounds": {"left": 0, "top": 0, "right": 1080, "bottom": 2400},
+    "nodeCount": 47,
+    "tree": [
+      {
+        "id": 1,
+        "testTag": "dashboard_grid",
+        "bounds": {"left": 0, "top": 0, "right": 1080, "bottom": 2400},
+        "size": {"width": 1080, "height": 2400},
+        "isVisible": true,
+        "children": [
+          {
+            "id": 5,
+            "testTag": "widget_abc-123",
+            "contentDescription": "Speedometer: 65 km/h",
+            "bounds": {"left": 0, "top": 0, "right": 540, "bottom": 400},
+            "size": {"width": 540, "height": 400},
+            "isVisible": true,
+            "text": [],
+            "actions": ["OnClick", "OnLongClick"],
+            "children": [
+              {
+                "id": 8,
+                "text": ["65"],
+                "bounds": {"left": 120, "top": 80, "right": 420, "bottom": 280},
+                "size": {"width": 300, "height": 200},
+                "isVisible": true,
+                "children": []
+              },
+              {
+                "id": 9,
+                "text": ["km/h"],
+                "bounds": {"left": 200, "top": 300, "right": 340, "bottom": 360},
+                "size": {"width": 140, "height": 60},
+                "isVisible": true,
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Each node includes: `id` (semantics ID), `testTag` (if set), `contentDescription` (if set), `text` (list of text values), `bounds` (pixel rect — global coordinates), `size` (width × height in pixels), `isVisible` (accounts for `alpha`, `visibility`, and clip), `actions` (available semantics actions), `role` (if set — Button, Checkbox, etc.), `stateDescription` (if set), `children` (recursive).
+
+Fields that are null/empty on a node are omitted from the JSON for compactness.
+
+#### `query-semantics` Command
+
+Filtered query — returns matching nodes without full tree traversal in the response. Preferred for targeted assertions.
+
+```
+adb shell content call \
+  --uri content://app.dqxn.android.debug.agentic \
+  --method query-semantics \
+  --arg '{"testTag":"widget_abc-123"}'
+```
+
+Filter parameters (all optional, combined with AND):
+- `testTag` (String): Exact match on `SemanticsProperties.TestTag`
+- `testTagPattern` (String): Regex match on test tag (e.g., `"widget_.*"`)
+- `text` (String): Substring match on any text value in the node
+- `textExact` (String): Exact match on any text value
+- `contentDescription` (String): Substring match on content description
+- `hasAction` (String): Node has the named action (e.g., `"OnClick"`, `"SetText"`)
+- `role` (String): Semantics role (e.g., `"Button"`, `"Checkbox"`, `"Image"`)
+- `boundsIntersect` (Object `{left, top, right, bottom}`): Node bounds intersect the given region
+- `isVisible` (Boolean): Filter by visibility (default: true — only visible nodes)
+- `includeChildren` (Boolean, default false): Include child subtree of each matched node
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "matchCount": 1,
+    "nodes": [
+      {
+        "id": 5,
+        "testTag": "widget_abc-123",
+        "contentDescription": "Speedometer: 65 km/h",
+        "bounds": {"left": 0, "top": 0, "right": 540, "bottom": 400},
+        "size": {"width": 540, "height": 400},
+        "isVisible": true,
+        "text": [],
+        "actions": ["OnClick", "OnLongClick"]
+      }
+    ]
+  }
+}
+```
+
+#### Compound Query: `diagnose-widget` Enhancement
+
+`diagnose-widget` now includes a `semantics` field when `SemanticsOwnerHolder.owner` is available:
+
+```json
+{
+  "widgetId": "abc-123",
+  "health": { ... },
+  "binding": { ... },
+  "semantics": {
+    "testTag": "widget_abc-123",
+    "bounds": {"left": 0, "top": 0, "right": 540, "bottom": 400},
+    "isVisible": true,
+    "contentDescription": "Speedometer: 65 km/h",
+    "childCount": 4,
+    "textContent": ["65", "km/h"],
+    "actions": ["OnClick", "OnLongClick"]
+  }
+}
+```
+
+If the widget's semantics node is not found (widget not rendered, off-viewport), `semantics` is `null` — the agent now knows whether a "stale data" issue is a binding problem (semantics present, data stale) or a rendering problem (semantics absent).
+
+#### Test Tag Convention
+
+Widgets and key dashboard elements MUST set `Modifier.testTag()` for agentic discoverability:
+
+| Element | Test tag pattern | Example |
+|---|---|---|
+| Widget container | `widget_{widgetId}` | `widget_abc-123` |
+| Dashboard grid | `dashboard_grid` | |
+| Bottom bar | `bottom_bar` | |
+| Profile icon | `profile_{profileId}` | `profile_driving` |
+| Add widget button | `add_widget_button` | |
+| Edit mode toggle | `edit_mode_toggle` | |
+| Settings button | `settings_button` | |
+| Notification banner | `banner_{bannerId}` | `banner_ble_adapter_off` |
+| Toast | `toast_{index}` | `toast_0` |
+| Widget status overlay | `widget_status_{widgetId}` | `widget_status_abc-123` |
+
+Test tags are debug-only overhead (string allocation per frame for recomposed nodes). Two options:
+1. Always set test tags — Compose skips the property entirely when `testTagsAsResourceId` is disabled in release builds. The `Modifier.testTag()` call still allocates but is near-zero cost.
+2. Conditional: `Modifier.thenIf(BuildConfig.DEBUG) { testTag(...) }` — zero release cost but clutters code.
+
+**Decision**: Always set test tags. The allocation is negligible for dashboard-scale UI (~50 nodes), and unconditional tags enable accessibility tooling and Espresso matchers in instrumented tests.
+
+#### Threading and Performance
+
+The semantics tree is a snapshot of Compose layout state. `SemanticsOwner.rootSemanticsNode` reads from the layout tree on the calling thread — no main-thread dispatch required.
+
+**However**: The semantics tree can be mid-update during composition/layout phases. Reading from the binder thread while main thread is composing may observe a partially-consistent tree. This is acceptable for debugging — a stale-by-one-frame tree is fine. For test assertions, `query-semantics` is called after `awaitCondition` settles the UI.
+
+| Operation | Budget |
+|---|---|
+| `dump-semantics` (50 nodes) | < 5ms |
+| `query-semantics` (single match) | < 2ms |
+| Tree serialization to JSON | < 3ms |
+
+If the tree exceeds 200 nodes, `dump-semantics` automatically truncates at `maxDepth` and includes `"truncated": true` in the response. `query-semantics` always walks the full tree regardless of size (filter evaluation is cheap).
 
 ### Deadlock-Safe Diagnostic Paths
 

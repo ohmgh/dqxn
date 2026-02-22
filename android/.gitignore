@@ -34,10 +34,6 @@ build/generated/ksp/
 **/test-results/
 **/reports/
 
-# Roborazzi diffs (keep references, ignore failures)
-**/build/outputs/roborazzi/
-**/*_compare.png
-
 # Benchmark results
 **/benchmarkData/
 

@@ -65,7 +65,7 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 
 - `android/settings.gradle.kts` — module includes, version catalog, `build-logic` includeBuild
 - `android/build.gradle.kts` — root project
-- `android/gradle/libs.versions.toml` — full version catalog (AGP 9.0.1, Kotlin 2.3+, JDK 25, Compose BOM, Hilt, KSP, kotlinx-collections-immutable, kotlinx.serialization, Proto DataStore, JUnit5, MockK, Turbine, Truth, jqwik, Roborazzi, Robolectric)
+- `android/gradle/libs.versions.toml` — full version catalog (AGP 9.0.1, Kotlin 2.3+, JDK 25, Compose BOM, Hilt, KSP, kotlinx-collections-immutable, kotlinx.serialization, Proto DataStore, JUnit5, MockK, Turbine, Truth, jqwik, Robolectric)
 - `android/gradle.properties` — configuration cache, KSP incremental, Compose compiler flags
 - `android/build-logic/convention/` — all convention plugins:
   - `dqxn.android.application`
@@ -265,6 +265,7 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
   - 8-second timeout with error envelope semantics
   - `Binder.getCallingUid()` security validation
 - Agentic trace ID generation and propagation into `DashboardCommand` (wired when coordinators land in Phase 7)
+- `SemanticsOwnerHolder` — debug-only `@Singleton` for Compose semantics tree access. Registered by `DashboardLayer` via `RootForTest.semanticsOwner`. Enables `dump-semantics`/`query-semantics` commands for pixel-accurate UI verification
 
 **Starter diagnostic handlers (read-only — query state, don't mutate it):**
 
@@ -280,6 +281,8 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 | `list-providers` | `Set<DataProvider<*>>` from Hilt | Phase 6 (empty until Phase 8) |
 | `list-themes` | `ThemeRegistry` | Phase 6 |
 | `list-commands` | KSP-generated schema from `:codegen:agentic` | Phase 6 |
+| `dump-semantics` | `SemanticsOwnerHolder` — full Compose semantics tree (bounds, test tags, text, actions) | Phase 6 (empty until DashboardLayer registers in Phase 7) |
+| `query-semantics` | `SemanticsOwnerHolder` — filtered semantics query by test tag, text, bounds | Phase 6 (empty until Phase 7) |
 | `trigger-anomaly` | Fires `DiagnosticSnapshotCapture` for pipeline self-testing | Phase 6 |
 
 **Mutation handlers (land incrementally as their targets are built):**
@@ -310,10 +313,12 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 - `AgenticContentProvider`: cold-start race (ping before Hilt ready → retry), timeout (8s exceeded → error envelope), concurrent calls, `query()` lock-free path works when `call()` would block
 - `AgenticEngine`: command routing, unknown command error, trace ID propagation
 - Handler tests for all starter diagnostic handlers against faked observability state
+- `SemanticsOwnerHolder`: registration/deregistration, `snapshot()` returns tree when owner set, `query()` filter matching
+- `dump-semantics`/`query-semantics` handlers: empty response when no owner registered, tree serialization correctness
 - E2E: `adb shell content call` round-trip on connected device
 - App startup: blank canvas renders without crash
 
-**Validation:** `./gradlew :app:installDebug` succeeds. `adb shell content call --uri content://app.dqxn.android.debug.agentic --method list-commands` returns handler schema. `trigger-anomaly` creates a diagnostic snapshot file. `diagnose-crash` returns crash evidence (or empty state). Debug overlays toggle on/off. `./gradlew assembleRelease` succeeds and R8-processed APK installs without `ClassNotFoundException` — validates ProGuard rules don't strip KSP-generated classes or proto-generated code.
+**Validation:** `./gradlew :app:installDebug` succeeds. `adb shell content call --uri content://app.dqxn.android.debug.agentic --method list-commands` returns handler schema. `trigger-anomaly` creates a diagnostic snapshot file. `diagnose-crash` returns crash evidence (or empty state). `dump-semantics` returns a tree with at least the blank canvas root node. Debug overlays toggle on/off. `./gradlew assembleRelease` succeeds and R8-processed APK installs without `ClassNotFoundException` — validates ProGuard rules don't strip KSP-generated classes or proto-generated code.
 
 **CI pipeline deliverable:** Configure CI (GitHub Actions or equivalent) running `./gradlew assembleDebug test lintDebug --console=plain`. From this phase forward, every phase must pass all prior-phase tests before merging. This is the regression gate — not just "current phase tests pass" but "nothing broke."
 
@@ -323,7 +328,7 @@ From this point forward, the agent can autonomously debug on a connected device:
 
 1. **Deploy:** `./gradlew :app:installDebug`
 2. **Detect:** `adb logcat` for crashes/ANRs, `diagnose-crash` for structured crash evidence, `list-diagnostics since=<timestamp>` for anomaly snapshots
-3. **Investigate:** `dump-health` for widget liveness, `get-metrics` for frame timing, `diagnose-performance` for jank analysis
+3. **Investigate:** `dump-health` for widget liveness, `get-metrics` for frame timing, `diagnose-performance` for jank analysis, `query-semantics` for visual verification (is the widget actually rendered? correct text? visible?)
 4. **Fix:** Edit source code
 5. **Verify:** Rebuild, redeploy, re-query — confirm anomaly resolved
 6. **Fallback:** If main thread is deadlocked and `call()` stalls, `query()` paths (`/health`, `/anr`) still work. If binder pool is exhausted, `adb pull` the `anr_latest.json` written by `AnrWatchdog`'s dedicated thread
@@ -348,8 +353,8 @@ From this point forward, the agent can autonomously debug on a connected device:
 
 - `DashboardCommand` sealed interface + `Channel` routing to coordinators, with `agenticTraceId` propagation from agentic commands
 - `WidgetDataBinder` — rewrite with `SupervisorJob`, `CoroutineExceptionHandler`, `widgetStatus` reporting. Applies `DataProviderInterceptor` chain (for chaos injection)
-- `DashboardGrid` — migrate layout logic (custom `MeasurePolicy` ports well), swap data delivery to `LocalWidgetData`, add `graphicsLayer` isolation per widget. Wire `MetricsCollector.recordWidgetDrawTime()` in draw modifier (not `LaunchedEffect`) and `MetricsCollector.recordRecomposition()` in widget container
-- `DashboardCanvas` — Layer 0 + Layer 1 overlay structure (ports with adaptation)
+- `DashboardGrid` — migrate layout logic (custom `MeasurePolicy` ports well), swap data delivery to `LocalWidgetData`, add `graphicsLayer` isolation per widget. Wire `MetricsCollector.recordWidgetDrawTime()` in draw modifier (not `LaunchedEffect`) and `MetricsCollector.recordRecomposition()` in widget container. Apply `Modifier.testTag()` to all key elements per test tag convention (see build-system.md): `dashboard_grid`, `widget_{id}`, `bottom_bar`, `banner_{id}`, etc. — required for agentic `dump-semantics`/`query-semantics` UI verification
+- `DashboardCanvas` — Layer 0 + Layer 1 overlay structure (ports with adaptation). `DashboardLayer` registers `SemanticsOwnerHolder` (debug only) — semantics commands start returning real data from this point
 - `OverlayNavHost` — Layer 1 navigation
 - Widget error boundary — `WidgetCoroutineScope` via CompositionLocal, crash count → safe mode
 
@@ -381,8 +386,7 @@ From this point forward, the agent can autonomously debug on a connected device:
 - `WidgetDataBinder`: `SupervisorJob` isolation (one provider crash doesn't cancel siblings), `CoroutineExceptionHandler` routes to `widgetStatus`
 - Thermal throttle wiring: inject `FakeThermalManager`, escalate to DEGRADED, verify emission rate drops in `WidgetDataBinder`
 - `ProviderFault`-based fault injection via `TestDataProvider`: `Delay`, `Error`, `Stall` → verify widget shows fallback UI, not crash
-- Visual regression baselines (Roborazzi)
-- On-device validation: deploy, `dump-layout` confirms grid state, `dump-health` confirms widget liveness, `get-metrics` confirms frame timing
+- On-device validation: deploy, `dump-layout` confirms grid state, `dump-health` confirms widget liveness, `get-metrics` confirms frame timing, `query-semantics {"testTagPattern":"widget_.*"}` confirms all widgets rendered with correct test tags and non-zero bounds
 
 ---
 
@@ -431,16 +435,16 @@ All widgets: `ImmutableMap` settings, `LocalWidgetData.current` data access, `ac
 
 **Ported from old:** Widget rendering logic (Canvas drawing, Compose layouts) ports with moderate adaptation. Provider sensor flows port cleanly (callbackFlow pattern already correct). Theme JSON files port verbatim. Every widget's `Render()` signature changes (no `widgetData` param, add `ImmutableMap`, read from `LocalWidgetData`).
 
-**Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. Roborazzi visual regression baselines.
+**Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. On-device semantics verification via `assertWidgetRendered` + `assertWidgetText` for each widget type.
 
 **Phase 8 gate — all four criteria must pass before Phase 9 starts:**
 
 1. **Contract tests green.** All 11 widgets pass `WidgetRendererContractTest`, all 7 providers pass `DataProviderContractTest`.
-2. **End-to-end wiring.** On-device: `add-widget` + `dump-health` for each of the 11 widget types shows ACTIVE status (provider bound, data flowing).
-3. **Stability soak.** 60-second soak with all 11 widgets placed — safe mode not triggered (no 4-crash/60s event).
+2. **End-to-end wiring.** On-device: `add-widget` + `dump-health` for each of the 11 widget types shows ACTIVE status (provider bound, data flowing). `query-semantics` confirms each widget's semantics node is visible with non-empty `contentDescription`.
+3. **Stability soak.** 60-second soak with all 11 widgets placed — safe mode not triggered (no 4-crash/60s event). `dump-semantics` at end confirms all 11 widget nodes visible with correct bounds.
 4. **Regression gate.** All Phase 2-7 tests pass with `:pack:free` in the `:app` dependency graph. Adding a pack must not cause Hilt binding conflicts, KSP annotation processing errors, or R8 rule collisions.
 
-First real E2E test class (`AgenticTestClient`) starts here — wrapping `adb shell content call` with assertion helpers. Test: `add-widget` for each type → `dump-health` → assert all ACTIVE → `get-metrics` → assert draw times within budget. This test grows in Phase 9 (chaos correlation) and Phase 10 (full user journey).
+First real E2E test class (`AgenticTestClient`) starts here — wrapping `adb shell content call` with assertion helpers including semantics helpers (`querySemanticsOne`, `assertWidgetRendered`, `assertWidgetText`, `awaitSemanticsNode`). Test: `add-widget` for each type → `dump-health` → assert all ACTIVE → `assertWidgetRendered` for each → `get-metrics` → assert draw times within budget. This test grows in Phase 9 (chaos correlation + semantics verification of fallback UI) and Phase 10 (full user journey).
 
 If contracts feel wrong, fix them in Phase 2 before proceeding.
 
@@ -525,10 +529,10 @@ Mutation kill rate > 80% for critical modules (deferred to post-launch — track
 
 ### Integration Testing
 
-- Full E2E: launch → load layout → bind data → render widgets → edit mode → add/remove/resize → theme switch
-- CI chaos gate: deterministic `seed = 42` chaos profile → `assertChaosCorrelation()` passes
-- CI diagnostic artifact collection: `adb pull` diagnostic snapshots + `list-diagnostics` + `dump-health` as CI artifacts on failure
-- Agentic debug loop validation: inject fault → detect via `list-diagnostics` → investigate via `diagnose-crash` → verify via `dump-health` after fix
+- Full E2E: launch → load layout → bind data → render widgets → edit mode → add/remove/resize → theme switch. Semantics verification at each step: `assertWidgetRendered` after add, `assertWidgetNotRendered` after remove, bounds change after resize
+- CI chaos gate: deterministic `seed = 42` chaos profile → `assertChaosCorrelation()` passes. Semantics verification: fallback UI rendered for failed providers, no "NaN" text in widget subtrees
+- CI diagnostic artifact collection: `adb pull` diagnostic snapshots + `list-diagnostics` + `dump-health` + `dump-semantics` as CI artifacts on failure
+- Agentic debug loop validation: inject fault → detect via `list-diagnostics` → investigate via `diagnose-crash` + `query-semantics` → verify via `dump-health` + `assertWidgetRendered` after fix
 
 ---
 
@@ -551,6 +555,7 @@ From Phase 2 onward, every phase runs `./gradlew test` across all modules before
 | 7 | `DashboardTestHarness` with real coordinators (not fakes) | Coordinator-to-coordinator interactions (the decomposition actually works) |
 | 7 | `FakeThermalManager` → DEGRADED → verify emission rate drops | Thermal throttle wiring to binding system |
 | 7 | `NotificationCoordinator` re-derivation after ViewModel kill | CRITICAL banners silently lost on process death |
+| 7 | `dump-semantics` returns widget nodes with test tags after `DashboardLayer` registration | `SemanticsOwnerHolder` not wired — semantics commands return empty, all UI verification silently fails |
 | 8 | 4-criteria gate (contract tests, on-device wiring, stability soak, regression) | Architecture validation — contracts are usable, not just compilable |
 
 ### Silent failure seams
@@ -561,6 +566,7 @@ These seams produce no error on failure — they degrade to empty/default state.
 - **`dqxn.pack` auto-wiring.** Convention plugin wires `:sdk:*` dependencies. If it uses wrong scope or misses a module, the pack compiles (transitive deps may satisfy it) but runtime behavior differs. Caught by Phase 4 stub module check.
 - **`DataProviderInterceptor` chain.** `WidgetDataBinder` must apply all registered interceptors. If it skips them on fallback paths, chaos testing gives wrong results. Caught by `ProviderFault` tests using `TestDataProvider` that asserts interceptor invocation.
 - **`merge()+scan()` vs `combine()`.** If someone "simplifies" the binder to `combine()`, any widget with a slow or missing provider silently receives no data (combine waits for all upstreams). Caught by test-first multi-slot delivery test (TDD Policy).
+- **`SemanticsOwnerHolder` registration.** If `DashboardLayer` doesn't register (or registers too late), `dump-semantics`/`query-semantics` return empty results — all semantics-based E2E assertions silently pass with "no match found" instead of failing meaningfully. Caught by Phase 7 integration check: `dump-semantics` must return nodeCount > 0 after `DashboardLayer` composition.
 
 ## TDD Policy
 
@@ -582,7 +588,7 @@ Not all code benefits equally from test-first. Mandatory TDD for code where the 
 | Category | Why not test-first | Phase |
 |---|---|---|
 | Build system / convention plugins | Configuration, not logic. `./gradlew tasks` is the test. | 1 |
-| UI rendering (widget `Render()` bodies) | Visual output — meaningful tests are Roborazzi baselines generated FROM implementation. Contract tests (null data handling, accessibility) are test-first via `WidgetRendererContractTest` inheritance, but rendering itself isn't. | 8-9 |
+| UI rendering (widget `Render()` bodies) | Visual output verified via on-device semantics (text content, bounds, visibility) and draw-math unit tests. Contract tests (null data handling, accessibility) are test-first via `WidgetRendererContractTest` inheritance, but rendering itself isn't. | 8-9 |
 | Observability plumbing (`DqxnLogger`, `CrashEvidenceWriter`, `AnrWatchdog`) | Well-understood patterns ported from old codebase. Unit tests verify behavior but writing them first doesn't improve design. | 3 |
 | `SupervisorJob` / `CoroutineExceptionHandler` error boundaries | Established boilerplate, not discovery work. The pattern is known before the test is written. Test-concurrent — verify isolation works, but test-first adds ceremony without catching real bugs. | 7 |
 | Proto DataStore schemas | Declarative `.proto` files. Round-trip serialization tests should exist but don't benefit from being written first. | 5 |
