@@ -97,6 +97,22 @@ These are non-negotiable. Violations cause real performance/correctness issues.
 - Per-widget data is individual flows via `widgetData(widgetId)`. A clock tick must NOT recompose the speedometer. Never put all widget data in a shared `Map` inside a single state object.
 - Discrete commands flow through sealed `DashboardCommand` → routed to coordinator via `Channel`. Continuous gestures (drag, resize) use `MutableStateFlow<DragUpdate>` — latest-value-wins, never queued behind slow commands.
 
+### Canvas model
+- **Unbounded canvas**: one canvas for all display configurations and profiles. Widgets can exist at any grid coordinate. The viewport is a rendering window — not the canvas boundary.
+- **Configuration boundaries**: each device display configuration (fold states × orientation) defines a viewport rectangle. Boundary lines shown in edit mode with labels. **No-straddle snap**: widgets cannot cross configuration boundaries — every widget is fully visible or fully invisible in any configuration. Hard constraint enforced via snap on drag. Distinct haptic on boundary snap.
+- **Configuration-aware defaults**: onboarding places core widgets in the intersection region visible across all configurations. Secondary widgets fill outward into larger-viewport zones.
+- **Free-sizing windows** (OEM split-screen) do NOT trigger configuration change — positions unchanged, only culling re-evaluates.
+- **No automatic relocation**: when viewport shrinks (fold, device switch), off-viewport widgets are simply not rendered. No reflow, no proportional anchoring, no axis swap. Edit mode is the discovery/rearrangement mechanism.
+
+### Dashboard profiles
+- **Per-profile dashboards**: each profile owns an independent `DashboardCanvas` — its own widget set, positions, sizes. Not a visibility filter on a shared canvas.
+- **New profile clones current**: creating a profile copies the active dashboard. User edits from there, not from scratch.
+- **Adding widgets**: defaults to current profile. "Add to all profiles" option in widget picker for shared widgets.
+- **Profile switching**: horizontal swipe on canvas (Android home screen page model) + tap profile icon in bottom bar. Disabled in edit mode. Edits apply to current profile only.
+- **Pack-extensible**: packs register `ProfileDescriptor` with optional `ProfileTrigger` (auto-switch). Shell manages activation, priority, storage.
+- **Bottom bar**: auto-hides, floats over canvas. Contains: Settings (always), profile icons (2+ profiles, active highlighted), Add Widget (edit mode). Tap to reveal, 3s auto-hide.
+- **Launcher path**: profiles = home screen pages. Direct mapping for future launcher pack.
+
 ### Compose performance (60fps with 12+ widgets)
 - **State read deferral**: Widget data provided via `LocalWidgetData` CompositionLocal — widgets access data via `LocalWidgetData.current` and use `derivedStateOf` to defer high-frequency reads to draw phase (`drawWithCache`/`onDrawBehind`)
 - **`graphicsLayer` on every widget**: Isolated RenderNode per widget
@@ -238,6 +254,7 @@ data class SpeedSnapshot(
 
 ## Architecture Patterns
 
+- **Unbounded canvas with profiles**: Each profile owns an independent unbounded canvas. Viewport is a rendering window. Configuration boundaries (fold × orientation) prevent widget straddling. Horizontal swipe switches between profile canvases (page model). Bottom bar: settings + profile icons + add-widget (edit mode), auto-hides.
 - **Dashboard-as-shell**: Dashboard is Layer 0, always present — NOT a navigation destination. Overlays navigate on Layer 1 via `OverlayNavHost`.
 - **IoC data binding**: Widgets never choose their data source. `WidgetDataBinder` assigns providers by data type, with fallback to next available on failure.
 - **Widget error isolation**: Each widget in a catch boundary (effects via `WidgetCoroutineScope`). Compose has NO composition-phase try/catch — mitigated by contract tests, crash count tracking, and safe mode fallback. Failed widget → fallback UI, never app crash.
@@ -366,5 +383,13 @@ Check `:codegen:plugin` and `:codegen:agentic` run as single pass. Verify `ksp.i
 | Why split CRITICAL banner to Layer 1.5? | Compose `Box` draws later children on top. `NotificationBannerHost` at Layer 0.5 is occluded by `OverlayNavHost` at Layer 1. CRITICAL banners (safe mode) must be visible above overlays — a separate `CriticalBannerHost` after `OverlayNavHost` achieves this without `zIndex` hacks. |
 | Why `Channel.BUFFERED` for toasts? | Default rendezvous channel (capacity 0) suspends the producer when the consumer isn't collecting. Multiple simultaneous toasts (entitlement revocation + theme preview end) would block the emitting coroutine. Buffered capacity prevents silent producer suspension. |
 | Why defer driving mode? | DQXN is a general-purpose dashboard, not vehicle-first. Driving mode is a pack-provided feature, not a shell concern. Post-launch: packs supply driving detection providers (GPS speed, OBD-II), users choose per-widget and system-level via standard data binding and dashboard settings. |
+| Why unbounded canvas, not viewport-bounded? | Viewport-bounded means widgets placed on a tablet silently disappear on a phone with no recovery path. Unbounded canvas preserves all widget positions — smaller viewports simply render a subset. Configuration boundaries + no-straddle snap make the subset boundaries explicit and clean. |
+| Why no-straddle snap? | Partially visible widgets are visual corruption — clipped gauges, truncated text. Worse than fully hidden. The snap constraint ensures every widget is either fully rendered or not rendered at all. Binary visibility, never partial. |
+| Why no automatic relocation on viewport change? | Proportional anchoring degrades ungracefully (widget pile-up on small screens, aspect ratio distortion). Axis swapping only works for rotation, destructive on round-trip, fragments widget clusters. Accepting hidden widgets + providing edit mode for manual rearrangement is simpler and more predictable. |
+| Why per-profile dashboards, not per-widget visibility? | Per-widget visibility is a filter on one canvas — creates sparse layouts, requires duplicate widgets for different sizes per context, and the cross-fade animation feels like nothing happened. Per-profile dashboards are independently designed, make horizontal swipe correct (actual pages), and map directly to home screen pages for launcher integration. Configuration burden mitigated by "new profile clones current" default. |
+| Why horizontal swipe for profiles? | Muscle memory — every Android user knows home screen page swiping. Per-profile dashboards are actual pages with independent canvases, so the page transition metaphor is correct (unlike a visibility filter where the canvas doesn't move). Directly positions DQXN for future home launcher integration. |
+| Why bottom bar with profile icons, not page dots? | Icons give one-tap direct access to any profile — no intermediary UI. Page dots require sequential swiping. Icon row also works as a visual profile indicator without needing the swipe gesture. |
+| Why bottom bar, not floating action buttons? | Bottom bar composes cleanly: settings + profile icons + add-widget in one auto-hiding strip. FABs scatter across the screen and conflict with widget tap targets. |
+| Why profiles from packs? | The shell can't know all contexts (driving, home, bedtime). Packs define domain-specific `ProfileDescriptor`s with `ProfileTrigger`s. Same discovery pattern as widgets/providers — Hilt multibinding, KSP validation, runtime registration. |
 
 Full rationale in `docs/ARCHITECTURE.md`.

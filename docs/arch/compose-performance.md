@@ -198,7 +198,7 @@ fun DashboardGrid(widgets: ImmutableList<WidgetInstance>) {
 
 ## Grid Layout
 
-Viewport-sized dashboard uses `Layout` with custom `MeasurePolicy` for absolute positioning:
+The canvas is unbounded — widgets can be placed at any grid coordinate. The viewport is a rendering window into this canvas, computed from screen dimensions. `Layout` with custom `MeasurePolicy` handles absolute positioning:
 
 ```kotlin
 @Composable
@@ -230,17 +230,20 @@ fun DashboardGrid(
 }
 ```
 
-`LazyLayout` adds `SubcomposeLayout` overhead without benefit when most widgets are visible. Reserve only if the canvas becomes scrollable.
+`LazyLayout` adds `SubcomposeLayout` overhead without benefit — the canvas is not scrollable, the viewport is a fixed window.
 
 ### Grid Properties
 
 - **Grid unit**: 16dp
-- **Viewport**: dynamically computed from screen dp dimensions
-- **Orientation-locked**: viewport dimensions are stable
-- **Rendering**: filters to viewport-intersecting widgets only
-- **Placement**: `GridPlacementEngine` scans at 2-unit steps, minimizes overlap area, prefers center positioning
-- **Interactions**: drag-to-move, 4-corner resize handles (76dp minimum touch targets, quadrant-based detection), focus animation (translate to center + scale to 38% viewport height)
-- **Edit mode**: wiggle animation (+/-0.5 degree rotation at 150ms via `graphicsLayer`), animated corner brackets, delete/settings buttons with spring animations
+- **Canvas**: unbounded — widgets can exist at any grid coordinate. One canvas shared across all profiles and display configurations
+- **Viewport**: dynamically computed from screen dp dimensions. Acts as a rendering window into the canvas
+- **Orientation-locked**: viewport dimensions are stable within a configuration
+- **Rendering**: filters to viewport-intersecting widgets only. Each profile has its own widget list — no cross-profile filtering needed
+- **Configuration boundaries**: viewport edges for each device display configuration (fold states × orientation). Visible in edit mode with labels. No-straddle snap prevents widgets from crossing boundaries — every widget is fully visible or fully invisible in any configuration
+- **Placement**: `GridPlacementEngine` scans at 2-unit steps, minimizes overlap area, prefers center positioning. Configuration-aware: default placement respects boundary zones (core widgets in intersection region, secondary widgets in larger-viewport zones)
+- **Interactions**: drag-to-move, 4-corner resize handles (76dp minimum touch targets, quadrant-based detection), focus animation (translate to center + scale to 38% viewport height). Boundary snap: additional snap constraint when widget bounding box crosses a configuration boundary — snaps to nearest side with distinct haptic
+- **Edit mode**: wiggle animation (+/-0.5 degree rotation at 150ms via `graphicsLayer`), animated corner brackets, configuration boundary lines with labels, delete/settings buttons with spring animations. Profile switching disabled (horizontal swipe reserved for widget drag)
+- **Profile switching**: horizontal swipe on canvas (outside edit mode) performs page transition between independent profile canvases. Profile icons in bottom bar for direct access
 - **Overlap**: tolerated but not encouraged. Tap targets resolve to highest z-index.
 
 ## Widget Container
@@ -428,7 +431,7 @@ if (showStatusBar) {
 
 ### Multi-Window
 
-`resizeableActivity="false"`. Despite this flag, some OEMs can still cause window size changes. `DashboardGrid` re-runs viewport culling on any window size change.
+`resizeableActivity="false"`. Despite this flag, some OEMs can still cause window size changes. `DashboardGrid` re-runs viewport culling on any window size change. Free-sizing windows (OEM-forced split-screen) do NOT constitute a configuration change — widget positions do not change, only viewport culling re-evaluates which widgets are visible.
 
 ## Memory Leak Prevention
 

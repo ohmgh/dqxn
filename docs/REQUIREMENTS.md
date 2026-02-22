@@ -16,7 +16,29 @@ DQXN is a modular dashboard platform for Android. Real-time data displayed throu
 
 ### Dashboard Canvas
 
-A 2D grid (unit = 16dp) where widgets are placed at absolute positions. The viewport is computed from screen dimensions. Widgets outside the viewport are culled from rendering. The canvas supports a single orientation (landscape or portrait, locked per device profile) — see F1.15.
+An unbounded 2D grid (unit = 16dp) where widgets are placed at absolute positions. The canvas extends beyond any single viewport — widgets can exist at any coordinate. The viewport is computed from screen dimensions and acts as a rendering window into the canvas. Widgets fully outside the viewport are culled (zero render cost). Widgets must not straddle viewport boundaries — the no-straddle snap constraint ensures every widget is either fully visible or fully invisible in any display configuration. See F1.15 for orientation lock, F1.26–F1.31 for configuration boundaries.
+
+### Display Configurations
+
+A device may have multiple display configurations: fold/unfold states × orientation lock settings. Each configuration defines a viewport rectangle on the canvas. The device reports configurations via Jetpack `WindowInfoTracker` / `WindowMetrics`. Configuration boundaries are the edges of these viewport rectangles.
+
+- **Non-foldable, orientation-locked**: 1 configuration, 0 boundaries
+- **Non-foldable, orientation-unlocked**: 2 configurations (landscape + portrait), 2 boundary rectangles
+- **Foldable, orientation-locked**: 2 configurations (folded + unfolded), 2 boundary rectangles
+- **Foldable, orientation-unlocked**: 4 configurations (folded×2 orientations + unfolded×2 orientations), 4 boundary rectangles
+
+Free-sizing windows (OEM-forced split-screen) do not constitute a configuration change — widget positions do not change upon free window resizing.
+
+### Dashboard Profiles
+
+Each profile owns an independent `DashboardCanvas` — its own widget set, positions, and sizes. Profiles are full dashboards, not visibility filters. Profile switching is a page transition between separate canvases.
+
+- **Default profile**: always exists, non-deletable. Created on first launch with the onboarding preset.
+- **Custom profiles**: user-created (e.g., "Driving", "Desk", "Bedtime"). New profile clones the currently active dashboard — user edits from there, not from scratch. Packs can register `ProfileDescriptor`s with optional auto-switch triggers.
+- **Profile switching**: horizontal swipe on the dashboard canvas (Android home screen page model) and/or tap profile icon in bottom bar. Manual switch always overrides auto-switching.
+- **Adding widgets**: defaults to current profile. "Add to all profiles" option in widget picker for shared widgets (clock, battery).
+- **Auto-switching**: pack-provided `ProfileTrigger`s (GPS speed, WiFi SSID, time of day). User configures which triggers activate which profiles, with priority ordering for simultaneous triggers. "Resume auto" re-enables trigger-based switching after manual override.
+- **Launcher integration**: profile-as-page model directly maps to home screen pages for future launcher pack.
 
 ### Widgets
 
@@ -59,7 +81,7 @@ The always-present canvas that hosts widgets and controls.
 | F1.6  | Drag-to-move widgets in edit mode                                                             | Must     |
 | F1.7  | 4-corner resize handles in edit mode (minimum 76dp touch targets)                             | Must     |
 | F1.8  | Widget focus animation (translate to center, scale up)                                        | Must     |
-| F1.9  | Auto-hide floating button bar (3s timeout, minimum 76dp touch targets)                        | Must     |
+| F1.9  | Auto-hide bottom bar: Settings button (always), profile icons (when 2+ profiles exist, active profile highlighted), Add Widget button (edit mode only). Tap to reveal, auto-hide after 3s inactivity. Floats over canvas (no layout shift). Minimum 76dp touch targets | Must     |
 | F1.10 | Z-index stacking for overlapping widgets                                                      | Must     |
 | F1.11 | Edit mode visual feedback (wiggle animation, corner brackets)                                 | Must     |
 | F1.12 | No widget count limit — users may place as many widgets as the viewport supports              | Must     |
@@ -76,6 +98,12 @@ The always-present canvas that hosts widgets and controls.
 | F1.23 | Multi-window disabled: `resizeableActivity="false"`. Dashboard is fullscreen-only             | Must     |
 | F1.24 | Cutout/punch-hole awareness: widgets placed in `DisplayCutout` exclusion zones show a visual warning in edit mode. Auto-arrange (F1.22) avoids cutout regions | Should   |
 | F1.25 | When the app detects it is running in a window smaller than 480dp in either dimension (forced split-screen by OEM or accessibility), display a persistent banner: "DQXN works best in fullscreen" with a "Go Fullscreen" action. Continue rendering with viewport-adapted layout | Should   |
+| F1.26 | Configuration boundaries: display viewport boundary lines for all device display configurations in edit mode. Each boundary labeled with its configuration name (e.g., "folded portrait", "unfolded landscape"). Boundaries visible only in edit mode | Must     |
+| F1.27 | No-straddle snap: when dragging a widget, if its bounding box would cross a configuration boundary, snap it to the nearest side (inside or outside, whichever is closer). Hard constraint — a widget can never straddle a boundary in persisted layout. Distinct haptic + visual cue on boundary snap (different from regular grid snap) | Must     |
+| F1.28 | Configuration-aware default placement: onboarding places core widgets (clock, battery, date) within the intersection region visible across all device configurations. Secondary widgets fill outward into larger-viewport zones. Every configuration gets a coherent widget subset | Must     |
+| F1.29 | Profile switching via horizontal swipe on dashboard canvas (page transition) and tap on profile icon in bottom bar. Single-profile: no icons, no swipe affordance. Two+ profiles: profile icons appear, swipe activates | Must     |
+| F1.30 | Per-profile dashboards: each profile owns an independent `DashboardCanvas` with its own widget set, positions, and sizes. New profile clones the current dashboard. Adding a widget defaults to current profile with "Add to all profiles" option | Must     |
+| F1.31 | Profile auto-switching: packs register `ProfileDescriptor` with `ProfileTrigger`. User configures trigger enable/disable and priority ordering in profile automation settings (accessible via bottom bar or Settings). Manual profile selection pauses auto-switching; "Resume auto" re-enables | Should   |
 
 ### F2: Widget System
 
@@ -385,8 +413,8 @@ Extended visual customization.
 | NF28 | targetSdk 36 with API 36 CDM event handling                                                    |
 | NF29 | Required hardware: `companion_device_setup`                                                    |
 | NF44 | App must handle display cutouts, punch-holes, and camera notches. Dashboard renders behind cutouts (edge-to-edge) but widget placement warnings surface when content overlaps |
-| NF45 | Presets are device-class-aware: phone-landscape, phone-portrait, tablet-landscape, tablet-portrait |
-| NF46 | Foldable behavior: when display configuration changes (fold/unfold), viewport recalculates and existing widgets reflow without data loss |
+| NF45 | Default presets are configuration-aware: core widgets placed in the intersection region visible across all device display configurations (fold states × orientation). Secondary widgets placed in larger-viewport zones. Every configuration renders a coherent subset |
+| NF46 | Foldable behavior: when display configuration changes (fold/unfold), viewport recalculates. Widgets outside the new viewport are simply not rendered (no reflow, no relocation). The no-straddle constraint (F1.27) ensures widgets are always fully visible or fully invisible — never partially clipped. Configuration boundary lines in edit mode (F1.26) let users make informed placement decisions |
 
 ### Accessibility
 
@@ -547,11 +575,12 @@ Three-page pager:
 ### Edit Mode
 
 1. Tap Edit button → enter edit mode (long-press only available when parked)
-2. Widgets show wiggle animation + corner brackets
+2. Widgets show wiggle animation + corner brackets. Configuration boundary lines appear with labels
 3. Tap widget → focus (translate to center, scale up, show overlay toolbar: delete/settings/style/duplicate)
-4. Drag to move (snaps to 2-unit grid), corner handles to resize (76dp minimum touch targets)
-5. Tapping widget content area unfocuses; tapping blank space or Edit button exits edit mode
-6. Cancel discards all changes; confirm persists via debounced save
+4. Drag to move (snaps to 2-unit grid + no-straddle boundary snap), corner handles to resize (76dp minimum touch targets)
+5. Profile switching disabled during edit mode — horizontal swipe is widget drag territory. Edits apply to the current profile's canvas only
+6. Tapping widget content area unfocuses; tapping blank space or Edit button exits edit mode
+7. Cancel discards all changes; confirm persists via debounced save
 
 ### Driving Mode (Deferred Post-Launch)
 
@@ -578,6 +607,7 @@ See F10. Driving mode is deferred to post-launch. When implemented, driving dete
 |------------------------|-----------------------------------------------------------------------------------|------------------------------------------------------------------|
 | Keep Screen On         | Toggle (default: on)                                                              | Prevents screen timeout while dashboard is active                |
 | Orientation Lock       | Selection (Landscape / Reverse Landscape / Portrait / Reverse Portrait)           | Locks display orientation                                        |
+| Profiles               | Navigation                                                                        | Profile management: create/edit/delete profiles, configure auto-switch triggers and priority ordering. Also accessible via bottom bar profile dots |
 | Dash Packs             | Navigation                                                                        | Opens Pack Browser                                               |
 
 **Data & Privacy**
@@ -637,6 +667,7 @@ These are acknowledged gaps deferred to future versions:
 | Third-party runtime plugins      | Compile-time module system is sufficient; runtime loading adds security and stability risks       |
 | Preset community sharing         | Requires backend infrastructure; defer to post-launch                                            |
 | Track recording / GPX export     | Medium complexity; planned for plus pack v2                                                      |
+| Home launcher mode               | Profile-as-page model and horizontal swipe UX position DQXN for future launcher integration, possibly as a pack |
 | Picture-in-Picture mode          | Requires separate mini-dashboard render mode                                                     |
 | Undo/redo in edit mode           | Cancel-all sufficient for v1                                                                     |
 | Widget grouping/locking          | Post-launch power-user feature                                                                   |

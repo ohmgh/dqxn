@@ -22,7 +22,54 @@ Type-safe routes via `sealed interface Route` with `@Serializable`:
 | `ProviderSetup(providerId)` | Schema-driven provider setup wizard |
 | `Diagnostics(...)` | Device connection diagnostics |
 
-Confirmation dialogs use composable state (`var showConfirm by remember`), not navigation destinations. Permission requests are side-effects within the calling screen.
+Confirmation dialogs are screen-centered overlays via `OverlayNavHost` (`var showConfirm by remember`), not navigation destinations. Permission requests are side-effects within the calling screen.
+
+### Dashboard Bottom Bar
+
+Persistent auto-hiding chrome floating over the dashboard canvas:
+
+| State | Contents |
+|---|---|
+| Normal, 1 profile | Settings |
+| Normal, 2+ profiles | Profile icons, Settings |
+| Edit mode, 1 profile | Add Widget, Settings |
+| Edit mode, 2+ profiles | Add Widget, Profile icons (non-interactive), Settings |
+
+- Tap anywhere on canvas to reveal. Auto-hides after 3s inactivity
+- Floats over canvas — no layout shift on widgets underneath
+- Minimum 76dp touch targets
+- Profile icons: active profile highlighted, others dimmed. Tap icon to jump directly to that profile (one tap, no intermediary)
+
+### Profile Switching
+
+Each profile owns an independent `DashboardCanvas`. Profile switching is a page transition between separate canvases — the Android home screen page model.
+
+- **Gesture**: horizontal swipe on canvas in non-edit mode. Page transition animation (slide) between profile canvases
+- **Icon row**: in bottom bar, one icon per profile. Tap for direct access. Active icon highlighted
+- **Edit mode**: profile switching disabled. Horizontal gesture reserved for widget drag. Edits apply to current profile's canvas only
+- **Single profile**: no icons, no swipe affordance. User doesn't know profiles exist until they create one in Settings
+- **New profile**: clones the currently active dashboard. User edits from there — not from scratch
+- **Adding widgets**: defaults to current profile. "Add to all profiles" option in widget picker for shared widgets
+- **Auto-switching**: pack-provided `ProfileTrigger`s observe context (GPS speed, WiFi, time). When trigger fires, profile switches with page transition animation. Manual selection pauses auto-switching; "Resume auto" in profile settings re-enables
+- **Launcher integration**: profile-as-page model directly maps to home screen pages for future launcher pack
+
+### Profile Contracts
+
+```kotlin
+// :sdk:contracts
+interface ProfileDescriptor {
+    val profileId: String           // {packId}:{name} — e.g., "driving:driving", "home:away"
+    val displayName: String
+    val icon: ImageVector?
+    val activationTrigger: ProfileTrigger?  // null = manual-only
+}
+
+interface ProfileTrigger {
+    fun observe(): Flow<Boolean>    // true = this profile should activate
+}
+```
+
+Packs register `ProfileDescriptor`s via Hilt multibinding (same pattern as widgets/providers). KSP validates `profileId` format. The shell manages activation, layout storage, and UI. Pack-provided triggers fire profile switches. User can override automatic activation (manual profile lock).
 
 ### Animation Profiles
 

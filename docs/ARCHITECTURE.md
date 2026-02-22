@@ -149,7 +149,7 @@ No module other than `:core:firebase` and `:app` depends on Firebase SDKs. This 
 | Layer | Role | Key Types |
 |---|---|---|
 | **Presentation** | Stateless Compose renderers | `DashboardScreen`, `DashboardGrid`, `OverlayNavHost` |
-| **Coordination** | Each coordinator owns its own `StateFlow` slice | `LayoutCoordinator`, `ThemeCoordinator`, `EditModeCoordinator`, `WidgetBindingCoordinator`, `NotificationCoordinator` |
+| **Coordination** | Each coordinator owns its own `StateFlow` slice | `LayoutCoordinator`, `ThemeCoordinator`, `EditModeCoordinator`, `WidgetBindingCoordinator`, `NotificationCoordinator`, `ProfileCoordinator` |
 | **Domain** | Pure logic, no Android imports | `ThemeAutoSwitchEngine`, `GridPlacementEngine`, `SetupEvaluator`, `EntitlementManager` |
 | **Plugin / Pack** | Runtime-discovered extensions | `DataProvider<T>` → `Flow<T>`, `WidgetRenderer` → `@Composable Render`, `ThemeProvider` |
 | **Data** | Document-style persistence | `LayoutDataStore` (Proto), `UserPreferencesRepository`, `PairedDeviceStore` (Proto), `ProviderSettingsStore` |
@@ -178,15 +178,21 @@ The dashboard is **not a navigation destination**. It lives as a persistent laye
 
 ```
 Box {
-    Layer 0: DashboardLayer (always present, live canvas)
+    Layer 0: DashboardLayer (always present, per-profile unbounded canvas with horizontal swipe page transitions)
+    Layer 0.25: BottomBar (settings, profile dots, add-widget — auto-hiding, floats over canvas)
+    Layer 0.5: NotificationBannerHost (non-critical banners + toasts)
     Layer 1: OverlayNavHost (settings, pickers, dialogs)
+    Layer 1.5: CriticalBannerHost (safe mode — above overlays)
 }
 ```
+
+Each profile owns an independent unbounded canvas — widgets can exist at any grid coordinate. The viewport acts as a rendering window. Configuration boundaries (fold states × orientation) are shown in edit mode. Profile switching uses horizontal swipe between canvases (Android home screen page model). New profiles clone the current dashboard.
 
 Benefits:
 - Dashboard state never destroyed on navigation
 - Overlays stack visually on top
 - Suspendable routes pause dashboard state collection to reduce CPU — identified via **type-safe route matching**, not string comparison
+- Unbounded canvas preserves widget positions across all display configurations — smaller viewports render a subset, larger viewports reveal more
 
 ## Detailed Architecture
 

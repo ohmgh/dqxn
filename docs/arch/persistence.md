@@ -7,9 +7,19 @@
 Structured data uses Proto DataStore for type-safe, binary-efficient persistence:
 
 ```protobuf
-message DashboardCanvas {
+message DashboardStore {
   int32 schema_version = 1;
-  repeated SavedWidget widgets = 2;
+  repeated ProfileCanvas profiles = 2;   // each profile owns its own canvas
+  string active_profile_id = 3;          // empty = default profile
+  bool auto_switch_enabled = 4;
+}
+
+message ProfileCanvas {
+  string profile_id = 1;                 // "default", "user:{name}", or "{packId}:{name}"
+  string display_name = 2;
+  int32 sort_order = 3;                  // determines swipe order (left-to-right)
+  bool auto_switch_enabled = 4;          // whether this profile's trigger is active
+  repeated SavedWidget widgets = 5;      // independent widget set per profile
 }
 
 message SavedWidget {
@@ -61,7 +71,7 @@ This pattern applies to ALL DataStore instances. Each corruption handler resets 
 
 | Store | Type | Contents |
 |---|---|---|
-| `dashboard_layouts` | Proto | `DashboardCanvas` (widget list + schema version) |
+| `dashboard_store` | Proto | `DashboardStore` (profiles with independent canvases, active profile, schema version) |
 | `paired_devices` | Proto | `Map<definitionId, List<PairedDeviceMetadata>>` |
 | `custom_themes` | Proto | User-created theme definitions |
 | `user_preferences` | Preferences | Device config, onboarding, themes, status bar, demo mode |
