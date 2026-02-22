@@ -121,7 +121,7 @@ for (command in commandChannel) {
 
 A coordinator throwing an unhandled exception must NOT kill the command processing loop. All disk I/O (DataStore reads/writes, Proto serialization) MUST run on `Dispatchers.IO`.
 
-One-shot effects via `Channel<DashboardEffect>` (navigation triggers, haptics). Toasts route through `NotificationCoordinator` — not `DashboardEffect` — because they need driving-mode gating, priority ordering, and lifecycle management that the raw channel cannot provide.
+One-shot effects via `Channel<DashboardEffect>` (navigation triggers, haptics). Toasts route through `NotificationCoordinator` — not `DashboardEffect` — because they need priority ordering and lifecycle management that the raw channel cannot provide.
 
 ## Per-Widget Data Binding
 
@@ -289,7 +289,6 @@ data class BatterySnapshot(
 // Pack-local subtypes in :pack:free: SolarSnapshot, WeatherSnapshot
 // Pack-local subtypes in :pack:plus: TripSnapshot, MediaSnapshot
 // OBU-specific subtypes in :pack:sg-erp2: ObuTrafficSnapshot, BalanceSnapshot, etc.
-// Core subtypes in :core:driving:snapshots: DrivingSnapshot
 ```
 
 The KSP processor (`@DashboardSnapshot`) enforces: no duplicate `dataType` strings, `@Immutable` annotation required, only `val` properties, implements `DataSnapshot`.
@@ -301,7 +300,6 @@ The `KClass`-keyed API (`snapshot<SpeedSnapshot>()`, `compatibleSnapshots = setO
 ```
 :pack:free:snapshots     — SpeedSnapshot, AccelerationSnapshot, BatterySnapshot, TimeSnapshot,
                            OrientationSnapshot, SpeedLimitSnapshot, AltitudeSnapshot, AmbientLightSnapshot
-:core:driving:snapshots  — DrivingSnapshot
 ```
 
 Each snapshot sub-module:
@@ -326,7 +324,6 @@ plugins {
 }
 dependencies {
     implementation(project(":pack:free:snapshots"))       // SpeedSnapshot, etc.
-    implementation(project(":core:driving:snapshots"))    // DrivingSnapshot
     // implementation(project(":pack:free"))              // ❌ still forbidden
 }
 ```
@@ -339,7 +336,6 @@ dependencies {
 | Location | Example Types | When |
 |---|---|---|
 | `:pack:free:snapshots` | `SpeedSnapshot`, `BatterySnapshot`, `TimeSnapshot` | Platform-level data consumed by multiple packs |
-| `:core:driving:snapshots` | `DrivingSnapshot` | Shell safety gate + optional pack widget display |
 | `:pack:free` (local) | `SolarSnapshot` | Only consumed by free pack's solar widget |
 | `:pack:plus` (local) | `TripSnapshot` | Only consumed by plus pack's trip widget |
 | `:pack:sg-erp2` (local) | `ObuTrafficSnapshot`, `BalanceSnapshot` | Regional pack, no cross-boundary consumers |
@@ -456,7 +452,6 @@ When a widget's last data snapshot exceeds its staleness threshold, `WidgetStatu
 | `ThemeAutoSwitchEngine` | `@Singleton` | Eager sharing via `SharingStarted.Eagerly`, ready at cold start |
 | `EntitlementManager` | `@Singleton` | Shared across all gated components |
 | `ThermalManager` | `@Singleton` | System-level, survives config changes |
-| `DrivingModeDetector` | `@Singleton` | Continuous GPS monitoring |
 | `DqxnLogger` / sinks | `@Singleton` | Available before ViewModel creation |
 | `CrashReporter` | `@Singleton` | Bound to Firebase impl via `:core:firebase` Hilt module (includes metadata methods: `setKey`, `setUserId`) |
 | `ErrorReporter` | `@Singleton` | Wraps `CrashReporter`, deduplication decorator |

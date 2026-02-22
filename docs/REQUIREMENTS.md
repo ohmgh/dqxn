@@ -4,7 +4,7 @@
 
 ## 1. Product Vision
 
-DQXN is a modular automotive dashboard platform for Android. A phone or tablet mounted in a vehicle displays real-time telemetry through a fully configurable widget grid. The platform uses a pack-based architecture where feature packs (widgets, themes, data providers) are decoupled from the dashboard shell, enabling regional feature sets, premium gating, and first-party modular extensibility.
+DQXN is a modular dashboard platform for Android. Real-time data displayed through a fully configurable widget grid. Use cases include automotive (phone/tablet mounted in a vehicle), desk/bedside displays, home automation panels, and finance dashboards. The platform uses a pack-based architecture where feature packs (widgets, themes, data providers) are decoupled from the dashboard shell, enabling regional feature sets, premium gating, and first-party modular extensibility.
 
 **Tagline**: "Life is a dash. Make it beautiful."
 
@@ -124,7 +124,7 @@ Reactive data sources with declarative setup.
 | F3.12 | Weather polling: weather data refreshed every 30 minutes when widget visible. Last-known data displayed with age timestamp when offline. Respect HTTP cache headers | Must     |
 | F3.13 | Provider health dashboard: Settings → Provider Health showing all active providers, connection state, last update timestamp, error descriptions, retry actions | Must     |
 | F3.14 | Provider setup failure UX: failed setup shows inline error with retry. Dismissed wizard → widget shows "Setup Required" overlay with tap-to-setup. Permanently denied permissions → direct to system settings | Must     |
-| F3.15 | Progressive error disclosure with user-facing messages. All `WidgetStatusCache` states map to specific user-facing strings. Driving mode: status icon + color only. Parked mode: icon + message + tap to diagnose. Messages are user-friendly (e.g., "GPS signal lost — move to an open area"), not developer-oriented (no exception messages). All error strings in Android string resources (localizable) | Must     |
+| F3.15 | Progressive error disclosure with user-facing messages. All `WidgetStatusCache` states map to specific user-facing strings. Icon + message + tap to diagnose. Messages are user-friendly (e.g., "GPS signal lost — move to an open area"), not developer-oriented (no exception messages). All error strings in Android string resources (localizable) | Must     |
 
 ### F4: Theme System
 
@@ -137,7 +137,7 @@ Visual customization with auto-switching.
 | F4.3  | Dual-theme model (separate light/dark selections)                                             | Must     |
 | F4.4  | 5 auto-switch modes: LIGHT, DARK, SYSTEM, SOLAR_AUTO, ILLUMINANCE_AUTO                       | Must     |
 | F4.5  | `ThemeAutoSwitchEngine` with eager sharing (ready at cold start)                              | Must     |
-| F4.6  | Theme preview: live preview before committing, reverts on cancel. Preview times out after 60 seconds with toast "Theme preview ended." Entering driving mode immediately reverts uncommitted previews | Must     |
+| F4.6  | Theme preview: live preview before committing, reverts on cancel. Preview times out after 60 seconds with toast "Theme preview ended." | Must     |
 | F4.7  | Theme Studio — create/edit custom themes (max 12)                                             | Should   |
 | F4.8  | Gradient editor (vertical, horizontal, linear, radial, sweep; 2-5 stops)                      | Should   |
 | F4.9  | Preview-regardless-of-entitlement, gate-at-persistence                                        | Must     |
@@ -236,19 +236,21 @@ Extended visual customization.
 | F9.3 | TTS readout for alerts                                       | Should   |
 | F9.4 | Custom alert sound URIs                                      | Should   |
 
-### F10: Driving Safety
+### F10: Driving Safety (Deferred Post-Launch)
+
+> Driving mode is deferred to post-launch. DQXN is a general-purpose dashboard platform — driving safety is a context-specific feature, not a shell concern. When implemented, driving detection providers will be supplied by packs (GPS speed, OBD-II, etc.), users choose the provider per-widget via standard data binding and at the system level via dashboard settings (none or pick a provider).
 
 | Req   | Description                                                                                   | Priority |
 |-------|-----------------------------------------------------------------------------------------------|----------|
-| F10.1 | Motion detection via GPS speed or paired device speed data                                    | Must     |
-| F10.2 | While in motion: disable edit mode, widget picker, settings, Theme Studio                     | Must     |
-| F10.3 | While in motion: allow only tap interactions on interactive widgets (Shortcuts, Media Controller) | Must     |
-| F10.4 | Minimum touch target size: 76dp for all interactive elements (per Android Automotive Design Guidelines) | Must     |
-| F10.5 | Speed limit alert with configurable offset (amber at +5, red at +10, user-configurable)       | Must     |
-| F10.6 | Parked-mode detection: speed = 0 for >5s unlocks full interaction                             | Must     |
+| F10.1 | Motion detection via pack-supplied driving providers (GPS speed, OBD-II, etc.)                | Deferred |
+| F10.2 | While in motion: disable edit mode, widget picker, settings, Theme Studio                     | Deferred |
+| F10.3 | While in motion: allow only tap interactions on interactive widgets (Shortcuts, Media Controller) | Deferred |
+| F10.4 | Minimum touch target size: 76dp for all interactive elements                                  | Must     |
+| F10.5 | Speed limit alert with configurable offset (amber at +5, red at +10, user-configurable)       | Deferred |
+| F10.6 | Parked-mode detection: speed = 0 for >5s unlocks full interaction                             | Deferred |
 | F10.7 | Adaptive rendering: reduce frame rate to 30fps when stationary, disable glow effects under thermal pressure | Should   |
-| F10.8 | Parking location save — GPS fix on app exit, deep-link to Maps for navigation back            | Should   |
-| F10.9 | Quick theme toggle: theme mode cycle button on floating bar (accessible while driving — single tap, no distraction). Cycles: current light → current dark → auto | Must     |
+| F10.8 | Parking location save — GPS fix on app exit, deep-link to Maps for navigation back            | Deferred |
+| F10.9 | Quick theme toggle: theme mode cycle button on floating bar (single tap, no distraction)       | Must     |
 
 ### F11: Onboarding
 
@@ -323,7 +325,7 @@ Extended visual customization.
 | NF12 | Thermal headroom monitoring via `PowerManager.getThermalHeadroom()` with proactive degradation  |
 | NF13 | Thermal degradation tiers: Normal (60fps, full effects) → Warm (45fps) → Degraded (30fps, no glow) → Critical (24fps, reduced effects) |
 | NF14 | Sensor batching for non-critical sensors (compass, ambient light) to reduce SoC wakeups        |
-| NF37 | Background battery: < 1% per hour with BLE service active, < 0.1% with no connections. GPS uses passive provider when backgrounded. Driving detection pauses when not foreground |
+| NF37 | Background battery: < 1% per hour with BLE service active, < 0.1% with no connections. GPS uses passive provider when backgrounded |
 
 ### Reliability
 
@@ -391,7 +393,7 @@ Extended visual customization.
 | Req  | Description                                                                                    |
 |------|------------------------------------------------------------------------------------------------|
 | NF30 | WCAG 2.1 AA contrast ratios for critical text (speed, time, speed limit)                       |
-| NF31 | Minimum text size for driving-distance readability (speed: 48sp+, secondary info: 24sp+)       |
+| NF31 | Minimum text size for at-a-glance readability (speed: 48sp+, secondary info: 24sp+)       |
 | NF32 | TalkBack support for setup/settings flows. Dashboard rendering is explicitly excluded from screen reader support — real-time updating Canvas content at 60fps is fundamentally incompatible with screen reader patterns. Per-widget `accessibilityDescription` (F2.19) provides read-only value announcements on demand |
 | NF33 | System font scale respected in settings UI (dashboard widgets use fixed sizes for layout stability) |
 | NF39 | Reduced motion: when system `animator_duration_scale` = 0, disable wiggle, replace spring with instant transitions, disable pixel-shift. Glow remains |
@@ -411,7 +413,7 @@ Extended visual customization.
 |------|------------------------------------------------------------------------------------------------|
 | NF-L1 | Phone calls: dashboard pauses state collection, resumes on return. BLE connection maintained via foreground service. `FLAG_KEEP_SCREEN_ON` behavior standard (released when Activity stops) |
 | NF-L2 | In-app updates: Google Play In-App Updates API — IMMEDIATE for critical bugs, FLEXIBLE for features |
-| NF-L3 | In-app review: Google Play In-App Review API. Trigger after 3+ sessions, 1+ layout customization, no crash in current session. Never while driving. Frequency cap: once per 90 days |
+| NF-L3 | In-app review: Google Play In-App Review API. Trigger after 3+ sessions, 1+ layout customization, no crash in current session. Frequency cap: once per 90 days |
 
 ### Localization
 
@@ -529,7 +531,7 @@ Max 12. Created via Theme Studio (requires Themes Pack entitlement). Editable: n
 
 ### Widget Settings
 
-Three-page pager (only available when parked):
+Three-page pager:
 - **Feature page**: Schema-driven controls (toggles, button groups, dropdowns, hub route pickers)
 - **Data Source page**: Pick which provider feeds this widget; shows available providers with status
 - **Info page**: Widget type, pack, description, entitlement requirements; shared element transition to PackBrowser
@@ -551,14 +553,9 @@ Three-page pager (only available when parked):
 5. Tapping widget content area unfocuses; tapping blank space or Edit button exits edit mode
 6. Cancel discards all changes; confirm persists via debounced save
 
-### Driving Mode
+### Driving Mode (Deferred Post-Launch)
 
-1. Speed > 0 for 3s → driving mode activates
-2. Edit button, widget picker, settings, Theme Studio become inaccessible
-3. Interactive widgets (Shortcuts, Media Controller) remain tappable with 76dp+ targets
-4. Quick theme toggle on floating bar remains accessible (single tap cycle: light → dark → auto)
-5. Speed = 0 for 5s → parked mode, full interaction restored
-6. Speed alerts (speed limit warning) active with configured alert mode (silent/vibrate/sound)
+See F10. Driving mode is deferred to post-launch. When implemented, driving detection will be pack-provided via standard data binding, not a shell-level safety gate.
 
 ## 9. Settings
 
@@ -645,3 +642,4 @@ These are acknowledged gaps deferred to future versions:
 | Widget grouping/locking          | Post-launch power-user feature                                                                   |
 | Multi-select in edit mode        | Individual ops sufficient for v1                                                                 |
 | High-contrast dedicated mode     | Free Slate theme designed for high contrast                                                      |
+| Driving safety features          | Deferred post-launch. DQXN is a general-purpose dashboard platform. When implemented, driving detection providers will come from packs via standard data binding, not as a shell-level concern |

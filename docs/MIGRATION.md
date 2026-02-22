@@ -99,7 +99,7 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 - `WidgetRenderer` — new signature with `ImmutableMap<String, Any>` settings, no `widgetData` param
 - `DataProvider<T : DataSnapshot>` — new generic contract, `provideState(): Flow<T>` compiler-enforced to match `snapshotType: KClass<T>`
 - `DataProviderInterceptor` — interface for chaos/debug interception of provider flows, registered via Hilt multibinding
-- `DataSnapshot` non-sealed interface (base only — no concrete subtypes here). `@DashboardSnapshot` annotation for KSP validation. Concrete subtypes live with their producing module: free pack snapshots in `:pack:free`, OBU snapshots in `:pack:sg-erp2`, `DrivingSnapshot` in `:core:driving`. If a second pack needs a snapshot from another pack, extract it to a snapshot sub-module (`:pack:{id}:snapshots`) — never promote to `:sdk:contracts`
+- `DataSnapshot` non-sealed interface (base only — no concrete subtypes here). `@DashboardSnapshot` annotation for KSP validation. Concrete subtypes live with their producing module: free pack snapshots in `:pack:free`, OBU snapshots in `:pack:sg-erp2`. If a second pack needs a snapshot from another pack, extract it to a snapshot sub-module (`:pack:{id}:snapshots`) — never promote to `:sdk:contracts`
 - `WidgetData` with `KClass`-keyed multi-slot: `snapshot<T : DataSnapshot>()`
 - `WidgetContext`, `WidgetDefaults`, `WidgetStyle`
 - `SettingDefinition<T>` sealed interface (port + tighten types)
@@ -211,12 +211,6 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 - `Window.setFrameRate()` API 34+, emission throttling API 31-33
 - `FakeThermalManager` for chaos injection — controllable `MutableStateFlow<ThermalLevel>`
 
-### `:core:driving` (net-new)
-
-- `DrivingModeDetector` — speed-based safety gate (old `:feature:driving` was Android Auto cruft, not this)
-- Implements `DataProvider<DrivingSnapshot>` emitting `DrivingSnapshot`
-- Safety gating interface for shell subscription
-
 ### `:data`
 
 - Proto DataStore schemas (`.proto` files for layouts, paired devices, custom themes)
@@ -232,9 +226,9 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 - Implements observability + analytics interfaces
 - Only imported by `:app`
 
-**Ported from old:** `ThermalManager`, `RenderConfig`, `UserPreferencesRepository` (rewritten for Proto), `LayoutDataStore` (rewritten from JSON-in-Preferences to Proto DataStore). Theme JSON loading. `:core:driving` is built from scratch — old `:feature:driving` was Android Auto scaffolding, not a driving mode detector.
+**Ported from old:** `ThermalManager`, `RenderConfig`, `UserPreferencesRepository` (rewritten for Proto), `LayoutDataStore` (rewritten from JSON-in-Preferences to Proto DataStore). Theme JSON loading.
 
-**Tests:** Thermal state transition tests, driving mode tests, DataStore corruption recovery tests, layout serialization round-trip tests. `FakeThermalManager` flow emission tests.
+**Tests:** Thermal state transition tests, DataStore corruption recovery tests, layout serialization round-trip tests. `FakeThermalManager` flow emission tests.
 
 ---
 
@@ -287,7 +281,6 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 | `set-theme` | `ThemeCoordinator` | Phase 7 |
 | `set-data-source` | `BindingCoordinator` | Phase 7 |
 | `set-setting` | Per-widget settings | Phase 7 |
-| `set-driving-mode` | `DrivingModeDetector` | Phase 7 |
 | `get-layout` | `LayoutCoordinator` | Phase 7 |
 | `get-widget-status` | `WidgetStatusCoordinator` | Phase 7 |
 | `get-entitlements` | `EntitlementRegistry` | Phase 7 |
@@ -369,7 +362,7 @@ From this point forward, the agent can autonomously debug on a connected device:
 
 **Tests:**
 - Coordinator unit tests for each of the five coordinators
-- Safety-critical tests: 4-crash/60s → safe mode trigger, driving mode gate (edit mode / settings / widget picker disabled), entitlement revocation → auto-revert
+- Safety-critical tests: 4-crash/60s → safe mode trigger, entitlement revocation → auto-revert
 - `DashboardTestHarness` DSL tests with `HarnessStateOnFailure` watcher
 - Grid layout tests (compose-ui-test + Robolectric): widget placement, overlap rejection, viewport filtering
 - Drag/resize interaction tests: `graphicsLayer` offset animation, snap-to-grid
@@ -510,7 +503,7 @@ Mutation kill rate > 80% for critical modules (deferred to post-launch — track
 
 ### Integration Testing
 
-- Full E2E: launch → load layout → bind data → render widgets → edit mode → add/remove/resize → theme switch → driving mode gate
+- Full E2E: launch → load layout → bind data → render widgets → edit mode → add/remove/resize → theme switch
 - CI chaos gate: deterministic `seed = 42` chaos profile → `assertChaosCorrelation()` passes
 - CI diagnostic artifact collection: `adb pull` diagnostic snapshots + `list-diagnostics` + `dump-health` as CI artifacts on failure
 - Agentic debug loop validation: inject fault → detect via `list-diagnostics` → investigate via `diagnose-crash` → verify via `dump-health` after fix
@@ -527,7 +520,7 @@ Mutation kill rate > 80% for critical modules (deferred to post-launch — track
 - JSON-in-Preferences layout storage (replaced by Proto DataStore)
 - ~~`app.dqxn.android` package namespace~~ — **retained**, no namespace migration
 - Dashboard's direct pack imports (inverted — shell is pack-blind)
-- `:feature:driving` (Android Auto cruft — `:core:driving` is net-new)
+- `:feature:driving` (Android Auto cruft — not applicable to general-purpose dashboard)
 - Any `var` in data classes, any `GlobalScope`, any `runBlocking` outside tests/debug-CP
 
 ---

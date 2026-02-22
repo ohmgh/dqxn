@@ -69,7 +69,7 @@ data class DataTypeDescriptor(
 )
 ```
 
-Matching between widgets and providers is by `KClass` equality on snapshot types. A widget declaring `compatibleSnapshots = setOf(SpeedSnapshot::class)` binds to any provider whose `snapshotType == SpeedSnapshot::class`, regardless of which pack it comes from. Cross-pack `KClass` visibility is enabled by snapshot sub-modules (`:pack:*:snapshots`, `:core:*:snapshots`) — see [state-management.md](state-management.md#snapshot-sub-modules).
+Matching between widgets and providers is by `KClass` equality on snapshot types. A widget declaring `compatibleSnapshots = setOf(SpeedSnapshot::class)` binds to any provider whose `snapshotType == SpeedSnapshot::class`, regardless of which pack it comes from. Cross-pack `KClass` visibility is enabled by snapshot sub-modules (`:pack:*:snapshots`) — see [state-management.md](state-management.md#snapshot-sub-modules).
 
 ### Snapshot Type Validation
 

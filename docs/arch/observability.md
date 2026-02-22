@@ -123,7 +123,6 @@ object LogTags {
     val BINDING = LogTag("BINDING")
     val EDIT_MODE = LogTag("EDIT_MODE")
     val ENTITLEMENT = LogTag("ENTITLEMENT")
-    val DRIVING = LogTag("DRIVING")
     val NAVIGATION = LogTag("NAVIGATION")
     val STARTUP = LogTag("STARTUP")
     val WIDGET_RENDER = LogTag("WIDGET_RENDER")
@@ -184,7 +183,7 @@ class SamplingLogSink(
 
 ### Breadcrumb Strategy
 
-- **Always**: Event dispatch, state transitions (thermal, driving, connection FSM), widget add/remove, theme change, provider bind/unbind, overlay navigation
+- **Always**: Event dispatch, state transitions (thermal, connection FSM), widget add/remove, theme change, provider bind/unbind, overlay navigation
 - **Never**: Per-frame metrics, sensor data emissions, draw-phase logs
 - **Conditional**: Errors/warnings always; debug-level only when diagnostics mode is active
 
@@ -515,8 +514,8 @@ class CrashContextProvider @Inject constructor(
                 crashReporter.setKey("thermal_level", level.name)
             }
         }
-        // Also tracks: widget_count, driving_state, jank_percent,
-        // active_providers, edit_mode, current_theme, memory_mb
+        // Also tracks: widget_count, jank_percent, active_providers,
+        // edit_mode, current_theme, memory_mb
     }
 }
 ```

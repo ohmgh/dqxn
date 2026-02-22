@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-DQXN is a single-activity Android dashboard platform that renders real-time telemetry on a fully configurable widget grid. A phone or tablet mounted in a vehicle displays speed, time, compass, ambient light, solar position, and data from feature packs — all through a modular, pack-based architecture.
+DQXN is a single-activity Android dashboard platform that renders real-time data on a fully configurable widget grid. Displays speed, time, compass, ambient light, solar position, and data from feature packs — all through a modular, pack-based architecture. Use cases include automotive, desk/bedside displays, home automation, and finance dashboards.
 
 Packs (widgets, themes, data providers) are fully decoupled from the dashboard shell. Packs know nothing about the shell; the shell discovers packs at runtime via Hilt multibinding. This enables regional feature sets, premium gating, and first-party modular extensibility without touching the core. All packs are compiled modules — there is no runtime plugin loading.
 
@@ -45,8 +45,6 @@ android/
 ├── core/                         # Shell internals (packs never depend on these)
 │   ├── design/                   # Theme tokens, typography, spacing, shared overlay composables
 │   ├── thermal/                  # ThermalManager, RenderConfig, adaptive frame rate
-│   ├── driving/                  # DrivingStateDetector — platform safety gate + DataProvider (DrivingSnapshot)
-│   │   └── snapshots/            # DrivingSnapshot — cross-boundary access for packs and shell
 │   ├── firebase/                 # Firebase implementations (Crashlytics, Analytics, Perf) — sole Firebase dependency point
 │   └── agentic/                  # Agentic command handlers + annotations (debugImplementation only)
 ├── codegen/                      # KSP processors (build-time only)
@@ -78,29 +76,28 @@ Convention plugins enforce shared defaults across all modules: compileSdk 36, mi
 
 ### Module Dependency Rules
 
-Packs depend on `:sdk:*` and snapshot sub-modules (`:pack:*:snapshots`, `:core:*:snapshots`) only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. Discovery is pure runtime via Hilt `Set<T>` multibinding.
+Packs depend on `:sdk:*` and snapshot sub-modules (`:pack:*:snapshots`) only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. Discovery is pure runtime via Hilt `Set<T>` multibinding.
 
 ```
 :app
   → :feature:* (dashboard, settings, diagnostics, onboarding)
   → :pack:* (widget/provider/theme implementations)
   → :sdk:* (contracts, common, ui, observability, analytics)
-  → :core:* (design, thermal, driving, firebase)
+  → :core:* (design, thermal, firebase)
   → :core:agentic (debugImplementation only)
   → :data (DataStore)
 
 :pack:*
   → :sdk:* (enforced by dqxn.pack convention plugin + validation task)
-  → :pack:*:snapshots, :core:*:snapshots (cross-boundary snapshot types only)
+  → :pack:*:snapshots (cross-boundary snapshot types only)
 
-:pack:*:snapshots, :core:*:snapshots
+:pack:*:snapshots
   → :sdk:contracts only (pure Kotlin @DashboardSnapshot data classes, no Android/Compose)
 
 :feature:dashboard
   → :sdk:*
   → :core:design
   → :core:thermal
-  → :core:driving:snapshots
   → :data
 
 :feature:settings
@@ -116,13 +113,6 @@ Packs depend on `:sdk:*` and snapshot sub-modules (`:pack:*:snapshots`, `:core:*
 :feature:onboarding
   → :sdk:*
   → :data
-
-:core:driving
-  → :core:driving:snapshots
-  → :sdk:contracts, :sdk:common, :sdk:observability
-
-:core:driving:snapshots
-  → :sdk:contracts
 
 :core:firebase
   → :sdk:observability (CrashReporter, ErrorReporter interfaces)
@@ -209,4 +199,4 @@ Benefits:
 | [Persistence](arch/persistence.md) | Proto DataStore, corruption handling, schema migration, preset system, R8 rules |
 | [Testing](arch/testing.md) | Test infrastructure, framework choices, test layers, CI gates, agentic validation pipeline, chaos testing, E2E protocol |
 | [Build System](arch/build-system.md) | Convention plugins, lint rules, agentic framework, diagnostic commands, chaos injection, CI configuration |
-| [Platform Integration](arch/platform.md) | Navigation, driving mode, alerts & notification architecture, security, permissions |
+| [Platform Integration](arch/platform.md) | Navigation, alerts & notification architecture, security, permissions |

@@ -2,7 +2,7 @@
 
 ## Project
 
-DQXN — modular Android automotive dashboard. Phone/tablet in a vehicle shows real-time telemetry through configurable widgets on a grid canvas. Pack-based plugin architecture: packs register widgets, providers, and themes via contracts; the shell discovers them at runtime via Hilt multibinding.
+DQXN — modular Android dashboard platform. Displays real-time data through configurable widgets on a grid canvas. Use cases include automotive (phone/tablet mounted in a vehicle), desk/bedside displays, home automation panels, and finance dashboards. Pack-based plugin architecture: packs register widgets, providers, and themes via contracts; the shell discovers them at runtime via Hilt multibinding.
 
 Pre-launch greenfield. Source under `android/`. Package namespace: `app.dqxn.android`. Read `docs/ARCHITECTURE.md` for full technical design, `docs/REQUIREMENTS.md` for product requirements.
 
@@ -37,7 +37,7 @@ Full annotated tree in `docs/ARCHITECTURE.md` Section 3.
 
 ```
 sdk/      — contracts, common, ui, observability, analytics (pack API surface)
-core/     — design, thermal, driving (+ driving/snapshots), firebase, agentic (shell internals)
+core/     — design, thermal, firebase, agentic (shell internals)
 codegen/  — plugin, agentic (KSP, build-time only)
 data/     — Proto + Preferences DataStore, .proto schemas
 feature/  — dashboard, settings, diagnostics, onboarding
@@ -47,7 +47,7 @@ app/      — single-activity entry, DI assembly
 
 ## Module Dependency Rules
 
-**The single most important rule**: Packs depend on `:sdk:*` and snapshot sub-modules (`:pack:*:snapshots`, `:core:*:snapshots`) only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. If you're adding a dashboard or core import in a pack, the design is wrong. The `dqxn.pack` convention plugin auto-wires all allowed sdk dependencies — packs should not manually add `:sdk:*` project dependencies. Snapshot sub-module dependencies are declared explicitly per pack.
+**The single most important rule**: Packs depend on `:sdk:*` and snapshot sub-modules (`:pack:*:snapshots`) only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. If you're adding a dashboard or core import in a pack, the design is wrong. The `dqxn.pack` convention plugin auto-wires all allowed sdk dependencies — packs should not manually add `:sdk:*` project dependencies. Snapshot sub-module dependencies are declared explicitly per pack.
 
 Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference below.
 
@@ -55,19 +55,19 @@ Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference belo
 
 **When working in `:pack:{packId}`:**
 - CAN import from: `:sdk:contracts`, `:sdk:common`, `:sdk:ui`, `:sdk:observability`, `:sdk:analytics`
-- CAN import from: `:pack:*:snapshots`, `:core:*:snapshots` (cross-boundary snapshot types)
+- CAN import from: `:pack:*:snapshots` (cross-boundary snapshot types)
 - CANNOT import from: `:feature:*`, `:core:*`, `:data`, other packs (non-snapshot modules)
 - If you need something from dashboard → it belongs in `:sdk:contracts` as a contract
 - SDK dependencies are auto-wired by the `dqxn.pack` convention plugin; snapshot sub-module dependencies are declared explicitly
 
-**When working in `:pack:{packId}:snapshots` or `:core:{id}:snapshots`:**
+**When working in `:pack:{packId}:snapshots`:**
 - CAN import from: `:sdk:contracts` only
 - Pure Kotlin — no Android framework, no Compose, no business logic
 - Contains ONLY `@DashboardSnapshot`-annotated data classes
 - Uses `dqxn.snapshot` convention plugin
 
 **When working in `:feature:dashboard`:**
-- CAN import from: `:sdk:*`, `:core:design`, `:core:thermal`, `:core:driving:snapshots`, `:data`
+- CAN import from: `:sdk:*`, `:core:design`, `:core:thermal`, `:data`
 - CANNOT import from: any `:pack:*` module
 - If you need a widget-specific type → the design is wrong, use contracts
 
@@ -81,18 +81,12 @@ Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference belo
 - No Compose dependencies, no Android framework types (pure Kotlin + coroutines)
 - Exception: `@Composable` allowed in `WidgetRenderer.Render()` signature only
 
-**When working in `:core:driving`:**
-- CAN import from: `:core:driving:snapshots`, `:sdk:contracts`, `:sdk:common`, `:sdk:observability`
-- `DrivingSnapshot` lives in `:core:driving:snapshots` — packs and shell access it via that sub-module
-- Implements `DataProvider` (emits `DrivingSnapshot`) — the sole exception to "providers come from packs"
-- Shell subscribes permanently for safety gating; widgets optionally subscribe for display
-
 ### Compose Compiler Scope
 
 Convention plugins control which modules get the Compose compiler:
 - `dqxn.android.compose` — modules WITH UI: `:app`, `:feature:*`, `:sdk:ui`, `:core:design`
-- `dqxn.snapshot` — snapshot sub-modules: `:pack:*:snapshots`, `:core:*:snapshots` (pure Kotlin, no Compose)
-- Modules WITHOUT Compose: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:driving`, `:core:firebase`, `:core:agentic`, `:codegen:*`, `:data`, `*:snapshots`
+- `dqxn.snapshot` — snapshot sub-modules: `:pack:*:snapshots` (pure Kotlin, no Compose)
+- Modules WITHOUT Compose: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:firebase`, `:core:agentic`, `:codegen:*`, `:data`, `*:snapshots`
 
 ## Critical Constraints
 
@@ -110,7 +104,7 @@ These are non-negotiable. Violations cause real performance/correctness issues.
 - **`derivedStateOf`**: Use for all computed values from state (filtered lists, theme display, aggregations). Prevents unnecessary recomposition when inputs change but output doesn't.
 - **Draw object caching**: `Path`, `Paint`, `Brush` via `remember` or `drawWithCache` — never allocate per frame
 - **Glow**: `RenderEffect.createBlurEffect()` (GPU shader) — NOT `BlurMaskFilter` with offscreen buffers
-- **Typed DataSnapshot**: `@DashboardSnapshot`-annotated subtypes per data type, 1:1 with provider boundaries (no `Map<String, Any>` boxing). Non-sealed `DataSnapshot` interface in `:sdk:contracts`; concrete subtypes live in snapshot sub-modules (`:pack:*:snapshots`, `:core:*:snapshots`) for cross-boundary access or pack-local for single-consumer types, validated by KSP. `WidgetData` uses `KClass`-keyed multi-slot delivery — `data.snapshot<SpeedSnapshot>()`. Target <4KB app-level allocation/frame (excluding Compose overhead). Total budget <64KB/frame.
+- **Typed DataSnapshot**: `@DashboardSnapshot`-annotated subtypes per data type, 1:1 with provider boundaries (no `Map<String, Any>` boxing). Non-sealed `DataSnapshot` interface in `:sdk:contracts`; concrete subtypes live in snapshot sub-modules (`:pack:*:snapshots`) for cross-boundary access or pack-local for single-consumer types, validated by KSP. `WidgetData` uses `KClass`-keyed multi-slot delivery — `data.snapshot<SpeedSnapshot>()`. Target <4KB app-level allocation/frame (excluding Compose overhead). Total budget <64KB/frame.
 - **Drag reordering**: Use `graphicsLayer` offset animation — NOT `movableContentOf` (wrong tool for same-parent reordering)
 - **Grid layout**: Use `Layout` composable with custom `MeasurePolicy` for absolute positioning — NOT `LazyLayout` (adds SubcomposeLayout overhead without benefit for viewport-sized grids)
 - **Dashboard lifecycle**: Layer 0 uses `collectAsState()` (no lifecycle awareness). Layer 1 overlays use `collectAsStateWithLifecycle()`. Manual pause/resume for CPU-heavy overlays.
@@ -249,10 +243,9 @@ data class SpeedSnapshot(
 - **Widget error isolation**: Each widget in a catch boundary (effects via `WidgetCoroutineScope`). Compose has NO composition-phase try/catch — mitigated by contract tests, crash count tracking, and safe mode fallback. Failed widget → fallback UI, never app crash.
 - **ConnectionStateMachine**: FSM with validated transitions. No ad-hoc `MutableStateFlow<ConnectionState>`.
 - **Thermal adaptation**: `ThermalManager` → `RenderConfig`. Glow disabled at DEGRADED, frame rate reduced via `Window.setFrameRate()` (API 34+) or data emission throttling (API 31-33).
-- **Driving mode**: `:core:driving` is both a platform safety gate and a `DataProvider` emitting `DrivingSnapshot`. Shell subscribes permanently for safety gating (edit mode / settings / widget picker disabled). Widgets optionally subscribe for display. Only tap interactions on interactive widgets while driving.
 - **Edge-to-edge**: `enableEdgeToEdge()` in onCreate. Dashboard draws behind system bars. Overlays respect `WindowInsets.systemBars`. Status bar toggle via `WindowInsetsControllerCompat`.
 - **Crash recovery**: >3 crashes in 60s → safe mode (clock widget only, reset banner).
-- **Notification separation**: Three independent surfaces — `NotificationCoordinator` (banners + toasts, `@ViewModelScoped`), `AlertSoundManager` (audio/haptic, `@Singleton` via `AlertEmitter` contract), `SystemNotificationBridge` (FGS + connection channels). Widget status overlays (`WidgetStatusCache`) are continuous per-widget state and intentionally excluded from notification coordination. Toasts route through `NotificationCoordinator`, NOT `DashboardEffect`.
+- **Notification separation**: Three independent surfaces — `NotificationCoordinator` (banners + toasts, `@ViewModelScoped`), `AlertSoundManager` (audio/haptic, `@Singleton` via `AlertEmitter` contract), `SystemNotificationBridge` (FGS + connection channels). Widget status overlays (`WidgetStatusCache`) are continuous per-widget state and intentionally excluded from notification coordination. Toasts route through `NotificationCoordinator`, NOT `DashboardEffect`. Priority levels (CRITICAL/HIGH/NORMAL/LOW) govern persistence, auto-dismiss timing, and ordering — no driving-mode conditional behavior at V1.
 
 ## Observability
 
@@ -284,7 +277,7 @@ data class SpeedSnapshot(
 - **State machine**: Exhaustive transitions + jqwik property-based testing
 - **Chaos**: `ProviderFault` sealed interface in `:sdk:contracts:testFixtures` — shared between `ChaosProviderInterceptor` (E2E) and `TestDataProvider` (unit). Correlation via `list-diagnostics since=`.
 - **Coordinators**: `DashboardTestHarness` DSL — `dashboardTest { dispatch(...); assertThat(...) }`
-- **Notifications**: Banner derivation from singleton state combinations (Turbine), driving-mode gating correctness per priority level, toast ordering under concurrent emission, safe mode banner lifecycle (CRITICAL persistence + action routing), `AlertSoundManager` audio focus interaction (MockK), HIGH re-derivation on driving→parked transition
+- **Notifications**: Banner derivation from singleton state combinations (Turbine), priority-based ordering and persistence, toast ordering under concurrent emission, safe mode banner lifecycle (CRITICAL persistence + action routing), `AlertSoundManager` audio focus interaction (MockK)
 - Shared test infra via `testFixtures` source sets. Factories: `testWidget()`, `testTheme()`, `testDataSnapshot()`.
 - **Agentic debug loop**: detect → investigate → reproduce → fix+verify → guard. `HarnessStateOnFailure` outputs JSON matching `diagnose-*` shapes.
 
@@ -364,14 +357,14 @@ Check `:codegen:plugin` and `:codegen:agentic` run as single pass. Verify `ksp.i
 | Why `:core:firebase`, not in `:sdk:observability`? | Would make Firebase a transitive dependency of every module. |
 | Why `ContentProvider`, not `BroadcastReceiver` for agentic? | BR runs on main thread. CP runs on binder thread — `runBlocking` is safe, no ANR risk. |
 | Why not unify widget status + notifications? | Widget status is continuous state (`StateFlow`), notifications are discrete events. Folding both into one system creates a god-object that owns per-widget status AND app-level alerts — violates decomposed-state principle. |
-| Why toasts through `NotificationCoordinator`, not `DashboardEffect`? | `DashboardEffect` is a raw `Channel` — no driving-mode gating, no priority ordering, no rate limiting. Toasts need all three. |
+| Why toasts through `NotificationCoordinator`, not `DashboardEffect`? | `DashboardEffect` is a raw `Channel` — no priority ordering, no rate limiting. Toasts need both. |
 | Why `AlertSoundManager` separate from `NotificationCoordinator`? | Scope mismatch (`@Singleton` vs `@ViewModelScoped`), independent triggers (speed limit alert is audio-only, no banner), and audio focus handling requires application-lifetime resources. |
 | Why no pack `NotificationEmitter` at V1? | Every V1 pack notification is already modeled as widget state (`WidgetStatusCache`) or shell-originated. Adding `NotificationEmitter` to `:sdk:contracts` is premature API commitment with no validated consumer. |
 | Why no notification rules engine? | Only ~5 rules at launch. Coordinator observes `@Singleton` state flows directly — not a standalone engine class injecting every subsystem. Domain knowledge stays in subsystem state representation (`bleAdapterOff`, `safeModeActive`); coordinator just maps state to banners. |
 | Why `AlertResult` return type? | Fire-and-forget `fire()` gives callers no feedback on audio focus denial, hardware unavailability, or user silence override. V2 pack alerts will need this to fall back to visual indicators. Changing a contract interface post-V1 is painful — return type costs nothing now. |
 | Why condition-keyed banner IDs? | Generated UUIDs cause dismiss+recreate flicker on state oscillation (BLE connection flapping). Condition keys (`"ble_adapter_off"`) enable stable animation, in-place updates, and targeted dismissal. |
 | Why split CRITICAL banner to Layer 1.5? | Compose `Box` draws later children on top. `NotificationBannerHost` at Layer 0.5 is occluded by `OverlayNavHost` at Layer 1. CRITICAL banners (safe mode) must be visible above overlays — a separate `CriticalBannerHost` after `OverlayNavHost` achieves this without `zIndex` hacks. |
-| Why re-derive HIGH banners on park? | A HIGH banner shown for 3s at highway speed is functionally invisible. Re-derivation on driving→parked transition is the same state projection as ViewModel recreation — no deferred queue, no new mechanism. |
 | Why `Channel.BUFFERED` for toasts? | Default rendezvous channel (capacity 0) suspends the producer when the consumer isn't collecting. Multiple simultaneous toasts (entitlement revocation + theme preview end) would block the emitting coroutine. Buffered capacity prevents silent producer suspension. |
+| Why defer driving mode? | DQXN is a general-purpose dashboard, not vehicle-first. Driving mode is a pack-provided feature, not a shell concern. Post-launch: packs supply driving detection providers (GPS speed, OBD-II), users choose per-widget and system-level via standard data binding and dashboard settings. |
 
 Full rationale in `docs/ARCHITECTURE.md`.

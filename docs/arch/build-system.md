@@ -24,7 +24,7 @@ id("dqxn.pack")
 id("dqxn.snapshot")
 
 // Modules WITHOUT Compose: :sdk:contracts, :sdk:common, :sdk:observability, :sdk:analytics,
-//   :core:thermal, :core:driving, :core:firebase, :core:agentic, :codegen:*, :data:*
+//   :core:thermal, :core:firebase, :core:agentic, :codegen:*, :data:*
 ```
 
 ## KSP Over KAPT
@@ -182,7 +182,6 @@ This avoids `Bundle.toString()` parsing ambiguity (nested JSON in `Result: Bundl
     "layout": { "widgetCount": 8, "widgets": [...] },
     "theme": { "current": "cyberpunk", "mode": "DARK", "preview": null },
     "thermal": { "level": "NORMAL", "headroom": 0.45, "targetFps": 60 },
-    "driving": false,
     "editMode": false,
     "safeMode": {
       "active": false,
@@ -228,7 +227,6 @@ errorReporter.reportWidgetCrash(
         lastSnapshot = SpeedSnapshot(speed = 65f, ...),
         settings = mapOf("showArcs" to "true", "speedUnit" to "KMH"),
         thermalLevel = ThermalLevel.NORMAL,
-        drivingState = false,
     ),
 )
 ```
@@ -419,7 +417,6 @@ data class WidgetExpectations(
       "thermalLevel": "NORMAL",
       "thermalHeadroom": 0.45,
       "safeMode": false,
-      "drivingState": false,
       "widgetCount": 12,
       "healthyWidgetCount": 10,
       "recentCrashes": 0

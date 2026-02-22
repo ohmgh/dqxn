@@ -1,6 +1,6 @@
 # Platform Integration
 
-> Navigation, driving mode, alerts, security requirements, and permissions.
+> Navigation, alerts, security requirements, and permissions.
 
 ## Navigation
 
@@ -50,29 +50,6 @@ Android 14+ predictive back fully supported:
 - Confirmation dialogs in edit mode intercept back for save/discard prompt
 - Dashboard Layer 0 does not consume back
 
-## Driving Mode
-
-`:core:driving` provides motion detection, safety gating, and driving state as a data source. It implements `DataProvider` and emits `DrivingSnapshot` — the sole exception to the rule that providers come from packs. This exception exists because driving state is a platform-level safety concern, not a pack feature.
-
-```kotlin
-class DrivingModeProvider : DataProvider {
-    override val typeId = "core:driving"
-    override val snapshotType = DrivingSnapshot::class
-
-    // Emits DrivingSnapshot with isDriving, speed, duration
-    // Speed > 0 for 3s -> driving
-    // Speed = 0 for 5s -> parked
-}
-```
-
-The shell permanently subscribes to `DrivingSnapshot` for safety gating — this subscription is never unbound. Widgets may optionally subscribe to `DrivingSnapshot` for display purposes (e.g., showing driving duration) via standard data binding, the same as any other snapshot type.
-
-When `isDriving == true`:
-- Edit mode disabled (button hidden, long-press suppressed)
-- Widget picker, settings, Theme Studio inaccessible
-- Interactive widgets (Shortcuts tap, Media Controller) remain functional
-- All touch targets enforce 76dp minimum
-
 ## Alerts & Notifications
 
 DQXN has three distinct notification surfaces, each with different lifetimes and consumer patterns. A fourth surface — widget status overlays (`WidgetStatusCache`) — is continuous per-widget state and intentionally excluded from notification coordination (see [State Management](state-management.md)).
@@ -90,7 +67,6 @@ DQXN has three distinct notification surfaces, each with different lifetimes and
               │ NotificationCoordinator │  @ViewModelScoped
               │                        │  feature:dashboard
               │ • Priority ordering    │
-              │ • Driving-mode gating  │
               │ • Active banner state  │
               │ • Toast delivery       │
               │ • Auto-dismiss timers  │
@@ -147,10 +123,10 @@ sealed interface InAppNotification {
 }
 
 enum class NotificationPriority {
-    CRITICAL,  // thermal shutdown, safe mode — always shown, even driving
-    HIGH,      // provider batch disconnect — shown while driving, auto-dismiss shortened
-    NORMAL,    // entitlement change, layout reset — suppressed while driving
-    LOW,       // background info — deferred until parked
+    CRITICAL,  // thermal shutdown, safe mode — always shown
+    HIGH,      // provider batch disconnect — shown, auto-dismiss shortened
+    NORMAL,    // entitlement change, layout reset
+    LOW,       // background info
 }
 
 @Immutable
@@ -202,19 +178,6 @@ scope.launch {
 ```
 
 Action routing via Channel + ID dispatch (not callback lambdas) keeps the banner type serializable and avoids capturing mutable state in the UI layer.
-
-**Driving-mode gating**: Observes `DrivingSnapshot.isDriving`:
-
-| Priority | While driving | While parked |
-|---|---|---|
-| `CRITICAL` | Shown immediately, persists | Shown immediately |
-| `HIGH` | Shown, auto-dismiss shortened to 3s | Shown normally |
-| `NORMAL` | Suppressed entirely | Shown normally |
-| `LOW` | Suppressed entirely | Shown normally |
-
-Suppressed NORMAL/LOW notifications are discarded, not deferred. The conditions that produce them (entitlement change, layout migration) will still be visible when the user parks and opens settings or sees the widget status overlay.
-
-**HIGH re-derivation on park**: When driving state transitions from `isDriving = true` to `isDriving = false`, the coordinator re-evaluates all `@Singleton` source flows to re-derive any active HIGH-priority conditions. This is not a deferred queue — it's the same state-derived projection the coordinator already performs on ViewModel recreation. Without this, a HIGH banner shown for 3s at highway speed (F8.10: offline grace period expired) is functionally invisible, and the user won't check settings for hours. Re-derivation on park ensures they see it when they can act on it.
 
 ### Notification Ownership Table
 
@@ -451,7 +414,7 @@ Deferred to post-launch, contingent on validated need:
 
 | Feature | Trigger | Notes |
 |---|---|---|
-| Pack notification emission | Real pack that can't model notification as state change | `NotificationEmitter` contract in `:sdk:contracts`, rate limiting (10/min, 60/hr per pack), priority cap (no CRITICAL), driving suppression, deferred queue with 60s TTL |
+| Pack notification emission | Real pack that can't model notification as state change | `NotificationEmitter` contract in `:sdk:contracts`, rate limiting (10/min, 60/hr per pack), priority cap (no CRITICAL), deferred queue with 60s TTL |
 | Critical system notification channel | Validated full-screen intent scenario | Safe mode / crash recovery when app fails to restart |
 | Notification history | Analytics showing user demand | Persistence via DataStore, dedicated overlay route |
 | `:core:alert` module | Second consumer beyond `:feature:dashboard` | Extract `AlertSoundManager` impl from `:app` |

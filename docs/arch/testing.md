@@ -180,20 +180,6 @@ fun `safe mode activates after 4 crashes in 60s`() = dashboardTest {
     assertThat(layoutState().widgets.first().typeId).isEqualTo("core:clock")
 }
 
-@Test
-fun `driving mode disables edit mode and widget picker`() = dashboardTest {
-    // Start in edit mode
-    dispatch(DashboardCommand.ToggleEditMode)
-    assertThat(editModeState()).isTrue()
-
-    // Simulate driving — inject DrivingSnapshot with speed > threshold for 3s
-    emitDrivingSnapshot(DrivingSnapshot(speedMps = 12f)) // ~43 km/h, above threshold
-    advanceTimeBy(3_500) // 3s debounce + margin
-
-    assertThat(editModeState()).isFalse() // auto-exited
-    assertThat(widgetPickerAvailable()).isFalse()
-    assertThat(settingsAccessible()).isFalse()
-}
 ```
 
 **DataStore Resilience Tests**:
