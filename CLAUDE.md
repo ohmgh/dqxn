@@ -252,6 +252,7 @@ data class SpeedSnapshot(
 - **Driving mode**: `:core:driving` is both a platform safety gate and a `DataProvider` emitting `DrivingSnapshot`. Shell subscribes permanently for safety gating (edit mode / settings / widget picker disabled). Widgets optionally subscribe for display. Only tap interactions on interactive widgets while driving.
 - **Edge-to-edge**: `enableEdgeToEdge()` in onCreate. Dashboard draws behind system bars. Overlays respect `WindowInsets.systemBars`. Status bar toggle via `WindowInsetsControllerCompat`.
 - **Crash recovery**: >3 crashes in 60s → safe mode (clock widget only, reset banner).
+- **Notification separation**: Three independent surfaces — `NotificationCoordinator` (banners + toasts, `@ViewModelScoped`), `AlertSoundManager` (audio/haptic, `@Singleton` via `AlertEmitter` contract), `SystemNotificationBridge` (FGS + connection channels). Widget status overlays (`WidgetStatusCache`) are continuous per-widget state and intentionally excluded from notification coordination. Toasts route through `NotificationCoordinator`, NOT `DashboardEffect`.
 
 ## Observability
 
@@ -359,5 +360,10 @@ Check `:codegen:plugin` and `:codegen:agentic` run as single pass. Verify `ksp.i
 | Why `callbackFlow` for sensors? | Ensures cleanup via `awaitClose`. Direct `SensorEventListener` leaks registrations. |
 | Why `:core:firebase`, not in `:sdk:observability`? | Would make Firebase a transitive dependency of every module. |
 | Why `ContentProvider`, not `BroadcastReceiver` for agentic? | BR runs on main thread. CP runs on binder thread — `runBlocking` is safe, no ANR risk. |
+| Why not unify widget status + notifications? | Widget status is continuous state (`StateFlow`), notifications are discrete events. Folding both into one system creates a god-object that owns per-widget status AND app-level alerts — violates decomposed-state principle. |
+| Why toasts through `NotificationCoordinator`, not `DashboardEffect`? | `DashboardEffect` is a raw `Channel` — no driving-mode gating, no priority ordering, no rate limiting. Toasts need all three. |
+| Why `AlertSoundManager` separate from `NotificationCoordinator`? | Scope mismatch (`@Singleton` vs `@ViewModelScoped`), independent triggers (speed limit alert is audio-only, no banner), and audio focus handling requires application-lifetime resources. |
+| Why no pack `NotificationEmitter` at V1? | Every V1 pack notification is already modeled as widget state (`WidgetStatusCache`) or shell-originated. Adding `NotificationEmitter` to `:sdk:contracts` is premature API commitment with no validated consumer. |
+| Why no notification rules engine? | Only ~5 rules at launch. Inline notification logic in each subsystem keeps domain knowledge with the domain owner, avoids hidden coupling, and is more testable. Extract a rules engine only if rule count grows. |
 
 Full rationale in `docs/ARCHITECTURE.md`.

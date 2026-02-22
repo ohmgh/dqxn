@@ -37,7 +37,7 @@ Packs (widgets, themes, data providers) are fully decoupled from the dashboard s
 android/
 ├── build-logic/convention/       # Gradle convention plugins (composite build)
 ├── sdk/                          # Pack-accessible API surface
-│   ├── contracts/                # Plugin contracts (WidgetRenderer, DataProvider, DataSnapshot interface, @DashboardSnapshot annotation)
+│   ├── contracts/                # Plugin contracts (WidgetRenderer, DataProvider, DataSnapshot, AlertEmitter, InAppNotification, @DashboardSnapshot)
 │   ├── common/                   # AppResult, AppError, coroutine dispatchers, base stability config (compose_compiler_config.txt)
 │   ├── ui/                       # WidgetContainer, WidgetStyle, LocalWidgetData, DashboardThemeDefinition
 │   ├── observability/            # Structured logging, tracing, metrics, health monitoring, ANR watchdog
@@ -159,7 +159,7 @@ No module other than `:core:firebase` and `:app` depends on Firebase SDKs. This 
 | Layer | Role | Key Types |
 |---|---|---|
 | **Presentation** | Stateless Compose renderers | `DashboardScreen`, `DashboardGrid`, `OverlayNavHost` |
-| **Coordination** | Each coordinator owns its own `StateFlow` slice | `LayoutCoordinator`, `ThemeCoordinator`, `EditModeCoordinator`, `WidgetBindingCoordinator` |
+| **Coordination** | Each coordinator owns its own `StateFlow` slice | `LayoutCoordinator`, `ThemeCoordinator`, `EditModeCoordinator`, `WidgetBindingCoordinator`, `NotificationCoordinator` |
 | **Domain** | Pure logic, no Android imports | `ThemeAutoSwitchEngine`, `GridPlacementEngine`, `SetupEvaluator`, `EntitlementManager` |
 | **Plugin / Pack** | Runtime-discovered extensions | `DataProvider` → `Flow<DataSnapshot>`, `WidgetRenderer` → `@Composable Render`, `ThemeProvider` |
 | **Data** | Document-style persistence | `LayoutDataStore` (Proto), `UserPreferencesRepository`, `PairedDeviceStore` (Proto), `ProviderSettingsStore` |
@@ -177,6 +177,7 @@ No module other than `:core:firebase` and `:app` depends on Firebase SDKs. This 
 - **IoC data binding** — widgets never choose their data source; the system binds providers by data type compatibility
 - **Declarative schemas** — settings UI and setup wizards driven by schema definitions, not custom composables
 - **Entitlement gating via `Gated` interface** — applied uniformly to renderers, providers, themes, settings, and auto-switch modes
+- **Notification separation** — widget status (continuous per-widget state), in-app banners/toasts (discrete events via `NotificationCoordinator`), and alert sounds (`AlertSoundManager`) are independent systems with distinct lifecycles
 - **Widget error isolation** — each widget renders inside a catch boundary; one widget's failure shows a fallback, not an app crash
 - **ConnectionStateMachine** — validated state transitions with explicit rules, retry counts, and timeouts
 - **Thermal adaptation** — rendering quality degrades gracefully under thermal pressure before the OS forces throttling
@@ -208,4 +209,4 @@ Benefits:
 | [Persistence](arch/persistence.md) | Proto DataStore, corruption handling, schema migration, preset system, R8 rules |
 | [Testing](arch/testing.md) | Test infrastructure, framework choices, test layers, CI gates, agentic validation pipeline, chaos testing, E2E protocol |
 | [Build System](arch/build-system.md) | Convention plugins, lint rules, agentic framework, diagnostic commands, chaos injection, CI configuration |
-| [Platform Integration](arch/platform.md) | Navigation, driving mode, alerts, security, permissions |
+| [Platform Integration](arch/platform.md) | Navigation, driving mode, alerts & notification architecture, security, permissions |

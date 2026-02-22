@@ -44,6 +44,12 @@ fun widgetData(widgetId: String): StateFlow<WidgetData>
 fun widgetStatus(widgetId: String): StateFlow<WidgetStatusCache>
 ```
 
+```kotlin
+// NotificationCoordinator — in-app banners and toasts (discrete events, not continuous state)
+val activeBanners: StateFlow<ImmutableList<InAppNotification.Banner>>
+val toasts: Channel<InAppNotification.Toast>  // single consumer, exactly-once
+```
+
 A single `DashboardState` containing all widget data means 60+ `.copy()` allocations per second and universal recomposition. With decomposed flows, each widget composable collects only `widgetData(myId)`. The speedometer doesn't recompose when the clock ticks.
 
 ## Split Event Channels
@@ -115,7 +121,7 @@ for (command in commandChannel) {
 
 A coordinator throwing an unhandled exception must NOT kill the command processing loop. All disk I/O (DataStore reads/writes, Proto serialization) MUST run on `Dispatchers.IO`.
 
-One-shot effects via `Channel<DashboardEffect>` (navigation triggers, toasts, haptics).
+One-shot effects via `Channel<DashboardEffect>` (navigation triggers, haptics). Toasts route through `NotificationCoordinator` — not `DashboardEffect` — because they need driving-mode gating, priority ordering, and lifecycle management that the raw channel cannot provide.
 
 ## Per-Widget Data Binding
 
@@ -444,6 +450,9 @@ When a widget's last data snapshot exceeds its staleness threshold, `WidgetStatu
 | Firebase Performance | `@Singleton` | Used directly in `:core:firebase` for v1 (extract `PerformanceTracer` interface when a second consumer needs it) |
 | `AnrWatchdog` | `@Singleton` | Dedicated thread, started at app init |
 | Coordinators (Layout, Theme, etc.) | `@ViewModelScoped` | Tied to dashboard ViewModel lifecycle |
+| `NotificationCoordinator` | `@ViewModelScoped` | Re-derives persistent banners from `@Singleton` sources on recreation |
+| `AlertSoundManager` | `@Singleton` | Implements `AlertEmitter` (`:sdk:contracts`), holds `SoundPool`/`AudioManager`/`Vibrator` — survives ViewModel recreation |
+| `SystemNotificationBridge` | `@Singleton` | FGS notification, connection channel — survives config changes |
 | Per-widget data bindings | ViewModel-scoped Jobs | Created/cancelled by WidgetBindingCoordinator |
 
 All DI-scoped components that interact with WindowInsets receive insets via constructor injection of a `WindowInsetsProvider` interface, not by reading from the Activity directly. This keeps components testable.
