@@ -359,6 +359,12 @@ Compilation tests for `@DashboardWidget` and `@DashboardDataProvider`:
 - Duplicate `typeId` within module -> compilation error
 - Missing required fields -> clear error message
 
+Snapshot sub-module validation (enforced by `dqxn.snapshot` convention plugin + CI fitness test):
+- Snapshot sub-modules contain only `@DashboardSnapshot`-annotated data classes
+- No Android framework imports, no Compose imports, no provider/widget types
+- All public types implement `DataSnapshot` and are annotated `@Immutable`
+- Cross-module `dataType` uniqueness validated at runtime by `WidgetRegistry`
+
 ## CI Gates
 
 | Gate | Threshold |

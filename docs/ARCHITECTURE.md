@@ -46,6 +46,7 @@ android/
 │   ├── design/                   # Theme tokens, typography, spacing, shared overlay composables
 │   ├── thermal/                  # ThermalManager, RenderConfig, adaptive frame rate
 │   ├── driving/                  # DrivingStateDetector — platform safety gate + DataProvider (DrivingSnapshot)
+│   │   └── snapshots/            # DrivingSnapshot — cross-boundary access for packs and shell
 │   ├── firebase/                 # Firebase implementations (Crashlytics, Analytics, Perf) — sole Firebase dependency point
 │   └── agentic/                  # Agentic command handlers + annotations (debugImplementation only)
 ├── codegen/                      # KSP processors (build-time only)
@@ -59,6 +60,7 @@ android/
 │   └── onboarding/               # Progressive tips, first-launch theme selection, permission flows
 ├── pack/                         # Pack extensions (own convention plugin, own dependency rules)
 │   ├── free/                     # "Essentials" — core widgets, providers, themes
+│   │   └── snapshots/            # Cross-boundary snapshot types (SpeedSnapshot, BatterySnapshot, etc.)
 │   ├── plus/                     # "Plus" — trip computer, media, G-force, altimeter, weather
 │   ├── themes/                   # Premium themes (JSON-driven)
 │   └── demo/                     # Hardware simulation for debug/demo
@@ -72,11 +74,11 @@ android/
 
 Regional packs (e.g., Singapore ERP integration) plug in as additional `:pack:*` modules without any changes to the shell or core.
 
-Convention plugins enforce shared defaults across all modules: compileSdk 36, minSdk 31, JVM target matching AGP/Gradle requirements. **Compose compiler is only applied to modules with UI** (not `:sdk:contracts`, not `:sdk:common`, not `:sdk:observability`, not `:sdk:analytics`, not `:core:*` except `:core:design`, not `:codegen:*`, not `:data`). The `dqxn.pack` convention plugin auto-wires all `:sdk:*` dependencies for pack modules — packs should not manually declare them.
+Convention plugins enforce shared defaults across all modules: compileSdk 36, minSdk 31, JVM target matching AGP/Gradle requirements. **Compose compiler is only applied to modules with UI** (not `:sdk:contracts`, not `:sdk:common`, not `:sdk:observability`, not `:sdk:analytics`, not `:core:*` except `:core:design`, not `:codegen:*`, not `:data`, not `*:snapshots`). The `dqxn.pack` convention plugin auto-wires all `:sdk:*` dependencies for pack modules — packs should not manually declare them. The `dqxn.snapshot` convention plugin configures snapshot sub-modules: pure Kotlin, `:sdk:contracts` dependency only, no Android/Compose.
 
 ### Module Dependency Rules
 
-Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. Discovery is pure runtime via Hilt `Set<T>` multibinding.
+Packs depend on `:sdk:*` and snapshot sub-modules (`:pack:*:snapshots`, `:core:*:snapshots`) only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. Discovery is pure runtime via Hilt `Set<T>` multibinding.
 
 ```
 :app
@@ -88,12 +90,17 @@ Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The s
   → :data (DataStore)
 
 :pack:*
-  → :sdk:* only (enforced by dqxn.pack convention plugin + validation task)
+  → :sdk:* (enforced by dqxn.pack convention plugin + validation task)
+  → :pack:*:snapshots, :core:*:snapshots (cross-boundary snapshot types only)
+
+:pack:*:snapshots, :core:*:snapshots
+  → :sdk:contracts only (pure Kotlin @DashboardSnapshot data classes, no Android/Compose)
 
 :feature:dashboard
   → :sdk:*
   → :core:design
   → :core:thermal
+  → :core:driving:snapshots
   → :data
 
 :feature:settings
@@ -111,7 +118,11 @@ Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The s
   → :data
 
 :core:driving
+  → :core:driving:snapshots
   → :sdk:contracts, :sdk:common, :sdk:observability
+
+:core:driving:snapshots
+  → :sdk:contracts
 
 :core:firebase
   → :sdk:observability (CrashReporter, ErrorReporter interfaces)
@@ -129,13 +140,16 @@ Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The s
 :core:agentic
   → :sdk:common, :sdk:contracts
 
+:pack:free:snapshots
+  → :sdk:contracts
+
 :codegen:plugin
   → :sdk:contracts (reads annotations, no runtime dependency)
 
 :codegen:agentic
   → :core:agentic (reads annotations, debugKsp only)
 
-Every module → :sdk:observability
+Every module except *:snapshots → :sdk:observability
 ```
 
 No module other than `:core:firebase` and `:app` depends on Firebase SDKs. This strict boundary means adding or removing a pack never requires changes to the shell.

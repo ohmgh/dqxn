@@ -37,17 +37,17 @@ Full annotated tree in `docs/ARCHITECTURE.md` Section 3.
 
 ```
 sdk/      — contracts, common, ui, observability, analytics (pack API surface)
-core/     — design, thermal, driving, firebase, agentic (shell internals)
+core/     — design, thermal, driving (+ driving/snapshots), firebase, agentic (shell internals)
 codegen/  — plugin, agentic (KSP, build-time only)
 data/     — Proto + Preferences DataStore, .proto schemas
 feature/  — dashboard, settings, diagnostics, onboarding
-pack/     — free, plus, themes, demo
+pack/     — free (+ free/snapshots), plus, themes, demo
 app/      — single-activity entry, DI assembly
 ```
 
 ## Module Dependency Rules
 
-**The single most important rule**: Packs depend on `:sdk:*` only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. If you're adding a dashboard or core import in a pack, the design is wrong. The `dqxn.pack` convention plugin auto-wires all allowed sdk dependencies — packs should not manually add `:sdk:*` project dependencies.
+**The single most important rule**: Packs depend on `:sdk:*` and snapshot sub-modules (`:pack:*:snapshots`, `:core:*:snapshots`) only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. If you're adding a dashboard or core import in a pack, the design is wrong. The `dqxn.pack` convention plugin auto-wires all allowed sdk dependencies — packs should not manually add `:sdk:*` project dependencies. Snapshot sub-module dependencies are declared explicitly per pack.
 
 Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference below.
 
@@ -55,12 +55,19 @@ Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference belo
 
 **When working in `:pack:{packId}`:**
 - CAN import from: `:sdk:contracts`, `:sdk:common`, `:sdk:ui`, `:sdk:observability`, `:sdk:analytics`
-- CANNOT import from: `:feature:*`, `:core:*`, `:data`, other packs
+- CAN import from: `:pack:*:snapshots`, `:core:*:snapshots` (cross-boundary snapshot types)
+- CANNOT import from: `:feature:*`, `:core:*`, `:data`, other packs (non-snapshot modules)
 - If you need something from dashboard → it belongs in `:sdk:contracts` as a contract
-- Dependencies are auto-wired by the `dqxn.pack` convention plugin
+- SDK dependencies are auto-wired by the `dqxn.pack` convention plugin; snapshot sub-module dependencies are declared explicitly
+
+**When working in `:pack:{packId}:snapshots` or `:core:{id}:snapshots`:**
+- CAN import from: `:sdk:contracts` only
+- Pure Kotlin — no Android framework, no Compose, no business logic
+- Contains ONLY `@DashboardSnapshot`-annotated data classes
+- Uses `dqxn.snapshot` convention plugin
 
 **When working in `:feature:dashboard`:**
-- CAN import from: `:sdk:*`, `:core:design`, `:core:thermal`, `:data`
+- CAN import from: `:sdk:*`, `:core:design`, `:core:thermal`, `:core:driving:snapshots`, `:data`
 - CANNOT import from: any `:pack:*` module
 - If you need a widget-specific type → the design is wrong, use contracts
 
@@ -75,7 +82,8 @@ Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference belo
 - Exception: `@Composable` allowed in `WidgetRenderer.Render()` signature only
 
 **When working in `:core:driving`:**
-- CAN import from: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`
+- CAN import from: `:core:driving:snapshots`, `:sdk:contracts`, `:sdk:common`, `:sdk:observability`
+- `DrivingSnapshot` lives in `:core:driving:snapshots` — packs and shell access it via that sub-module
 - Implements `DataProvider` (emits `DrivingSnapshot`) — the sole exception to "providers come from packs"
 - Shell subscribes permanently for safety gating; widgets optionally subscribe for display
 
@@ -83,7 +91,8 @@ Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference belo
 
 Convention plugins control which modules get the Compose compiler:
 - `dqxn.android.compose` — modules WITH UI: `:app`, `:feature:*`, `:sdk:ui`, `:core:design`
-- Modules WITHOUT Compose: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:driving`, `:core:firebase`, `:core:agentic`, `:codegen:*`, `:data`
+- `dqxn.snapshot` — snapshot sub-modules: `:pack:*:snapshots`, `:core:*:snapshots` (pure Kotlin, no Compose)
+- Modules WITHOUT Compose: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:driving`, `:core:firebase`, `:core:agentic`, `:codegen:*`, `:data`, `*:snapshots`
 
 ## Critical Constraints
 
@@ -101,7 +110,7 @@ These are non-negotiable. Violations cause real performance/correctness issues.
 - **`derivedStateOf`**: Use for all computed values from state (filtered lists, theme display, aggregations). Prevents unnecessary recomposition when inputs change but output doesn't.
 - **Draw object caching**: `Path`, `Paint`, `Brush` via `remember` or `drawWithCache` — never allocate per frame
 - **Glow**: `RenderEffect.createBlurEffect()` (GPU shader) — NOT `BlurMaskFilter` with offscreen buffers
-- **Typed DataSnapshot**: `@DashboardSnapshot`-annotated subtypes per data type, 1:1 with provider boundaries (no `Map<String, Any>` boxing). Non-sealed `DataSnapshot` interface in `:sdk:contracts`; concrete subtypes live with their producing module (pack or core), validated by KSP. `WidgetData` uses `KClass`-keyed multi-slot delivery — `data.snapshot<SpeedSnapshot>()`. Target <4KB app-level allocation/frame (excluding Compose overhead). Total budget <64KB/frame.
+- **Typed DataSnapshot**: `@DashboardSnapshot`-annotated subtypes per data type, 1:1 with provider boundaries (no `Map<String, Any>` boxing). Non-sealed `DataSnapshot` interface in `:sdk:contracts`; concrete subtypes live in snapshot sub-modules (`:pack:*:snapshots`, `:core:*:snapshots`) for cross-boundary access or pack-local for single-consumer types, validated by KSP. `WidgetData` uses `KClass`-keyed multi-slot delivery — `data.snapshot<SpeedSnapshot>()`. Target <4KB app-level allocation/frame (excluding Compose overhead). Total budget <64KB/frame.
 - **Drag reordering**: Use `graphicsLayer` offset animation — NOT `movableContentOf` (wrong tool for same-parent reordering)
 - **Grid layout**: Use `Layout` composable with custom `MeasurePolicy` for absolute positioning — NOT `LazyLayout` (adds SubcomposeLayout overhead without benefit for viewport-sized grids)
 - **Dashboard lifecycle**: Layer 0 uses `collectAsState()` (no lifecycle awareness). Layer 1 overlays use `collectAsStateWithLifecycle()`. Manual pause/resume for CPU-heavy overlays.
@@ -189,12 +198,41 @@ Files: `android/pack/{packId}/src/main/kotlin/app/dqxn/android/pack/{packId}/pro
 
 Provider flows MUST use `callbackFlow` with `awaitClose` for sensor/BLE listeners. Accumulation providers (Trip) handle high-frequency accumulation internally on `Dispatchers.Default`, emit aggregated snapshots at reduced rate.
 
+### New Snapshot Type (cross-boundary)
+
+When a snapshot type needs to be consumed by modules other than its producer, place it in a snapshot sub-module:
+
+1. Create `android/pack/{packId}/snapshots/build.gradle.kts` — apply `id("dqxn.snapshot")`
+2. Add `include(":pack:{packId}:snapshots")` to `android/settings.gradle.kts`
+3. Add snapshot data class with `@DashboardSnapshot` + `@Immutable` annotations
+4. Consumer packs add `implementation(project(":pack:{packId}:snapshots"))` to their `build.gradle.kts`
+
+Package: `app.dqxn.android.pack.{packId}.snapshots`
+
+```kotlin
+// android/pack/free/snapshots/build.gradle.kts
+plugins {
+    id("dqxn.snapshot")
+}
+
+// android/pack/free/snapshots/src/main/kotlin/.../SpeedSnapshot.kt
+@DashboardSnapshot(dataType = "speed")
+@Immutable
+data class SpeedSnapshot(
+    val speed: Float,
+    override val timestamp: Long,
+) : DataSnapshot
+```
+
+**When NOT to create a sub-module**: If the snapshot type is only consumed within its producing pack, keep it in the pack module directly. Extract to a sub-module only when a second consumer appears.
+
 ### New Pack Module
 
 1. Create `android/pack/{packId}/build.gradle.kts` — apply `id("dqxn.pack")` (auto-wires all sdk dependencies)
 2. Add `include(":pack:{packId}")` to `android/settings.gradle.kts`
 3. Add `implementation(project(":pack:{packId}"))` to `android/app/build.gradle.kts`
 4. **Never** add it to `:feature:dashboard` or `:core:*` dependencies
+5. If the pack has cross-boundary snapshot types, create a `:pack:{packId}:snapshots` sub-module (see above)
 
 ## Plugin Conventions
 
@@ -259,7 +297,8 @@ Tests:             {ClassName}Test.kt               (SpeedometerRendererTest.kt)
 Hilt modules:      {PackName}Module.kt              (FreePackModule.kt)
 Theme files:       {pack_id}_themes.json            (themes_pack_themes.json)
 Proto schemas:     {entity_name}.proto              (dashboard_canvas.proto)
-Convention plugins: dqxn.android.{purpose}.gradle.kts
+Convention plugins: dqxn.android.{purpose}.gradle.kts, dqxn.pack.gradle.kts, dqxn.snapshot.gradle.kts
+Snapshot types:    {PascalCaseName}Snapshot.kt       (SpeedSnapshot.kt) — in *:snapshots sub-module if cross-boundary
 ```
 
 ## Code Style
@@ -313,6 +352,7 @@ Check `:codegen:plugin` and `:codegen:agentic` run as single pass. Verify `ksp.i
 | Why `SupervisorJob` for bindings? | Without it, one provider crash propagates and kills all widget bindings. |
 | Why typed DataSnapshot, not Map? | `Map<String, Any?>` boxes primitives. 60 emissions/sec × 12 widgets = 720 garbage objects/sec. |
 | Why non-sealed DataSnapshot? | Sealed forces all subtypes into `:sdk:contracts` — packs can't define snapshot types without modifying SDK. KSP `@DashboardSnapshot` gives compile-time validation (no duplicate dataType, `@Immutable` required) without same-module restriction. `KClass`-keyed `WidgetData.snapshot<T>()` doesn't need sealed. |
+| Why snapshot sub-modules, not promote to `:sdk:contracts`? | Promotion divorces types from producers, grows `:sdk:contracts` into a domain dumping ground, and recompiles all modules on every change. Sub-modules (`:pack:*:snapshots`) preserve producer ownership, limit blast radius, and keep `:sdk:contracts` as pure mechanism. |
 | Why `KClass` keys in `WidgetData`? | String keys allow typos, no compiler enforcement. `snapshot<SpeedSnapshot>()` can't reference a nonexistent type. |
 | Why multi-slot `WidgetData`? | Speedometer consumes 3 independent providers. Single-slot loses independent availability and graceful degradation. |
 | Why plain `Layout`, not `LazyLayout`? | Absolute-position grid. `LazyLayout` adds `SubcomposeLayout` overhead without benefit. |

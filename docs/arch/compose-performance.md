@@ -118,7 +118,7 @@ app.dqxn.android.core.design.DashboardThemeDefinition
 app.dqxn.android.data.SavedWidget
 ```
 
-**Auto-generated entries** — the `:codegen:plugin` KSP processor already validates `@DashboardSnapshot`-annotated types. It additionally outputs a stability config file listing every discovered snapshot subtype's fully-qualified class name. The `dqxn.pack` convention plugin wires this generated file into the Compose compiler's `stabilityConfigurationFile` option alongside the static base config via `dqxn.android.compose`.
+**Auto-generated entries** — the `:codegen:plugin` KSP processor already validates `@DashboardSnapshot`-annotated types. It additionally outputs a stability config file listing every discovered snapshot subtype's fully-qualified class name. Both `dqxn.pack` and `dqxn.snapshot` convention plugins wire this generated file into the Compose compiler's `stabilityConfigurationFile` option alongside the static base config via `dqxn.android.compose`. Snapshot sub-modules (`:pack:*:snapshots`, `:core:*:snapshots`) are processed by the same KSP pass — their types appear in the generated config automatically.
 
 This eliminates a silent failure mode: adding a new `@DashboardSnapshot` type without a stability config entry would cause the Compose compiler to treat it as unstable → unnecessary recomposition → frame drops. With generation, coverage is automatic — no manual maintenance, no missed types.
 

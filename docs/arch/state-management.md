@@ -212,7 +212,7 @@ bindingScope.launch {
 
 ## Typed DataSnapshot
 
-Widget data uses typed subtypes per data type instead of `Map<String, Any?>`. Each subtype aligns 1:1 with a provider boundary. `DataSnapshot` is a non-sealed interface in `:sdk:contracts` — concrete subtypes live with their producing module (pack or core), validated at compile time by the `:codegen:plugin` KSP processor via `@DashboardSnapshot`.
+Widget data uses typed subtypes per data type instead of `Map<String, Any?>`. Each subtype aligns 1:1 with a provider boundary. `DataSnapshot` is a non-sealed interface in `:sdk:contracts` — concrete subtypes live with their producing module, validated at compile time by the `:codegen:plugin` KSP processor via `@DashboardSnapshot`.
 
 ```kotlin
 // :sdk:contracts — interface only, no concrete subtypes
@@ -221,7 +221,7 @@ interface DataSnapshot {
     val timestamp: Long
 }
 
-// :pack:free — snapshot types owned by the free pack's providers
+// :pack:free:snapshots — cross-boundary snapshot types for the free pack
 @DashboardSnapshot(dataType = "speed")
 @Immutable
 data class SpeedSnapshot(
@@ -270,13 +270,64 @@ data class BatterySnapshot(
     override val timestamp: Long,
 ) : DataSnapshot
 
-// Additional subtypes in :pack:free: TripSnapshot, MediaSnapshot, WeatherSnapshot,
-// SolarSnapshot, AmbientLightSnapshot, AltitudeSnapshot
+// Additional cross-boundary subtypes in :pack:free:snapshots: AltitudeSnapshot, AmbientLightSnapshot
+// Pack-local subtypes in :pack:free: SolarSnapshot, WeatherSnapshot
+// Pack-local subtypes in :pack:plus: TripSnapshot, MediaSnapshot
 // OBU-specific subtypes in :pack:sg-erp2: ObuTrafficSnapshot, BalanceSnapshot, etc.
-// Core subtypes in :core:driving: DrivingSnapshot
+// Core subtypes in :core:driving:snapshots: DrivingSnapshot
 ```
 
-**Snapshot type ownership:** Each snapshot type lives in the module that produces it. Free pack snapshots in `:pack:free`, OBU snapshots in `:pack:sg-erp2`, `DrivingSnapshot` in `:core:driving`. If a second pack needs a snapshot type defined in another pack, that type is promoted to `:sdk:contracts` at that point — not preemptively. The KSP processor (`@DashboardSnapshot`) enforces: no duplicate `dataType` strings, `@Immutable` annotation required, only `val` properties, implements `DataSnapshot`.
+The KSP processor (`@DashboardSnapshot`) enforces: no duplicate `dataType` strings, `@Immutable` annotation required, only `val` properties, implements `DataSnapshot`.
+
+### Snapshot Sub-Modules
+
+The `KClass`-keyed API (`snapshot<SpeedSnapshot>()`, `compatibleSnapshots = setOf(SpeedSnapshot::class)`) requires compile-time visibility of the concrete snapshot class. Pack isolation rules forbid importing other packs or `:core:*`. Snapshot sub-modules resolve this without promoting types to `:sdk:contracts`:
+
+```
+:pack:free:snapshots     — SpeedSnapshot, AccelerationSnapshot, BatterySnapshot, TimeSnapshot,
+                           OrientationSnapshot, SpeedLimitSnapshot, AltitudeSnapshot, AmbientLightSnapshot
+:core:driving:snapshots  — DrivingSnapshot
+```
+
+Each snapshot sub-module:
+- Contains **only** `@DashboardSnapshot`-annotated data classes — no providers, no widgets, no business logic
+- Pure Kotlin — no Android framework, no Compose dependencies
+- Depends on `:sdk:contracts` only (for `DataSnapshot` interface + `@Immutable`)
+- Uses the `dqxn.snapshot` convention plugin
+
+```kotlin
+// pack/free/snapshots/build.gradle.kts
+plugins {
+    id("dqxn.snapshot")  // auto-wires :sdk:contracts, no Compose, no Android
+}
+```
+
+**Cross-boundary access:** Packs and features depend on snapshot sub-modules, not on producing modules:
+
+```kotlin
+// pack/plus/build.gradle.kts — plus pack consumes free pack's snapshot types
+plugins {
+    id("dqxn.pack")
+}
+dependencies {
+    implementation(project(":pack:free:snapshots"))       // SpeedSnapshot, etc.
+    implementation(project(":core:driving:snapshots"))    // DrivingSnapshot
+    // implementation(project(":pack:free"))              // ❌ still forbidden
+}
+```
+
+**Ownership rules:**
+- **Snapshot sub-module** (`:pack:{id}:snapshots`, `:core:{id}:snapshots`) — types consumed across module boundaries. The producing module's team owns the sub-module.
+- **Pack-local** — types consumed only within the producing pack stay in the pack module directly. Extract to a sub-module only when a second consumer appears.
+- `:sdk:contracts` holds only the `DataSnapshot` interface and `@DashboardSnapshot` annotation — never concrete snapshot types.
+
+| Location | Example Types | When |
+|---|---|---|
+| `:pack:free:snapshots` | `SpeedSnapshot`, `BatterySnapshot`, `TimeSnapshot` | Platform-level data consumed by multiple packs |
+| `:core:driving:snapshots` | `DrivingSnapshot` | Shell safety gate + optional pack widget display |
+| `:pack:free` (local) | `SolarSnapshot` | Only consumed by free pack's solar widget |
+| `:pack:plus` (local) | `TripSnapshot` | Only consumed by plus pack's trip widget |
+| `:pack:sg-erp2` (local) | `ObuTrafficSnapshot`, `BalanceSnapshot` | Regional pack, no cross-boundary consumers |
 
 **Why 1:1 provider-to-snapshot alignment**: Bundling speed + acceleration + speed limit into a single composite type forces a single provider to own data from three independent sources with different availability, frequency, and failure modes. When the accelerometer is unavailable, a composite provider must fabricate a zero — wrong (zero means "not accelerating", not "unknown"). With 1:1 alignment, each snapshot is independently available. A speedometer widget binds to all three separately and renders gracefully with whatever data is available.
 

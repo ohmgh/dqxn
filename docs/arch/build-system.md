@@ -19,6 +19,10 @@ id("dqxn.android.compose")
 // Pack modules: auto-wires all :sdk:* dependencies, wires KSP-generated stability config
 id("dqxn.pack")
 
+// Snapshot sub-modules: pure Kotlin, :sdk:contracts only, no Android/Compose
+// Contains only @DashboardSnapshot-annotated data classes for cross-boundary access
+id("dqxn.snapshot")
+
 // Modules WITHOUT Compose: :sdk:contracts, :sdk:common, :sdk:observability, :sdk:analytics,
 //   :core:thermal, :core:driving, :core:firebase, :core:agentic, :codegen:*, :data:*
 ```
@@ -31,7 +35,7 @@ All annotation processing uses KSP. No KAPT — enables Gradle configuration cac
 
 | Rule | Severity | Description |
 |---|---|---|
-| `ModuleBoundaryViolation` | Error | Pack modules importing outside `:sdk:*` boundary |
+| `ModuleBoundaryViolation` | Error | Pack modules importing outside `:sdk:*` / `*:snapshots` boundary |
 | `KaptDetection` | Error | Any module applying `kapt` plugin |
 | `ComposeInNonUiModule` | Error | Compose imports in non-UI modules |
 
@@ -72,6 +76,13 @@ fun `all widget snapshot types have at least one provider`() {
                 .that(providedTypes).contains(type)
         }
     }
+}
+
+@Test
+fun `snapshot sub-modules contain only DashboardSnapshot types`() {
+    // Parses source files in *:snapshots modules, asserts every public class is
+    // annotated @DashboardSnapshot and implements DataSnapshot. No providers,
+    // no widgets, no Android framework imports.
 }
 ```
 
