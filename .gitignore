@@ -11,5 +11,7 @@
 *.keystore
 local.properties
 
-# GSD planning
-.planning/
+# GSD planning (ephemeral)
+.planning/phases/
+.planning/research/
+.planning/codebase/

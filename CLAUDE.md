@@ -4,7 +4,7 @@
 
 DQXN — modular Android dashboard platform. Displays real-time data through configurable widgets on a grid canvas. Use cases include automotive (phone/tablet mounted in a vehicle), desk/bedside displays, home automation panels, and finance dashboards. Pack-based plugin architecture: packs register widgets, providers, and themes via contracts; the shell discovers them at runtime via Hilt multibinding.
 
-Pre-launch greenfield. Source under `android/`. Package namespace: `app.dqxn.android`. Read `docs/ARCHITECTURE.md` for full technical design, `docs/REQUIREMENTS.md` for product requirements.
+Pre-launch greenfield. Source under `android/`. Package namespace: `app.dqxn.android`. Read `.planning/ARCHITECTURE.md` for full technical design, `.planning/REQUIREMENTS.md` for product requirements.
 
 ## Tech Stack
 
@@ -33,7 +33,7 @@ compileSdk 36, minSdk 31, targetSdk 36. AGP 9.0.1, Gradle 9.3.1, JDK 25. AGP 9 m
 
 ## Module Map
 
-Full annotated tree in `docs/ARCHITECTURE.md` Section 3.
+Full annotated tree in `.planning/ARCHITECTURE.md` Section 3.
 
 ```
 sdk/      — contracts, common, ui, observability, analytics (pack API surface)
@@ -49,7 +49,7 @@ app/      — single-activity entry, DI assembly
 
 **The single most important rule**: Packs depend on `:sdk:*` and snapshot sub-modules (`:pack:*:snapshots`) only, never on `:feature:dashboard` or `:core:*`. The shell imports nothing from packs at compile time. If you're adding a dashboard or core import in a pack, the design is wrong. The `dqxn.pack` convention plugin auto-wires all allowed sdk dependencies — packs should not manually add `:sdk:*` project dependencies. Snapshot sub-module dependencies are declared explicitly per pack.
 
-Full dependency matrix in `docs/ARCHITECTURE.md` Section 3. Quick reference below.
+Full dependency matrix in `.planning/ARCHITECTURE.md` Section 3. Quick reference below.
 
 ### Module Isolation Guide
 
@@ -301,7 +301,7 @@ data class SpeedSnapshot(
 
 ## Package & File Naming
 
-Package pattern: `app.dqxn.android.{group}.{module}[.subpackage]`. Pack widgets: `app.dqxn.android.pack.{packId}.widgets.{name}`. Full listing in `docs/ARCHITECTURE.md`.
+Package pattern: `app.dqxn.android.{group}.{module}[.subpackage]`. Pack widgets: `app.dqxn.android.pack.{packId}.widgets.{name}`. Full listing in `.planning/ARCHITECTURE.md`.
 
 ```
 Widgets:           {PascalCaseName}Renderer.kt     (SpeedometerRenderer.kt)
@@ -398,4 +398,4 @@ Check `:codegen:plugin` and `:codegen:agentic` run as single pass. Verify `ksp.i
 | Why `SemanticsOwnerHolder` singleton, not direct main-thread access? | `AgenticContentProvider` runs on binder threads. Needs a cross-thread reference to the composition's `SemanticsOwner`. Debug-only singleton registered at composition time. |
 | Why always set test tags, not conditional `BuildConfig.DEBUG`? | ~50 nodes, negligible allocation. Unconditional tags enable Espresso matchers and accessibility tooling in release instrumented tests. |
 
-Full rationale in `docs/ARCHITECTURE.md`.
+Full rationale in `.planning/ARCHITECTURE.md`.
