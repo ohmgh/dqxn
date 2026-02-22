@@ -134,6 +134,7 @@ object LogTags {
     val DIAGNOSTIC = LogTag("DIAGNOSTIC")
     val ANR = LogTag("ANR")
     val INTERACTION = LogTag("INTERACTION")
+    val NOTIFICATION = LogTag("NOTIFICATION")
 }
 
 // Pack-defined tags — no changes to :sdk:observability needed
@@ -604,6 +605,12 @@ sealed interface AnomalyTrigger {
         val fileName: String,
         val fallbackApplied: Boolean,
     ) : AnomalyTrigger
+
+    data class NotificationDeliveryFailure(
+        val notificationId: String,
+        val priority: String,       // "CRITICAL", "HIGH", etc.
+        val failureReason: String,  // "banner_derivation_exception", "toast_channel_closed", etc.
+    ) : AnomalyTrigger
 }
 ```
 
@@ -619,6 +626,7 @@ sealed interface AnomalyTrigger {
 | Escalated staleness | Widget data freshness exceeds 3x staleness threshold while provider reports CONNECTED | Capture, include binding lifecycle events |
 | Binding stall | Binding active >2x `firstEmissionTimeout` and `widgetData` still `Empty` | Capture, include per-slot emission status |
 | DataStore corruption | `ReplaceFileCorruptionHandler` invoked | Capture, crash rotation pool (data loss event) |
+| Notification delivery failure | CRITICAL banner derivation throws or toast channel is closed | Capture (CRITICAL only — lower-priority failures are logged via `DqxnLogger` but don't trigger diagnostic capture) |
 
 ### DiagnosticSnapshotCapture
 
@@ -665,7 +673,7 @@ Debug builds write snapshots to `${filesDir}/debug/diagnostics/` with **separate
 
 | Pool | Path pattern | Max files | Trigger types |
 |---|---|---|---|
-| Crash | `snap_crash_{timestamp}.json` | 20 | `WidgetCrash`, `AnrDetected`, `DataStoreCorruption` |
+| Crash | `snap_crash_{timestamp}.json` | 20 | `WidgetCrash`, `AnrDetected`, `DataStoreCorruption`, `NotificationDeliveryFailure` |
 | Thermal | `snap_thermal_{timestamp}.json` | 10 | `ThermalEscalation` |
 | Performance | `snap_perf_{timestamp}.json` | 10 | `JankSpike`, `ProviderTimeout`, `EscalatedStaleness`, `BindingStalled` |
 

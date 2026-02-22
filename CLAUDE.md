@@ -284,6 +284,7 @@ data class SpeedSnapshot(
 - **State machine**: Exhaustive transitions + jqwik property-based testing
 - **Chaos**: `ProviderFault` sealed interface in `:sdk:contracts:testFixtures` — shared between `ChaosProviderInterceptor` (E2E) and `TestDataProvider` (unit). Correlation via `list-diagnostics since=`.
 - **Coordinators**: `DashboardTestHarness` DSL — `dashboardTest { dispatch(...); assertThat(...) }`
+- **Notifications**: Banner derivation from singleton state combinations (Turbine), driving-mode gating correctness per priority level, toast ordering under concurrent emission, safe mode banner lifecycle (CRITICAL persistence + action routing), `AlertSoundManager` audio focus interaction (MockK), HIGH re-derivation on driving→parked transition
 - Shared test infra via `testFixtures` source sets. Factories: `testWidget()`, `testTheme()`, `testDataSnapshot()`.
 - **Agentic debug loop**: detect → investigate → reproduce → fix+verify → guard. `HarnessStateOnFailure` outputs JSON matching `diagnose-*` shapes.
 
@@ -367,5 +368,10 @@ Check `:codegen:plugin` and `:codegen:agentic` run as single pass. Verify `ksp.i
 | Why `AlertSoundManager` separate from `NotificationCoordinator`? | Scope mismatch (`@Singleton` vs `@ViewModelScoped`), independent triggers (speed limit alert is audio-only, no banner), and audio focus handling requires application-lifetime resources. |
 | Why no pack `NotificationEmitter` at V1? | Every V1 pack notification is already modeled as widget state (`WidgetStatusCache`) or shell-originated. Adding `NotificationEmitter` to `:sdk:contracts` is premature API commitment with no validated consumer. |
 | Why no notification rules engine? | Only ~5 rules at launch. Coordinator observes `@Singleton` state flows directly — not a standalone engine class injecting every subsystem. Domain knowledge stays in subsystem state representation (`bleAdapterOff`, `safeModeActive`); coordinator just maps state to banners. |
+| Why `AlertResult` return type? | Fire-and-forget `fire()` gives callers no feedback on audio focus denial, hardware unavailability, or user silence override. V2 pack alerts will need this to fall back to visual indicators. Changing a contract interface post-V1 is painful — return type costs nothing now. |
+| Why condition-keyed banner IDs? | Generated UUIDs cause dismiss+recreate flicker on state oscillation (BLE connection flapping). Condition keys (`"ble_adapter_off"`) enable stable animation, in-place updates, and targeted dismissal. |
+| Why split CRITICAL banner to Layer 1.5? | Compose `Box` draws later children on top. `NotificationBannerHost` at Layer 0.5 is occluded by `OverlayNavHost` at Layer 1. CRITICAL banners (safe mode) must be visible above overlays — a separate `CriticalBannerHost` after `OverlayNavHost` achieves this without `zIndex` hacks. |
+| Why re-derive HIGH banners on park? | A HIGH banner shown for 3s at highway speed is functionally invisible. Re-derivation on driving→parked transition is the same state projection as ViewModel recreation — no deferred queue, no new mechanism. |
+| Why `Channel.BUFFERED` for toasts? | Default rendezvous channel (capacity 0) suspends the producer when the consumer isn't collecting. Multiple simultaneous toasts (entitlement revocation + theme preview end) would block the emitting coroutine. Buffered capacity prevents silent producer suspension. |
 
 Full rationale in `docs/ARCHITECTURE.md`.

@@ -47,7 +47,7 @@ fun widgetStatus(widgetId: String): StateFlow<WidgetStatusCache>
 ```kotlin
 // NotificationCoordinator — in-app banners and toasts (discrete events, not continuous state)
 val activeBanners: StateFlow<ImmutableList<InAppNotification.Banner>>
-val toasts: Channel<InAppNotification.Toast>  // single consumer, exactly-once
+val toasts: Channel<InAppNotification.Toast>(capacity = Channel.BUFFERED)  // single consumer, exactly-once, buffered for burst delivery
 ```
 
 A single `DashboardState` containing all widget data means 60+ `.copy()` allocations per second and universal recomposition. With decomposed flows, each widget composable collects only `widgetData(myId)`. The speedometer doesn't recompose when the clock ticks.
