@@ -80,6 +80,13 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 
 **Ported from old:** Convention plugin structure (4 plugins → 7+, significantly expanded). Version catalog (updated versions, added missing deps like kotlinx-collections-immutable, Proto DataStore, JUnit5, jqwik).
 
+**Toolchain compatibility checks** (binary go/no-go before Phase 2 starts):
+
+- Proto DataStore: add a stub `.proto` file, verify `protobuf` Gradle plugin compiles with AGP 9.0.1 / Gradle 9.3.1 / JDK 25. If it doesn't, investigate before Phase 5 designs around it.
+- EXTOL SDK: add `implementation("sg.gov.lta:extol:X.Y.Z")` to a throwaway module, run `compileDebugKotlin`. Record result. If incompatible, remove `:pack:sg-erp2` from Phase 9 scope immediately — don't waste design effort on connection state machine and 8 provider contracts for a pack that can't ship.
+
+Delete throwaway modules after checks. These are 10-minute verifications that prevent Phase 5/9 scope surprises.
+
 **Validation:** `./gradlew tasks --console=plain` succeeds. No modules to compile yet, but plugin resolution works.
 
 ---
@@ -189,6 +196,8 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 - Compilation error on missing handler (annotated command with no implementation)
 
 **Ported from old:** `core:plugin-processor` → `:codegen:plugin` (adapt for new annotation shapes, add manifest generation). `core:agentic-processor` → `:codegen:agentic` (expand from simple dispatch to full schema generation).
+
+**Convention plugin wiring check:** Apply `dqxn.pack` to a stub module (no source, just the plugin application). Verify the resolved dependency graph includes all expected `:sdk:*` modules with `implementation` scope and that the KSP-generated Compose stability config file path is wired into the Compose compiler options. This is a 7-phase gap between the plugin (Phase 1) and its first real consumer (Phase 8) — misconfigured auto-wiring would silently propagate to every pack.
 
 **Tests:** KSP processor tests with compile-testing. Verify generated `list-commands` output. Verify compilation failure on malformed `typeId`. Verify `@DashboardSnapshot` rejects: duplicate `dataType`, mutable properties, missing `@Immutable`, non-`DataSnapshot` class.
 
@@ -304,7 +313,9 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 - E2E: `adb shell content call` round-trip on connected device
 - App startup: blank canvas renders without crash
 
-**Validation:** `./gradlew :app:installDebug` succeeds. `adb shell content call --uri content://app.dqxn.android.debug.agentic --method list-commands` returns handler schema. `trigger-anomaly` creates a diagnostic snapshot file. `diagnose-crash` returns crash evidence (or empty state). Debug overlays toggle on/off.
+**Validation:** `./gradlew :app:installDebug` succeeds. `adb shell content call --uri content://app.dqxn.android.debug.agentic --method list-commands` returns handler schema. `trigger-anomaly` creates a diagnostic snapshot file. `diagnose-crash` returns crash evidence (or empty state). Debug overlays toggle on/off. `./gradlew assembleRelease` succeeds and R8-processed APK installs without `ClassNotFoundException` — validates ProGuard rules don't strip KSP-generated classes or proto-generated code.
+
+**CI pipeline deliverable:** Configure CI (GitHub Actions or equivalent) running `./gradlew assembleDebug test lintDebug --console=plain`. From this phase forward, every phase must pass all prior-phase tests before merging. This is the regression gate — not just "current phase tests pass" but "nothing broke."
 
 ### Autonomous debug bootstrapping
 
@@ -345,8 +356,8 @@ From this point forward, the agent can autonomously debug on a connected device:
 **`DashboardTestHarness`** — rebuild DSL for new coordinator architecture:
 
 - DSL surface: `dashboardTest { dispatch(...); assertThat(...) }` with `layoutState()`, `bindingJobs()`, `safeMode()`, `editModeState()`, `widgetPickerAvailable()`, `settingsAccessible()`, `widgetStatuses()`, `ringBufferTail()`
-- Fakes for all five coordinators
-- `FakeLayoutRepository`, `FakeWidgetDataBinder`
+- Default configuration uses **real coordinator implementations**, not fakes. Fakes available for isolation tests via `dashboardTest(fakeLayout = true) { ... }` but the primary integration path exercises real coordinator-to-coordinator interactions
+- `FakeLayoutRepository`, `FakeWidgetDataBinder` for persistence/binding isolation
 - Uses `TestDataProvider` and `ProviderFault` from `:sdk:contracts:testFixtures` for fault injection in unit tests
 
 **`HarnessStateOnFailure`** — JUnit5 `TestWatcher`:
@@ -363,10 +374,12 @@ From this point forward, the agent can autonomously debug on a connected device:
 **Tests:**
 - Coordinator unit tests for each of the five coordinators
 - Safety-critical tests: 4-crash/60s → safe mode trigger, entitlement revocation → auto-revert
-- `DashboardTestHarness` DSL tests with `HarnessStateOnFailure` watcher
+- `NotificationCoordinator` re-derivation: kill ViewModel, recreate coordinator, assert all condition-based banners (safe mode, BLE adapter off, storage pressure) re-derive from current singleton state — no lost banners after process death
+- `DashboardTestHarness` DSL tests with `HarnessStateOnFailure` watcher — default path uses real coordinators, proving coordinator-to-coordinator interactions (e.g., `AddWidget` → `BindingCoordinator` creates job → `WidgetStatusCoordinator` reports ACTIVE)
 - Grid layout tests (compose-ui-test + Robolectric): widget placement, overlap rejection, viewport filtering
 - Drag/resize interaction tests: `graphicsLayer` offset animation, snap-to-grid
 - `WidgetDataBinder`: `SupervisorJob` isolation (one provider crash doesn't cancel siblings), `CoroutineExceptionHandler` routes to `widgetStatus`
+- Thermal throttle wiring: inject `FakeThermalManager`, escalate to DEGRADED, verify emission rate drops in `WidgetDataBinder`
 - `ProviderFault`-based fault injection via `TestDataProvider`: `Delay`, `Error`, `Stall` → verify widget shows fallback UI, not crash
 - Visual regression baselines (Roborazzi)
 - On-device validation: deploy, `dump-layout` confirms grid state, `dump-health` confirms widget liveness, `get-metrics` confirms frame timing
@@ -418,9 +431,18 @@ All widgets: `ImmutableMap` settings, `LocalWidgetData.current` data access, `ac
 
 **Ported from old:** Widget rendering logic (Canvas drawing, Compose layouts) ports with moderate adaptation. Provider sensor flows port cleanly (callbackFlow pattern already correct). Theme JSON files port verbatim. Every widget's `Render()` signature changes (no `widgetData` param, add `ImmutableMap`, read from `LocalWidgetData`).
 
-**Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. Roborazzi visual regression baselines. On-device: deploy, `list-widgets` confirms all 11 registered, `add-widget` places each on grid, `dump-health` confirms data flowing, `get-metrics` confirms draw times within budget.
+**Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. Roborazzi visual regression baselines.
 
-**This phase is the gate.** If contracts feel wrong, fix them in Phase 2 before proceeding.
+**Phase 8 gate — all four criteria must pass before Phase 9 starts:**
+
+1. **Contract tests green.** All 11 widgets pass `WidgetRendererContractTest`, all 7 providers pass `DataProviderContractTest`.
+2. **End-to-end wiring.** On-device: `add-widget` + `dump-health` for each of the 11 widget types shows ACTIVE status (provider bound, data flowing).
+3. **Stability soak.** 60-second soak with all 11 widgets placed — safe mode not triggered (no 4-crash/60s event).
+4. **Regression gate.** All Phase 2-7 tests pass with `:pack:free` in the `:app` dependency graph. Adding a pack must not cause Hilt binding conflicts, KSP annotation processing errors, or R8 rule collisions.
+
+First real E2E test class (`AgenticTestClient`) starts here — wrapping `adb shell content call` with assertion helpers. Test: `add-widget` for each type → `dump-health` → assert all ACTIVE → `get-metrics` → assert draw times within budget. This test grows in Phase 9 (chaos correlation) and Phase 10 (full user journey).
+
+If contracts feel wrong, fix them in Phase 2 before proceeding.
 
 ---
 
@@ -510,6 +532,69 @@ Mutation kill rate > 80% for critical modules (deferred to post-launch — track
 
 ---
 
+## Integration Policy
+
+Each phase must prove its output actually connects — compilation alone is insufficient for integration seams with silent failure modes.
+
+### Regression invariant
+
+From Phase 2 onward, every phase runs `./gradlew test` across all modules before merging. CI pipeline established in Phase 6 automates this, but the rule applies even before CI exists (manual `./gradlew test` gate). Adding a new module must not break existing tests.
+
+### Phase-specific integration checks
+
+| Phase | Integration check | What it catches |
+|---|---|---|
+| 1 | Proto toolchain + EXTOL SDK compat (throwaway modules) | Toolchain incompatibility discovered in Phase 5/9 instead of Phase 1 |
+| 4 | `dqxn.pack` applied to stub module, resolved dependency graph verified | Convention plugin misconfiguration accumulating silently for 7 phases |
+| 6 | `./gradlew assembleRelease` + install + dashboard renders | R8 stripping KSP-generated or proto-generated classes (passes all debug tests, crashes in release) |
+| 6 | `trigger-anomaly` → `diagnose-crash` round-trip in CI | Observability pipeline broken with no signal |
+| 7 | `DashboardTestHarness` with real coordinators (not fakes) | Coordinator-to-coordinator interactions (the decomposition actually works) |
+| 7 | `FakeThermalManager` → DEGRADED → verify emission rate drops | Thermal throttle wiring to binding system |
+| 7 | `NotificationCoordinator` re-derivation after ViewModel kill | CRITICAL banners silently lost on process death |
+| 8 | 4-criteria gate (contract tests, on-device wiring, stability soak, regression) | Architecture validation — contracts are usable, not just compilable |
+
+### Silent failure seams
+
+These seams produce no error on failure — they degrade to empty/default state. Automated checks are mandatory because manual testing won't surface them:
+
+- **KClass equality for snapshot binding.** Widget declares `compatibleSnapshots = setOf(SpeedSnapshot::class)`, provider declares `snapshotType = SpeedSnapshot::class`. If they reference different class objects (different modules, duplicated type), the KClass won't match and the widget silently gets `WidgetData.Empty`. Caught by on-device `dump-health` showing widget as INACTIVE despite provider running.
+- **`dqxn.pack` auto-wiring.** Convention plugin wires `:sdk:*` dependencies. If it uses wrong scope or misses a module, the pack compiles (transitive deps may satisfy it) but runtime behavior differs. Caught by Phase 4 stub module check.
+- **`DataProviderInterceptor` chain.** `WidgetDataBinder` must apply all registered interceptors. If it skips them on fallback paths, chaos testing gives wrong results. Caught by `ProviderFault` tests using `TestDataProvider` that asserts interceptor invocation.
+- **`merge()+scan()` vs `combine()`.** If someone "simplifies" the binder to `combine()`, any widget with a slow or missing provider silently receives no data (combine waits for all upstreams). Caught by test-first multi-slot delivery test (TDD Policy).
+
+## TDD Policy
+
+Not all code benefits equally from test-first. Mandatory TDD for code where the test IS the specification and getting it wrong has silent or safety-critical consequences. Test-concurrent for everything else — tests land in the same phase, same PR, but don't need to exist before the first line of implementation.
+
+### TDD mandatory (test-first)
+
+| Category | Why test-first | Phase |
+|---|---|---|
+| Contract interfaces (`WidgetRenderer`, `DataProvider<T>`, `WidgetData`) | Writing `WidgetRendererContractTest` before the interface forces the contract to be testable. If the test is hard to write, the interface is wrong. Highest-leverage TDD in the project. | 2 |
+| State machines (`ConnectionStateMachine`, coordinator transitions) | Property-based testing (jqwik) defines valid transition sequences before implementation. Missing transitions and illegal states caught at design time. | 2, 7 |
+| Banner derivation logic (`NotificationCoordinator` observer blocks) | Maps `(safeModeActive, bleAdapterOff, storageLow, ...)` → prioritized banner list. Incorrect derivation = CRITICAL banners invisible. Effectively a state machine — same rationale applies. | 7 |
+| `merge()+scan()` accumulation in `WidgetDataBinder` | Test: "widget with 3 slots renders correctly when slot 2 is delayed." Prevents accidental `combine()` starvation — the architecture's most critical flow invariant. | 7 |
+| Safe mode trigger logic | Boundary condition: 4 crashes (not 3) in 60s rolling window (not total), cross-widget counting (4 different widgets each crashing once triggers it). Easy to get subtly wrong. | 7 |
+| KSP validation rules | Compile-testing assertions for invalid `typeId`, missing `@Immutable`, duplicate `dataType` before writing the processor. The test IS the specification. | 4 |
+
+### TDD not required (test-concurrent)
+
+| Category | Why not test-first | Phase |
+|---|---|---|
+| Build system / convention plugins | Configuration, not logic. `./gradlew tasks` is the test. | 1 |
+| UI rendering (widget `Render()` bodies) | Visual output — meaningful tests are Roborazzi baselines generated FROM implementation. Contract tests (null data handling, accessibility) are test-first via `WidgetRendererContractTest` inheritance, but rendering itself isn't. | 8-9 |
+| Observability plumbing (`DqxnLogger`, `CrashEvidenceWriter`, `AnrWatchdog`) | Well-understood patterns ported from old codebase. Unit tests verify behavior but writing them first doesn't improve design. | 3 |
+| `SupervisorJob` / `CoroutineExceptionHandler` error boundaries | Established boilerplate, not discovery work. The pattern is known before the test is written. Test-concurrent — verify isolation works, but test-first adds ceremony without catching real bugs. | 7 |
+| Proto DataStore schemas | Declarative `.proto` files. Round-trip serialization tests should exist but don't benefit from being written first. | 5 |
+| Theme JSON porting | Pure data, no logic. | 8-9 |
+| Agentic handlers | Request-response adapters over coordinator APIs. Coordinator tests (test-first) already validate the logic. Handler tests verify serialization/routing — test-concurrent. | 6-7 |
+
+### Policy enforcement
+
+"Test-concurrent" means: the phase is not considered done until tests pass. Tests land in the same PR as implementation — no "add tests later" tracking issues. Every widget extends `WidgetRendererContractTest`, every provider extends `DataProviderContractTest` — this is non-negotiable regardless of TDD-mandatory classification.
+
+---
+
 ## What NOT to Port
 
 - Old manual `@Binds @IntoSet` DI wiring (replaced by KSP codegen)
@@ -531,6 +616,6 @@ Mutation kill rate > 80% for critical modules (deferred to post-launch — track
 
 2. **Typed DataSnapshot design may need iteration.** The `@DashboardSnapshot` + KSP approach is designed in docs but untested. The free pack migration (Phase 8) will pressure-test it — be ready to revise contracts. Cross-pack snapshot promotion (from pack to `:sdk:contracts`) is the escape hatch if a snapshot type needs sharing.
 
-3. **sg-erp2 pack depends on a proprietary SDK** (`sg.gov.lta:extol`). Verify it builds against AGP 9.0.1 / Kotlin 2.3+ / JDK 25 before committing to porting it. If it doesn't, quarantine it.
+3. **sg-erp2 pack depends on a proprietary SDK** (`sg.gov.lta:extol`). Compatibility check runs in Phase 1 (see toolchain checks). If incompatible, remove from Phase 9 scope immediately.
 
 4. **Proto DataStore migration needs a data migration story.** Users of the old app (if any) would lose saved layouts. Given this is pre-launch, probably fine — but confirm.
