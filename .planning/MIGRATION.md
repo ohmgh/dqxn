@@ -403,8 +403,11 @@ From this point forward, the agent can autonomously debug on a connected device:
 | `WidgetContainer` — glow rendering with `drawWithCache`, responsive sizing (3 tiers), border overlay, rim padding | `:sdk:ui` as `WidgetScaffold` | Redesign required — old uses `BlurMaskFilter` (forbidden); new uses `RenderEffect.createBlurEffect()` API 31+. Responsive sizing logic worth porting |
 | `ConfirmationDialog` — reusable modal with scrim + animation | `:feature:dashboard` or `:core:design` | Port verbatim |
 | `OverlayScaffold` — scaffold wrapping overlay content with title bar | `:feature:dashboard` | Port + adapt |
-| `InlineColorPicker` — HSL sliders + hex editor (412 lines, `WindowInsets.ime` keyboard handling) | `:feature:dashboard` (moves to `:feature:settings` in Phase 10) | Port; non-trivial — do not rebuild from scratch or pull in third-party lib |
-| `GradientTypeSelector` + `GradientStopRow` | `:feature:dashboard` | Port + adapt |
+| `UnknownWidgetPlaceholder` — fallback UI for deregistered/missing widget types | `:feature:dashboard` or `:sdk:ui` | Port; required by F2.13 (Must) and F7.10 (backup/restore with missing packs) |
+| `InlineColorPicker` — HSL sliders + hex editor (412 lines, `WindowInsets.ime` keyboard handling) | `:feature:dashboard` (moves to `:feature:settings` in Phase 10) | Port; non-trivial — do not rebuild from scratch or pull in third-party lib. Extract `colorToHsl`/`colorToHex`/`parseHexToColor` to a testable utility |
+| `GradientTypeSelector` + `GradientStopRow` + `ThemeSwatchRow` (5-slot swatch selector with `parseHexColor`/`gradientSpecToBrush` utils) | `:feature:dashboard` | Port + adapt |
+| `SetupSheetContent` + setup UI system — `SetupDefinitionRenderer`, `SetupNavigationBar`, `SetupPermissionCard`, `SetupToggleCard`, `DeviceScanCard`, `PairedDeviceCard`, `DeviceLimitCounter`, `InstructionCard` | `:feature:dashboard` (moves to `:feature:settings` in Phase 10) | Port; required by F3.3/F3.4/F3.5/F3.14 (all Must). sg-erp2 pack (Phase 9) depends on this UI for BLE device pairing |
+| `AutoSwitchModeContent` + `IlluminanceThresholdControl` — theme auto-switch mode selector + logarithmic Canvas-drawn lux meter (~280 lines) with drag-to-set | `:feature:dashboard` (moves to `:feature:settings` in Phase 10) | Port; non-trivial custom Canvas drawing in lux meter — do not rebuild from scratch. Domain logic (`ThemeAutoSwitchEngine`) covered in Phase 5 |
 | `SettingRowDispatcher` + 10 row types (`Boolean`, `Enum`, `Int`, `Float`, `String`, `Info`, `Instruction`, `AppPicker`, `DateFormat`, `Timezone`, `Sound`) + `SettingComponents.kt` building blocks | `:feature:dashboard` (moves to `:feature:settings` in Phase 10) | Port; `FeatureSettingsContent` renders full settings schema with collapsible groups |
 | `DashboardCustomLayout` — `Layout` composable with `layoutId`-based matching, grid-unit coordinate system | `:feature:dashboard` | Port + adapt for new coordinator-owned state |
 
@@ -414,10 +417,11 @@ From this point forward, the agent can autonomously debug on a connected device:
 - `NotificationCoordinator` re-derivation: kill ViewModel, recreate coordinator, assert all condition-based banners (safe mode, BLE adapter off, storage pressure) re-derive from current singleton state — no lost banners after process death
 - `DashboardTestHarness` DSL tests with `HarnessStateOnFailure` watcher — default path uses real coordinators, proving coordinator-to-coordinator interactions (e.g., `AddWidget` → `BindingCoordinator` creates job → `WidgetStatusCoordinator` reports ACTIVE)
 - Grid layout tests (compose-ui-test + Robolectric): widget placement, overlap rejection, viewport filtering
-- Drag/resize interaction tests: `graphicsLayer` offset animation, snap-to-grid
+- Drag/resize interaction tests: `graphicsLayer` offset animation, snap-to-grid. **Decide resize preview strategy:** old codebase passes target dimensions to widgets via `LocalWidgetScale`/`LocalWidgetPreviewUnits` so widgets re-layout at target size during resize gesture (8 widgets read this). New architecture says `graphicsLayer` for drag animation — clarify whether resize is visual-only scaling or content-aware relayout. If content-aware (needed for `InfoCardLayout` STACK/COMPACT/GRID mode switching), port `WidgetScale` CompositionLocal
 - `WidgetDataBinder`: `SupervisorJob` isolation (one provider crash doesn't cancel siblings), `CoroutineExceptionHandler` routes to `widgetStatus`
 - Thermal throttle wiring: inject `FakeThermalManager`, escalate to DEGRADED, verify emission rate drops in `WidgetDataBinder`
 - `ProviderFault`-based fault injection via `TestDataProvider`: `Delay`, `Error`, `Stall` → verify widget shows fallback UI, not crash
+- `InlineColorPicker` color conversion tests — `colorToHsl`/`colorToHex`/`parseHexToColor` with known values (black, white, pure RGB, achromatic grays, hue boundary 0/120/240/360)
 - On-device validation: deploy, `dump-layout` confirms grid state, `dump-health` confirms widget liveness, `get-metrics` confirms frame timing, `query-semantics {"testTagPattern":"widget_.*"}` confirms all widgets rendered with correct test tags and non-zero bounds
 
 ---
@@ -471,15 +475,15 @@ All widgets: `ImmutableMap` settings, `LocalWidgetData.current` data access, `ac
 
 | Old artifact | Target | Notes |
 |---|---|---|
-| `SolarCalculator` — Meeus/NOAA solar algorithm, pure Kotlin, ±1min accuracy | `:pack:free` alongside providers | Port verbatim; no Android deps. Regeneration task (`updateIanaTimezones`) needs equivalent |
-| `IanaTimezoneCoordinates` — 312-entry IANA zone → lat/lon lookup table | `:pack:free` alongside providers | Port verbatim; pure Kotlin |
-| `RegionDetector` — timezone-first MPH country detection | `:pack:free` | Port; only speed widgets use it — keep in pack unless second consumer appears |
+| `SolarCalculator` — Meeus/NOAA solar algorithm, pure Kotlin, ±1min accuracy | `:pack:free` alongside providers | Port verbatim; no Android deps. Regeneration task (`updateIanaTimezones`) needs equivalent. **Add `SolarCalculatorTest`** — pure algorithm with known NOAA reference data; bugs produce plausible-but-wrong sunrise times affecting theme auto-switch app-wide |
+| `IanaTimezoneCoordinates` — 312-entry IANA zone → lat/lon lookup table | `:pack:free` alongside providers | Port verbatim; pure Kotlin. Spot-check 3–5 known cities to verify table integrity after port |
+| `RegionDetector` — timezone-first MPH country detection + `MPH_COUNTRIES` set | `:pack:free` | Port; only speed widgets use it — keep in pack unless second consumer appears. **Add `RegionDetectorTest`** — verify 3-step fallback chain (timezone→locale→"US") and `MPH_COUNTRIES` correctness (wrong entry = wrong speed unit for entire country) |
 | `TimezoneCountryMap` — IANA timezone → country code + city name | `:pack:free` | Port; co-located with `RegionDetector` |
-| `InfoCardLayout` — deterministic weighted normalization for STACK/COMPACT/GRID modes | `:sdk:ui` | Port if widget designs retain layout modes; includes `getTightTextStyle` (font padding elimination) |
+| `InfoCardLayout` — deterministic weighted normalization for STACK/COMPACT/GRID modes | `:sdk:ui` | Port if widget designs retain layout modes; includes `getTightTextStyle` (font padding elimination). If ported, add test for `SizeOption.toMultiplier()` mapping and normalization calc per layout mode — wrong weights cause text clipping in 5+ widgets |
 | `WidgetPreviewData` — `PREVIEW_WIDGET_DATA` static data for picker previews | `:pack:free` | Port + adapt to typed snapshots |
 | `CornerRadius` presets enum + `styleSettingsSchema` | `:pack:free` (shared widget style settings) | Port verbatim |
 
-**Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. On-device semantics verification via `assertWidgetRendered` + `assertWidgetText` for each widget type.
+**Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. On-device semantics verification via `assertWidgetRendered` + `assertWidgetText` for each widget type. `SolarCalculatorTest` — known reference data: summer/winter solstice at known cities (e.g., London 51.5°N), equatorial location, `minutesToLocalTime` edge cases (0, 1439, fractional), `toJulianDay` against NOAA reference. `RegionDetectorTest` — 3-step fallback chain + `MPH_COUNTRIES` set correctness.
 
 **Phase 8 gate — all four criteria must pass before Phase 9 starts:**
 
@@ -498,7 +502,7 @@ If contracts feel wrong, fix them in Phase 2 before proceeding.
 
 ### `:pack:themes`
 
-- 26 premium theme JSON files (port verbatim)
+- 22 premium theme JSON files (port verbatim)
 - `ThemeProvider` implementation
 - Entitlement gating (`themes` entitlement)
 
