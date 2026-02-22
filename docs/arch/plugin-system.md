@@ -13,16 +13,16 @@
 - `supportsTap`, `onTap()`, `priority`
 - `accessibilityDescription(data: WidgetData): String` — semantic description for TalkBack
 
-**`DataProvider`** — extends `DataProviderSpec`:
-- `snapshotType: KClass<out DataSnapshot>` — the `@DashboardSnapshot`-annotated subtype this provider emits
-- `provideState(): Flow<DataSnapshot>` — reactive data stream
+**`DataProvider<T : DataSnapshot>`** — extends `DataProviderSpec`:
+- `snapshotType: KClass<T>` — the `@DashboardSnapshot`-annotated subtype this provider emits
+- `provideState(): Flow<T>` — reactive data stream, compiler-enforced to match `snapshotType`
 - `schema: DataSchema` — describes output shape, staleness thresholds, and display metadata
 - `setupSchema: List<SetupPageDefinition>` — declarative setup wizard
 - `subscriberTimeout: Duration` — how long to keep alive after last subscriber (default 5s)
 - `firstEmissionTimeout: Duration` — max time to wait for first emission (default 5s)
 - `isAvailable`, `connectionState: Flow<Boolean>`, `connectionErrorDescription: Flow<String?>`
 
-**`ActionableProvider`** — extends `DataProvider` for bidirectional interaction:
+**`ActionableProvider<T : DataSnapshot>`** — extends `DataProvider<T>` for bidirectional interaction:
 - `onAction(action: WidgetAction)` — receives actions from bound widgets
 
 **`ThemeProvider`**:
@@ -42,7 +42,7 @@ sealed interface WidgetAction {
     data class TripReset(val tripId: String) : WidgetAction
 }
 
-interface ActionableProvider : DataProvider {
+interface ActionableProvider<T : DataSnapshot> : DataProvider<T> {
     fun onAction(action: WidgetAction)
 }
 ```
@@ -76,7 +76,7 @@ Matching between widgets and providers is by `KClass` equality on snapshot types
 Runtime validation in `WidgetRegistry` catches unresolvable snapshot type declarations at startup:
 
 ```kotlin
-fun validateBindings(providers: Set<DataProvider>, widgets: Set<WidgetRenderer>) {
+fun validateBindings(providers: Set<DataProvider<*>>, widgets: Set<WidgetRenderer>) {
     val providedTypes = providers.map { it.snapshotType }.toSet()
     widgets.forEach { widget ->
         widget.compatibleSnapshots.forEach { type ->
@@ -143,7 +143,7 @@ The processor:
 
 ## Runtime Discovery
 
-`WidgetRegistry` and `DataProviderRegistryImpl` index the injected `Set<WidgetRenderer>` and `Set<DataProvider>`. No dynamic loading — all compiled in, gated by entitlements at runtime.
+`WidgetRegistry` and `DataProviderRegistryImpl` index the injected `Set<WidgetRenderer>` and `Set<DataProvider<*>>`. No dynamic loading — all compiled in, gated by entitlements at runtime.
 
 Duplicate `typeId` detection: registry logs an error and uses the higher-priority registration.
 
@@ -154,7 +154,7 @@ When a widget's assigned provider becomes unavailable, `WidgetDataBinder` falls 
 **Priority order**: user-selected > hardware (BLE device) > device sensor > network
 
 ```kotlin
-private fun resolveProvider(snapshotType: KClass<out DataSnapshot>): DataProvider? {
+private fun resolveProvider(snapshotType: KClass<out DataSnapshot>): DataProvider<*>? {
     return userSelectedProviders[snapshotType]?.takeIf { it.isAvailable }
         ?: findByPriority(snapshotType, ProviderPriority.HARDWARE)
         ?: findByPriority(snapshotType, ProviderPriority.DEVICE_SENSOR)

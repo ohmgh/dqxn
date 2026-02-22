@@ -97,9 +97,9 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 ### `:sdk:contracts` (pure Kotlin + coroutines, `@Composable` only in `WidgetRenderer.Render()` signature)
 
 - `WidgetRenderer` — new signature with `ImmutableMap<String, Any>` settings, no `widgetData` param
-- `DataProvider` — new contract emitting typed `DataSnapshot` subtypes
+- `DataProvider<T : DataSnapshot>` — new generic contract, `provideState(): Flow<T>` compiler-enforced to match `snapshotType: KClass<T>`
 - `DataProviderInterceptor` — interface for chaos/debug interception of provider flows, registered via Hilt multibinding
-- `DataSnapshot` non-sealed interface (base only — no concrete subtypes here). `@DashboardSnapshot` annotation for KSP validation. Concrete subtypes live with their producing module: free pack snapshots in `:pack:free`, OBU snapshots in `:pack:sg-erp2`, `DrivingSnapshot` in `:core:driving`. If a second pack needs a snapshot from another pack, promote it to `:sdk:contracts` at that point
+- `DataSnapshot` non-sealed interface (base only — no concrete subtypes here). `@DashboardSnapshot` annotation for KSP validation. Concrete subtypes live with their producing module: free pack snapshots in `:pack:free`, OBU snapshots in `:pack:sg-erp2`, `DrivingSnapshot` in `:core:driving`. If a second pack needs a snapshot from another pack, extract it to a snapshot sub-module (`:pack:{id}:snapshots`) — never promote to `:sdk:contracts`
 - `WidgetData` with `KClass`-keyed multi-slot: `snapshot<T : DataSnapshot>()`
 - `WidgetContext`, `WidgetDefaults`, `WidgetStyle`
 - `SettingDefinition<T>` sealed interface (port + tighten types)
@@ -214,7 +214,7 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 ### `:core:driving` (net-new)
 
 - `DrivingModeDetector` — speed-based safety gate (old `:feature:driving` was Android Auto cruft, not this)
-- Implements `DataProvider` emitting `DrivingSnapshot`
+- Implements `DataProvider<DrivingSnapshot>` emitting `DrivingSnapshot`
 - Safety gating interface for shell subscription
 
 ### `:data`
@@ -246,7 +246,7 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 
 - `MainActivity` — single activity, `enableEdgeToEdge()`, `WindowInsetsControllerCompat`
 - `DqxnApplication` — Hilt application
-- `AppModule` — DI assembly with empty `Set<WidgetRenderer>` and `Set<DataProvider>` (packs not yet migrated)
+- `AppModule` — DI assembly with empty `Set<WidgetRenderer>` and `Set<DataProvider<*>>` (packs not yet migrated)
 - Blank dashboard canvas (placeholder composable — real dashboard lands in Phase 7)
 - ProGuard/R8 rules
 
@@ -274,7 +274,7 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 | `get-metrics` | `MetricsCollector` frame histogram + per-widget draw times | Phase 6 |
 | `dump-layout` | `:data` layout repository | Phase 6 |
 | `list-widgets` | `Set<WidgetRenderer>` from Hilt | Phase 6 (empty until Phase 8) |
-| `list-providers` | `Set<DataProvider>` from Hilt | Phase 6 (empty until Phase 8) |
+| `list-providers` | `Set<DataProvider<*>>` from Hilt | Phase 6 (empty until Phase 8) |
 | `list-themes` | `ThemeRegistry` | Phase 6 |
 | `list-commands` | KSP-generated schema from `:codegen:agentic` | Phase 6 |
 | `trigger-anomaly` | Fires `DiagnosticSnapshotCapture` for pipeline self-testing | Phase 6 |

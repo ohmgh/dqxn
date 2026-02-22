@@ -161,7 +161,7 @@ No module other than `:core:firebase` and `:app` depends on Firebase SDKs. This 
 | **Presentation** | Stateless Compose renderers | `DashboardScreen`, `DashboardGrid`, `OverlayNavHost` |
 | **Coordination** | Each coordinator owns its own `StateFlow` slice | `LayoutCoordinator`, `ThemeCoordinator`, `EditModeCoordinator`, `WidgetBindingCoordinator`, `NotificationCoordinator` |
 | **Domain** | Pure logic, no Android imports | `ThemeAutoSwitchEngine`, `GridPlacementEngine`, `SetupEvaluator`, `EntitlementManager` |
-| **Plugin / Pack** | Runtime-discovered extensions | `DataProvider` → `Flow<DataSnapshot>`, `WidgetRenderer` → `@Composable Render`, `ThemeProvider` |
+| **Plugin / Pack** | Runtime-discovered extensions | `DataProvider<T>` → `Flow<T>`, `WidgetRenderer` → `@Composable Render`, `ThemeProvider` |
 | **Data** | Document-style persistence | `LayoutDataStore` (Proto), `UserPreferencesRepository`, `PairedDeviceStore` (Proto), `ProviderSettingsStore` |
 | **Observability** | Cross-cutting, every module depends on this | `DqxnLogger`, `DqxnTracer`, `MetricsCollector`, `WidgetHealthMonitor`, `JankDetector`, `AnrWatchdog`, `ErrorReporter`, `DiagnosticSnapshotCapture` |
 

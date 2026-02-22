@@ -191,30 +191,39 @@ fun bind(widget: DashboardWidgetInstance, renderConfig: StateFlow<RenderConfig>)
         }
     }
 
-    return combine(providerFlows) { results ->
-        WidgetData(results.toMap().toImmutableMap(), SystemClock.elapsedRealtimeNanos())
-    }.stateIn(bindingScope, SharingStarted.WhileSubscribed(timeout), WidgetData.Empty)
+    return providerFlows.merge()
+        .scan(WidgetData.Empty) { current, (snapshotType, snapshot) ->
+            current.withSlot(snapshotType, snapshot)
+        }
+        .stateIn(bindingScope, SharingStarted.WhileSubscribed(timeout), WidgetData.Empty)
 }
 ```
 
 Compose draws when state changes. Throttling data emissions is the correct lever for reducing frame work on API 31-33 where system-level frame rate control is unavailable.
 
-### Stuck Provider Watchdog
+### Per-Provider Emission Watchdog
 
-Each binding enforces a `firstEmissionTimeout` (default 5s). If a provider does not emit within this window after binding, `WidgetStatusCache` transitions to `DataTimeout`:
+With `merge() + scan()`, the overall binding emits as soon as any provider produces data. Individual stuck providers are tracked per-slot via independent timeouts:
 
 ```kotlin
-bindingScope.launch {
-    val firstEmission = withTimeoutOrNull(provider.firstEmissionTimeout) {
-        binder.bind(widget).first()
-    }
-    if (firstEmission == null) {
-        updateStatus(widget.id, WidgetStatusCache.DataTimeout("Waiting for data..."))
-        delay(provider.retryDelay)
-        bind(widget) // recursive rebind
+widget.compatibleSnapshots.forEach { snapshotType ->
+    resolveProvider(snapshotType)?.let { provider ->
+        bindingScope.launch {
+            val firstEmission = withTimeoutOrNull(provider.firstEmissionTimeout) {
+                provider.provideState().first()
+            }
+            if (firstEmission == null) {
+                updateSlotStatus(widget.id, snapshotType, SlotStatus.DataTimeout("Waiting for data..."))
+                logger.warn(LogTag.BINDING, "widgetId" to widget.id, "snapshotType" to snapshotType.simpleName) {
+                    "Provider has not emitted within ${provider.firstEmissionTimeout}"
+                }
+            }
+        }
     }
 }
 ```
+
+If all providers for a widget stall, `WidgetData` remains `Empty` and `WidgetStatusCache` escalates to widget-level `DataTimeout`.
 
 ## Typed DataSnapshot
 
@@ -350,6 +359,10 @@ data class WidgetData(
     inline fun <reified T : DataSnapshot> snapshot(): T? = snapshots[T::class] as? T
     fun hasData(): Boolean = snapshots.isNotEmpty()
 
+    /** Returns a new WidgetData with the given slot updated. Used by merge+scan binder. */
+    fun withSlot(type: KClass<out DataSnapshot>, snapshot: DataSnapshot): WidgetData =
+        WidgetData(snapshots.put(type, snapshot), SystemClock.elapsedRealtimeNanos())
+
     companion object {
         val Empty = WidgetData(persistentMapOf(), 0L)
         val Unavailable = WidgetData(persistentMapOf(), -1L)
@@ -357,11 +370,11 @@ data class WidgetData(
 }
 ```
 
-`KClass` keys provide compiler enforcement — `data.snapshot<SpeedSnapshot>()` cannot reference a nonexistent type. The single `as? T` cast is safe because the map is internally consistent.
+`KClass` keys provide compiler enforcement — `data.snapshot<SpeedSnapshot>()` cannot reference a nonexistent type. The `as? T` cast is safe by construction: `DataProvider<T>.provideState(): Flow<T>` guarantees emissions match `snapshotType: KClass<T>`, so the binder's `snapshotType to snapshot` entries are always correctly typed.
 
 ### Batching
 
-The binder uses `combine()` to merge multiple provider flows into a single `StateFlow<WidgetData>` per widget:
+The binder uses `merge()` + `scan()` to accumulate provider emissions into a single `StateFlow<WidgetData>` per widget. Each slot updates independently — a stuck BLE provider does not block speed and battery from rendering:
 
 ```kotlin
 fun bind(widget: WidgetInstance): StateFlow<WidgetData> {
@@ -373,14 +386,15 @@ fun bind(widget: WidgetInstance): StateFlow<WidgetData> {
 
     if (providerFlows.isEmpty()) return MutableStateFlow(WidgetData.Unavailable)
 
-    return combine(providerFlows) { results ->
-        WidgetData(
-            snapshots = results.toMap().toImmutableMap(),
-            timestamp = SystemClock.elapsedRealtimeNanos(),
-        )
-    }.stateIn(bindingScope, SharingStarted.WhileSubscribed(timeout), WidgetData.Empty)
+    return providerFlows.merge()
+        .scan(WidgetData.Empty) { current, (snapshotType, snapshot) ->
+            current.withSlot(snapshotType, snapshot)
+        }
+        .stateIn(bindingScope, SharingStarted.WhileSubscribed(timeout), WidgetData.Empty)
 }
 ```
+
+**Why `merge() + scan()`, not `combine()`**: `combine()` requires at least one emission from every upstream flow before producing any downstream value. A 3-slot widget where one provider is slow or stuck receives zero data — contradicting the multi-slot design goal of independent availability and graceful degradation. `merge() + scan()` emits on each upstream emission, accumulating slots incrementally. `StateFlow` conflation ensures the UI still sees at most one update per frame regardless of emission rate.
 
 **Application-level allocation target: <4KB per frame** (DataSnapshot objects, event routing, state updates — excluding Compose framework overhead). **Total allocation budget: <64KB per frame** including Compose's snapshot system, slot table, and recomposition scope tracking.
 

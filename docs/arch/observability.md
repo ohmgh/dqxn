@@ -617,7 +617,7 @@ sealed interface AnomalyTrigger {
 | Jank spike | `JankDetector`: ≥5 consecutive frames >16ms | Capture, include worst-recomposing widget |
 | Provider timeout | `firstEmissionTimeout` exceeded | Partial capture (affected widget only) |
 | Escalated staleness | Widget data freshness exceeds 3x staleness threshold while provider reports CONNECTED | Capture, include binding lifecycle events |
-| Binding stall | Binding active >2x `firstEmissionTimeout` and `widgetData` still `Empty` | Capture, include `combine()` upstream status |
+| Binding stall | Binding active >2x `firstEmissionTimeout` and `widgetData` still `Empty` | Capture, include per-slot emission status |
 | DataStore corruption | `ReplaceFileCorruptionHandler` invoked | Capture, crash rotation pool (data loss event) |
 
 ### DiagnosticSnapshotCapture

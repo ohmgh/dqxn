@@ -110,7 +110,7 @@ Reactive data sources with declarative setup.
 
 | Req   | Description                                                                                   | Priority |
 |-------|-----------------------------------------------------------------------------------------------|----------|
-| F3.1  | `DataProvider` contract with `provideState(): Flow<DataSnapshot>`                             | Must     |
+| F3.1  | `DataProvider<T : DataSnapshot>` contract with `provideState(): Flow<T>`                      | Must     |
 | F3.2  | `DataSchema` describing output shape and data types                                           | Must     |
 | F3.3  | `SetupPageDefinition` — declarative multi-page setup wizard                                   | Must     |
 | F3.4  | Setup definition types: RuntimePermission, SystemServiceToggle, DeviceScan, Instruction       | Must     |

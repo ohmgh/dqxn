@@ -388,7 +388,7 @@ data class WidgetExpectations(
 **`diagnose-bindings`** returns:
 - All active widget→provider bindings with status
 - Stuck providers (bound but no emission within `firstEmissionTimeout`)
-- **Stalled bindings**: widgets where binding active >2x `firstEmissionTimeout` and `widgetData` still `Empty` — catches `combine()` starvation where one of N upstream providers fails initial emission and `combine()` blocks forever
+- **Stalled bindings**: widgets where binding active >2x `firstEmissionTimeout` and `widgetData` still `Empty` — all upstream providers failed initial emission (per-slot watchdog tracks individual provider timeouts)
 - Fallback activations (where primary provider was unavailable)
 - Provider error counts and retry states
 

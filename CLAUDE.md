@@ -351,6 +351,8 @@ Check `:codegen:plugin` and `:codegen:agentic` run as single pass. Verify `ksp.i
 | Why Proto DataStore, not Room? | No queries needed. Proto is faster for document-style persistence with schema evolution. |
 | Why no Timber? | Varargs allocation, no structured data, no trace correlation. `DqxnLogger` is zero-allocation when disabled. |
 | Why `SupervisorJob` for bindings? | Without it, one provider crash propagates and kills all widget bindings. |
+| Why generic `DataProvider<T>`? | Untyped `provideState(): Flow<DataSnapshot>` lets a provider declare `snapshotType = SpeedSnapshot::class` but emit `BatterySnapshot` — silent `null` from `as? T`. Generic bound makes the compiler enforce consistency. |
+| Why `merge() + scan()`, not `combine()`? | `combine()` requires all upstreams to emit before producing any value. A stuck provider blocks all slots — contradicts multi-slot independent availability. `merge() + scan()` surfaces partial data immediately. |
 | Why typed DataSnapshot, not Map? | `Map<String, Any?>` boxes primitives. 60 emissions/sec × 12 widgets = 720 garbage objects/sec. |
 | Why non-sealed DataSnapshot? | Sealed forces all subtypes into `:sdk:contracts` — packs can't define snapshot types without modifying SDK. KSP `@DashboardSnapshot` gives compile-time validation (no duplicate dataType, `@Immutable` required) without same-module restriction. `KClass`-keyed `WidgetData.snapshot<T>()` doesn't need sealed. |
 | Why snapshot sub-modules, not promote to `:sdk:contracts`? | Promotion divorces types from producers, grows `:sdk:contracts` into a domain dumping ground, and recompiles all modules on every change. Sub-modules (`:pack:*:snapshots`) preserve producer ownership, limit blast radius, and keep `:sdk:contracts` as pure mechanism. |
