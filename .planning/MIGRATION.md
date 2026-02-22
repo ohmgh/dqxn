@@ -237,6 +237,15 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 
 **Ported from old:** `ThermalManager`, `RenderConfig`, `UserPreferencesRepository` (rewritten for Proto), `LayoutDataStore` (rewritten from JSON-in-Preferences to Proto DataStore). Theme JSON loading.
 
+**Port inventory:**
+
+| Old artifact | Target | Notes |
+|---|---|---|
+| `DashboardThemeExtensions.kt` — spacing scale (`SpaceXXS`–`SpaceXXL`, 4dp grid) + 10 semantic aliases (`ScreenEdgePadding`, `SectionGap`, `ItemGap`, `InGroupGap`, `ButtonGap`, `IconTextGap`, `LabelInputGap`, `CardInternalPadding`, `NestedIndent`, `MinTouchTarget`) | `:core:design` | Port values; extension target changes from `DashboardThemeDefinition` to new `ThemeDefinition` |
+| `DashboardTypography` — 8 named styles (`title`, `sectionHeader`, `itemTitle`, `label`, `description`, `buttonLabel`, `primaryButtonLabel`, `caption`) + `getTightTextStyle` helper | `:core:design` | Port; verify against Material 3 type scale |
+| `TextEmphasis` — 4 alpha constants (`High=1.0f`, `Medium=0.7f`, `Disabled=0.4f`, `Pressed=0.12f`) | `:core:design` | Port verbatim |
+| `CardSize` enum — `SMALL(8dp)`, `MEDIUM(12dp)`, `LARGE(16dp)` corner radii | `:core:design` | Port verbatim |
+
 **Tests:** Thermal state transition tests, DataStore corruption recovery tests, layout serialization round-trip tests. `FakeThermalManager` flow emission tests.
 
 ---
@@ -252,6 +261,14 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 - `AppModule` — DI assembly with empty `Set<WidgetRenderer>` and `Set<DataProvider<*>>` (packs not yet migrated)
 - Blank dashboard canvas (placeholder composable — real dashboard lands in Phase 7)
 - ProGuard/R8 rules
+
+**Asset migration checklist:**
+
+- [ ] Adaptive launcher icon: `ic_launcher_foreground.xml`, `ic_launcher_background.xml` → `app/src/main/res/drawable/`
+- [ ] Monochrome launcher icon (API 33+): `ic_launcher_monochrome.xml` → `app/src/main/res/drawable/`
+- [ ] Adaptive icon manifests: `ic_launcher.xml`, `ic_launcher_round.xml` → `app/src/main/res/mipmap-anydpi-v26/`
+- [ ] Vector logo: `ic_logo_letterform.xml` → `app/src/main/res/drawable/`
+- [ ] Logo asset: `dqxn_logo_cyber_dog.webp` → decide: `:app` or `:core:design` res (needed by onboarding in Phase 10)
 
 ### `:core:agentic`
 
@@ -374,7 +391,22 @@ From this point forward, the agent can autonomously debug on a connected device:
 
 **Mutation handlers wired:** All mutation handlers listed in Phase 6 table become functional as coordinators land. Agent can now `add-widget`, `set-theme`, `inject-fault` etc. on device.
 
-**Ported from old:** Grid layout geometry, viewport filtering, gesture handling, drag offset animation — these port with moderate adaptation. The ViewModel, state management, and data binding are rewritten from scratch against the new coordinator pattern. Overlay composables (WidgetPicker, Settings, ThemeSelector, Diagnostics) port with UI adaptation.
+**Ported from old:** Grid layout geometry, viewport filtering, gesture handling, drag offset animation — these port with moderate adaptation. The ViewModel, state management, and data binding are rewritten from scratch against the new coordinator pattern. Overlay composables (WidgetPicker, Settings, ThemeSelector, Diagnostics) port with UI adaptation. Theme studio overlays include `InlineColorPicker` (HSL + hex editor), `GradientTypeSelector`, `GradientStopRow`. Settings overlays include `SettingRowDispatcher` with 10+ row types and shared building blocks (`SelectionChip`, `PreviewSelectionCard`, `SelectionBox`, `CornerRadiusPreview`). Timezone, DateFormat, AppPicker, and Sound pickers are full sub-overlays, not single composables.
+
+**Port inventory:**
+
+| Old artifact | Target | Notes |
+|---|---|---|
+| `DashboardMotion` — 3 spring profiles (`standard` 0.65/300, `hub` 0.5/300, `preview` 0.75/380) + all enter/exit transitions | `:feature:dashboard` | Port; springs are tuned — do not re-guess values |
+| `DashboardHaptics` — 6 semantic methods with API 30+ branching (`editModeEnter`, `editModeExit`, `dragStart`, `snapToGrid`, `boundaryHit`, `resizeStart`) | `:feature:dashboard` | Port; `REJECT`/`CONFIRM` constants API 30+ with fallbacks |
+| `GridPlacementEngine` — auto-placement algorithm for new widgets | `:feature:dashboard` (inside or alongside `LayoutCoordinator`) | Port; has existing `GridPlacementEngineTest` — port tests too |
+| `WidgetContainer` — glow rendering with `drawWithCache`, responsive sizing (3 tiers), border overlay, rim padding | `:sdk:ui` as `WidgetScaffold` | Redesign required — old uses `BlurMaskFilter` (forbidden); new uses `RenderEffect.createBlurEffect()` API 31+. Responsive sizing logic worth porting |
+| `ConfirmationDialog` — reusable modal with scrim + animation | `:feature:dashboard` or `:core:design` | Port verbatim |
+| `OverlayScaffold` — scaffold wrapping overlay content with title bar | `:feature:dashboard` | Port + adapt |
+| `InlineColorPicker` — HSL sliders + hex editor (412 lines, `WindowInsets.ime` keyboard handling) | `:feature:dashboard` (moves to `:feature:settings` in Phase 10) | Port; non-trivial — do not rebuild from scratch or pull in third-party lib |
+| `GradientTypeSelector` + `GradientStopRow` | `:feature:dashboard` | Port + adapt |
+| `SettingRowDispatcher` + 10 row types (`Boolean`, `Enum`, `Int`, `Float`, `String`, `Info`, `Instruction`, `AppPicker`, `DateFormat`, `Timezone`, `Sound`) + `SettingComponents.kt` building blocks | `:feature:dashboard` (moves to `:feature:settings` in Phase 10) | Port; `FeatureSettingsContent` renders full settings schema with collapsible groups |
+| `DashboardCustomLayout` — `Layout` composable with `layoutId`-based matching, grid-unit coordinate system | `:feature:dashboard` | Port + adapt for new coordinator-owned state |
 
 **Tests:**
 - Coordinator unit tests for each of the five coordinators
@@ -434,6 +466,18 @@ All widgets: `ImmutableMap` settings, `LocalWidgetData.current` data access, `ac
 **2 free themes** — `slate.theme.json`, `minimalist.theme.json` (port verbatim).
 
 **Ported from old:** Widget rendering logic (Canvas drawing, Compose layouts) ports with moderate adaptation. Provider sensor flows port cleanly (callbackFlow pattern already correct). Theme JSON files port verbatim. Every widget's `Render()` signature changes (no `widgetData` param, add `ImmutableMap`, read from `LocalWidgetData`).
+
+**Port inventory:**
+
+| Old artifact | Target | Notes |
+|---|---|---|
+| `SolarCalculator` — Meeus/NOAA solar algorithm, pure Kotlin, ±1min accuracy | `:pack:free` alongside providers | Port verbatim; no Android deps. Regeneration task (`updateIanaTimezones`) needs equivalent |
+| `IanaTimezoneCoordinates` — 312-entry IANA zone → lat/lon lookup table | `:pack:free` alongside providers | Port verbatim; pure Kotlin |
+| `RegionDetector` — timezone-first MPH country detection | `:pack:free` | Port; only speed widgets use it — keep in pack unless second consumer appears |
+| `TimezoneCountryMap` — IANA timezone → country code + city name | `:pack:free` | Port; co-located with `RegionDetector` |
+| `InfoCardLayout` — deterministic weighted normalization for STACK/COMPACT/GRID modes | `:sdk:ui` | Port if widget designs retain layout modes; includes `getTightTextStyle` (font padding elimination) |
+| `WidgetPreviewData` — `PREVIEW_WIDGET_DATA` static data for picker previews | `:pack:free` | Port + adapt to typed snapshots |
+| `CornerRadius` presets enum + `styleSettingsSchema` | `:pack:free` (shared widget style settings) | Port verbatim |
 
 **Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. On-device semantics verification via `assertWidgetRendered` + `assertWidgetText` for each widget type.
 
