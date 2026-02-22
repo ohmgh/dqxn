@@ -214,38 +214,60 @@ Every user-facing message in the requirements maps to exactly one owner:
 
 ### Shell Subsystem Emission
 
-No reactive rules engine — each shell subsystem that needs to emit notifications calls the coordinator directly. Domain-specific logic (debouncing, batching) stays in the subsystem that understands it:
+`@Singleton` subsystems cannot call the `@ViewModelScoped` coordinator directly — that's a Hilt scope violation. Instead, the coordinator **observes** singleton state flows and derives banners reactively. Domain-specific logic (debouncing, what constitutes a BLE adapter failure vs individual disconnect) stays in the subsystem via its state representation. The coordinator maps states to banners.
 
 ```kotlin
-// ConnectionStateMachine — owns BLE disconnect batching
-private fun onBleAdapterOff(affectedDevices: Int) {
-    // I know this is an adapter-level event, not N individual disconnects
-    notificationCoordinator.showBanner(
-        id = "ble_adapter_off",
-        title = "Bluetooth Off",
-        message = "$affectedDevices devices disconnected",
-        priority = NotificationPriority.HIGH,
-        dismissible = false,  // persists until BLE adapter restored
-    )
+// In NotificationCoordinator init — observes @Singleton state flows
+// This is 5 launch blocks, not a rules engine. The domain knowledge stays
+// in the subsystem's state representation, not in the coordinator.
+
+scope.launch {
+    connectionStateMachine.state
+        .map { it.bleAdapterOff to it.affectedDeviceCount }
+        .distinctUntilChanged()
+        .collect { (adapterOff, count) ->
+            if (adapterOff) {
+                showBanner(
+                    id = "ble_adapter_off",
+                    title = "Bluetooth Off",
+                    message = "$count devices disconnected",
+                    priority = NotificationPriority.HIGH,
+                    dismissible = false,
+                )
+            } else {
+                dismissBanner("ble_adapter_off")
+            }
+        }
 }
 
-// CrashRecovery — reads from SharedPreferences (survives process death)
-if (shouldEnterSafeMode()) {
-    notificationCoordinator.showBanner(
-        id = "safe_mode",
-        title = "App Recovered",
-        message = "Dashboard recovered from repeated crashes",
-        priority = NotificationPriority.CRITICAL,
-        actions = persistentListOf(
-            NotificationAction("Reset Layout", "reset_layout"),
-            NotificationAction("Report", "report_crash"),
-        ),
-        dismissible = false,
-    )
+scope.launch {
+    crashRecovery.safeModeActive  // @Singleton, backed by SharedPreferences
+        .distinctUntilChanged()
+        .collect { active ->
+            if (active) {
+                showBanner(
+                    id = "safe_mode",
+                    title = "App Recovered",
+                    message = "Dashboard recovered from repeated crashes",
+                    priority = NotificationPriority.CRITICAL,
+                    actions = persistentListOf(
+                        NotificationAction("Reset Layout", "reset_layout"),
+                        NotificationAction("Report", "report_crash"),
+                    ),
+                    dismissible = false,
+                )
+            } else {
+                dismissBanner("safe_mode")
+            }
+        }
 }
+
+// Similar for: StorageMonitor.isLow, EntitlementManager.graceExpired, windowMetrics
 ```
 
-This keeps each subsystem's notification logic testable with that subsystem, avoids hidden coupling through a centralized rules engine, and respects DQXN's principle that domain knowledge stays with the domain owner.
+**Why this isn't the killed "rules engine"**: The rules engine was a standalone class injecting every subsystem's flows, creating hidden coupling. Here, the coordinator — whose explicit job is mapping state to user-facing notifications — observes the same flows it already needs for re-derivation on ViewModel recreation. No new coupling, no new abstraction. The subsystems expose meaningful state (`bleAdapterOff`, `safeModeActive`); the coordinator maps to banners.
+
+**Activity-dead scenarios**: When the Activity is killed (low memory) while the FGS keeps running, subsystem state changes still occur in `@Singleton` scope. `SystemNotificationBridge` (`@Singleton`) independently observes `ConnectionStateMachine.state` for system notification updates — this path never depends on the coordinator. When the Activity recreates and the coordinator initializes, it re-derives all banners from current singleton state. No events are lost because the coordinator never stores events — it projects current conditions.
 
 ### In-App Notification Rendering (Layer 0.5)
 
@@ -274,6 +296,20 @@ Box {
 **Inset behavior**: Banners always respect `WindowInsets.statusBars` regardless of Layer 0's edge-to-edge rendering. Banners are informational chrome, not dashboard content.
 
 **When overlays are open**: Non-critical banners are suppressed while a Layer 1 overlay is active. Critical banners (safe mode) remain visible above the overlay.
+
+**Lifecycle collection**: `NotificationBannerHost` uses `collectAsStateWithLifecycle()` for toast consumption — unlike Layer 0 widgets which use `collectAsState()`. This prevents toasts from being consumed and auto-dismissed while the app is backgrounded (e.g., user left to system settings). Toasts remain in the `Channel` until the Activity resumes. Banners use `collectAsState()` because they're state-derived and re-derive on resume regardless.
+
+### Overlay-Local Feedback vs App-Level Notifications
+
+Setup-flow confirmations ("Permission granted", "Bluetooth enabled", "Sensor calibrated") are **not** app-level notifications. They are contextual UI feedback within a specific overlay and use `SnackbarHostState` in the overlay's own `Scaffold`:
+
+```kotlin
+// Inside ProviderSetup overlay — local feedback, not NotificationCoordinator
+val snackbarHostState = remember { SnackbarHostState() }
+Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { ... }
+```
+
+The distinction: if the **user caused** the event (toggled a permission, completed calibration), feedback belongs to the screen that caused it. If the **system caused** the event (crash recovery, storage pressure, entitlement revocation), it goes through `NotificationCoordinator`.
 
 ### AlertEmitter & AlertSoundManager
 

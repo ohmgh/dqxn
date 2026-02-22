@@ -364,6 +364,6 @@ Check `:codegen:plugin` and `:codegen:agentic` run as single pass. Verify `ksp.i
 | Why toasts through `NotificationCoordinator`, not `DashboardEffect`? | `DashboardEffect` is a raw `Channel` — no driving-mode gating, no priority ordering, no rate limiting. Toasts need all three. |
 | Why `AlertSoundManager` separate from `NotificationCoordinator`? | Scope mismatch (`@Singleton` vs `@ViewModelScoped`), independent triggers (speed limit alert is audio-only, no banner), and audio focus handling requires application-lifetime resources. |
 | Why no pack `NotificationEmitter` at V1? | Every V1 pack notification is already modeled as widget state (`WidgetStatusCache`) or shell-originated. Adding `NotificationEmitter` to `:sdk:contracts` is premature API commitment with no validated consumer. |
-| Why no notification rules engine? | Only ~5 rules at launch. Inline notification logic in each subsystem keeps domain knowledge with the domain owner, avoids hidden coupling, and is more testable. Extract a rules engine only if rule count grows. |
+| Why no notification rules engine? | Only ~5 rules at launch. Coordinator observes `@Singleton` state flows directly — not a standalone engine class injecting every subsystem. Domain knowledge stays in subsystem state representation (`bleAdapterOff`, `safeModeActive`); coordinator just maps state to banners. |
 
 Full rationale in `docs/ARCHITECTURE.md`.
