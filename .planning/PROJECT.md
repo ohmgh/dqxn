@@ -13,8 +13,12 @@ Modular Android dashboard platform for real-time data display through configurab
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Full technical design: module structure, dependency rules, layers, patterns |
 | [arch/](arch/) | Deep-dive docs: state management, Compose performance, plugin system, observability, persistence, testing, build system, platform |
 | [REQUIREMENTS.md](REQUIREMENTS.md) | Product requirements: F1-F14 functional, NF1-NF47 non-functional, widget/provider/theme inventories, user flows |
-| [MIGRATION.md](MIGRATION.md) | Implementation playbook: per-phase deliverables, porting notes, test lists, integration policy, TDD policy |
-| [ROADMAP.md](ROADMAP.md) | GSD phase index with requirement mappings and success criteria |
+| [ROADMAP.md](ROADMAP.md) | 13-phase index with requirement mappings, success criteria, and dependency graph |
+| [MIGRATION.md](MIGRATION.md) | Migration assessment, guiding principles, and phase index |
+| [migration/](migration/) | Per-phase implementation playbooks (phase-01..13), TDD policy, integration policy, replication advisory, risk flags |
+| [DECISIONS.md](DECISIONS.md) | 88 architectural decisions with rejected alternatives and rationale |
+| [STATE.md](STATE.md) | Current project state, phase progress, accumulated decisions and context |
+| [oldcodebase/](oldcodebase/) | 8 mapping docs (~6000 lines) indexing prior implementation for migration reference |
 
 ## Tech Stack
 
@@ -29,7 +33,7 @@ android/
   codegen/  — plugin, agentic (KSP, build-time only)
   data/     — Proto + Preferences DataStore, .proto schemas
   feature/  — dashboard, settings, diagnostics, onboarding
-  pack/     — free (+snapshots), plus, themes, demo
+  pack/     — essentials (+snapshots), plus, themes, demo
   app/      — single-activity entry, DI assembly
 ```
 
@@ -52,4 +56,4 @@ android/
 
 ## Current State
 
-Phase 1 not started. See [ROADMAP.md](ROADMAP.md) for phase structure, [MIGRATION.md](MIGRATION.md) for implementation details per phase.
+Phase 1 not started. 13 phases planned across 4 parallel streams after Phase 8 (architecture validation gate). See [STATE.md](STATE.md) for progress, [ROADMAP.md](ROADMAP.md) for phase structure, [migration/](migration/) for per-phase implementation details.

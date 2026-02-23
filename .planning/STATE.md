@@ -26,7 +26,7 @@
 
 ## Decisions
 
-Key decisions accumulated during architecture phase — full table in `DECISIONS.md` (47 entries). Highlights:
+Key decisions accumulated during architecture phase — full table in `DECISIONS.md` (88 entries). Highlights:
 
 - **Per-profile dashboards** over per-widget visibility (sparse layouts, gesture mismatch)
 - **Unbounded canvas** with no-straddle snap and no automatic relocation
