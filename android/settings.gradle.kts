@@ -47,6 +47,8 @@ include(":codegen:agentic")
 // Data layer
 include(":data")
 
+include(":data:proto")
+
 // Feature modules
 include(":feature:dashboard")
 
