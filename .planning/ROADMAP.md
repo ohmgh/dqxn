@@ -4,15 +4,20 @@
 
 ## Phase 1: Build System Foundation
 
-**Goal:** Gradle infrastructure that all modules depend on. Nothing compiles without this.
+**Goal:** Gradle infrastructure that all modules depend on. Nothing compiles without this. Stub `build.gradle.kts` for all modules — `settings.gradle.kts` is stable from Phase 1 onward.
 
 **Requirements:** NF35 (build times)
 
 **Success Criteria:**
-1. `./gradlew tasks --console=plain` succeeds with all convention plugins resolving
-2. Version catalog covers full dependency set (AGP 9.0.1, Kotlin 2.3+, Compose BOM, Hilt, KSP, Proto DataStore, JUnit5, etc.)
-3. Proto DataStore toolchain compatibility verified (throwaway module)
-4. All convention plugins defined: `dqxn.android.application`, `dqxn.android.library`, `dqxn.android.compose`, `dqxn.android.hilt`, `dqxn.android.test`, `dqxn.pack`, `dqxn.snapshot`, `dqxn.android.feature`
+1. `./gradlew tasks --console=plain` succeeds — all convention plugins resolve, all stub modules parse
+2. `./gradlew :build-logic:convention:test` passes — Gradle TestKit configuration assertions (compileSdk/minSdk/targetSdk, Compose enabled where expected, Hilt wired, `dqxn.pack` dependency graph correct)
+3. `./gradlew :pack:essentials:dependencies --configuration debugCompileClasspath` shows all `:sdk:*` modules with `implementation` scope
+4. `./gradlew :lint-rules:test` passes — all 5 lint rules have positive/negative test cases
+5. Version catalog contains all required dependency aliases (verified by assertion test)
+6. Proto DataStore toolchain compatibility verified (throwaway module: `compileDebugKotlin` + generated files present)
+7. EXTOL SDK throwaway: `assembleDebug` passes (or incompatibility recorded in `STATE.md`)
+
+All convention plugins defined: `dqxn.android.application`, `dqxn.android.library`, `dqxn.android.compose`, `dqxn.android.hilt`, `dqxn.android.test`, `dqxn.pack`, `dqxn.snapshot`, `dqxn.android.feature`, `dqxn.kotlin.jvm`
 
 **Details:** [MIGRATION.md — Phase 1](MIGRATION.md#phase-1-build-system-foundation)
 

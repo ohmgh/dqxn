@@ -46,19 +46,21 @@ app/      — single-activity entry, DI assembly
 
 **`:pack:{packId}`** — CAN: `:sdk:*`, `:pack:*:snapshots`. CANNOT: `:feature:*`, `:core:*`, `:data`, other packs. Need something from dashboard? → belongs in `:sdk:contracts`.
 
-**`:pack:{packId}:snapshots`** — CAN: `:sdk:contracts` only. Pure Kotlin, no Android/Compose. Only `@DashboardSnapshot` data classes. Uses `dqxn.snapshot` plugin.
+**`:pack:{packId}:snapshots`** — CAN: `:sdk:contracts` only. Pure Kotlin, no Compose compiler (no `dqxn.android.compose`). `@Immutable` available transitively via `:sdk:contracts` → `compose.runtime`. Only `@DashboardSnapshot` data classes. Uses `dqxn.snapshot` plugin.
 
 **`:feature:dashboard`** — CAN: `:sdk:*`, `:core:design`, `:core:thermal`, `:data`. CANNOT: any `:pack:*`.
 
 **`:core:firebase`** — CAN: `:sdk:observability`, `:sdk:analytics`, `:sdk:common`. Only module with Firebase SDKs. Only `:app` imports it.
 
-**`:sdk:contracts`** — CAN: `:sdk:common` only. Pure Kotlin + coroutines. Exception: `@Composable` in `WidgetRenderer.Render()` signature only.
+**`:sdk:contracts`** — CAN: `:sdk:common` only. Pure Kotlin + coroutines + `compileOnly(compose.runtime)` for `@Composable` and `@Immutable` annotations. No Compose compiler — annotations only, no composable function bodies.
 
 ### Compose Compiler Scope
 
-- `dqxn.android.compose` — UI modules: `:app`, `:feature:*`, `:sdk:ui`, `:core:design`
-- `dqxn.snapshot` — `:pack:*:snapshots` (pure Kotlin, no Compose)
-- WITHOUT Compose: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:firebase`, `:core:agentic`, `:codegen:*`, `:data`
+- `dqxn.android.compose` (explicit) — UI modules: `:app`, `:feature:*`, `:sdk:ui`, `:core:design`
+- `dqxn.pack` (applies `dqxn.android.compose` internally) — all `:pack:{packId}` modules (packs contain `@Composable Render()`)
+- `dqxn.snapshot` — `:pack:*:snapshots` (pure Kotlin, no Compose compiler — `@Immutable` available transitively via `compose.runtime`)
+- `dqxn.kotlin.jvm` — `:codegen:*` (pure JVM, no Android, no Compose)
+- WITHOUT Compose compiler: `:sdk:contracts` (`compileOnly(compose.runtime)` for annotations only), `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:firebase`, `:core:agentic`, `:data`
 
 ## Critical Constraints
 

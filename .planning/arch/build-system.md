@@ -33,19 +33,24 @@ All annotation processing uses KSP. No KAPT — enables Gradle configuration cac
 
 ## Custom Lint Rules (`:lint-rules`)
 
-| Rule | Severity | Description |
-|---|---|---|
-| `ModuleBoundaryViolation` | Error | Pack modules importing outside `:sdk:*` / `*:snapshots` boundary |
-| `KaptDetection` | Error | Any module applying `kapt` plugin |
-| `ComposeInNonUiModule` | Error | Compose imports in non-UI modules |
+All rules delivered in Phase 1, enforcement starts when consumers exist:
 
-Additional rules (`WidgetScopeBypass`, `AgenticMainThreadBan`) added when the first widget renderer and agentic command handler are implemented. `MutableCollectionInImmutable` deferred — caught by Compose stability report. `MainThreadDiskIo` deferred — standard Android discipline enforced by code review.
+| Rule | Severity | Enforcement starts | Description |
+|---|---|---|---|
+| `KaptDetection` | Error | Phase 1 | Any module applying `kapt` plugin — breaks configuration cache |
+| `NoHardcodedSecrets` | Error | Phase 1 | SDK keys, API tokens, credentials in source; secrets via `local.properties` or secrets plugin |
+| `ModuleBoundaryViolation` | Error | Phase 2 | Pack modules importing outside `:sdk:*` / `*:snapshots` boundary |
+| `ComposeInNonUiModule` | Error | Phase 2 | Compose imports in non-UI modules |
+| `AgenticMainThreadBan` | Error | Phase 6 | `Dispatchers.Main` usage in agentic command handlers |
+
+Additional rules added when consumers exist: `WidgetScopeBypass` (Phase 8, first widget renderer). `MutableCollectionInImmutable` deferred — caught by Compose stability report. `MainThreadDiskIo` deferred — standard Android discipline enforced by code review.
 
 ## Pre-commit Hooks
 
 ```bash
 # .githooks/pre-commit
 ./gradlew :lint-rules:test --console=plain --warning-mode=summary
+./gradlew spotlessCheck --console=plain --warning-mode=summary
 grep -r "feature.dashboard" pack/ && exit 1
 grep -r "kapt" --include="*.kts" */build.gradle.kts && exit 1
 ```

@@ -4,7 +4,7 @@ Incremental migration of the old codebase into the new architecture. Bottom-up, 
 
 ## Assessment
 
-**Old codebase:** ~369 Kotlin files, working app. 15 widgets, 15 providers, 28 themes, full dashboard shell, agentic framework, observability, tests.
+**Old codebase:** ~369 Kotlin files, working app. 15 widgets, 15 providers, 24 themes (2 free + 22 premium), full dashboard shell, agentic framework, observability, tests.
 
 **New codebase:** Zero implementation code. 10 architecture docs defining a significantly different target architecture.
 
@@ -62,36 +62,209 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
 
 **What:** Gradle infrastructure that all modules depend on. Nothing compiles without this.
 
+**Pre-requisites:**
+
+- JDK 25 installed (or Gradle toolchain auto-download configured via `org.gradle.java.installations.auto-download=true`)
+- Any recent Gradle installation for bootstrapping (`gradle wrapper --gradle-version 9.3.1`)
+- Android SDK platform 36 installed
+
 **Deliverables:**
 
-- `android/settings.gradle.kts` — module includes, version catalog, `build-logic` includeBuild
+- `android/settings.gradle.kts` — module includes for ALL modules (stub `build.gradle.kts` for modules not yet implemented — see Module Include Strategy), version catalog, `build-logic` includeBuild
 - `android/build.gradle.kts` — root project
-- `android/gradle/libs.versions.toml` — full version catalog (AGP 9.0.1, Kotlin 2.3+, JDK 25, Compose BOM, Hilt, KSP, kotlinx-collections-immutable, kotlinx.serialization, Proto DataStore, JUnit5, MockK, Turbine, Truth, jqwik, Robolectric)
-- `android/gradle.properties` — configuration cache, KSP incremental, Compose compiler flags
-- `android/build-logic/convention/` — all convention plugins:
-  - `dqxn.android.application`
-  - `dqxn.android.library`
-  - `dqxn.android.compose` (separate from library — controls which modules get Compose compiler)
-  - `dqxn.android.hilt`
-  - `dqxn.android.test` (JUnit5 + MockK + Truth + Turbine)
-  - `dqxn.pack` (auto-wires all `:sdk:*` dependencies — packs never manually add them)
-  - `dqxn.snapshot` (configures `:pack:*:snapshots` sub-modules — pure Kotlin, `:sdk:contracts` only, no Android/Compose)
-  - `dqxn.android.feature`
+- `android/gradle/libs.versions.toml` — complete version catalog (see Version Catalog)
+- `android/gradle.properties` — configuration cache, KSP incremental, Compose compiler flags, `jvmToolchain(25)` in convention plugins (no hardcoded `org.gradle.java.home`)
+- `android/build-logic/convention/` — all convention plugins with Gradle TestKit tests (see Convention Plugin Specs)
+- `android/lint-rules/` — `:lint-rules` module with custom lint checks and unit tests (see Lint Rules)
 - JUnit5 test tags (`fast`, `compose`, `integration`, `benchmark`) and convention plugin `fastTest`/`composeTest` Gradle tasks (F13.10) — available from Phase 2 onward so every module benefits
-- `AgenticMainThreadBan` lint rule (enforced from Phase 6 onward when first handler lands)
-- `NoHardcodedSecrets` lint rule (NF20) — flags SDK keys, API tokens, credentials in source; secrets via `local.properties` or secrets plugin
+- Code formatting: ktfmt (Google style) via Spotless Gradle plugin, `.editorconfig`, enforced in pre-commit hook
 - Gradle wrapper (9.3.1)
 
-**Ported from old:** Convention plugin structure (4 plugins → 7+, significantly expanded). Version catalog (updated versions, added missing deps like kotlinx-collections-immutable, Proto DataStore, JUnit5, jqwik).
+### Module Include Strategy
 
-**Toolchain compatibility checks** (binary go/no-go before Phase 2 starts):
+`settings.gradle.kts` includes ALL modules from Phase 1 onward. Modules not yet implemented get a stub `build.gradle.kts` containing only the plugin application:
 
-- Proto DataStore: add a stub `.proto` file, verify `protobuf` Gradle plugin compiles with AGP 9.0.1 / Gradle 9.3.1 / JDK 25. If it doesn't, investigate before Phase 5 designs around it.
-- EXTOL SDK: add `implementation("sg.gov.lta:extol:X.Y.Z")` to a throwaway module, run `compileDebugKotlin`. Record result. If incompatible, remove `:pack:sg-erp2` from Phase 9 scope immediately — don't waste design effort on connection state machine and 8 provider contracts for a pack that can't ship.
+```kotlin
+// sdk/contracts/build.gradle.kts (stub — source added in Phase 2)
+plugins {
+    id("dqxn.android.library")
+}
+```
+
+Benefits:
+
+- `./gradlew tasks` validates all plugin resolution against actual module targets
+- `./gradlew :pack:essentials:dependencies` validates `dqxn.pack` auto-wiring from Phase 1 (closes 7-phase gap)
+- `settings.gradle.kts` is stable — no modifications per phase
+- Phases 3+4 (concurrent) don't create merge conflicts on settings
+
+Subsequent phases fill in source files; they do not modify `settings.gradle.kts` or stub build files (only `:app/build.gradle.kts` gains `implementation(project(...))` entries as packs land).
+
+### Convention Plugin Specs
+
+**`dqxn.android.application`**
+
+- Applies `com.android.application`
+- Sets compileSdk 36, minSdk 31, targetSdk 36, `jvmToolchain(25)`
+- Configures release build type (minify, R8)
+- Enables `buildConfig = true`
+- Applies `dqxn.android.compose`
+
+**`dqxn.android.library`**
+
+- Applies `com.android.library`
+- Sets compileSdk 36, minSdk 31, `jvmToolchain(25)`
+- Configures `unitTests.isIncludeAndroidResources = true`, `unitTests.isReturnDefaultValues = true`
+- Does NOT enable Compose — Compose is opt-in via `dqxn.android.compose`
+
+**`dqxn.android.compose`**
+
+- Enables `buildFeatures { compose = true }` (verify AGP 9.0.1 mechanism — see AGP 9 Compose Investigation)
+- Adds Compose BOM + core dependencies (`compose-ui`, `compose-ui-graphics`, `compose-material3`, `compose-ui-tooling-preview`)
+- Adds `debugImplementation` compose-ui-tooling
+- Wires base stability config file (`sdk/common/compose_compiler_config.txt`)
+- Accepts additional stability config paths via extension property (for KSP-generated files in `dqxn.pack`)
+
+**`dqxn.android.hilt`**
+
+- Applies `com.google.devtools.ksp` and `com.google.dagger.hilt.android`
+- Adds `hilt-android` (implementation) and `hilt-compiler` (ksp)
+
+**`dqxn.android.test`**
+
+- Applies `de.mannodermaus.android-junit5`
+- Adds: `junit-jupiter-api`, `junit-jupiter-engine`, `junit-jupiter-params` (testImplementation / testRuntimeOnly)
+- Adds: jqwik (testImplementation) — available from Phase 2 for property-based tests
+- Adds: MockK, Truth, Turbine, kotlinx-coroutines-test, Robolectric (testImplementation)
+- Configures `useJUnitPlatform()` in test tasks
+- Registers `fastTest` task (`--include-tags fast`) and `composeTest` task (`--include-tags compose`)
+- Configures structured test output to `{module}/build/test-results/{variant}/` (F13.8)
+
+**`dqxn.pack`** (most complex convention plugin — all responsibilities enumerated)
+
+- Applies `dqxn.android.library` (base Android library config)
+- Applies `dqxn.android.compose` (packs contain `@Composable Render()` — Compose compiler required)
+- Applies `dqxn.android.hilt` (packs use `@Module @InstallIn(SingletonComponent::class)` for multibinding)
+- Applies `dqxn.android.test`
+- Applies `com.google.devtools.ksp` and adds `ksp(project(":codegen:plugin"))` for `@DashboardWidget` / `@DashboardDataProvider` processing
+- Applies `org.jetbrains.kotlin.plugin.serialization` (packs use kotlinx.serialization for settings)
+- Wires KSP-generated Compose stability config file into Compose compiler options (via `dqxn.android.compose` extension)
+- Auto-wires all `:sdk:*` dependencies with `implementation` scope: `:sdk:contracts`, `:sdk:common`, `:sdk:ui`, `:sdk:observability`, `:sdk:analytics`
+- Adds `implementation(libs.kotlinx.collections.immutable)` and `implementation(libs.kotlinx.coroutines.core)`
+- Configures common KSP args: `themesDir` pointing to `src/main/resources/themes/`, `manifestPath` (convention-based, no `afterEvaluate` — configuration-cache safe)
+- Note: `:codegen:plugin` doesn't exist until Phase 4 adds processor source. Stub module has an empty `build.gradle.kts`. KSP processing is a no-op until then. The convention plugin still wires the dependency — Gradle resolves it against the empty stub
+
+**`dqxn.snapshot`** (pure-data sub-modules for cross-boundary snapshot types)
+
+- Applies `dqxn.android.library` (Android library module for build consistency)
+- Adds `api(project(":sdk:contracts"))` as only project dependency
+- Does NOT apply the Compose compiler plugin — no `@Composable` function processing
+- `@Immutable` annotation (from `androidx.compose.runtime`) is available transitively because `:sdk:contracts` depends on `compose.runtime` (for `@Composable` in `WidgetRenderer.Render()` signature)
+- No kotlinx.serialization, no Hilt, no KSP
+
+**`dqxn.android.feature`**
+
+- Applies `dqxn.android.library`, `dqxn.android.compose`, `dqxn.android.hilt`, `dqxn.android.test`
+- Auto-wires: `:sdk:contracts`, `:sdk:common`, `:sdk:ui`, `:sdk:observability` (implementation scope)
+- Adds: lifecycle, hilt-navigation-compose, navigation-compose
+- Does NOT wire `:core:*` or `:data` — features declare these manually per module
+
+**`dqxn.kotlin.jvm`** (lightweight, for `:codegen:*` modules)
+
+- Applies `kotlin("jvm")`
+- Sets `jvmToolchain(25)`
+- No Android, no Compose, no Hilt
+
+### Version Catalog
+
+`android/gradle/libs.versions.toml` — complete catalog covering all phases. Dependencies not consumed until later phases are still present — changing the catalog later is trivial but missing entries cause confusion about intentional omissions.
+
+Required entries (non-exhaustive — full enumeration at implementation time):
+
+| Category | Entries |
+|---|---|
+| Build plugins | AGP 9.0.1, KSP (Kotlin 2.3-compatible), Hilt, `com.google.protobuf`, `de.mannodermaus.android-junit5`, kotlinx.serialization, Spotless |
+| Compose | Compose BOM, `compose-runtime` (standalone — needed by `:sdk:contracts` without compiler), compose-ui, compose-material3, compose-ui-tooling, compose-ui-test-junit4 |
+| AndroidX | lifecycle, navigation-compose, activity-compose, core-ktx, core-splashscreen, datastore-proto, datastore-preferences, window (foldable APIs) |
+| Kotlin | kotlinx-coroutines (core + test), kotlinx-collections-immutable, kotlinx-serialization-json |
+| DI | hilt-android, hilt-compiler, hilt-navigation-compose |
+| KSP authoring | ksp-api, KotlinPoet, KotlinPoet-KSP |
+| Firebase | crashlytics, analytics, performance (behind interfaces in `:core:firebase`) |
+| Debug | LeakCanary |
+| Testing | JUnit5 (jupiter-api, engine, params), jqwik, MockK, Truth, Turbine, Robolectric, compose-ui-test-junit4, kotlinx-coroutines-test |
+| Location | play-services-location |
+| Conditional | EXTOL SDK (contingent on Phase 1 compat check) |
+
+### Lint Rules
+
+`:lint-rules` module with the following detectors (all delivered in Phase 1, enforcement starts when consumers exist):
+
+| Rule | Severity | Enforcement starts | What it catches |
+|---|---|---|---|
+| `KaptDetection` | Error | Phase 1 | Any module applying `kapt` plugin — breaks configuration cache |
+| `NoHardcodedSecrets` | Error | Phase 1 | SDK keys, API tokens, credentials in source |
+| `ModuleBoundaryViolation` | Error | Phase 2 | Pack modules importing outside `:sdk:*` / `*:snapshots` boundary |
+| `ComposeInNonUiModule` | Error | Phase 2 | Compose imports in non-UI modules |
+| `AgenticMainThreadBan` | Error | Phase 6 | `Dispatchers.Main` usage in agentic command handlers |
+
+Each rule has unit tests (positive case: fires on violating code; negative case: does not fire on clean code) using `LintDetectorTest`. Additional rules (`WidgetScopeBypass`) added when the first widget renderer is implemented (Phase 8).
+
+### AGP 9 Compose Investigation
+
+AGP 9.0.1 manages Kotlin directly (no `org.jetbrains.kotlin.android` plugin). The old codebase applies `org.jetbrains.kotlin.plugin.compose` as a separate JetBrains plugin. Phase 1 must determine:
+
+1. Does AGP 9.0.1 subsume the Compose compiler, or is the separate plugin still required?
+2. If the separate plugin is needed, does it conflict with AGP 9's built-in Kotlin management?
+3. What is the correct `buildFeatures` / plugin DSL for enabling Compose in AGP 9.0.1?
+
+Document the finding and build `dqxn.android.compose` accordingly. The old `build-logic/gradle/libs.versions.toml` has `compose-gradlePlugin` — verify whether this classpath dependency is still needed.
+
+### Toolchain Compatibility Checks
+
+Binary go/no-go before Phase 2 starts:
+
+- **Proto DataStore**: Add a stub `.proto` file to a throwaway module applying `com.google.protobuf` plugin. Verify `compileDebugKotlin` passes AND generated Kotlin files are present in build output. If protoc binary is incompatible with JDK 25 or generated code fails to compile with Kotlin 2.3+, investigate before Phase 5 designs around it.
+- **EXTOL SDK**: Add `implementation("sg.gov.lta:extol:X.Y.Z")` to a throwaway module, run `assembleDebug` (not just `compileDebugKotlin` — catches linking/packaging failures from JNI or native library incompatibilities). Record result in `STATE.md` Decisions section. If incompatible, remove `:pack:sg-erp2` from Phase 9 scope immediately — don't waste design effort on connection state machine and 8 provider contracts for a pack that can't ship.
 
 Delete throwaway modules after checks. These are 10-minute verifications that prevent Phase 5/9 scope surprises.
 
-**Validation:** `./gradlew tasks --console=plain` succeeds. No modules to compile yet, but plugin resolution works.
+### `java-test-fixtures` Strategy
+
+Modules that need testFixtures (`:sdk:contracts` in Phase 2, others later) apply `java-test-fixtures` manually in their `build.gradle.kts`. This is not baked into any convention plugin — testFixtures are opt-in per module.
+
+### `:sdk:contracts` Compose Runtime Dependency
+
+`:sdk:contracts` is "pure Kotlin + coroutines" but has `@Composable` in the `WidgetRenderer.Render()` signature and `@Immutable` annotation usage. It needs `compileOnly(libs.compose.runtime)` — the Compose runtime for annotations, NOT the Compose compiler. This is added manually in Phase 2's `:sdk:contracts/build.gradle.kts`, not via a convention plugin.
+
+### Deferred Validation Registry
+
+Several convention plugins can't be fully validated until their first real consumer. Deferred validation is assigned to the consuming phase's success criteria:
+
+| Plugin | Deferred validation | Owner phase |
+|---|---|---|
+| `dqxn.android.library` | First module compiles | Phase 2 (`:sdk:common` compiles) |
+| `dqxn.android.compose` | Compose code compiles | Phase 3 (`:sdk:ui` compiles) |
+| `dqxn.android.hilt` | Hilt DI graph resolves | Phase 6 (`:app:installDebug`) |
+| `dqxn.android.test` | First test runs with JUnit5 | Phase 2 (`ConnectionStateMachineTest` passes) |
+| `dqxn.android.feature` | Feature module compiles | Phase 7 (`:feature:dashboard` compiles) |
+| `dqxn.pack` | Dependency graph + KSP wiring | Phase 1 stub check + Phase 8 real validation |
+| `dqxn.snapshot` | Snapshot sub-module compiles | Phase 8 (`:pack:essentials:snapshots` compiles) |
+| `dqxn.android.application` | APK assembles | Phase 6 (`:app:installDebug`) |
+| `dqxn.kotlin.jvm` | Codegen module compiles | Phase 4 (`:codegen:plugin` compiles) |
+
+Phase 1 partially validates `dqxn.pack` via stub module dependency resolution (`./gradlew :pack:essentials:dependencies`). Full validation (KSP processing, Compose compilation, runtime behavior) waits for Phase 8.
+
+**Ported from old:** Convention plugin structure (4 plugins → 9, significantly expanded). Version catalog (updated versions, added missing deps). Convention plugins must be rewritten for AGP 9.0.1's new DSL interfaces (old `BaseExtension` types are gone). Old `afterEvaluate` pattern in `AndroidFeatureConventionPlugin` must NOT be replicated — configuration-cache hazard. Old `VersionCatalogsExtension.named("libs")` API may be deprecated in Gradle 9.3.1 — verify and use type-safe catalog accessor if needed. No existing R8 rules to port — old codebase has zero custom ProGuard/R8 rules. Phase 6 writes rules from scratch.
+
+**Validation:**
+
+1. `./gradlew tasks --console=plain` succeeds — all convention plugins resolve, all stub modules parse
+2. `./gradlew :build-logic:convention:test` passes — Gradle TestKit configuration assertions (compileSdk/minSdk/targetSdk, Compose enabled where expected, Hilt wired, `dqxn.pack` dependency graph correct)
+3. `./gradlew :pack:essentials:dependencies --configuration debugCompileClasspath` shows `:sdk:contracts`, `:sdk:common`, `:sdk:ui`, `:sdk:observability`, `:sdk:analytics` with `implementation` scope
+4. `./gradlew :lint-rules:test` passes — all lint rules have positive/negative test cases
+5. Version catalog contains all required dependency aliases (verified by assertion test in `:build-logic:convention:test`)
+6. Proto DataStore throwaway: `compileDebugKotlin` passes, generated Kotlin files present in build output
+7. EXTOL SDK throwaway: `assembleDebug` passes (or incompatibility recorded in `STATE.md`)
 
 ---
 
