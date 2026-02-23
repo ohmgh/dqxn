@@ -128,6 +128,13 @@ Plans:
 3. KSP compile-testing: invalid `typeId`, missing `@Immutable`, duplicate `dataType` produce compilation errors
 4. `dqxn.pack` applied to stub module resolves expected `:sdk:*` dependency graph (if Phase 3 complete; otherwise defer verification to Phase 6)
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — `:codegen:plugin` build infrastructure + KSP processor implementation (hub, handlers, generators, validators)
+- [ ] 04-02-PLAN.md — `:codegen:plugin` compile-testing (20 tests: positive + negative paths)
+- [ ] 04-03-PLAN.md — `:codegen:agentic` processor implementation + compile-testing
+
 **Depends on:** Phase 2
 **Concurrent with:** Phase 3
 
