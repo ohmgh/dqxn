@@ -43,9 +43,9 @@ class ComposeInNonUiModuleDetector : Detector(), SourceCodeScanner {
                                 ISSUE,
                                 node,
                                 context.getLocation(node),
-                                "Compose import `$importRef` is not allowed in `:sdk:contracts`. " +
-                                    "Only `@Composable`, `@Immutable`, and `@Stable` from " +
-                                    "`androidx.compose.runtime` are permitted (via compileOnly).",
+                                "Compose import $importRef is not allowed in :sdk:contracts. " +
+                                    "Only @Composable, @Immutable, and @Stable from " +
+                                    "androidx.compose.runtime are permitted (via compileOnly).",
                             )
                         }
                     }
@@ -54,9 +54,9 @@ class ComposeInNonUiModuleDetector : Detector(), SourceCodeScanner {
                             ISSUE,
                             node,
                             context.getLocation(node),
-                            "Compose import `$importRef` is not allowed in a non-UI module. " +
+                            "Compose import $importRef is not allowed in a non-UI module. " +
                                 "This module does not have the Compose compiler. " +
-                                "Move Compose code to `:sdk:ui`, `:core:design`, or a `:feature:*` module.",
+                                "Move Compose code to :sdk:ui, :core:design, or a :feature:* module.",
                         )
                     }
                 }

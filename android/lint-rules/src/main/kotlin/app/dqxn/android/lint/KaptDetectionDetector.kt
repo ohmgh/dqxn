@@ -17,26 +17,6 @@ import com.android.tools.lint.detector.api.Severity
  */
 class KaptDetectionDetector : Detector(), GradleScanner {
 
-    override fun checkDslPropertyAssignment(
-        context: GradleContext,
-        property: String,
-        value: String,
-        parent: String,
-        parentParent: String?,
-        valueCookie: Any,
-        statementCookie: Any,
-    ) {
-        // Detect kapt dependency configuration: kapt("some.dep:artifact:1.0")
-        if (parent == "dependencies" && property == "kapt") {
-            context.report(
-                ISSUE,
-                valueCookie,
-                context.getLocation(valueCookie),
-                "KAPT is not allowed -- use KSP instead. KAPT breaks Gradle configuration cache.",
-            )
-        }
-    }
-
     override fun checkMethodCall(
         context: GradleContext,
         statement: String,

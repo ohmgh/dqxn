@@ -38,8 +38,8 @@ class ModuleBoundaryViolationDetector : Detector(), SourceCodeScanner {
                             ISSUE,
                             node,
                             context.getLocation(node),
-                            "Pack modules cannot import from `:feature:*` modules. " +
-                                "If this type is needed by packs, move it to `:sdk:contracts`.",
+                            "Pack modules cannot import from :feature:* modules. " +
+                                "If this type is needed by packs, move it to :sdk:contracts.",
                         )
                     }
                     importRef.startsWith("app.dqxn.android.core.") -> {
@@ -47,8 +47,8 @@ class ModuleBoundaryViolationDetector : Detector(), SourceCodeScanner {
                             ISSUE,
                             node,
                             context.getLocation(node),
-                            "Pack modules cannot import from `:core:*` modules. " +
-                                "If this type is needed by packs, move it to `:sdk:contracts`.",
+                            "Pack modules cannot import from :core:* modules. " +
+                                "If this type is needed by packs, move it to :sdk:contracts.",
                         )
                     }
                     importRef.startsWith("app.dqxn.android.data.") -> {
@@ -56,8 +56,8 @@ class ModuleBoundaryViolationDetector : Detector(), SourceCodeScanner {
                             ISSUE,
                             node,
                             context.getLocation(node),
-                            "Pack modules cannot import from the `:data` module. " +
-                                "If this type is needed by packs, move it to `:sdk:contracts`.",
+                            "Pack modules cannot import from the :data module. " +
+                                "If this type is needed by packs, move it to :sdk:contracts.",
                         )
                     }
                 }

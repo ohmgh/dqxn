@@ -49,7 +49,7 @@ class NoHardcodedSecretsDetector : Detector(), SourceCodeScanner {
                             ISSUE,
                             node,
                             context.getLocation(node),
-                            "Hardcoded secret detected in `$name`. " +
+                            "Hardcoded secret detected in $name. " +
                                 "Use local.properties or a secrets plugin instead.",
                         )
                     }
