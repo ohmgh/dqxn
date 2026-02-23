@@ -66,6 +66,15 @@ Plans:
 12. testFixtures consumer verification: throwaway `testImplementation(testFixtures(project(":sdk:contracts")))` import succeeds — catches JAR packaging issues 6 phases before Phase 8
 13. Test output XML present in `build/test-results/` — confirms JUnit5 platform actually executed (catches silent test skip under AGP 9.0.1)
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — `:sdk:common` types + tests (dispatcher qualifiers, AppResult, ConnectionStateMachine, FlowExtensions)
+- [ ] 02-02-PLAN.md — `:sdk:contracts` build config + widget/provider/entitlement/annotation/fault types
+- [ ] 02-03-PLAN.md — `:sdk:contracts` setup/settings/notification/status/theme/pack/registry types
+- [ ] 02-04-PLAN.md — `:sdk:contracts` unit tests (WidgetData, Gated, SettingDefinition, SetupDefinition, ProviderFault)
+- [ ] 02-05-PLAN.md — `:sdk:contracts` testFixtures + contract test bases + concrete validation tests
+
 **Depends on:** Phase 1
 
 **Replication Advisory:** §7 (setup/setting definition schemas, three-layer visibility, evaluator semantics, type-prefixed serialization).
