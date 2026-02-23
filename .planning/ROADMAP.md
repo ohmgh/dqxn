@@ -76,6 +76,10 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 3. `MetricsCollector` ring buffer, `JankDetector` threshold, `CrashEvidenceWriter` persistence, `AnrWatchdog` detection, `DiagnosticSnapshotCapture` rotation pool tests all pass
 4. `WidgetContainer` composition tests pass
 5. `CrashReporter` and `ErrorReporter` interfaces defined in `:sdk:observability` with `ErrorContext` sealed hierarchy
+6. `InfoCardLayout` tests pass (ported from `core:widget-primitives` — 536 lines, used by 5+ widgets in Phase 8). `SizeOption.toMultiplier()` mapping and normalization calc per layout mode verified
+7. `EnumSetting.optionPreviews` replacement mechanism defined (registry or extension pattern for packs to register preview composables)
+
+**Note:** Observability is entirely greenfield — no prior implementation exists in the old codebase.
 
 **Depends on:** Phase 2
 **Concurrent with:** Phase 4
@@ -169,7 +173,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 ## Phase 8: Essentials Pack (Architecture Validation Gate)
 
-**Goal:** First pack migration. Proves entire SDK-to-Pack contract works end-to-end. Cross-boundary snapshot types live in `:pack:essentials:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1). Includes 4 greenfield providers (GpsSpeed, Battery, Accelerometer, SpeedLimit).
+**Goal:** First pack migration. Proves entire SDK-to-Pack contract works end-to-end. Cross-boundary snapshot types live in `:pack:essentials:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1). **4 greenfield providers** (GpsSpeed, Battery, Accelerometer, SpeedLimit — none have old codebase equivalents: old speed came from OBU/EXTOL, no battery provider existed, no standalone accelerometer or user-configured speed limit provider).
 
 **Requirements:** F5.1-F5.11, NF14 (sensor batching for greenfield providers), NF40 (color-blind safety — speed limit widget uses color + pattern + icon), NF-I2 (locale-aware formatting in renderers)
 

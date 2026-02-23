@@ -294,7 +294,7 @@ Deliverables:
 - `@IoDispatcher`, `@DefaultDispatcher`, `@MainDispatcher` qualifier annotations
 - `DispatcherModule` — Hilt module providing dispatchers. Drop old redundant `DQXNDispatchers` interface
 - `@ApplicationScope` qualifier
-- `ConnectionStateMachine` + `ConnectionMachineState` + `ConnectionEvent` — implementation ports directly from old codebase; test suite significantly expanded from 8 assertions to jqwik property-based coverage. New architecture additions: retry counter as state machine state (not external variable), exponential backoff (1s, 2s, 4s), max 3 retries → Idle, searching timeout (30s), connecting timeout (10s)
+- `ConnectionStateMachine` + `ConnectionMachineState` + `ConnectionEvent` — implementation ports from old codebase with generalization: **old code references OBU-specific error types (`AppError.Obu.ConnectionTimeout`, `AppError.Obu.BluetoothDisabled`) which are in the drop list — replace with generalized `AppError.Bluetooth`/`AppError.Device` variants.** Old tests also use OBU-specific errors — port test structure but update error types. Test suite significantly expanded from 8 assertions to jqwik property-based coverage. New architecture additions: retry counter as state machine state (not external variable), exponential backoff (1s, 2s, 4s), max 3 retries → Idle, searching timeout (30s), connecting timeout (10s)
 - `AppResult<T>` sealed interface + extension functions (`map`, `flatMap`, `onSuccess`, `onFailure`, `getOrNull`, `getOrElse`)
 - `AppError` sealed hierarchy — port from old, strip OBU-specific variants (`Obu`, `SdkAuth`), keep general-purpose (`Network`, `Bluetooth`, `Permission`, `Device`, `Database`, `Unknown`). Add extensibility mechanism for packs
 - `PermissionKind` enum — generalize (remove `ObuDataAccess`)
@@ -407,16 +407,19 @@ Deliverables:
 - `DeviceManagement`, `DeviceServiceRegistry`, `CompanionDeviceHandler`, device model types (`PairedDevice`, `PresentDevice`, `ConnectedDevice`) — deferred to Phase 5/7. First consumer is Phase 9 (sg-erp2). `SetupDefinition.DeviceScan` references `handlerId: String`, not the full interface
 - `ConnectionNotifier` — deferred to Phase 7, shell internal
 - `DashboardWidgetInstance`, `WidgetSizeSpec` — deferred to Phase 5, persistence/layout model
-- `InfoCardSettings` helper — deferred to Phase 3 (`:sdk:ui`), rendering helper
+- `InfoCardSettings` helper — include in Phase 2 (`:sdk:contracts`). Pure parser/factory methods constructing `List<SettingDefinition<*>>` — zero Compose deps, co-located with `SettingDefinition` in old `core/plugin-api`. Not a rendering helper
 
-**Explicitly dropped:**
+**Explicitly dropped (old types superseded by new architecture):**
 
-- `DQXNDispatchers` interface — redundant with qualifier annotations
+- `DQXNDispatchers` interface — redundant with qualifier annotations (old `OversteerDispatchers.kt` never used via `@Binds` anyway)
 - `@DataContract`, `@RequiresData` annotations — replaced by typed `compatibleSnapshots: Set<KClass<out DataSnapshot>>`
 - `@PackResourceMarker`, `@SettingsSchema`, `@ValidConstraints` — old KSP markers replaced by new annotation system
 - `@ThemePackMarker` — replaced by `ThemeProvider` Hilt multibinding
 - `DataSnapshot` as concrete `data class(values: Map<String, Any?>)` — replaced by non-sealed interface + typed `@DashboardSnapshot` subtypes
-- `EnumSetting.optionPreviews` (`@Composable` lambda) — Compose dependency, moves to `:sdk:ui`
+- `EnumSetting.optionPreviews` (`@Composable` lambda) — Compose dependency, replacement registry in Phase 3 `:sdk:ui`
+- Old `DashboardPackManifest` field structure — old refs `PackWidgetRef`/`PackThemeRef`/`PackDataProviderRef` replaced. **The concept survives as a new `DashboardPackManifest`** (see deliverables above) with updated fields; it's the old type's structure that's dropped, not the concept
+- `DynamicSizeProvider` — already `@Deprecated` in old code, replaced by `SettingsAwareSizer`
+- `DataSchema` / `DataFieldSpec` — staleness threshold migrated to `DataProvider.firstEmissionTimeout` + `DataFieldSpec` on `DataSchema`; the rest is superseded by typed snapshots. **Note: `DataSchema.stalenessThresholdMs` must survive** — it's explicitly retained on `DataProvider<T>` per Phase 2 deliverables. Only the `Map<String, Any?>` runtime type-check machinery is dropped
 
 ### `:sdk:contracts` testFixtures
 
@@ -598,9 +601,11 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
 - `WidgetContainer` skeleton (migrate from `core:widget-primitives` — responsive sizing, border overlay, rim padding). Glow rendering (`RenderEffect.createBlurEffect()` rewrite) added in Phase 7
 - Icon name resolution utility — maps `iconName: String` (from Phase 2 `SetupDefinition`) to `ImageVector`. Material icon lookup
 - `GRID_UNIT_SIZE = 16.dp` constant
-- **Deferred from Phase 3 to first consumer:** `InfoCardLayout` (Phase 8, when first widget needs it), setup overlay composables (`SetupRequiredOverlay`, `DisconnectedOverlay` — Phase 10), `PermissionRequestPage` (Phase 10)
+- `InfoCardLayout` — port from `core:widget-primitives` (536 lines). Deterministic weighted normalization for STACK/COMPACT/GRID modes, `getTightTextStyle` (font padding elimination). 5+ widgets in Phase 8 depend on this — deferring to Phase 8 creates a two-concern pile-up. Port now with tests: `SizeOption.toMultiplier()` mapping, normalization calc per layout mode — wrong weights cause text clipping
+- `EnumSetting.optionPreviews` replacement — registry or extension function pattern for packs to register preview composables for `EnumSetting<E>` options. Old code had `(@Composable (E) -> Unit)?` lambda on `EnumSetting` which was stripped in Phase 2. Packs need a way to provide option previews
+- **Deferred from Phase 3 to first consumer:** setup overlay composables (`SetupRequiredOverlay`, `DisconnectedOverlay` — Phase 10), `PermissionRequestPage` (Phase 10)
 
-**Ported from old:** `core:common/observability/*` (Logger, Metrics, CrashEvidence, AnrWatchdog — adapt to new module boundaries and add missing capabilities: JankDetector, rotation pools, storage pressure, trace IDs). `core:widget-primitives/*` → `sdk:ui`. Analytics is entirely new.
+**Ported from old:** `core:widget-primitives/*` → `sdk:ui` (WidgetContainer, InfoCardLayout, SetupOverlays, LocalWidgetScale, LocalWidgetPreviewUnits). Analytics is entirely new. **Observability is entirely new** — exhaustive search of old codebase found zero observability code (no logger, no metrics, no crash evidence, no ANR watchdog, no diagnostic snapshots). Old code uses raw `android.util.Log` directly. The entire `:sdk:observability` module is greenfield.
 
 **Tests:**
 - `DqxnLogger`: disabled-path zero-allocation test, tag filtering test
@@ -611,6 +616,7 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
 - `DiagnosticSnapshotCapture`: concurrent capture guard (second capture dropped), rotation pool eviction (thermal doesn't evict crash), storage pressure skip
 - `WidgetHealthMonitor`: stale vs stalled distinction, liveness check period
 - `WidgetContainer`: composition tests
+- `InfoCardLayout`: `SizeOption.toMultiplier()` mapping tests, normalization calculation per layout mode (STACK/COMPACT/GRID), `getTightTextStyle()` output verification
 
 ---
 
@@ -637,7 +643,7 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
 - **JVM-vs-Android:** Same constraint as `:codegen:plugin` — `:codegen:agentic` uses `dqxn.kotlin.jvm` (pure JVM) and cannot have a Gradle module dependency on `:core:agentic` (Android library). The processor reads `@AgenticCommand` annotation metadata from `KSAnnotation` in the compilation environment, not via compile dependency. `@AgenticCommand` is defined in `:core:agentic` (Phase 6). **Phase 4 builds the processor structure against expected annotation shapes; it becomes functional when Phase 6 provides the annotation types at consumer compile time.** Phase 4 tests use compile-testing with synthetic annotation declarations
 - **Phase ordering note:** `@AgenticCommand` lives in `:core:agentic` (Phase 6), but the processor is built in Phase 4. This is not circular — the processor reads annotation metadata from the consumer's compilation classpath (which includes `:core:agentic` at compile time), not from its own module dependencies
 
-**Ported from old:** `core:plugin-processor` → `:codegen:plugin` (adapt for new annotation shapes, add manifest generation). `core:agentic-processor` → `:codegen:agentic` (expand from simple dispatch to full schema generation).
+**Ported from old:** `core:plugin-processor` → `:codegen:plugin` (adapt for new annotation shapes, add manifest generation). `core:agentic-processor` → `:codegen:agentic` (expand from simple dispatch to full schema generation). **Warning: old `GeneratedCommandRegistry` from agentic processor is dead code** — `AgenticEngine` explicitly bypasses it and does manual registration because the generator can't handle constructor dependencies. Do not replicate this pattern. New `:codegen:agentic` must generate a router that works with Hilt-injected handler instances, not no-arg constructors.
 
 **Convention plugin wiring check:** Apply `dqxn.pack` to a stub module (no source, just the plugin application). Verify the resolved dependency graph includes all expected `:sdk:*` modules with `implementation` scope and that the KSP-generated Compose stability config file path is wired into the Compose compiler options. This is a 7-phase gap between the plugin (Phase 1) and its first real consumer (Phase 8) — misconfigured auto-wiring would silently propagate to every pack. Note: this check requires all `:sdk:*` modules to exist (Phase 3 deliverables). If Phase 4 runs concurrently with Phase 3, defer this validation to Phase 6 (first `:app` assembly). The KSP processor work in Phase 4 has no dependency on Phase 3; only this validation check does.
 
@@ -678,7 +684,8 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
   - `ProviderSettingsStore` — pack-namespaced keys: `{packId}:{providerId}:{key}`
   - `PairedDeviceStore` — CRUD for paired BLE devices (first consumer: Phase 9 sg-erp2)
   - `ConnectionEventStore` — rolling 50-event log (F7.6)
-- `PresetLoader` + preset JSON files (F7.7) — loads region-aware default layouts. Depends on `LayoutRepository` for writing. Note: `RegionDetector` (which `PresetLoader` may use for region-aware defaults) lives in `:pack:essentials` (Phase 8). Phase 5 `PresetLoader` uses a simpler timezone-based region heuristic; Phase 8 can enhance if needed
+- `PresetLoader` + preset JSON files (F7.7) — loads region-aware default layouts. Depends on `LayoutRepository` for writing. **Old codebase has `preset_demo_default.json` (schema version 2) — portable with `free:*` → `essentials:*` typeId updates.** Note: `RegionDetector` (which `PresetLoader` may use for region-aware defaults) lives in `:pack:essentials` (Phase 8). Phase 5 `PresetLoader` uses a simpler timezone-based region heuristic; Phase 8 can enhance if needed
+- Hardcoded minimal fallback layout (F7.12) — clock widget centered, as a code-level constant (`LayoutRepository.FALLBACK_LAYOUT`), not dependent on JSON or asset files. Used when preset loading fails (APK integrity, asset corruption)
 - `ReplaceFileCorruptionHandler` on ALL DataStore instances
 - `consumer-proguard-rules.pro` — R8 keep rules for proto-generated classes (distributed with module, consumed by `:app` automatically)
 - Migration from old Preferences-JSON-blob approach to Proto
@@ -691,13 +698,13 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
 - `FirebasePerformanceTracer` — wraps Firebase Performance: custom traces, HTTP metrics (if applicable)
 - Requires `google-services.json` in `:app` — Phase 5 test strategy: unit tests mock Firebase interfaces, no real Firebase calls. Binding verification via Hilt test in Phase 6
 
-**Ported from old:** `ThermalManager`, `RenderConfig`, `UserPreferencesRepository` (rewritten for Proto), `LayoutDataStore` (rewritten from JSON-in-Preferences to Proto DataStore). Theme JSON loading.
+**Ported from old:** `UserPreferencesRepository` (rewritten for Proto — old used Preferences DataStore with Gson blobs), `LayoutDataStore` (rewritten from JSON-in-Preferences to Proto DataStore). Theme JSON loading (schema parser). `DashboardThemeExtensions.kt`, `DashboardTypography`, `TextEmphasis`, `CardSize` from `feature/dashboard` → `:core:design`. **Greenfield:** `ThermalManager`, `RenderConfig`, `FramePacer` — no thermal management exists in old codebase. Proto DataStore schemas are new (old uses Preferences DataStore exclusively). `ConnectionEventStore` is new.
 
 **Port inventory:**
 
 | Old artifact | Target | Notes |
 |---|---|---|
-| `DashboardThemeExtensions.kt` — spacing scale (`SpaceXXS`–`SpaceXXL`, 4dp grid) + 10 semantic aliases (`ScreenEdgePadding`, `SectionGap`, `ItemGap`, `InGroupGap`, `ButtonGap`, `IconTextGap`, `LabelInputGap`, `CardInternalPadding`, `NestedIndent`, `MinTouchTarget`) | `:core:design` | Port values; extension target changes from `DashboardThemeDefinition` to new `ThemeDefinition` |
+| `DashboardThemeExtensions.kt` — spacing scale (`SpaceXXS`–`SpaceXXL`, 4dp grid) + 10 semantic aliases (`ScreenEdgePadding`, `SectionGap`, `ItemGap`, `InGroupGap`, `ButtonGap`, `IconTextGap`, `LabelInputGap`, `CardInternalPadding`, `NestedIndent`, `MinTouchTarget`) | `:core:design` | Port values; **old location is `feature/dashboard` — unreachable by packs.** Extension target changes from `DashboardThemeDefinition` to new `ThemeDefinition`. Must be in `:core:design` so `:feature:settings` and overlay UI can use them |
 | `DashboardTypography` — 8 named styles (`title`, `sectionHeader`, `itemTitle`, `label`, `description`, `buttonLabel`, `primaryButtonLabel`, `caption`) + `getTightTextStyle` helper | `:core:design` | Port; verify against Material 3 type scale |
 | `TextEmphasis` — 4 alpha constants (`High=1.0f`, `Medium=0.7f`, `Disabled=0.4f`, `Pressed=0.12f`) | `:core:design` | Port verbatim |
 | `CardSize` enum — `SMALL(8dp)`, `MEDIUM(12dp)`, `LARGE(16dp)` corner radii | `:core:design` | Port verbatim |
@@ -729,11 +736,13 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
 
 **Asset migration checklist:**
 
-- [ ] Adaptive launcher icon: `ic_launcher_foreground.xml`, `ic_launcher_background.xml` → `app/src/main/res/drawable/`
-- [ ] Monochrome launcher icon (API 33+): `ic_launcher_monochrome.xml` → `app/src/main/res/drawable/`
-- [ ] Adaptive icon manifests: `ic_launcher.xml`, `ic_launcher_round.xml` → `app/src/main/res/mipmap-anydpi-v26/`
-- [ ] Vector logo: `ic_logo_letterform.xml` → `app/src/main/res/drawable/`
-- [ ] Logo asset: `dqxn_logo_cyber_dog.webp` → decide: `:app` or `:core:design` res (needed by onboarding in Phase 10)
+- [ ] Adaptive launcher icon foreground: **`ic_launcher_runner_foreground.xml`** (the current DQXN runner/wordmark in cyan — NOT `ic_launcher_foreground.xml` which is the old ring+arc design) → `app/src/main/res/drawable/`
+- [ ] Adaptive launcher icon background: `ic_launcher_background.xml` (solid `#0f172a`) → `app/src/main/res/drawable/`
+- [ ] Monochrome launcher icon (API 33+): `ic_launcher_monochrome.xml` → `app/src/main/res/drawable/` — **Note: old monochrome uses the ring+arc geometry, not the runner. Verify desired monochrome design before porting**
+- [ ] Adaptive icon manifests: `ic_launcher.xml`, `ic_launcher_round.xml` → `app/src/main/res/mipmap-anydpi-v26/` (these already reference `runner_foreground` in old codebase)
+- [ ] Vector logo: `ic_logo_letterform.xml` (app version with cyan secondary) → `app/src/main/res/drawable/`
+- [ ] Logo asset: `dqxn_logo_cyber_dog.webp` (700KB) → decide: `:app` or `:core:design` res (needed by onboarding in Phase 11)
+- [ ] Default layout preset: `preset_demo_default.json` → `app/src/main/assets/presets/` — **update all typeIds from `free:*` to `essentials:*` prefix**
 
 ### `:core:agentic`
 
@@ -886,11 +895,11 @@ From this point forward, the agent can autonomously debug on a connected device:
 
 | Old artifact | Target | Notes |
 |---|---|---|
-| `DashboardMotion` — 3 spring profiles (`standard` 0.65/300, `hub` 0.5/300, `preview` 0.75/380) + all enter/exit transitions | `:feature:dashboard` | Port; springs are tuned — do not re-guess values |
+| `DashboardMotion` — 3 spring profiles (`standard` 0.65/300, `hub` 0.5/300, `preview` 0.75/380) + all enter/exit transitions | `:core:design` (shared transitions) + `:feature:dashboard` (grid-local: wiggle, lift, handle pulse, focus translate) | Port; springs are tuned — do not re-guess values. Shared enter/exit specs (`sheetEnter/Exit`, `hubEnter/Exit`, `dialogEnter/Exit`, `expandEnter`) move to `:core:design` since `ConfirmationDialog` and overlays in `:feature:settings` need them. Grid-local animations (wiggle `infiniteRepeatable(tween(150))`, lift `spring(DampingRatioMediumBouncy)`, handle pulse `infiniteRepeatable(tween(800))`) stay in `:feature:dashboard` |
 | `DashboardHaptics` — 6 semantic methods with API 30+ branching (`editModeEnter`, `editModeExit`, `dragStart`, `snapToGrid`, `boundaryHit`, `resizeStart`) | `:feature:dashboard` | Port; `REJECT`/`CONFIRM` constants API 30+ with fallbacks |
 | `GridPlacementEngine` — auto-placement algorithm for new widgets | `:feature:dashboard` (inside or alongside `LayoutCoordinator`) | Port; has existing `GridPlacementEngineTest` — port tests too |
 | `WidgetContainer` — glow rendering with `drawWithCache`, responsive sizing (3 tiers), border overlay, rim padding | `:sdk:ui` as `WidgetContainer` | Redesign required — old uses `BlurMaskFilter` (forbidden); new uses `RenderEffect.createBlurEffect()` API 31+. Phase 3 builds the skeleton; Phase 7 adds glow rendering with `RenderEffect` rewrite. Responsive sizing logic worth porting |
-| `ConfirmationDialog` — reusable modal with scrim + animation | `:core:design` | Port verbatim — reused by overlays in Phase 10 |
+| `ConfirmationDialog` — reusable modal with scrim + animation | `:core:design` | Port verbatim — reused by overlays in Phase 10. **Depends on `DashboardMotion.dialogEnter/dialogExit`** — either co-locate shared animation specs in `:core:design` alongside this dialog, or keep both in `:feature:dashboard` |
 | `OverlayScaffold` — scaffold wrapping overlay content with title bar | `:feature:dashboard` | Port + adapt. Scaffolded empty in Phase 7; overlay routes populated in Phase 10 |
 | `UnknownWidgetPlaceholder` — fallback UI for deregistered/missing widget types | `:sdk:ui` | Port; required by F2.13 (Must). Must be in `:sdk:ui` so packs could theoretically reference it |
 | `DashboardCustomLayout` — `Layout` composable with `layoutId`-based matching, grid-unit coordinate system | `:feature:dashboard` | Port + adapt for new coordinator-owned state |
@@ -980,7 +989,7 @@ Typed `DataProvider<T>` implementations:
 | `GpsSpeedProvider` | `SpeedSnapshot` | **Greenfield** | Requires `ACCESS_FINE_LOCATION`. No old equivalent — old used OBD/EXTOL for speed. Implement `callbackFlow` + `LocationManager.requestLocationUpdates()` with `TRANSPORT_GPS` provider. Emit speed in m/s (widget handles unit conversion via `RegionDetector`) |
 | `BatteryProvider` | `BatterySnapshot` | **Greenfield** | `BroadcastReceiver` for `ACTION_BATTERY_CHANGED` → `callbackFlow`. Extract level, status, plugged, temperature fields |
 | `AccelerometerProvider` | `AccelerationSnapshot` | **Greenfield** | `SensorManager.getDefaultSensor(TYPE_ACCELEROMETER)` → `callbackFlow`. Low-pass filter for gravity removal configurable via settings |
-| `SpeedLimitProvider` | `SpeedLimitSnapshot` | Port from old | User-configured static value (exists in old codebase) |
+| `SpeedLimitProvider` | `SpeedLimitSnapshot` | **Greenfield** | User-configured static value. No standalone provider exists in old codebase — old speed limits came only from OBU SDK and demo simulator. Implement as `MutableStateFlow` reading from `ProviderSettingsStore` |
 
 Action handler (not a typed `DataProvider<T>` — excluded from `DataProviderContractTest` count):
 
@@ -992,19 +1001,19 @@ Action handler (not a typed `DataProvider<T>` — excluded from `DataProviderCon
 
 **2 free themes** — `slate.theme.json`, `minimalist.theme.json` (port verbatim).
 
-**Ported from old:** All widget implementations except `BatteryRenderer` exist in old codebase — import wholesale and adapt to new architecture (signature changes, `LocalWidgetData`, `ImmutableMap`). `BatteryRenderer` is new. Provider sensor flows port cleanly (callbackFlow pattern already correct). Theme JSON files port verbatim. Every widget's `Render()` signature changes (no `widgetData` param, add `ImmutableMap`, read from `LocalWidgetData`).
+**Ported from old:** All widget implementations except `BatteryRenderer` exist in old codebase — import wholesale and adapt to new architecture (signature changes, `LocalWidgetData`, `ImmutableMap`). `BatteryRenderer` is greenfield (no old equivalent). 4 providers are greenfield: `GpsSpeedProvider` (old used OBD/EXTOL, not GPS), `BatteryProvider` (no old equivalent), `AccelerometerProvider` (old `OrientationProvider` uses accelerometer internally but no standalone provider), `SpeedLimitProvider` (old had OBU-specific and demo-only — no standalone user-configured provider). Remaining 5 providers (`Time`, `Orientation`, `SolarTimezone`, `SolarLocation`, `AmbientLight`) port with callbackFlow patterns already correct. Theme JSON files port verbatim. Every widget's `Render()` signature changes (no `widgetData` param, add `ImmutableMap`, read from `LocalWidgetData`). Also port: old `WidgetRenderer.onTap(context, widgetId, settings)` drops `Context` param — but `CallActionProvider.execute()` still needs `Context` for intent launching (it gets `Context` via Hilt injection, not method param).
 
 **Port inventory:**
 
 | Old artifact | Target | Notes |
 |---|---|---|
 | `SolarCalculator` — Meeus/NOAA solar algorithm, pure Kotlin, ±1min accuracy | `:pack:essentials` alongside providers | Port verbatim; no Android deps. Regeneration task (`updateIanaTimezones`) needs equivalent. **Add `SolarCalculatorTest`** — pure algorithm with known NOAA reference data; bugs produce plausible-but-wrong sunrise times affecting theme auto-switch app-wide |
-| `IanaTimezoneCoordinates` — 312-entry IANA zone → lat/lon lookup table | `:pack:essentials` alongside providers | Port verbatim; pure Kotlin. Spot-check 3–5 known cities to verify table integrity after port |
+| `IanaTimezoneCoordinates` — 312-entry IANA zone → lat/lon lookup table (updated 2026-01-25) | `:pack:essentials` alongside providers | Port; **has one `android.icu.util.TimeZone.getCanonicalID()` import** for alias resolution (e.g., `"Asia/Saigon"` → `"Asia/Ho_Chi_Minh"`). This makes it Android-only — acceptable for `:pack:essentials` but note the dependency. Alternatively replace ICU call with a static alias map. Spot-check 3–5 known cities to verify table integrity after port |
 | `RegionDetector` — timezone-first MPH country detection + `MPH_COUNTRIES` set | `:pack:essentials` | Port; only speed widgets use it — keep in pack unless second consumer appears. **Add `RegionDetectorTest`** — verify 3-step fallback chain (timezone→locale→"US") and `MPH_COUNTRIES` correctness (wrong entry = wrong speed unit for entire country) |
 | `TimezoneCountryMap` — IANA timezone → country code + city name | `:pack:essentials` | Port; co-located with `RegionDetector` |
-| `InfoCardLayout` — deterministic weighted normalization for STACK/COMPACT/GRID modes | `:sdk:ui` | Port if widget designs retain layout modes; includes `getTightTextStyle` (font padding elimination). If ported, add test for `SizeOption.toMultiplier()` mapping and normalization calc per layout mode — wrong weights cause text clipping in 5+ widgets |
-| `WidgetPreviewData` — `PREVIEW_WIDGET_DATA` static data for picker previews | `:pack:essentials` | Port + adapt to typed snapshots |
-| `CornerRadius` presets enum + `styleSettingsSchema` | `:pack:essentials` (shared widget style settings) | Port verbatim |
+| `InfoCardLayout` — deterministic weighted normalization for STACK/COMPACT/GRID modes (536 lines) | `:sdk:ui` (Phase 3, not deferred) | Port; 5+ widgets depend on layout modes. Includes `getTightTextStyle` (font padding elimination via `PlatformTextStyle(includeFontPadding = false)` + `LineHeightStyle.Trim.Both`). **Add tests**: `SizeOption.toMultiplier()` mapping and normalization calc per layout mode — wrong weights cause text clipping |
+| `WidgetPreviewData` — `PREVIEW_WIDGET_DATA` static data for picker previews | Each pack provides its own preview data | Port + adapt to typed snapshots. **Old code places this in `feature/dashboard` — packs can't import that.** Each pack should define its own `object PreviewData` with typed snapshot instances for its widgets. `WidgetPicker` (Phase 10) reads preview data via `WidgetRenderer.getPreviewData(): WidgetData` method or similar pack-local factory |
+| `CardSize` enum — `SMALL(8dp)`, `MEDIUM(12dp)`, `LARGE(16dp)` corner radii | `:core:design` | Port verbatim. No `CornerRadius` enum or shared `styleSettingsSchema` exists in old code — style settings (glow, border, background, opacity, cornerRadius, rim) are per-widget via `WidgetStyle` properties, not a shared schema |
 
 **Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. On-device semantics verification via `assertWidgetRendered` + `assertWidgetText` for each widget type. `SolarCalculatorTest` — known reference data: summer/winter solstice at known cities (e.g., London 51.5°N), equatorial location, `minutesToLocalTime` edge cases (0, 1439, fractional), `toJulianDay` against NOAA reference. `RegionDetectorTest` — 3-step fallback chain + `MPH_COUNTRIES` set correctness.
 
