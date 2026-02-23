@@ -12,6 +12,8 @@ dependencyResolutionManagement {
   repositories {
     google()
     mavenCentral()
+    // EXTOL OBU SDK (LTA Singapore)
+    maven { url = uri("https://extol.mycloudrepo.io/public/repositories/extol-android") }
   }
 }
 

@@ -30,6 +30,7 @@ core-ktx = "1.15.0"
 splashscreen = "1.0.1"
 hilt-navigation-compose = "1.2.0"
 accompanist = "0.36.0"
+extol = "2.1.0"
 
 [libraries]
 # Gradle plugin libraries (for build-logic compileOnly consumption)
@@ -114,6 +115,9 @@ leakcanary = { group = "com.squareup.leakcanary", name = "leakcanary-android", v
 
 # Accompanist
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
+
+# EXTOL OBU SDK (LTA Singapore)
+extol-sdk = { group = "sg.gov.lta", name = "extol", version.ref = "extol" }
 
 # JUnit 5
 junit-bom = { group = "org.junit", name = "junit-bom", version = "5.11.4" }

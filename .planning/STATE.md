@@ -51,7 +51,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Root+submodule TestKit pattern** for Android convention plugin testing (AGP on buildscript classpath via apply-false)
 - **JUnit BOM dual-configuration scoping** — must apply to both testImplementation and testRuntimeOnly for vintage-engine resolution
 - **Proto DataStore plugin incompatible with AGP 9** — Phase 5 needs Wire migration or custom protoc Exec task
-- **EXTOL SDK not available** in public repositories — sg-erp2 pack deferred
+- **EXTOL SDK available** at `sg.gov.lta:extol:2.1.0` from `https://extol.mycloudrepo.io/public/repositories/extol-android` — sg-erp2 pack unblocked
 
 ### Phase 1 Toolchain Compatibility (Plan 04)
 
@@ -62,7 +62,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Compose compiler + AGP 9 | PASS | `@Composable` function compiles in `:sdk:ui` with `dqxn.android.compose` plugin. `org.jetbrains.kotlin.plugin.compose` correctly applied alongside AGP 9's built-in Kotlin. |
 | Proto DataStore + JDK 25 | FAIL | `protobuf-gradle-plugin` 0.9.6 casts to `BaseExtension` which was removed in AGP 9. Error: `Cannot cast LibraryExtensionImpl to BaseExtension`. No newer plugin version available (0.9.6 is latest). **Blocker for Phase 5**: need Wire migration, manual protoc task, or upstream fix. |
 | testFixtures + AGP 9 | PASS | `android { testFixtures { enable = true } }` works. Kotlin sources in `src/testFixtures/kotlin/` compile. `android.experimental.enableTestFixturesKotlinSupport=true` still required (prints warning). |
-| EXTOL SDK | NOT_AVAILABLE | Not in public Maven repositories. sg-erp2 pack deferred until SDK access is obtained. |
+| EXTOL SDK | PASS | Available at `sg.gov.lta:extol:2.1.0` from `https://extol.mycloudrepo.io/public/repositories/extol-android`. 7 versions published (1.0.0-beta.1 through 2.1.0, latest July 2025). |
 | Clean build time (stubs) | 38s | `assembleDebug` across all 25 modules. 589 tasks, 425 executed. Well under NF35 120s target. |
 
 **Proto DataStore resolution path**: The most viable workaround for Phase 5 is registering a custom `Exec` task that invokes `protoc` directly (protoc is a native binary, not JVM-hosted, so AGP version doesn't matter). Alternatively, Square's Wire protobuf library generates Kotlin directly without the Gradle plugin. Decision deferred to Phase 5 planning.
@@ -88,4 +88,5 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - Spotless/ktfmt formatting enforced, pre-commit hook with boundary checks active
 - Custom lint rules: 5 detectors with 30 tests enforcing KAPT ban, secrets detection, module boundaries, Compose scope, agentic threading
 - TestKit tests: 18 tests validating convention plugin behavior (SDK versions, Compose, Hilt, Pack wiring, tag filtering, version catalog completeness)
-- Toolchain compatibility validated: Compose, testFixtures, KSP, tag filtering all pass. Proto DataStore plugin incompatible with AGP 9 (workaround identified). EXTOL SDK not available.
+- Toolchain compatibility validated: Compose, testFixtures, KSP, tag filtering, EXTOL SDK all pass. Proto DataStore plugin incompatible with AGP 9 (workaround identified).
+- EXTOL SDK: `sg.gov.lta:extol:2.1.0` from `https://extol.mycloudrepo.io/public/repositories/extol-android`
