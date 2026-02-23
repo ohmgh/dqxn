@@ -5,7 +5,6 @@ import app.dqxn.android.sdk.observability.log.LogTag
 import app.dqxn.android.sdk.observability.log.warn
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -24,7 +23,7 @@ public class WidgetHealthMonitor(
   private val widgetStatuses: ConcurrentHashMap<String, WidgetHealthStatus> = ConcurrentHashMap()
 
   init {
-    scope.launch(Dispatchers.Default) {
+    scope.launch {
       while (true) {
         delay(checkIntervalMs)
         checkLiveness()

@@ -23,7 +23,7 @@ import kotlinx.collections.immutable.toImmutableList
  * - **perf**: [AnomalyTrigger.JankSpike], [AnomalyTrigger.ProviderTimeout],
  *   [AnomalyTrigger.EscalatedStaleness], [AnomalyTrigger.BindingStalled]
  */
-public class DiagnosticSnapshotCapture(
+public open class DiagnosticSnapshotCapture(
   private val logger: DqxnLogger,
   private val metricsCollector: MetricsCollector,
   private val tracer: DqxnTracer,
@@ -37,7 +37,10 @@ public class DiagnosticSnapshotCapture(
    * Captures a diagnostic snapshot for the given [trigger]. Returns null if a concurrent capture is
    * already in progress or if storage pressure is detected.
    */
-  public fun capture(trigger: AnomalyTrigger, agenticTraceId: String? = null): DiagnosticSnapshot? {
+  public open fun capture(
+    trigger: AnomalyTrigger,
+    agenticTraceId: String? = null
+  ): DiagnosticSnapshot? {
     if (!capturing.compareAndSet(false, true)) {
       logger.warn(TAG) { "Concurrent diagnostic capture dropped for trigger: $trigger" }
       return null

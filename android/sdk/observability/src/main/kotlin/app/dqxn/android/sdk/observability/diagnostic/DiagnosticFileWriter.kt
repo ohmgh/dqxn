@@ -12,7 +12,7 @@ import kotlinx.serialization.json.Json
  * Manages diagnostic snapshot file persistence with pool-based rotation. Three pools: crash (max
  * 20), thermal (max 10), perf (max 10). Oldest files evicted when pool capacity reached.
  */
-public class DiagnosticFileWriter(
+public open class DiagnosticFileWriter(
   private val baseDirectory: File,
   private val logger: DqxnLogger,
 ) {
@@ -23,7 +23,7 @@ public class DiagnosticFileWriter(
   }
 
   /** Writes a serializable representation of [snapshot] to the appropriate pool directory. */
-  public fun write(snapshot: DiagnosticSnapshot, pool: String) {
+  public open fun write(snapshot: DiagnosticSnapshot, pool: String) {
     val poolDir = poolDirectory(pool)
     poolDir.mkdirs()
 
@@ -76,7 +76,7 @@ public class DiagnosticFileWriter(
   /**
    * Returns true if storage is under pressure (<10MB free), suggesting capture should be skipped.
    */
-  public fun checkStoragePressure(): Boolean {
+  public open fun checkStoragePressure(): Boolean {
     return try {
       val stat = StatFs(baseDirectory.absolutePath)
       val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
