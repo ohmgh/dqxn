@@ -1,6 +1,9 @@
 package app.dqxn.android.sdk.contracts.setup
 
-// Stub — Plan 03 fleshes out SetupDefinition with 7 concrete subtypes
+import androidx.compose.runtime.Immutable
+
+/** A page within a setup flow, containing a list of [SetupDefinition] items. */
+@Immutable
 public data class SetupPageDefinition(
   val id: String,
   val title: String,
