@@ -237,13 +237,13 @@ Extended visual customization.
 | Req  | Description                                                                                    | Priority |
 |------|------------------------------------------------------------------------------------------------|----------|
 | F8.1 | Entitlement system: `free`, `themes` tiers (extensible for regional packs). `plus` tier deferred with Plus Pack | Must     |
-| F8.2 | Play Billing integration (purchase, restore)                                                   | Must     |
+| F8.2 | Play Billing integration (purchase, restore)                                                   | Deferred |
 | F8.3 | `Gated` interface on renderers, providers, themes, settings                                    | Must     |
 | F8.4 | *(Removed)*                                                                                    | —        |
 | F8.5 | Debug "Simulate Free User" toggle. Follow old codebase behavior                                | Must     |
 | F8.6 | *(Removed)*                                                                                    | —        |
 | F8.7 | Widget picker previews use single-shot data providers with sane defaults. Adding entitlement-gated widgets to layout requires entitlement. Preview-regardless-of-entitlement, gate-at-persistence pattern | Must     |
-| F8.8 | Family sharing: enable Google Play Family Library for one-time IAP packs (Play Console toggle) | Must     |
+| F8.8 | Family sharing: enable Google Play Family Library for one-time IAP packs (Play Console toggle) | Deferred |
 | F8.9 | Refund UX: on entitlement revocation, widgets show EntitlementRevoked overlay, remain in layout but non-functional. Premium themes become gated (selection preserved, theme selector shows locked state). Gated themes can still be previewed at full quality — revert to free only upon exiting preview. Re-purchase restores previous selection. One-time toast explains change. Follow old codebase behavior | Must     |
 | F8.10 | *(Removed)*                                                                                    | —        |
 

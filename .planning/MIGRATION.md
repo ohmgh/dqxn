@@ -425,8 +425,9 @@ Deliverables:
 
 - `WidgetRendererContractTest` — abstract JUnit4 test base (requires `ComposeContentTestRule` for `Render()` tests). Every widget extends this. Inherited assertions (see Contract Test Specification below)
 - `DataProviderContractTest` — abstract JUnit5 test base. Every provider extends this
-- `ProviderFault` sealed interface — shared fault primitives for both `ChaosProviderInterceptor` (E2E) and `TestDataProvider` (unit tests). Variants: `Kill`, `Delay(millis)`, `Error(exception)`, `ErrorOnNext`, `Corrupt(transform)`, `Flap(onMillis, offMillis)`, `Stall`
 - `TestDataProvider<T>` — configurable fake that applies `ProviderFault` transformations to a base flow. Supports mid-stream fault injection
+
+**Note:** `ProviderFault` sealed interface lives in `:sdk:contracts` **main source set** (not testFixtures) — `ChaosProviderInterceptor` (Phase 9) needs it at debug runtime. Variants: `Kill`, `Delay(millis)`, `Error(exception)`, `ErrorOnNext`, `Corrupt(transform)`, `Flap(onMillis, offMillis)`, `Stall`. `TestDataProvider` stays in testFixtures (test-only)
 - `TestWidgetRenderer` — minimal stub implementing `WidgetRenderer`. Used to run concrete contract tests in Phase 2 (validates the abstract test base itself)
 - `testWidget()`, `testTheme()`, `testDataSnapshot()` factories
 
@@ -583,6 +584,7 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
 - `CrashEvidenceWriter` — sync `SharedPreferences.commit()` in `UncaughtExceptionHandler`. Captures: `last_crash_type_id`, `last_crash_exception`, `last_crash_stack_top5`, `last_crash_timestamp`. `extractWidgetTypeId()` to pull widget type from exception chain. Fallback for `diagnose-crash` when no snapshot file exists
 - `AnrWatchdog` — dedicated daemon thread with `CountDownLatch`, 2.5s timeout, 2-consecutive-miss trigger. `Thread.getAllStackTraces()` + fdCount in ANR file. `writeAnrFile()` via direct `FileOutputStream` on watchdog thread (no `Dispatchers.IO` — process may die before coroutine dispatches). `Debug.isDebuggerConnected()` guard. Exposed via lock-free `query()` path in `AgenticContentProvider` (`/anr`)
 - `WidgetHealthMonitor` — periodic liveness checks (10s), stale data detection (last data timestamp > staleness threshold), stalled render detection (last draw timestamp > 2x target frame interval). Reports to `CrashContextProvider`. Exposed via lock-free `query()` path (`/health`) with `cachedHealthMonitor` pattern
+- `ProviderStatusProvider` interface — `fun providerStatuses(): Flow<Map<String, ProviderStatus>>`. Implemented by `WidgetBindingCoordinator` (Phase 7). Consumed by `:feature:diagnostics` (Phase 11) without `:feature:diagnostics` → `:feature:dashboard` dependency
 
 ### `:sdk:analytics`
 
@@ -684,6 +686,7 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
   - `ProviderSettingsStore` — pack-namespaced keys: `{packId}:{providerId}:{key}`
   - `PairedDeviceStore` — CRUD for paired BLE devices (first consumer: Phase 9 sg-erp2)
   - `ConnectionEventStore` — rolling 50-event log (F7.6)
+  - `WidgetStyleStore` — per-widget style persistence (container glow, rim, opacity, corner radius, background). Consumed by `WidgetContainer` rendering in Phase 7
 - `PresetLoader` + preset JSON files (F7.7) — loads region-aware default layouts. Depends on `LayoutRepository` for writing. **Old codebase has `preset_demo_default.json` (schema version 2) — portable with `free:*` → `essentials:*` typeId updates.** Note: `RegionDetector` (which `PresetLoader` may use for region-aware defaults) lives in `:pack:essentials` (Phase 8). Phase 5 `PresetLoader` uses a simpler timezone-based region heuristic; Phase 8 can enhance if needed
 - Hardcoded minimal fallback layout (F7.12) — clock widget centered, as a code-level constant (`LayoutRepository.FALLBACK_LAYOUT`), not dependent on JSON or asset files. Used when preset loading fails (APK integrity, asset corruption)
 - `ReplaceFileCorruptionHandler` on ALL DataStore instances
@@ -717,6 +720,8 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
 
 **What:** First deployable APK with the agentic debug framework. Every subsequent phase can deploy to a device and use structured `adb shell content call` queries for autonomous debugging. This is debugging infrastructure — it lands before the code it will debug.
 
+**Depends on:** Phases 3, 4, 5 (Phase 3 direct: `:app` imports `:sdk:observability`, `:sdk:analytics`, `:sdk:ui`)
+
 ### `:app` (minimal shell)
 
 - `MainActivity` — single activity, `enableEdgeToEdge()`, `WindowInsetsControllerCompat`
@@ -728,7 +733,7 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
   - Empty `Set<DataProviderInterceptor>` (Phase 2 interface, chaos adds to it in Phase 9)
   - Empty `Set<DashboardPackManifest>`
   - `AlertSoundManager : AlertEmitter` — `@Singleton` with `SoundPool`, `AudioManager`, `Vibrator`. Phase 2 defines the `AlertEmitter` interface; Phase 6 provides the implementation. Required by `NotificationCoordinator` in Phase 7
-  - `CrashRecovery` — `@Singleton`, synchronous `SharedPreferences` read in `Application.onCreate()` before DataStore. Tracks crash timestamps for safe mode trigger (>3 crashes in 60s). Phase 7 wires safe mode response into coordinators/UI
+  - `CrashRecovery` — `@Singleton`, synchronous `SharedPreferences` read in `Application.onCreate()` before DataStore. Tracks crash timestamps for safe mode trigger (≥4 crashes in 60s). Phase 7 wires safe mode response into coordinators/UI
   - `StubEntitlementManager : EntitlementManager` — returns `free` only. Phase 10 replaces with Play Billing implementation
 - Blank dashboard canvas (placeholder composable — real dashboard lands in Phase 7)
 - AndroidManifest: `resizeableActivity="false"` (F1.23), `android:permission="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"` (NF23)
@@ -883,7 +888,7 @@ From this point forward, the agent can autonomously debug on a connected device:
 - `LayoutCoordinator(layoutRepository: LayoutRepository, presetLoader: PresetLoader, gridPlacementEngine: GridPlacementEngine)`
 - `EditModeCoordinator(layoutCoordinator: LayoutCoordinator)` — needs layout state for drag/resize validation
 - `ThemeCoordinator(themeAutoSwitchEngine: ThemeAutoSwitchEngine, themeProviders: Set<ThemeProvider>)`
-- `WidgetBindingCoordinator(dataProviderRegistry: DataProviderRegistry, widgetRegistry: WidgetRegistry, interceptors: Set<DataProviderInterceptor>, metricsCollector: MetricsCollector, dispatchers: AppDispatchers)`
+- `WidgetBindingCoordinator(dataProviderRegistry: DataProviderRegistry, widgetRegistry: WidgetRegistry, interceptors: Set<DataProviderInterceptor>, metricsCollector: MetricsCollector, @IoDispatcher ioDispatcher: CoroutineDispatcher, @DefaultDispatcher defaultDispatcher: CoroutineDispatcher)`
 - `NotificationCoordinator()` — derives banners from injected singleton state holders (safe mode, BLE adapter, storage)
 - `ProfileCoordinator(layoutRepository: LayoutRepository)` — profile create/clone/switch/delete all mutate layout persistence
 
@@ -899,7 +904,7 @@ From this point forward, the agent can autonomously debug on a connected device:
 | `DashboardHaptics` — 6 semantic methods with API 30+ branching (`editModeEnter`, `editModeExit`, `dragStart`, `snapToGrid`, `boundaryHit`, `resizeStart`) | `:feature:dashboard` | Port; `REJECT`/`CONFIRM` constants API 30+ with fallbacks |
 | `GridPlacementEngine` — auto-placement algorithm for new widgets | `:feature:dashboard` (inside or alongside `LayoutCoordinator`) | Port; has existing `GridPlacementEngineTest` — port tests too |
 | `WidgetContainer` — glow rendering with `drawWithCache`, responsive sizing (3 tiers), border overlay, rim padding | `:sdk:ui` as `WidgetContainer` | Redesign required — old uses `BlurMaskFilter` (forbidden); new uses `RenderEffect.createBlurEffect()` API 31+. Phase 3 builds the skeleton; Phase 7 adds glow rendering with `RenderEffect` rewrite. Responsive sizing logic worth porting |
-| `ConfirmationDialog` — reusable modal with scrim + animation | `:core:design` | Port verbatim — reused by overlays in Phase 10. **Depends on `DashboardMotion.dialogEnter/dialogExit`** — either co-locate shared animation specs in `:core:design` alongside this dialog, or keep both in `:feature:dashboard` |
+| `ConfirmationDialog` — reusable modal with scrim + animation | `:core:design` | **Delivered in Phase 7.** Port verbatim — reused by overlays in Phase 10. **Depends on `DashboardMotion.dialogEnter/dialogExit`** — co-locate shared animation specs in `:core:design` alongside this dialog |
 | `OverlayScaffold` — scaffold wrapping overlay content with title bar | `:feature:dashboard` | Port + adapt. Scaffolded empty in Phase 7; overlay routes populated in Phase 10 |
 | `UnknownWidgetPlaceholder` — fallback UI for deregistered/missing widget types | `:sdk:ui` | Port; required by F2.13 (Must). Must be in `:sdk:ui` so packs could theoretically reference it |
 | `DashboardCustomLayout` — `Layout` composable with `layoutId`-based matching, grid-unit coordinate system | `:feature:dashboard` | Port + adapt for new coordinator-owned state |
@@ -922,7 +927,7 @@ From this point forward, the agent can autonomously debug on a connected device:
 **Tests:**
 - Coordinator unit tests for each of the six coordinators — each coordinator tested in isolation with fakes for its dependencies
 - `DashboardViewModel` routing test: dispatch each `DashboardCommand` subtype, verify it reaches the correct coordinator
-- Safety-critical tests: 4-crash/60s → safe mode trigger (cross-widget: 4 different widgets each crashing once), entitlement revocation → auto-revert
+- Safety-critical tests: ≥4 crashes in 60s → safe mode trigger (cross-widget: 4 different widgets each crashing once), entitlement revocation → auto-revert
 - `NotificationCoordinator` re-derivation: kill ViewModel, recreate coordinator, assert all condition-based banners (safe mode, BLE adapter off, storage pressure) re-derive from current singleton state — no lost banners after process death
 - `ProfileCoordinator`: create → clone → switch → delete lifecycle, verify per-profile canvas independence (widget added to profile A not visible in profile B)
 - `DashboardTestHarness` DSL tests with `HarnessStateOnFailure` watcher — default path uses real coordinators, proving coordinator-to-coordinator interactions (e.g., `AddWidget` → `WidgetBindingCoordinator` creates job → `WidgetBindingCoordinator` reports ACTIVE)
@@ -932,7 +937,7 @@ From this point forward, the agent can autonomously debug on a connected device:
 - Thermal throttle wiring: inject `FakeThermalManager`, escalate to DEGRADED, verify emission rate drops in `WidgetDataBinder`
 - `ProviderFault`-based fault injection via `TestDataProvider`: `Delay`, `Error`, `Stall` → verify widget shows fallback UI, not crash
 - `BlankSpaceGestureHandler`: tap-on-blank → edit mode, long-press → edit mode, tap-on-widget in non-edit → no action
-- On-device validation: deploy, `dump-layout` confirms grid state, `dump-health` confirms widget liveness, `get-metrics` confirms frame timing, `query-semantics {"testTagPattern":"widget_.*"}` confirms all widgets rendered with correct test tags and non-zero bounds
+- On-device validation: deploy, `dump-layout` confirms grid state, `dump-health` confirms coordinator health (empty widget set), `get-metrics` confirms frame timing, `dump-semantics` confirms `dashboard_grid` test tag in semantics tree. Widget-specific semantics verification (`query-semantics {"testTagPattern":"widget_.*"}`) deferred to Phase 8 when widgets exist
 
 **Structural delivery vs functional validation:** Requirements that span coordinators + overlays (e.g., F1.2 widget creation = coordinator binding + widget picker overlay) are structurally delivered in Phase 7 (coordinator logic) and functionally validated end-to-end in Phase 10 (when overlays exist). Phase 7 tests validate coordinator behavior via `DashboardTestHarness` and agentic commands, not through overlay UI.
 
@@ -1057,8 +1062,8 @@ If contracts feel wrong, fix them in Phase 2 before proceeding.
 
 ### Chaos infrastructure
 
-- `ChaosProviderInterceptor` in `:core:agentic` (debug only) — implements `DataProviderInterceptor`, applies `ProviderFault` from `:sdk:contracts:testFixtures`
-- `StubEntitlementManager` with `simulateRevocation()` / `simulateGrant()`
+- `ChaosProviderInterceptor` in `:core:agentic` (debug only) — implements `DataProviderInterceptor`, applies `ProviderFault`. **Note:** `ProviderFault` must live in `:sdk:contracts` main source set (not testFixtures) — `ChaosProviderInterceptor` needs it at debug runtime, not just test time. `TestDataProvider` remains in testFixtures
+- Extend `StubEntitlementManager` (Phase 6) with `simulateRevocation()` / `simulateGrant()` for chaos testing
 - Chaos profiles: `provider-stress`, `provider-flap`, `thermal-ramp`, `entitlement-churn`, `widget-storm`, `process-death`, `combined`
 - `ChaosEngine` with seed-based deterministic reproduction (`seed: Long`)
 - `inject-fault` handler wired to `ChaosProviderInterceptor`
@@ -1125,7 +1130,7 @@ Key risk: `SettingsSheetDispatcher` in old code threads state through `Dashboard
 
 **`MainSettings`** — 4 sections: Appearance, Behavior, Data & Privacy, Danger Zone. Old `MainSettingsContent.kt` (390 lines). Mostly navigation dispatch with a status bar toggle.
 
-**`DeleteAllData` (F14.4):** Clear ALL DataStores, revoke Firebase analytics ID, reset to factory state. Confirmation dialog with destructive styling. Implementation: iterate `DataStoreRegistry` (all registered DataStore instances), call `updateData { defaultValue }` on each, then `FirebaseAnalytics.resetAnalyticsData()`.
+**`DeleteAllData` (F14.4):** Clear ALL DataStores, revoke Firebase analytics ID, reset to factory state. Uses `ConfirmationDialog` from `:core:design` (delivered Phase 7) with destructive styling. Implementation: inject all DataStore repositories (`LayoutRepository`, `UserPreferencesRepository`, `ProviderSettingsStore`, `PairedDeviceStore`, `WidgetStyleStore`) and call `clear()` on each, then `FirebaseAnalytics.resetAnalyticsData()`.
 
 **Analytics toggle (F12.5):** Settings → Data & Privacy includes analytics consent toggle. Default OFF (opt-in per PDPA/GDPR). State persisted in `UserPreferencesRepository`. Toggling ON shows consent dialog explaining data collected, purpose, and right to revoke. Toggling OFF immediately stops analytics collection via `AnalyticsTracker.setEnabled(false)`. No analytics events fire before opt-in.
 
@@ -1172,7 +1177,7 @@ Remaining routes (`ThemeSelector`, `Diagnostics`, `Onboarding`) populated in Pha
 
 **`OverlayScaffold`** — shared container for all overlay composables. Old `OverlayScaffold.kt` (175 lines). `OverlayType` enum (Hub/Preview/Confirmation) determines sheet shape + padding. `OverlayTitleBar` with close button.
 
-**`ConfirmationDialog`** — animated entry/exit state machine (`dialogVisible`, `pendingAction`), dismiss with 150ms delay. Old `ConfirmationDialog.kt` (195 lines). Used by Delete All Data, Reset Dash, widget delete.
+**`ConfirmationDialog`** — uses `ConfirmationDialog` from `:core:design` (delivered Phase 7). Animated entry/exit via `DashboardMotion.dialogEnter/dialogExit`. Used by Delete All Data, Reset Dash, widget delete.
 
 ### `PackBrowserContent`
 
@@ -1220,7 +1225,7 @@ Remaining routes (`ThemeSelector`, `Diagnostics`, `Onboarding`) populated in Pha
 
 Entirely new code — no old codebase equivalent. Debug builds only.
 
-- **Provider Health dashboard (F3.13):** list all registered providers with connection state, last emission time, error count, staleness indicator. Data from `DataProviderRegistry.registeredProviders()` + `WidgetBindingCoordinator.providerStatuses()`. Tap provider → detail view with connection log (F7.6, rolling 50 events), retry button
+- **Provider Health dashboard (F3.13):** list all registered providers with connection state, last emission time, error count, staleness indicator. Data from `DataProviderRegistry.getAll()` + `ProviderStatusProvider` interface (defined in `:sdk:observability`, implemented by `WidgetBindingCoordinator` in `:feature:dashboard` — avoids `:feature:diagnostics` → `:feature:dashboard` dependency). Tap provider → detail view with connection log (F7.6, rolling 50 events from `ConnectionEventStore`), retry button
 - **Diagnostic snapshot viewer:** browse snapshots from `DiagnosticSnapshotCapture`, sorted by timestamp, filterable by type (crash, ANR, anomaly, chaos)
 - **Session recording capture (F13.3):** tap, move, resize, navigation events logged with timestamps. `SessionRecorder` service class captures events to a ring buffer (max 10,000 events, ~500KB). Replay viewer shows scrollable timeline with event markers. Recording toggle in diagnostics — not always-on. **Highest-risk novel component** — no old code to reference. Keep scope minimal for V1: event capture + text-based timeline. Graphical replay viewer is stretch
 - **Observability data display:** metrics dashboard (frame times from `MetricsCollector`, recomposition counts, memory), log viewer with level filtering from `DqxnLogger` JSON-lines file
@@ -1353,7 +1358,7 @@ Mutation kill rate > 80% for critical modules (deferred to post-launch — track
 
 ### Data privacy feature (NF-P5)
 
-- **Export My Data:** JSON export of all user data (layouts, settings, profiles, paired devices). Accessible from Settings → Data & Privacy. Format documented. Implementation: iterate `DataStoreRegistry`, serialize each DataStore's current value to JSON via kotlinx.serialization, write to user-selected file via `ActivityResultContracts.CreateDocument`. No server-side data — everything is local Proto/Preferences DataStore
+- **Export My Data:** JSON export of all user data (layouts, settings, profiles, paired devices). Accessible from Settings → Data & Privacy. Format documented. Implementation: inject all DataStore repositories (`LayoutRepository`, `UserPreferencesRepository`, `ProviderSettingsStore`, `PairedDeviceStore`, `WidgetStyleStore`), serialize each current value to JSON via kotlinx.serialization, write to user-selected file via `ActivityResultContracts.CreateDocument`. No server-side data — everything is local Proto/Preferences DataStore
 - **NF-P3 (PDPA compliance) verification:** Analytics consent flow works end-to-end (consent dialog → opt-in → events fire → opt-out → events stop). Privacy policy URL reachable. "Delete All Data" (F14.4, implemented in Phase 10) verified to clear all stores
 
 ### Accessibility audit (NF30, NF32, NF33, NF39, NF40)
@@ -1438,7 +1443,7 @@ Not all code benefits equally from test-first. Mandatory TDD for code where the 
 | State machines (`ConnectionStateMachine`, coordinator transitions) | Property-based testing (jqwik) defines valid transition sequences before implementation. Missing transitions and illegal states caught at design time. | 2, 7 |
 | Banner derivation logic (`NotificationCoordinator` observer blocks) | Maps `(safeModeActive, bleAdapterOff, storageLow, ...)` → prioritized banner list. Incorrect derivation = CRITICAL banners invisible. Effectively a state machine — same rationale applies. | 7 |
 | `merge()+scan()` accumulation in `WidgetDataBinder` | Test: "widget with 3 slots renders correctly when slot 2 is delayed." Prevents accidental `combine()` starvation — the architecture's most critical flow invariant. | 7 |
-| Safe mode trigger logic | Boundary condition: 4 crashes (not 3) in 60s rolling window (not total), cross-widget counting (4 different widgets each crashing once triggers it). Easy to get subtly wrong. | 7 |
+| Safe mode trigger logic | Boundary condition: ≥4 crashes in 60s rolling window (not total), cross-widget counting (4 different widgets each crashing once triggers it). Easy to get subtly wrong. | 7 |
 | KSP validation rules | Compile-testing assertions for invalid `typeId`, missing `@Immutable`, duplicate `dataType` before writing the processor. The test IS the specification. | 4 |
 
 ### TDD not required (test-concurrent)

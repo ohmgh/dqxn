@@ -6,7 +6,7 @@
 
 **Goal:** Gradle infrastructure that all modules depend on. Nothing compiles without this. Stub `build.gradle.kts` for all modules — `settings.gradle.kts` is stable from Phase 1 onward.
 
-**Requirements:** NF35 (build times)
+**Requirements:** F13.10 (test categorization — JUnit5 tags + `fastTest`/`composeTest` tasks), NF27 (minSdk 31), NF28 (targetSdk 36), NF35 (build times)
 
 **Success Criteria:**
 1. `./gradlew tasks --console=plain` succeeds — all convention plugins resolve, all stub modules parse
@@ -31,7 +31,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Goal:** Complete `:sdk:contracts` type surface and `:sdk:common` utilities. Every type that lives in `:sdk:contracts` is defined here — downstream phases consume but never modify it. Biggest architectural transformation: old untyped `DataSnapshot(Map<String, Any?>)` becomes typed `@DashboardSnapshot` subtypes with `KClass`-keyed `WidgetData`.
 
-**Requirements:** F2.1, F2.2, F2.4 (contracts only — rendering in Phase 3), F2.5, F2.11, F2.12 (annotations only — KSP processor in Phase 4), F2.16, F2.19, F2.20, F3.1, F3.2, F3.3, F3.4, F3.5, F3.6, F3.8, F8.3, F9.1–F9.4 (notification type definitions — coordinator implementation in Phase 7)
+**Requirements:** F2.1, F2.2, F2.4 (contracts only — rendering in Phase 3), F2.5, F2.10 (WidgetContext type), F2.11, F2.12 (annotations only — KSP processor in Phase 4), F2.16, F2.19, F2.20, F3.1, F3.2, F3.3, F3.4, F3.5, F3.6, F3.8, F8.1 (entitlement contracts — `EntitlementManager` interface + `Entitlements` constants), F8.3, F9.1–F9.4 (notification type definitions — coordinator implementation in Phase 7)
 
 **Key design decisions:**
 - `:sdk:common` is an Android library with Hilt (not pure Kotlin) — `DispatcherModule` requires `@InstallIn(SingletonComponent::class)`
@@ -111,7 +111,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Goal:** Shell internals that features depend on but packs never touch. Proto DataStore schemas, theme engine, thermal management, Firebase implementations.
 
-**Requirements:** F4.1, F4.2, F4.3, F4.4, F4.5, F7.1, F7.2, F7.3, F7.4, F7.5, F7.8, F7.12, NF12, NF13, NF43
+**Requirements:** F4.1, F4.2, F4.3, F4.4, F4.5, F7.1, F7.2, F7.3, F7.4, F7.5, F7.7 (preset system — `PresetLoader` + JSON presets + fallback layout), F7.8, F7.12, NF12, NF13, NF43
 
 **Success Criteria:**
 1. `:core:design`, `:core:thermal`, `:data`, `:core:firebase` compile
@@ -141,7 +141,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 5. CI pipeline running `./gradlew assembleDebug test lintDebug`
 6. Empty multibinding sets (`Set<WidgetRenderer>`, `Set<DataProvider<*>>`, `Set<ThemeProvider>`, `Set<DataProviderInterceptor>`, `Set<PackManifest>`) resolve — app starts with zero packs
 
-**Depends on:** Phases 4, 5
+**Depends on:** Phases 3, 4, 5 (Phase 3 direct: `:app` imports `:sdk:observability`, `:sdk:analytics`, `:sdk:ui`)
 
 **Details:** [MIGRATION.md — Phase 6](MIGRATION.md#phase-6-deployable-app--agentic-framework)
 
@@ -151,14 +151,14 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Goal:** Decompose the god-ViewModel into coordinators. Structural transformation, not porting. Highest-risk phase. Overlay composables deferred to Phase 10 — agentic commands provide mutation paths for validation.
 
-**Requirements:** F1.2-F1.17, F1.20-F1.21, F1.23, F1.26-F1.30, F2.3-F2.14, F2.16, F2.18-F2.20, F3.7, F3.9-F3.11, F3.14, F3.15, F9.1-F9.4, F10.4 (touch targets — 76dp in dashboard context), F10.9, NF1-NF8, NF15-NF19, NF38, NF39 (reduced motion), NF41, NF42, NF45 (config-aware presets), NF46 (foldable viewport), NF-L1 (lifecycle pause/resume)
+**Requirements:** F1.2-F1.17, F1.20-F1.21, F1.26-F1.30, F2.3-F2.6 (binder, status cache, placement, container — implementations), F2.10-F2.14 (context defaults, sizer, KSP wiring, unknown placeholder, error boundary), F2.16, F2.18-F2.20, F3.7, F3.9-F3.11, F3.14 (coordinator-level status overlay infrastructure), F3.15, F9.1-F9.4, F10.4 (touch targets — 76dp in dashboard context), F10.7 (adaptive rendering — stationary frame rate reduction), F10.9, NF1-NF8, NF15-NF19, NF38, NF39 (reduced motion), NF41, NF42, NF45 (config-aware presets), NF46 (foldable viewport), NF-L1 (lifecycle pause/resume)
 
 **Success Criteria:**
 1. Six coordinators (Layout, EditMode, Theme, WidgetBinding, Notification, Profile) unit tests pass
 2. `DashboardViewModel` routes `DashboardCommand` to correct coordinator
 3. `DashboardTestHarness` with real coordinators: `AddWidget` → `WidgetBindingCoordinator` creates job → reports ACTIVE
-4. Safe mode trigger: 4 crashes in 60s rolling window activates safe mode (cross-widget counting)
-5. `dump-semantics` returns widget nodes with test tags after `DashboardLayer` registration
+4. Safe mode trigger: ≥4 crashes in 60s rolling window activates safe mode (cross-widget counting)
+5. `dump-semantics` returns semantics tree with `dashboard_grid` test tag after `DashboardLayer` registration (widget-specific node verification deferred to Phase 8)
 6. On-device: `dump-layout`, `dump-health`, `get-metrics` return valid data
 7. `NotificationCoordinator` re-derives banners from singleton state after ViewModel kill
 8. `ProfileCoordinator` handles profile create/switch/clone/delete with per-profile canvas independence
@@ -175,7 +175,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Goal:** First pack migration. Proves entire SDK-to-Pack contract works end-to-end. Cross-boundary snapshot types live in `:pack:essentials:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1). **4 greenfield providers** (GpsSpeed, Battery, Accelerometer, SpeedLimit — none have old codebase equivalents: old speed came from OBU/EXTOL, no battery provider existed, no standalone accelerometer or user-configured speed limit provider).
 
-**Requirements:** F5.1-F5.11, NF14 (sensor batching for greenfield providers), NF40 (color-blind safety — speed limit widget uses color + pattern + icon), NF-I2 (locale-aware formatting in renderers)
+**Requirements:** F5.1-F5.11, NF14 (sensor batching for greenfield providers), NF40 (color-blind safety — speed limit widget uses color + pattern + icon), NF-I2 (locale-aware formatting in renderers), NF-P1 (no GPS track stored — `GpsSpeedProvider` design constraint)
 
 **Success Criteria (all four required before Phase 9):**
 1. **Contract tests green:** 13 widgets pass `WidgetRendererContractTest`, 9 typed data providers pass `DataProviderContractTest` (`CallActionProvider` excluded — implements `ActionableProvider`)
@@ -194,7 +194,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Goal:** Themes pack, demo pack (deterministic stub providers), chaos testing infrastructure. sg-erp2 contingent on EXTOL SDK compatibility.
 
-**Requirements:** F6.1-F6.4, F13.1
+**Requirements:** F6.1-F6.4, F8.5 (simulate free user — `StubEntitlementManager.simulateRevocation()`/`simulateGrant()`), F13.1
 
 **Success Criteria:**
 1. All pack widgets pass contract tests; all providers pass contract tests
@@ -213,7 +213,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Goal:** Schema-driven settings row system, widget/global settings, setup wizard UI, and widget picker. Foundation layer that all other overlay UI depends on. Deliberately sequenced before Phase 9 to unblock sg-erp2's BLE device pairing UI.
 
-**Requirements:** F2.7 (widget picker), F2.8-F2.9 (widget settings), F3.3-F3.5 (setup wizard), F3.14 (setup failure UX), F7.7 (preset system — settings UI), F8.7 (widget picker entitlement gating), F8.9 (refund overlay in picker), F10.4 (76dp touch targets in overlay context = 48dp), F12.5 (analytics consent toggle in settings), F14.2 (diagnostics nav in settings), F14.4 (delete all data)
+**Requirements:** F2.7 (widget picker), F2.8-F2.9 (widget settings), F3.3-F3.5 (setup wizard), F3.14 (setup failure UX), F8.1 (entitlement gating enforcement in UI — contract from Phase 2), F8.7 (widget picker entitlement gating), F8.9 (refund overlay in picker — UI built here, verification requires Phase 9's `simulateRevocation()`), F10.4 (76dp touch targets in overlay context), F12.5 (analytics consent toggle in settings), F14.2 (diagnostics nav in settings), F14.4 (delete all data), NF29 (companion_device_setup manifest feature)
 
 **Success Criteria:**
 1. `SettingRowDispatcher` renders all 10 row types from `SettingDefinition` schema, value changes propagate to `ProviderSettingsStore`
@@ -233,7 +233,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Goal:** Three independent feature clusters built on Phase 10's settings row system: theme editing/selection UI, diagnostics module (`:feature:diagnostics`), and onboarding flow (`:feature:onboarding`). Completes all `OverlayNavHost` routes.
 
-**Requirements:** F3.13 (provider health dashboard), F4.6-F4.10, F4.12-F4.13, F7.6 (connection event log in diagnostics), F11.1, F11.2, F11.5-F11.7, F12.2-F12.7 (analytics event call sites), F13.3 (session recording), NF-D1 (speed disclaimer on widget info — already in Phase 10 `WidgetInfoContent`), NF-D3 (first-launch disclaimer in onboarding)
+**Requirements:** F3.13 (provider health dashboard), F4.6-F4.10, F4.12-F4.13, F7.6 (connection event log in diagnostics), F11.1, F11.2, F11.5-F11.7, F12.2-F12.4 (analytics event call sites + privacy compliance), F12.5 (analytics consent enforcement — events gated on opt-in), F12.6-F12.7, F13.3 (session recording), NF-D1 (speed disclaimer on widget info — already in Phase 10 `WidgetInfoContent`), NF-D3 (first-launch disclaimer in onboarding)
 
 **Success Criteria:**
 1. All 7 `OverlayNavHost` routes populated — navigate to each, verify content renders, back navigation correct
@@ -276,7 +276,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Goal:** Full system integration testing, chaos CI gate, performance soak, accessibility audit, privacy features, and app lifecycle features. The convergence point — everything works together.
 
-**Requirements:** NF11 (battery drain), NF37 (background battery), NF30 (WCAG contrast), NF32 (TalkBack), NF33 (font scale), NF-I1 (string resource audit), NF-L2 (in-app updates), NF-L3 (in-app review), NF-P3 (PDPA verification), NF-P5 (Export My Data)
+**Requirements:** NF11 (battery drain), NF24 (offline functionality verification), NF25 (BLE data independence), NF26 (internet-only for purchase/weather), NF30 (WCAG contrast), NF32 (TalkBack), NF33 (font scale), NF37 (background battery), NF-D2 (ToS speed accuracy disclaimer — legal checklist), NF-I1 (string resource audit), NF-L2 (in-app updates), NF-L3 (in-app review), NF-P3 (PDPA verification), NF-P4 (data export + Firebase deletion API), NF-P5 (Export My Data)
 
 **Success Criteria:**
 1. Full E2E: launch → load → bind → render → edit → add/remove/resize → theme switch → settings with semantics verification at each step
@@ -307,13 +307,14 @@ graph TD
     P5 --> P7[Phase 7: Dashboard Shell]
     P6 --> P7
     P7 --> P8[Phase 8: Essentials Pack]
+    P8 --> P9[Phase 9: Themes, Demo + Chaos]
     P8 --> P10[Phase 10: Settings Foundation]
     P8 --> P12[Phase 12: CI Gates + Benchmarks]
-    P10 --> P9[Phase 9: Themes, Demo + Chaos]
+    P10 --> P9
     P10 --> P11[Phase 11: Theme UI + Diagnostics + Onboarding]
     P9 --> P13[Phase 13: E2E + Launch Polish]
     P11 --> P13
     P12 --> P13
 ```
 
-Phases 3+4 concurrent after Phase 2. Phase 6 gates on-device work. Phase 8 is the architecture validation gate and spawns three parallel streams: Phase 10 (settings/setup — unblocks sg-erp2), Phase 12 (CI/benchmarks — no UI dependency), and indirectly Phase 9 (runs after Phase 10's SetupSheet). Phase 11 (theme UI, diagnostics, onboarding) follows Phase 10 and runs concurrent with Phase 9. Phase 13 is the convergence point.
+Phases 3+4 concurrent after Phase 2. Phase 6 gates on-device work (depends on Phases 3, 4, 5 — Phase 3 is a direct dependency, not just transitive through 5). Phase 8 is the architecture validation gate and spawns three parallel streams: Phase 10 (settings/setup — unblocks sg-erp2), Phase 12 (CI/benchmarks — no UI dependency), and Phase 9 (depends on both Phase 8 directly for snapshot types and Phase 10 for SetupSheet). Phase 11 (theme UI, diagnostics, onboarding) follows Phase 10 and runs concurrent with Phase 9. Phase 13 is the convergence point.
