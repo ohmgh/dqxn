@@ -3,17 +3,17 @@
 ## Current Position
 
 - **Phase:** 1 — Build System Foundation
-- **Current Plan:** 2 of 4
+- **Current Plan:** 3 of 4
 - **Milestone:** V1 Launch
-- **Next action:** Phase 1, Plan 02 — Module stubs
-- **Last session:** 2026-02-23T16:52:42Z
-- **Stopped at:** Completed 01-01-PLAN.md
+- **Next action:** Phase 1, Plan 03 — Lint rules
+- **Last session:** 2026-02-23T17:04:51Z
+- **Stopped at:** Completed 01-02-PLAN.md
 
 ## Progress
 
 | Phase | Status | Notes |
 |---|---|---|
-| 1. Build System Foundation | In Progress (1/4 plans) | Plan 01 complete: Gradle infrastructure + convention plugins |
+| 1. Build System Foundation | In Progress (2/4 plans) | Plan 01-02 complete: infrastructure + module stubs + Spotless |
 | 2. SDK Contracts + Common | Pending | |
 | 3. SDK Observability + Analytics + UI | Pending | Concurrent with Phase 4 |
 | 4. KSP Codegen | Pending | Concurrent with Phase 3 |
@@ -43,12 +43,15 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **KSP 2.3.6** with new simplified versioning scheme (no longer Kotlin-version-prefixed)
 - **Single shared libs.versions.toml** between root and build-logic (via versionCatalogs create/from)
 - **JDK 25 toolchain** with Kotlin JVM_24 fallback (Kotlin 2.3.10 does not support JVM 25 target yet)
+- **afterEvaluate for tag-filtered test tasks** — AGP registers testDebugUnitTest during variant creation, not at plugin apply time
+- **ktfmt Google style** (2-space indent) enforced via Spotless from day one
 
 ## Performance Metrics
 
 | Phase-Plan | Duration | Tasks | Files |
 |---|---|---|---|
 | 01-01 | 12min | 2 | 20 |
+| 01-02 | 7min | 3 | 62 |
 
 ## Context
 
@@ -56,3 +59,5 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - Old codebase mapped in `.planning/oldcodebase/` (8 docs, ~6000 lines)
 - Replication advisory at `.planning/migration/replication-advisory.md` — 7 hard-to-replicate UX areas cross-referenced in phase files and risk-flags.md
 - Build infrastructure established: Gradle 9.3.1, AGP 9.0.1, Kotlin 2.3.10, all convention plugins compiling
+- All 25 module stubs created with correct convention plugins, settings.gradle.kts stable
+- Spotless/ktfmt formatting enforced, pre-commit hook with boundary checks active
