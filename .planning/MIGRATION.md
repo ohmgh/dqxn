@@ -45,10 +45,11 @@ graph TD
     P3 --> P5[Phase 5: Core Infrastructure]
     P3 --> P6[Phase 6: Deployable App + Agentic]
     P4 --> P6
+    P5 --> P6
     P5 --> P7[Phase 7: Dashboard Shell]
     P6 --> P7
     P7 --> P8[Phase 8: Free Pack]
-    P8 --> P9[Phase 9: Remaining Packs]
+    P8 --> P9[Phase 9: Themes, Demo + Chaos]
     P7 --> P10[Phase 10: Features + Polish]
     P9 --> P10
 ```
@@ -74,6 +75,7 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
   - `dqxn.android.hilt`
   - `dqxn.android.test` (JUnit5 + MockK + Truth + Turbine)
   - `dqxn.pack` (auto-wires all `:sdk:*` dependencies — packs never manually add them)
+  - `dqxn.snapshot` (configures `:pack:*:snapshots` sub-modules — pure Kotlin, `:sdk:contracts` only, no Android/Compose)
   - `dqxn.android.feature`
 - `AgenticMainThreadBan` lint rule (enforced from Phase 6 onward when first handler lands)
 - Gradle wrapper (9.3.1)
@@ -113,7 +115,8 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 - `DashboardPackManifest`, `DataTypeDescriptor`
 - `ThemeDefinition`, `ThemeProvider`
 - `EntitlementManager`, `Gated` interface
-- `DashboardWidget` / `DashboardDataProvider` / `@AgenticCommand` KSP annotations
+- `DashboardWidget` / `DashboardDataProvider` KSP annotations
+- Note: `@AgenticCommand` lives in `:core:agentic` (Phase 6), not `:sdk:contracts` — agentic is debug-only infrastructure, not part of the pack API surface
 
 ### `:sdk:contracts` testFixtures
 
@@ -156,7 +159,7 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 
 - `LocalWidgetData` CompositionLocal
 - `LocalWidgetScope` CompositionLocal (supervised `WidgetCoroutineScope`)
-- `WidgetScaffold` (migrate from `core:widget-primitives`)
+- `WidgetContainer` (migrate from `core:widget-primitives`)
 - Shared Compose widget components
 - Theme-aware drawing utilities
 
@@ -170,7 +173,7 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 - `AnrWatchdog`: single miss → no capture; two consecutive misses → capture + file written; debugger attached → no capture
 - `DiagnosticSnapshotCapture`: concurrent capture guard (second capture dropped), rotation pool eviction (thermal doesn't evict crash), storage pressure skip
 - `WidgetHealthMonitor`: stale vs stalled distinction, liveness check period
-- `WidgetScaffold`: composition tests
+- `WidgetContainer`: composition tests
 
 ---
 
@@ -197,7 +200,7 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 
 **Ported from old:** `core:plugin-processor` → `:codegen:plugin` (adapt for new annotation shapes, add manifest generation). `core:agentic-processor` → `:codegen:agentic` (expand from simple dispatch to full schema generation).
 
-**Convention plugin wiring check:** Apply `dqxn.pack` to a stub module (no source, just the plugin application). Verify the resolved dependency graph includes all expected `:sdk:*` modules with `implementation` scope and that the KSP-generated Compose stability config file path is wired into the Compose compiler options. This is a 7-phase gap between the plugin (Phase 1) and its first real consumer (Phase 8) — misconfigured auto-wiring would silently propagate to every pack.
+**Convention plugin wiring check:** Apply `dqxn.pack` to a stub module (no source, just the plugin application). Verify the resolved dependency graph includes all expected `:sdk:*` modules with `implementation` scope and that the KSP-generated Compose stability config file path is wired into the Compose compiler options. This is a 7-phase gap between the plugin (Phase 1) and its first real consumer (Phase 8) — misconfigured auto-wiring would silently propagate to every pack. Note: this check requires all `:sdk:*` modules to exist (Phase 3 deliverables). If Phase 4 runs concurrently with Phase 3, defer this validation to Phase 6 (first `:app` assembly). The KSP processor work in Phase 4 has no dependency on Phase 3; only this validation check does.
 
 **Tests:** KSP processor tests with compile-testing. Verify generated `list-commands` output. Verify compilation failure on malformed `typeId`. Verify `@DashboardSnapshot` rejects: duplicate `dataType`, mutable properties, missing `@Immutable`, non-`DataSnapshot` class.
 
@@ -296,7 +299,7 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 | `dump-layout` | `:data` layout repository | Phase 6 |
 | `list-widgets` | `Set<WidgetRenderer>` from Hilt | Phase 6 (empty until Phase 8) |
 | `list-providers` | `Set<DataProvider<*>>` from Hilt | Phase 6 (empty until Phase 8) |
-| `list-themes` | `ThemeRegistry` | Phase 6 |
+| `list-themes` | `Set<ThemeProvider>` (via Hilt multibinding) | Phase 6 |
 | `list-commands` | KSP-generated schema from `:codegen:agentic` | Phase 6 |
 | `dump-semantics` | `SemanticsOwnerHolder` — full Compose semantics tree (bounds, test tags, text, actions) | Phase 6 (empty until DashboardLayer registers in Phase 7) |
 | `query-semantics` | `SemanticsOwnerHolder` — filtered semantics query by test tag, text, bounds | Phase 6 (empty until Phase 7) |
@@ -308,11 +311,11 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 |---|---|---|
 | `add-widget`, `remove-widget`, `move-widget`, `resize-widget` | `LayoutCoordinator` | Phase 7 |
 | `set-theme` | `ThemeCoordinator` | Phase 7 |
-| `set-data-source` | `BindingCoordinator` | Phase 7 |
+| `set-data-source` | `WidgetBindingCoordinator` | Phase 7 |
 | `set-setting` | Per-widget settings | Phase 7 |
 | `get-layout` | `LayoutCoordinator` | Phase 7 |
-| `get-widget-status` | `WidgetStatusCoordinator` | Phase 7 |
-| `get-entitlements` | `EntitlementRegistry` | Phase 7 |
+| `get-widget-status` | `WidgetBindingCoordinator` | Phase 7 |
+| `get-entitlements` | `EntitlementManager` | Phase 7 |
 | `reset-layout` | `LayoutCoordinator` | Phase 7 |
 | `import-preset` | `:data` preset system | Phase 7 |
 | `inject-fault` | `ChaosProviderInterceptor` | Phase 9 |
@@ -360,11 +363,12 @@ From this point forward, the agent can autonomously debug on a connected device:
 
 **State decomposition** — break `DashboardState` into coordinator-owned slices:
 
-- `LayoutCoordinator` — widget positions, grid state
-- `EditModeCoordinator` — edit toggle, drag/resize state
-- `ThemeCoordinator` — current theme, theme switching
-- `BindingCoordinator` — widget↔provider bindings, `SupervisorJob` isolation
-- `WidgetStatusCoordinator` — health tracking, error counts, safe mode
+- `LayoutCoordinator` — canvas positioning, viewport culling, grid placement
+- `EditModeCoordinator` — edit mode toggle, drag/resize gestures
+- `ThemeCoordinator` — active theme, auto-switch engine, preview/revert
+- `WidgetBindingCoordinator` — provider binding, `SupervisorJob` isolation, per-widget status tracking, error counts, safe mode trigger
+- `NotificationCoordinator` — banner derivation, toast queue, priority ordering
+- `ProfileCoordinator` — profile creation/clone/switch/delete, per-profile canvas ownership
 
 **Core components:**
 
@@ -400,10 +404,10 @@ From this point forward, the agent can autonomously debug on a connected device:
 | `DashboardMotion` — 3 spring profiles (`standard` 0.65/300, `hub` 0.5/300, `preview` 0.75/380) + all enter/exit transitions | `:feature:dashboard` | Port; springs are tuned — do not re-guess values |
 | `DashboardHaptics` — 6 semantic methods with API 30+ branching (`editModeEnter`, `editModeExit`, `dragStart`, `snapToGrid`, `boundaryHit`, `resizeStart`) | `:feature:dashboard` | Port; `REJECT`/`CONFIRM` constants API 30+ with fallbacks |
 | `GridPlacementEngine` — auto-placement algorithm for new widgets | `:feature:dashboard` (inside or alongside `LayoutCoordinator`) | Port; has existing `GridPlacementEngineTest` — port tests too |
-| `WidgetContainer` — glow rendering with `drawWithCache`, responsive sizing (3 tiers), border overlay, rim padding | `:sdk:ui` as `WidgetScaffold` | Redesign required — old uses `BlurMaskFilter` (forbidden); new uses `RenderEffect.createBlurEffect()` API 31+. Responsive sizing logic worth porting |
+| `WidgetContainer` — glow rendering with `drawWithCache`, responsive sizing (3 tiers), border overlay, rim padding | `:sdk:ui` as `WidgetContainer` | Redesign required — old uses `BlurMaskFilter` (forbidden); new uses `RenderEffect.createBlurEffect()` API 31+. Phase 3 builds the skeleton; Phase 7 adds glow rendering with `RenderEffect` rewrite. Responsive sizing logic worth porting |
 | `ConfirmationDialog` — reusable modal with scrim + animation | `:feature:dashboard` or `:core:design` | Port verbatim |
 | `OverlayScaffold` — scaffold wrapping overlay content with title bar | `:feature:dashboard` | Port + adapt |
-| `UnknownWidgetPlaceholder` — fallback UI for deregistered/missing widget types | `:feature:dashboard` or `:sdk:ui` | Port; required by F2.13 (Must) and F7.10 (backup/restore with missing packs) |
+| `UnknownWidgetPlaceholder` — fallback UI for deregistered/missing widget types | `:feature:dashboard` or `:sdk:ui` | Port; required by F2.13 (Must). F7.10 (backup/restore) deferred post-launch |
 | `InlineColorPicker` — HSL sliders + hex editor (412 lines, `WindowInsets.ime` keyboard handling) | `:feature:dashboard` (moves to `:feature:settings` in Phase 10) | Port; non-trivial — do not rebuild from scratch or pull in third-party lib. Extract `colorToHsl`/`colorToHex`/`parseHexToColor` to a testable utility |
 | `GradientTypeSelector` + `GradientStopRow` + `ThemeSwatchRow` (5-slot swatch selector with `parseHexColor`/`gradientSpecToBrush` utils) | `:feature:dashboard` | Port + adapt |
 | `SetupSheetContent` + setup UI system — `SetupDefinitionRenderer`, `SetupNavigationBar`, `SetupPermissionCard`, `SetupToggleCard`, `DeviceScanCard`, `PairedDeviceCard`, `DeviceLimitCounter`, `InstructionCard` | `:feature:dashboard` (moves to `:feature:settings` in Phase 10) | Port; required by F3.3/F3.4/F3.5/F3.14 (all Must). sg-erp2 pack (Phase 9) depends on this UI for BLE device pairing |
@@ -412,10 +416,10 @@ From this point forward, the agent can autonomously debug on a connected device:
 | `DashboardCustomLayout` — `Layout` composable with `layoutId`-based matching, grid-unit coordinate system | `:feature:dashboard` | Port + adapt for new coordinator-owned state |
 
 **Tests:**
-- Coordinator unit tests for each of the five coordinators
+- Coordinator unit tests for each of the six coordinators
 - Safety-critical tests: 4-crash/60s → safe mode trigger, entitlement revocation → auto-revert
 - `NotificationCoordinator` re-derivation: kill ViewModel, recreate coordinator, assert all condition-based banners (safe mode, BLE adapter off, storage pressure) re-derive from current singleton state — no lost banners after process death
-- `DashboardTestHarness` DSL tests with `HarnessStateOnFailure` watcher — default path uses real coordinators, proving coordinator-to-coordinator interactions (e.g., `AddWidget` → `BindingCoordinator` creates job → `WidgetStatusCoordinator` reports ACTIVE)
+- `DashboardTestHarness` DSL tests with `HarnessStateOnFailure` watcher — default path uses real coordinators, proving coordinator-to-coordinator interactions (e.g., `AddWidget` → `WidgetBindingCoordinator` creates job → `WidgetBindingCoordinator` reports ACTIVE)
 - Grid layout tests (compose-ui-test + Robolectric): widget placement, overlap rejection, viewport filtering
 - Drag/resize interaction tests: `graphicsLayer` offset animation, snap-to-grid. **Decide resize preview strategy:** old codebase passes target dimensions to widgets via `LocalWidgetScale`/`LocalWidgetPreviewUnits` so widgets re-layout at target size during resize gesture (8 widgets read this). New architecture says `graphicsLayer` for drag animation — clarify whether resize is visual-only scaling or content-aware relayout. If content-aware (needed for `InfoCardLayout` STACK/COMPACT/GRID mode switching), port `WidgetScale` CompositionLocal
 - `WidgetDataBinder`: `SupervisorJob` isolation (one provider crash doesn't cancel siblings), `CoroutineExceptionHandler` routes to `widgetStatus`
@@ -434,42 +438,60 @@ From this point forward, the agent can autonomously debug on a connected device:
 
 **Convention plugin validation** — `dqxn.pack` auto-wires deps, no manual `:sdk:*` imports.
 
-**Snapshot types defined in `:pack:free`** — `SpeedSnapshot`, `TimeSnapshot`, `DateSnapshot`, `OrientationSnapshot`, `SolarSnapshot`, `AmbientLightSnapshot`, `SpeedLimitSnapshot`, `AccelerationSnapshot`, `BatterySnapshot`. Each annotated with `@DashboardSnapshot`, validated by KSP. This is the first real test of the non-sealed `DataSnapshot` + KSP validation approach.
+**Snapshot types** — partitioned between `:pack:free:snapshots` (cross-boundary, available for future packs) and `:pack:free` (pack-local). Each annotated with `@DashboardSnapshot`, validated by KSP. This is the first real test of the non-sealed `DataSnapshot` + KSP validation approach.
 
-**11 widgets** migrated to new contracts:
+`:pack:free:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1):
+- `SpeedSnapshot`, `AccelerationSnapshot`, `BatterySnapshot`, `TimeSnapshot`, `OrientationSnapshot`, `AmbientLightSnapshot`
+
+`:pack:free` pack-local:
+- `SolarSnapshot` (only consumed by free pack's Solar widget)
+- `SpeedLimitSnapshot` (only consumed by free pack's Speed Limit widgets)
+
+**13 widgets** migrated to new contracts:
 
 | Widget | Snapshot Type | Notes |
 |---|---|---|
 | `SpeedometerRenderer` | `SpeedSnapshot` | `derivedStateOf` + `drawWithCache` for high-frequency data |
 | `ClockDigitalRenderer` | `TimeSnapshot` | |
 | `ClockAnalogRenderer` | `TimeSnapshot` | |
-| `DateSimpleRenderer` | `DateSnapshot` | |
-| `DateStackRenderer` | `DateSnapshot` | |
-| `DateGridRenderer` | `DateSnapshot` | |
+| `DateSimpleRenderer` | `TimeSnapshot` | Formats date from `TimeSnapshot` — no separate `DateSnapshot` |
+| `DateStackRenderer` | `TimeSnapshot` | Formats date from `TimeSnapshot` |
+| `DateGridRenderer` | `TimeSnapshot` | Formats date from `TimeSnapshot` |
 | `CompassRenderer` | `OrientationSnapshot` | `drawWithCache` for needle rotation |
-| `SpeedLimitCircleRenderer` | `SpeedLimitSnapshot` | |
-| `SpeedLimitRectRenderer` | `SpeedLimitSnapshot` | |
+| `SpeedLimitCircleRenderer` | `SpeedLimitSnapshot` | SPEED_LIMIT is a data provider type (exists in old codebase) |
+| `SpeedLimitRectRenderer` | `SpeedLimitSnapshot` | SPEED_LIMIT is a data provider type (exists in old codebase) |
 | `SolarRenderer` | `SolarSnapshot` | |
 | `AmbientLightRenderer` | `AmbientLightSnapshot` | |
+| `BatteryRenderer` | `BatterySnapshot` | Displays battery level, charging state, time-to-full/empty |
 | `ShortcutsRenderer` | (none — tap actions) | `AppPickerSetting` |
 
 All widgets: `ImmutableMap` settings, `LocalWidgetData.current` data access, `accessibilityDescription()` implemented.
 
-**7 providers** migrated to typed emission:
+**9 data providers + 1 action handler** migrated to typed emission:
+
+Typed `DataProvider<T>` implementations:
 
 | Provider | Emits | Notes |
 |---|---|---|
 | `TimeDataProvider` | `TimeSnapshot` | |
-| `DateDataProvider` | `DateSnapshot` | |
 | `OrientationDataProvider` | `OrientationSnapshot` | callbackFlow + awaitClose preserved |
 | `SolarTimezoneDataProvider` | `SolarSnapshot` | |
 | `SolarLocationDataProvider` | `SolarSnapshot` | |
 | `AmbientLightDataProvider` | `AmbientLightSnapshot` | callbackFlow |
-| `CallActionProvider` | (tap action) | |
+| `GpsSpeedProvider` | `SpeedSnapshot` | Requires `ACCESS_FINE_LOCATION` |
+| `BatteryProvider` | `BatterySnapshot` | |
+| `AccelerometerProvider` | `AccelerationSnapshot` | |
+| `SpeedLimitProvider` | `SpeedLimitSnapshot` | User-configured static value (exists in old codebase) |
+
+Action handler (not a typed `DataProvider<T>`):
+
+| Provider | Notes |
+|---|---|
+| `CallActionProvider` | Tap action routing for Shortcuts widget (no snapshot emission) |
 
 **2 free themes** — `slate.theme.json`, `minimalist.theme.json` (port verbatim).
 
-**Ported from old:** Widget rendering logic (Canvas drawing, Compose layouts) ports with moderate adaptation. Provider sensor flows port cleanly (callbackFlow pattern already correct). Theme JSON files port verbatim. Every widget's `Render()` signature changes (no `widgetData` param, add `ImmutableMap`, read from `LocalWidgetData`).
+**Ported from old:** All widget implementations except `BatteryRenderer` exist in old codebase — import wholesale and adapt to new architecture (signature changes, `LocalWidgetData`, `ImmutableMap`). `BatteryRenderer` is new. Provider sensor flows port cleanly (callbackFlow pattern already correct). Theme JSON files port verbatim. Every widget's `Render()` signature changes (no `widgetData` param, add `ImmutableMap`, read from `LocalWidgetData`).
 
 **Port inventory:**
 
@@ -487,9 +509,9 @@ All widgets: `ImmutableMap` settings, `LocalWidgetData.current` data access, `ac
 
 **Phase 8 gate — all four criteria must pass before Phase 9 starts:**
 
-1. **Contract tests green.** All 11 widgets pass `WidgetRendererContractTest`, all 7 providers pass `DataProviderContractTest`.
-2. **End-to-end wiring.** On-device: `add-widget` + `dump-health` for each of the 11 widget types shows ACTIVE status (provider bound, data flowing). `query-semantics` confirms each widget's semantics node is visible with non-empty `contentDescription`.
-3. **Stability soak.** 60-second soak with all 11 widgets placed — safe mode not triggered (no 4-crash/60s event). `dump-semantics` at end confirms all 11 widget nodes visible with correct bounds.
+1. **Contract tests green.** All 13 widgets pass `WidgetRendererContractTest`, all 9 data providers pass `DataProviderContractTest`.
+2. **End-to-end wiring.** On-device: `add-widget` + `dump-health` for each of the 13 widget types shows ACTIVE status (provider bound, data flowing). `query-semantics` confirms each widget's semantics node is visible with non-empty `contentDescription`.
+3. **Stability soak.** 60-second soak with all 13 widgets placed — safe mode not triggered (no 4-crash/60s event). `dump-semantics` at end confirms all 13 widget nodes visible with correct bounds.
 4. **Regression gate.** All Phase 2-7 tests pass with `:pack:free` in the `:app` dependency graph. Adding a pack must not cause Hilt binding conflicts, KSP annotation processing errors, or R8 rule collisions.
 
 First real E2E test class (`AgenticTestClient`) starts here — wrapping `adb shell content call` with assertion helpers including semantics helpers (`querySemanticsOne`, `assertWidgetRendered`, `assertWidgetText`, `awaitSemanticsNode`). Test: `add-widget` for each type → `dump-health` → assert all ACTIVE → `assertWidgetRendered` for each → `get-metrics` → assert draw times within budget. This test grows in Phase 9 (chaos correlation + semantics verification of fallback UI) and Phase 10 (full user journey).
@@ -498,7 +520,7 @@ If contracts feel wrong, fix them in Phase 2 before proceeding.
 
 ---
 
-## Phase 9: Remaining Packs + Chaos
+## Phase 9: Themes, Demo + Chaos
 
 ### `:pack:themes`
 

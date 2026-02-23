@@ -79,7 +79,7 @@ The always-present canvas that hosts widgets and controls.
 | F1.4  | Widget rendering with viewport culling (skip off-screen widgets)                              | Must     |
 | F1.5  | Edit mode via Edit button (primary) or long-press on blank space (parked only)                | Must     |
 | F1.6  | Drag-to-move widgets in edit mode                                                             | Must     |
-| F1.7  | 4-corner resize handles in edit mode (minimum 76dp touch targets)                             | Must     |
+| F1.7  | 4-corner resize handles in edit mode (minimum 48dp touch targets)                             | Must     |
 | F1.8  | Widget focus animation (translate to center, scale up)                                        | Must     |
 | F1.9  | Auto-hide bottom bar: Settings button (always), profile icons (when 2+ profiles exist, active profile highlighted), Add Widget button (edit mode only). Tap to reveal, auto-hide after 3s inactivity. Floats over canvas (no layout shift). Minimum 76dp touch targets | Must     |
 | F1.10 | Z-index stacking for overlapping widgets                                                      | Must     |
@@ -90,20 +90,20 @@ The always-present canvas that hosts widgets and controls.
 | F1.15 | Orientation lock (landscape default, configurable in settings)                                | Must     |
 | F1.16 | `FLAG_KEEP_SCREEN_ON` while dashboard is active, user-configurable                            | Must     |
 | F1.17 | Haptic feedback on edit mode entry/exit, widget focus, resize snap, button press              | Must     |
-| F1.18 | Pixel-shift for OLED burn-in prevention (1-2px translation every 5 minutes)                   | Should   |
-| F1.19 | HUD mirror mode: horizontal flip applied to Layer 0 (dashboard canvas) only via single `graphicsLayer { scaleX = -1f }`. Layer 1 overlays (settings, pickers) remain un-flipped for normal interaction. Text on dashboard is mirrored (correct for windshield reflection) | Should   |
+| F1.18 | Pixel-shift for OLED burn-in prevention (1-2px translation every 5 minutes)                   | Deferred |
+| F1.19 | HUD mirror mode: horizontal flip applied to Layer 0 (dashboard canvas) only via single `graphicsLayer { scaleX = -1f }`. Layer 1 overlays (settings, pickers) remain un-flipped for normal interaction. Text on dashboard is mirrored (correct for windshield reflection) | Deferred |
 | F1.20 | Grid snapping: widget snaps to nearest 2-unit grid boundary on drop. Visual grid overlay during drag. Haptic tick on snap | Must     |
-| F1.21 | Widget add/remove animations: fade + scale-in on add (spring animation via `graphicsLayer`), fade + scale-out on delete | Should   |
-| F1.22 | Auto-arrange: button in edit mode. Algorithm: sort widgets by area (descending), clear all positions, re-place each sequentially via `GridPlacementEngine.findOptimalPosition()` respecting cutout zones. Greedy approximation, not optimal packing, but acceptable for ≤20 widgets. Avoids cutout regions (F1.24) | Should   |
+| F1.21 | Widget add/remove animations: fade + scale-in on add (spring animation via `graphicsLayer`), fade + scale-out on delete | Must     |
+| F1.22 | Auto-arrange: button in edit mode. Algorithm: sort widgets by area (descending), clear all positions, re-place each sequentially via `GridPlacementEngine.findOptimalPosition()` respecting cutout zones. Greedy approximation, not optimal packing, but acceptable for ≤20 widgets. Avoids cutout regions (F1.24) | Deferred |
 | F1.23 | Multi-window disabled: `resizeableActivity="false"`. Dashboard is fullscreen-only             | Must     |
-| F1.24 | Cutout/punch-hole awareness: widgets placed in `DisplayCutout` exclusion zones show a visual warning in edit mode. Auto-arrange (F1.22) avoids cutout regions | Should   |
-| F1.25 | When the app detects it is running in a window smaller than 480dp in either dimension (forced split-screen by OEM or accessibility), display a persistent banner: "DQXN works best in fullscreen" with a "Go Fullscreen" action. Continue rendering with viewport-adapted layout | Should   |
+| F1.24 | Cutout/punch-hole awareness: widgets placed in `DisplayCutout` exclusion zones show a visual warning in edit mode. Auto-arrange (F1.22) avoids cutout regions | Deferred |
+| F1.25 | When the app detects it is running in a window smaller than 480dp in either dimension (forced split-screen by OEM or accessibility), display a persistent banner: "DQXN works best in fullscreen" with a "Go Fullscreen" action. Continue rendering with viewport-adapted layout | Deferred |
 | F1.26 | Configuration boundaries: display viewport boundary lines for all device display configurations in edit mode. Each boundary labeled with its configuration name (e.g., "folded portrait", "unfolded landscape"). Boundaries visible only in edit mode | Must     |
-| F1.27 | No-straddle snap: when dragging a widget, if its bounding box would cross a configuration boundary, snap it to the nearest side (inside or outside, whichever is closer). Hard constraint — a widget can never straddle a boundary in persisted layout. Distinct haptic + visual cue on boundary snap (different from regular grid snap) | Must     |
+| F1.27 | No-straddle snap: when dragging a widget, if its bounding box would cross a configuration boundary, snap it to the nearest side (inside or outside, whichever is closer). Hard constraint — a widget can never straddle a boundary in persisted layout. Distinct haptic + visual cue on boundary snap (different from regular grid snap). Boundary line turns highlight color when a dragging widget straddles it | Must     |
 | F1.28 | Configuration-aware default placement: onboarding places core widgets (clock, battery, date) within the intersection region visible across all device configurations. Secondary widgets fill outward into larger-viewport zones. Every configuration gets a coherent widget subset | Must     |
 | F1.29 | Profile switching via horizontal swipe on dashboard canvas (page transition) and tap on profile icon in bottom bar. Single-profile: no icons, no swipe affordance. Two+ profiles: profile icons appear, swipe activates | Must     |
 | F1.30 | Per-profile dashboards: each profile owns an independent `DashboardCanvas` with its own widget set, positions, and sizes. New profile clones the current dashboard. Adding a widget defaults to current profile with "Add to all profiles" option | Must     |
-| F1.31 | Profile auto-switching: packs register `ProfileDescriptor` with `ProfileTrigger`. User configures trigger enable/disable and priority ordering in profile automation settings (accessible via bottom bar or Settings). Manual profile selection pauses auto-switching; "Resume auto" re-enables | Should   |
+| F1.31 | Profile auto-switching: packs register `ProfileDescriptor` with `ProfileTrigger`. User configures trigger enable/disable and priority ordering in profile automation settings (accessible via bottom bar or Settings). Manual profile selection pauses auto-switching; "Resume auto" re-enables | Deferred |
 
 ### F2: Widget System
 
@@ -117,18 +117,18 @@ The plugin API, container, and lifecycle.
 | F2.4  | `WidgetDataBinder` — IoC binding of providers to widgets by data type                         | Must     |
 | F2.5  | `WidgetStatusCache` — overlays for entitlement, setup, connection issues                      | Must     |
 | F2.6  | `GridPlacementEngine` — optimal placement minimizing overlap, preferring center               | Must     |
-| F2.7  | Widget picker with preview images, one-line description, required data type icons (GPS/BLE/none), and entitlement badges. Widget descriptions sourced from `WidgetSpec.description` field | Must     |
+| F2.7  | Widget picker with live previews (scaled composables fed by single-shot data providers with sane defaults), one-line description, required data type icons (GPS/BLE/none), and entitlement badges. Widget descriptions sourced from `WidgetSpec.description` field | Must     |
 | F2.8  | Per-widget settings sheet (3 pages: Feature / Data Source / Info)                              | Must     |
 | F2.9  | Schema-driven settings UI (toggles, button groups, dropdowns, hub routes)                     | Must     |
-| F2.10 | Context-aware defaults via `WidgetContext` (timezone, region)                                  | Should   |
-| F2.11 | `SettingsAwareSizer` — dynamic default size based on enabled features                         | Should   |
+| F2.10 | Context-aware defaults via `WidgetContext` (timezone, region)                                  | Must     |
+| F2.11 | `SettingsAwareSizer` — dynamic default size based on enabled features                         | Must     |
 | F2.12 | `@DashboardWidget` KSP annotation → auto-registration                                        | Must     |
 | F2.13 | `UnknownWidgetPlaceholder` for deregistered widget types                                      | Must     |
 | F2.14 | Widget error boundary — render failure shows fallback UI, not app crash                       | Must     |
-| F2.15 | Widget picker with real live previews (scaled composables)                                     | Should   |
+| F2.15 | *(Merged into F2.7)*                                                                          | —        |
 | F2.16 | Aspect ratio constraint: widgets declare optional `aspectRatio: Float?` in `WidgetSpec` (null = freeform). Resize handles enforce ratio when set. Circular widgets (speedometer, compass, analog clock, G-force) declare 1:1 | Must     |
-| F2.17 | Widget duplicate: duplicate focused widget with all settings copied. New instance placed at next optimal position | Should   |
-| F2.18 | Focus interaction model: focused widget shows overlay toolbar (delete, settings, style, duplicate). Tapping widget content area unfocuses. Interactive widget actions (play/pause, app launch) only work in non-focused, non-edit mode | Must     |
+| F2.17 | Widget duplicate: duplicate focused widget with all settings copied. New instance placed at next optimal position | Deferred |
+| F2.18 | Focus interaction model: focused widget shows overlay toolbar (delete, settings). Tapping widget content area unfocuses. Interactive widget actions (play/pause, app launch) only work in non-focused, non-edit mode | Must     |
 | F2.19 | Widget accessibility: each widget provides `accessibilityDescription(data)` for screen readers. Read-only: announces current value (e.g., "Speed: 65 km/h") | Must     |
 | F2.20 | `WidgetSpec` includes `description: String` — one-line explanation of what the widget shows (e.g., "Current speed with acceleration arc and limit warning"). Used in widget picker and widget info page | Must     |
 
@@ -149,9 +149,9 @@ Reactive data sources with declarative setup.
 | F3.9  | `WhileSubscribed` sharing — providers stop after last subscriber (configurable per-provider: 1s for clock, 5s default, 30s for GPS-heavy) | Must     |
 | F3.10 | Provider fallback: when assigned provider becomes unavailable, `WidgetDataBinder` falls back to next available provider for same data type. Priority: user-selected > hardware > device sensor > network. User notified via transient indicator | Must     |
 | F3.11 | Data staleness: staleness thresholds per data type — SPEED (3s), ORIENTATION (5s), TIME (2s), BATTERY (30s), WEATHER (30min). Widget shows stale indicator when exceeded. Provider reports expected emission interval in `DataSchema` | Must     |
-| F3.12 | Weather polling: weather data refreshed every 30 minutes when widget visible. Last-known data displayed with age timestamp when offline. Respect HTTP cache headers | Must     |
-| F3.13 | Provider health dashboard: Settings → Provider Health showing all active providers, connection state, last update timestamp, error descriptions, retry actions | Must     |
-| F3.14 | Provider setup failure UX: failed setup shows inline error with retry. Dismissed wizard → widget shows "Setup Required" overlay with tap-to-setup. Permanently denied permissions → direct to system settings | Must     |
+| F3.12 | Weather polling: weather data refreshed every 30 minutes when widget visible. Last-known data displayed with age timestamp when offline. Respect HTTP cache headers | Deferred |
+| F3.13 | Provider health dashboard: Diagnostics UI (`:feature:diagnostics`) showing all active providers, connection state, last update timestamp, error descriptions, retry actions. Accessible via Settings → Diagnostics (F14.2) | Must     |
+| F3.14 | Provider setup failure UX: follow old codebase behavior. Failed setup shows inline error with retry. Dismissed wizard → widget shows "Setup Required" overlay with tap-to-setup. Permanently denied permissions → direct to system settings | Must     |
 | F3.15 | Progressive error disclosure with user-facing messages. All `WidgetStatusCache` states map to specific user-facing strings. Icon + message + tap to diagnose. Messages are user-friendly (e.g., "GPS signal lost — move to an open area"), not developer-oriented (no exception messages). All error strings in Android string resources (localizable) | Must     |
 
 ### F4: Theme System
@@ -165,14 +165,14 @@ Visual customization with auto-switching.
 | F4.3  | Dual-theme model (separate light/dark selections)                                             | Must     |
 | F4.4  | 5 auto-switch modes: LIGHT, DARK, SYSTEM, SOLAR_AUTO, ILLUMINANCE_AUTO                       | Must     |
 | F4.5  | `ThemeAutoSwitchEngine` with eager sharing (ready at cold start)                              | Must     |
-| F4.6  | Theme preview: live preview before committing, reverts on cancel. Preview times out after 60 seconds with toast "Theme preview ended." | Must     |
-| F4.7  | Theme Studio — create/edit custom themes (max 12)                                             | Should   |
-| F4.8  | Gradient editor (vertical, horizontal, linear, radial, sweep; 2-5 stops)                      | Should   |
-| F4.9  | Preview-regardless-of-entitlement, gate-at-persistence                                        | Must     |
-| F4.10 | Reactive entitlement revocation (auto-revert to free defaults)                                | Must     |
-| F4.11 | Spacing tokens and typography scale in theme definition                                       | Should   |
-| F4.12 | Clone built-in → custom via long-press                                                        | Should   |
-| F4.13 | Theme selector ordering: free themes always listed first, then custom themes, then premium themes | Must     |
+| F4.6  | Theme preview: live preview before committing, reverts on cancel. Preview times out after 60 seconds with toast "Theme preview ended." Follow old codebase behavior | Must     |
+| F4.7  | Theme Studio — create/edit custom themes (max 12). Follow old codebase behavior               | Must     |
+| F4.8  | Gradient editor (vertical, horizontal, linear, radial, sweep; 2-5 stops). Follow old codebase behavior | Must     |
+| F4.9  | Preview-regardless-of-entitlement, gate-at-persistence. No degradation during preview — gated themes render at full quality, revert to free only upon exit. Follow old codebase behavior | Must     |
+| F4.10 | Reactive entitlement revocation (premium themes become gated, fall back to free default for rendering) | Must     |
+| F4.11 | Spacing tokens, typography scale, and font selection in theme definition and Theme Studio      | Deferred |
+| F4.12 | Clone built-in → custom via long-press. Follow old codebase behavior                          | Must     |
+| F4.13 | Theme selector ordering: free themes always listed first, then custom themes, then premium themes. Follow old codebase behavior | Must     |
 
 ### F5: Essentials Pack (Free)
 
@@ -182,15 +182,15 @@ Core widgets available to all users.
 |-------|-----------------------------------------------------------------------------------------------|----------|
 | F5.1  | **Speedometer** — circular arc gauge, 12-segment acceleration arc, auto-scaling max, speed limit warning (amber/red), configurable alert types | Must     |
 | F5.2  | **Clock (Digital)** — large HH:mm, optional seconds, AM/PM, timezone label, configurable timezone | Must     |
-| F5.3  | **Clock (Analog)** — Canvas circular clock with hour/minute/second hands, tick marks          | Should   |
+| F5.3  | **Clock (Analog)** — Canvas circular clock with hour/minute/second hands, tick marks          | Must     |
 | F5.4  | **Date** — 3 variants (Simple, Stack, Grid), configurable format and timezone                 | Must     |
 | F5.5  | **Compass** — cardinal direction, tick marks, tilt indicators (pitch/roll)                    | Must     |
 | F5.6  | **Battery** — battery level percentage, charging state, optional temperature                  | Must     |
-| F5.7  | **Speed Limit (Circle)** — European-style circular sign, region-aware (auto KPH/MPH, Japan blue digits). Speed limit value is user-configured as a static value in widget settings (per-widget). Future regional packs may provide dynamic speed limit data via provider (e.g., OpenStreetMap speed zones). In v1, SPEED_LIMIT is a widget-internal setting, not a data provider type | Must     |
-| F5.8  | **Shortcuts** — tappable widget launching a chosen app, with suggested apps                   | Should   |
-| F5.9  | **Solar** — sunrise/sunset times or next event countdown, optional 24h circular arc with sun/moon marker | Should   |
-| F5.10 | **Ambient Light** — lux level, category (DARK/DIM/NORMAL/BRIGHT), InfoCard layout             | Should   |
-| F5.11 | **Speed Limit (Rectangle)** — US-style rectangular sign. Speed limit value is user-configured as a static value in widget settings (per-widget). Future regional packs may provide dynamic speed limit data via provider (e.g., OpenStreetMap speed zones). In v1, SPEED_LIMIT is a widget-internal setting, not a data provider type | Should   |
+| F5.7  | **Speed Limit (Circle)** — European-style circular sign, region-aware (auto KPH/MPH, Japan blue digits). SPEED_LIMIT is a data provider type (exists in old codebase). User sets limit value via provider settings | Must     |
+| F5.8  | **Shortcuts** — tappable widget launching a chosen app, with suggested apps                   | Must     |
+| F5.9  | **Solar** — sunrise/sunset times or next event countdown, optional 24h circular arc with sun/moon marker | Must     |
+| F5.10 | **Ambient Light** — lux level, category (DARK/DIM/NORMAL/BRIGHT), InfoCard layout             | Must     |
+| F5.11 | **Speed Limit (Rectangle)** — US-style rectangular sign. SPEED_LIMIT is a data provider type (exists in old codebase). User sets limit value via provider settings | Must     |
 
 ### F5B: Plus Pack (Premium)
 
@@ -198,11 +198,11 @@ Extended functional widgets for power users.
 
 | Req   | Description                                                                                   | Priority |
 |-------|-----------------------------------------------------------------------------------------------|----------|
-| F5B.1 | **Trip Computer** — current/average/max speed, trip distance (odometer), trip duration, resettable per-trip | Must     |
-| F5B.2 | **Media Controller** — now-playing track/artist/album art, prev/play-pause/next controls via Android `MediaSession` | Must     |
-| F5B.3 | **G-Force** — lateral/longitudinal acceleration display (circular or vector), peak hold        | Should   |
-| F5B.4 | **Altimeter** — GPS altitude with optional barometric correction                              | Should   |
-| F5B.5 | **Weather** — current temperature, condition icon, high/low (via OpenMeteo API, graceful offline fallback to last-known) | Should   |
+| F5B.1 | **Trip Computer** — current/average/max speed, trip distance (odometer), trip duration, resettable per-trip | Deferred |
+| F5B.2 | **Media Controller** — now-playing track/artist/album art, prev/play-pause/next controls via Android `MediaSession` | Deferred |
+| F5B.3 | **G-Force** — lateral/longitudinal acceleration display (circular or vector), peak hold        | Deferred |
+| F5B.4 | **Altimeter** — GPS altitude with optional barometric correction                              | Deferred |
+| F5B.5 | **Weather** — current temperature, condition icon, high/low (via OpenMeteo API, graceful offline fallback to last-known) | Deferred |
 
 ### F6: Themes Pack (Premium)
 
@@ -224,36 +224,36 @@ Extended visual customization.
 | F7.3  | Debounced layout save (500ms) with atomic writes (write to temp, swap on success)             | Must     |
 | F7.4  | Type-safe provider settings store with pack-namespaced keys                                   | Must     |
 | F7.5  | Paired device persistence (survives restarts)                                                 | Must     |
-| F7.6  | Connection event log (rolling 50 events)                                                      | Should   |
+| F7.6  | Connection event log (rolling 50 events). Part of Diagnostics UI (`:feature:diagnostics`, F3.13) | Should   |
 | F7.7  | Preset system — JSON presets, region-aware defaults                                           | Must     |
 | F7.8  | Layout corruption detection with fallback to last-known-good or default preset                | Must     |
-| F7.9  | Edit-mode cancel restores pre-edit layout state. When more than 1 action has been performed (add, move, resize, delete), show confirmation dialog: "Discard all changes? You [action summary]." Single undo not supported in v1 | Must     |
-| F7.10 | Android Auto Backup support: include DataStore files. On restore, handle missing packs: widgets from uninstalled packs show `UnknownWidgetPlaceholder` with pack name and "Install [pack] to restore" CTA. Theme selections from missing packs revert to free default. Provider settings from missing packs preserved silently. Entitlement state re-verified via Play Billing on restore | Should   |
-| F7.11 | Preset import/export via share intent (user-facing)                                           | Should   |
+| F7.9  | *(Removed)*                                                                                   | —        |
+| F7.10 | Android Auto Backup support: include DataStore files. On restore, handle missing packs: widgets from uninstalled packs show `UnknownWidgetPlaceholder` with pack name and "Install [pack] to restore" CTA. Theme selections from missing packs revert to free default. Provider settings from missing packs preserved silently. Entitlement state re-verified via Play Billing on restore | Deferred |
+| F7.11 | Preset import/export via share intent (user-facing)                                           | Deferred |
 | F7.12 | Hardcoded minimal fallback layout (clock widget, centered) as a code-level constant, not dependent on JSON or asset files. Used when preset loading fails (APK integrity issue, asset corruption) | Must     |
 
 ### F8: Entitlements & Monetization
 
 | Req  | Description                                                                                    | Priority |
 |------|------------------------------------------------------------------------------------------------|----------|
-| F8.1 | Entitlement system: `free`, `plus`, `themes` tiers (extensible for regional packs)             | Must     |
+| F8.1 | Entitlement system: `free`, `themes` tiers (extensible for regional packs). `plus` tier deferred with Plus Pack | Must     |
 | F8.2 | Play Billing integration (purchase, restore)                                                   | Must     |
 | F8.3 | `Gated` interface on renderers, providers, themes, settings                                    | Must     |
-| F8.4 | Upsell overlays on gated widgets with frequency caps                                           | Must     |
-| F8.5 | Debug "Simulate Free User" toggle                                                              | Should   |
-| F8.6 | Contextual upsell triggers: theme preview → purchase, plus widget attempt → purchase          | Must     |
-| F8.7 | Plus widget preview: users can preview plus widgets with live data in the widget picker (scaled composable). Adding to layout requires entitlement. Mirrors theme preview-regardless-of-entitlement, gate-at-persistence pattern | Should   |
-| F8.8 | Family sharing: enable Google Play Family Library for one-time IAP packs (Play Console toggle) | Should   |
-| F8.9 | Refund UX: on entitlement revocation, widgets show EntitlementRevoked overlay, remain in layout but non-functional. Premium themes revert to free. One-time toast explains change | Must     |
-| F8.10 | When entitlement state cannot be determined (offline + stale Play Billing cache), preserve last-known entitlement state for up to 7 days. After 7 days without verification, downgrade to free tier with explanatory banner. Re-verify immediately when connectivity returns | Must     |
+| F8.4 | *(Removed)*                                                                                    | —        |
+| F8.5 | Debug "Simulate Free User" toggle. Follow old codebase behavior                                | Must     |
+| F8.6 | *(Removed)*                                                                                    | —        |
+| F8.7 | Widget picker previews use single-shot data providers with sane defaults. Adding entitlement-gated widgets to layout requires entitlement. Preview-regardless-of-entitlement, gate-at-persistence pattern | Must     |
+| F8.8 | Family sharing: enable Google Play Family Library for one-time IAP packs (Play Console toggle) | Must     |
+| F8.9 | Refund UX: on entitlement revocation, widgets show EntitlementRevoked overlay, remain in layout but non-functional. Premium themes become gated (selection preserved, theme selector shows locked state). Gated themes can still be previewed at full quality — revert to free only upon exiting preview. Re-purchase restores previous selection. One-time toast explains change. Follow old codebase behavior | Must     |
+| F8.10 | *(Removed)*                                                                                    | —        |
 
-**Monetization Model**: One-time IAP per pack (aligned with market expectations of $3–$10 range). No subscriptions for v1. Regional pricing for Singapore (SGD). Bundle discount for themes + plus together.
+**Monetization Model**: One-time IAP per pack (aligned with market expectations of $3–$10 range). No subscriptions for v1. Regional pricing for Singapore (SGD).
 
 | Entitlement | Scope                                                                                                      | Price Range    |
 |-------------|------------------------------------------------------------------------------------------------------------|----------------|
-| `free`      | Core widgets (speedometer, clock, date, compass, battery, speed limit, shortcuts) + 2 themes + full customization | Free           |
-| `plus`      | Trip computer, media controller, G-force, altimeter, weather widgets                                          | $4.99–$6.99   |
+| `free`      | Core widgets (speedometer, clock, date, compass, battery, speed limit, shortcuts, solar, ambient light) + 2 themes + full customization | Free           |
 | `themes`    | 22 premium themes + Theme Studio + Solar/Illuminance auto-switch                                           | $3.99–$5.99   |
+| `plus`      | *(Deferred with Plus Pack)* Trip computer, media controller, G-force, altimeter, weather widgets            | $4.99–$6.99   |
 
 ### F9: Notifications & Alerts
 
@@ -466,8 +466,8 @@ Extended visual customization.
 | Date (Grid)         | `core:date-grid`       | 10x6         | TIME                    | Current date in configurable format               | timezone                                                                   |
 | Compass             | `core:compass`         | 10x10        | ORIENTATION             | Heading direction with tilt indicators            | tick marks, cardinal labels, tilt indicators                               |
 | Battery             | `core:battery`         | 6x6          | BATTERY                 | Battery level, charging state, temperature        | show percentage, show temperature, charging indicator                      |
-| Speed Limit (Circle)| `core:speedlimit-circle`| —           | —                       | European-style speed limit sign                   | speed limit value, border size, speed unit, digit color                    |
-| Speed Limit (Rect)  | `core:speedlimit-rect` | —            | —                       | US-style speed limit sign                         | speed limit value, border size, speed unit                                 |
+| Speed Limit (Circle)| `core:speedlimit-circle`| —           | SPEED_LIMIT             | European-style speed limit sign                   | border size, speed unit, digit color                                       |
+| Speed Limit (Rect)  | `core:speedlimit-rect` | —            | SPEED_LIMIT             | US-style speed limit sign                         | border size, speed unit                                                    |
 | Shortcuts           | `core:shortcuts`       | 9x9          | —                       | Tap to launch any installed app                   | app package, show label, InfoCard layout                                   |
 | Solar               | `core:solar`           | —            | SOLAR                   | Sunrise and sunset times with arc visualization   | arc, display mode, countdown                                               |
 | Ambient Light       | `core:ambient-light`   | 8x8          | AMBIENT_LIGHT           | Current ambient light level                       | InfoCard layout options                                                    |
@@ -497,6 +497,7 @@ Regional packs contribute their own widgets to the grid — the shell renders th
 | Ambient Light | AMBIENT_LIGHT       | Light sensor (lux)                  | None                 |
 | Battery       | BATTERY             | BatteryManager broadcast            | None                 |
 | Accelerometer | ACCELERATION        | TYPE_ACCELEROMETER sensor           | None                 |
+| Speed Limit   | SPEED_LIMIT         | User-configured static value        | None                 |
 
 ### Location-Based
 
@@ -553,7 +554,7 @@ Max 12. Created via Theme Studio (requires Themes Pack entitlement). Editable: n
 ### Adding a Widget
 
 1. User taps Edit → edit mode → taps "+" button (disabled while in motion)
-2. Widget picker opens: staggered grid grouped by pack, preview images (with entitlement badges)
+2. Widget picker opens: staggered grid grouped by pack, live previews (with entitlement badges)
 3. User taps a widget → `GridPlacementEngine.findOptimalPosition()` places it
 4. Default data sources auto-assigned
 5. Widget settings sheet auto-opens
@@ -577,11 +578,11 @@ Three-page pager:
 
 1. Tap Edit button → enter edit mode (long-press only available when parked)
 2. Widgets show wiggle animation + corner brackets. Configuration boundary lines appear with labels
-3. Tap widget → focus (translate to center, scale up, show overlay toolbar: delete/settings/style/duplicate)
-4. Drag to move (snaps to 2-unit grid + no-straddle boundary snap), corner handles to resize (76dp minimum touch targets)
+3. Tap widget → focus (translate to center, scale up, show overlay toolbar: delete/settings)
+4. Drag to move (snaps to 2-unit grid + no-straddle boundary snap), corner handles to resize (48dp minimum touch targets)
 5. Profile switching disabled during edit mode — horizontal swipe is widget drag territory. Edits apply to the current profile's canvas only
 6. Tapping widget content area unfocuses; tapping blank space or Edit button exits edit mode
-7. Cancel discards all changes; confirm persists via debounced save
+7. Changes save continuously via debounced save (F7.3) — no cancel/confirm transaction
 
 ### Driving Mode (Deferred Post-Launch)
 
@@ -675,3 +676,15 @@ These are acknowledged gaps deferred to future versions:
 | Multi-select in edit mode        | Individual ops sufficient for v1                                                                 |
 | High-contrast dedicated mode     | Free Slate theme designed for high contrast                                                      |
 | Driving safety features          | Deferred post-launch. DQXN is a general-purpose dashboard platform. When implemented, driving detection providers will come from packs via standard data binding, not as a shell-level concern |
+| Pixel-shift OLED burn-in (F1.18) | Nice-to-have polish; not blocking launch                                                         |
+| HUD mirror mode (F1.19)          | Niche use case (windshield projection); defer until user demand signals                          |
+| Auto-arrange (F1.22)             | Manual placement sufficient for v1; greedy algorithm can wait                                    |
+| Cutout awareness (F1.24)         | Edge case for punch-hole devices; widgets still work, just may overlap cutout                    |
+| Small window banner (F1.25)      | Multi-window already disabled (F1.23); banner is defense-in-depth for OEM overrides              |
+| Profile auto-switching (F1.31)   | Manual profile switching (F1.29) sufficient for v1; trigger infrastructure deferred               |
+| Widget duplicate (F2.17)         | Delete + re-add sufficient for v1; duplicate button adds toolbar complexity for marginal benefit  |
+| Weather polling (F3.12)          | Weather widget (F5B.5) is Should priority; network-dependent feature deferred with its provider   |
+| Theme typography/font (F4.11)    | Core typography in `:core:design` sufficient for v1; per-theme font customization adds complexity without clear user demand |
+| Plus Pack (F5B.1-F5B.5)          | Entire pack deferred post-launch. Free pack validates architecture; Plus adds widgets, not risk  |
+| Auto Backup (F7.10)              | Requires handling missing packs on restore; adds complexity without pre-launch user base          |
+| Preset import/export (F7.11)     | Share intent flow is polish; manual preset management sufficient for v1                          |

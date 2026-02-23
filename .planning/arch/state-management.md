@@ -285,9 +285,9 @@ data class BatterySnapshot(
     override val timestamp: Long,
 ) : DataSnapshot
 
-// Additional cross-boundary subtypes in :pack:free:snapshots: AltitudeSnapshot, AmbientLightSnapshot
-// Pack-local subtypes in :pack:free: SolarSnapshot, WeatherSnapshot
-// Pack-local subtypes in :pack:plus: TripSnapshot, MediaSnapshot
+// Additional cross-boundary subtypes in :pack:free:snapshots: AmbientLightSnapshot
+// Pack-local subtypes in :pack:free: SolarSnapshot, SpeedLimitSnapshot
+// Pack-local subtypes in :pack:plus (deferred): WeatherSnapshot, TripSnapshot, MediaSnapshot, AltitudeSnapshot
 // OBU-specific subtypes in :pack:sg-erp2: ObuTrafficSnapshot, BalanceSnapshot, etc.
 ```
 
@@ -299,7 +299,7 @@ The `KClass`-keyed API (`snapshot<SpeedSnapshot>()`, `compatibleSnapshots = setO
 
 ```
 :pack:free:snapshots     — SpeedSnapshot, AccelerationSnapshot, BatterySnapshot, TimeSnapshot,
-                           OrientationSnapshot, SpeedLimitSnapshot, AltitudeSnapshot, AmbientLightSnapshot
+                           OrientationSnapshot, AmbientLightSnapshot
 ```
 
 Each snapshot sub-module:

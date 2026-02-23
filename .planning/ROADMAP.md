@@ -12,7 +12,7 @@
 1. `./gradlew tasks --console=plain` succeeds with all convention plugins resolving
 2. Version catalog covers full dependency set (AGP 9.0.1, Kotlin 2.3+, Compose BOM, Hilt, KSP, Proto DataStore, JUnit5, etc.)
 3. Proto DataStore toolchain compatibility verified (throwaway module)
-4. All convention plugins defined: `dqxn.android.application`, `dqxn.android.library`, `dqxn.android.compose`, `dqxn.android.hilt`, `dqxn.android.test`, `dqxn.pack`, `dqxn.android.feature`
+4. All convention plugins defined: `dqxn.android.application`, `dqxn.android.library`, `dqxn.android.compose`, `dqxn.android.hilt`, `dqxn.android.test`, `dqxn.pack`, `dqxn.snapshot`, `dqxn.android.feature`
 
 **Details:** [MIGRATION.md — Phase 1](MIGRATION.md#phase-1-build-system-foundation)
 
@@ -46,7 +46,7 @@
 1. `:sdk:observability`, `:sdk:analytics`, `:sdk:ui` compile
 2. `DqxnLogger` disabled-path zero-allocation test passes
 3. `MetricsCollector` ring buffer, `JankDetector` threshold, `CrashEvidenceWriter` persistence, `AnrWatchdog` detection, `DiagnosticSnapshotCapture` rotation pool tests all pass
-4. `WidgetScaffold` composition tests pass
+4. `WidgetContainer` composition tests pass
 
 **Depends on:** Phase 2
 **Concurrent with:** Phase 4
@@ -115,14 +115,16 @@
 
 **Goal:** Decompose the god-ViewModel into coordinators. Structural transformation, not porting. Highest-risk phase.
 
-**Requirements:** F1.2-F1.12, F1.14-F1.22, F1.24-F1.31, F2.3-F2.18, F3.7, F3.9-F3.11, F3.14, F3.15, F7.9, F9.1-F9.4, F10.4, F10.9, NF1-NF10, NF15-NF19, NF38, NF41, NF42
+**Requirements:** F1.2-F1.17, F1.20-F1.21, F1.23, F1.26-F1.30, F2.3-F2.14, F2.16, F2.18-F2.20, F3.7, F3.9-F3.11, F3.14, F3.15, F9.1-F9.4, F10.9, NF1-NF8, NF15-NF19, NF38, NF41, NF42
 
 **Success Criteria:**
-1. Five coordinators (Layout, EditMode, Theme, Binding, WidgetStatus) unit tests pass
-2. `DashboardTestHarness` with real coordinators: `AddWidget` → `BindingCoordinator` creates job → `WidgetStatusCoordinator` reports ACTIVE
+1. Six coordinators (Layout, EditMode, Theme, WidgetBinding, Notification, Profile) unit tests pass
+2. `DashboardTestHarness` with real coordinators: `AddWidget` → `WidgetBindingCoordinator` creates job → `WidgetBindingCoordinator` reports ACTIVE
 3. Safe mode trigger: 4 crashes in 60s rolling window activates safe mode
 4. `dump-semantics` returns widget nodes with test tags after `DashboardLayer` registration
 5. On-device: `dump-layout`, `dump-health`, `get-metrics` return valid data
+6. `NotificationCoordinator` re-derives banners from singleton state after ViewModel kill
+7. `ProfileCoordinator` handles profile create/switch/clone/delete
 
 **Depends on:** Phases 5, 6
 
@@ -132,14 +134,14 @@
 
 ## Phase 8: Free Pack (Architecture Validation Gate)
 
-**Goal:** First pack migration. Proves entire SDK-to-Pack contract works end-to-end.
+**Goal:** First pack migration. Proves entire SDK-to-Pack contract works end-to-end. Cross-boundary snapshot types live in `:pack:free:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1).
 
 **Requirements:** F5.1-F5.11
 
 **Success Criteria (all four required before Phase 9):**
-1. **Contract tests green:** 11 widgets pass `WidgetRendererContractTest`, 7 providers pass `DataProviderContractTest`
+1. **Contract tests green:** 13 widgets pass `WidgetRendererContractTest`, 9 data providers pass `DataProviderContractTest`
 2. **End-to-end wiring:** On-device `add-widget` + `dump-health` for each widget type shows ACTIVE; `query-semantics` confirms visible nodes
-3. **Stability soak:** 60-second soak with all 11 widgets — safe mode not triggered
+3. **Stability soak:** 60-second soak with all 13 widgets — safe mode not triggered
 4. **Regression gate:** All Phase 2-7 tests pass with `:pack:free` in dependency graph
 
 **Depends on:** Phase 7
@@ -148,11 +150,11 @@
 
 ---
 
-## Phase 9: Remaining Packs + Chaos
+## Phase 9: Themes, Demo + Chaos
 
-**Goal:** Plus pack, themes pack, demo pack, chaos testing infrastructure.
+**Goal:** Themes pack, demo pack, chaos testing infrastructure.
 
-**Requirements:** F5B.1-F5B.5, F6.1-F6.4, F13.1
+**Requirements:** F6.1-F6.4, F13.1
 
 **Success Criteria:**
 1. All pack widgets pass contract tests; all providers pass contract tests
@@ -170,7 +172,7 @@
 
 **Goal:** Settings, diagnostics, onboarding, entitlements, CI gates, full E2E integration.
 
-**Requirements:** F4.6-F4.13, F7.6, F7.7, F7.10, F7.11, F8.1, F8.2, F8.4-F8.10, F11.1-F11.7, F12.2-F12.7, F13.3, F13.10, F14.1-F14.4, NF-P1-NF-P5, NF-D1-NF-D3, NF24-NF26, NF27-NF29, NF30-NF33, NF34, NF39, NF40, NF44-NF47, NF-L1-NF-L3, NF-I1, NF-I2, NF9, NF10
+**Requirements:** F4.6-F4.10, F4.12-F4.13, F7.6, F7.7, F8.1-F8.3, F8.5, F8.7-F8.9, F11.1-F11.7, F12.2-F12.7, F13.3, F13.10, F14.1-F14.4, NF-P1-NF-P5, NF-D1-NF-D3, NF24-NF26, NF27-NF29, NF30-NF33, NF34, NF39, NF40, NF44-NF47, NF-L1-NF-L3, NF-I1, NF-I2, NF9, NF10
 
 **Success Criteria:**
 1. Full E2E: launch → load → bind → render → edit → add/remove/resize → theme switch with semantics verification at each step
@@ -198,7 +200,7 @@ graph TD
     P5 --> P7[Phase 7: Dashboard Shell]
     P6 --> P7
     P7 --> P8[Phase 8: Free Pack]
-    P8 --> P9[Phase 9: Remaining Packs + Chaos]
+    P8 --> P9[Phase 9: Themes, Demo + Chaos]
     P7 --> P10[Phase 10: Features + Polish]
     P9 --> P10
 ```
