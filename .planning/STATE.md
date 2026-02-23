@@ -3,18 +3,18 @@
 ## Current Position
 
 - **Phase:** 2 — SDK Contracts + Common
-- **Current Plan:** 3 of 5
+- **Current Plan:** 4 of 5
 - **Milestone:** V1 Launch
-- **Next action:** Phase 2, Plan 03 — SDK contracts settings/setup/notification/theme/status/pack types
-- **Last session:** 2026-02-23T18:57:53Z
-- **Stopped at:** Completed 02-02-PLAN.md
+- **Next action:** Phase 2, Plan 04 — SDK contracts unit tests
+- **Last session:** 2026-02-23T19:10:15.696Z
+- **Stopped at:** Completed 02-03-PLAN.md
 
 ## Progress
 
 | Phase | Status | Notes |
 |---|---|---|
 | 1. Build System Foundation | Complete (4/4 plans) | All plans complete |
-| 2. SDK Contracts + Common | In Progress (2/5 plans) | Plan 02 complete — sdk:contracts widget/provider/entitlement/fault types |
+| 2. SDK Contracts + Common | In Progress (3/5 plans) | Plan 03 complete — sdk:contracts setup/settings/notification/theme/status/pack/registry types |
 | 3. SDK Observability + Analytics + UI | Pending | Concurrent with Phase 4 |
 | 4. KSP Codegen | Pending | Concurrent with Phase 3 |
 | 5. Core Infrastructure | Pending | |
@@ -79,6 +79,9 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **AGP 9 testFixtures via android block** — `java-test-fixtures` plugin conflicts; use `android { testFixtures { enable = true } }` instead
 - **WidgetData.withSlot PersistentMap handling** — runtime type check for ImmutableMap→PersistentMap.put()
 - **DataSnapshot created in Task 1** — forward-dependency from WidgetSpec.compatibleSnapshots required early creation
+- **InfoStyle and InstructionAction in setup package** — shared by SetupDefinition and SettingDefinition; settings imports from setup
+- **Setting wrapper defaults delegated from inner SettingDefinition** — all fields overridable per-instance
+- **DashboardPackManifest @Serializable + @Immutable** — KSP generates at build time, runtime deserializable
 
 ## Performance Metrics
 
@@ -90,6 +93,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 01-04 | 28min | 2 | 11 |
 | 02-01 | 10min | 2 | 12 |
 | 02-02 | 5min | 2 | 28 |
+| 02-03 | 6min | 2 | 23 |
 
 ## Context
 
