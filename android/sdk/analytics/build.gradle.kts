@@ -4,3 +4,5 @@ plugins {
 }
 
 android { namespace = "app.dqxn.android.sdk.analytics" }
+
+dependencies { implementation(libs.kotlinx.collections.immutable) }

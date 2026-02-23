@@ -10,6 +10,9 @@ dependencies {
   implementation(project(":sdk:contracts"))
   implementation(project(":sdk:common"))
 
+  compileOnly(platform(libs.compose.bom))
+  compileOnly(libs.compose.runtime) // @Immutable annotation only — no Compose compiler
+
   implementation(libs.kotlinx.collections.immutable)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.kotlinx.coroutines.android)
