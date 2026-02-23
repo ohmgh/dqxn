@@ -24,8 +24,8 @@ compileSdk 36, minSdk 31, targetSdk 36. AGP 9.0.1, Gradle 9.3.1, JDK 25. AGP 9 m
 ./gradlew :feature:dashboard:testDebugUnitTest --tests "*.ClassName"  # Single test class
 ./gradlew connectedAndroidTest             # Integration tests
 ./gradlew lintDebug                        # Lint
-./gradlew :pack:free:compileDebugKotlin                  # Compile check only
-./gradlew :pack:free:testDebugUnitTest                   # Compile + unit tests
+./gradlew :pack:essentials:compileDebugKotlin              # Compile check only
+./gradlew :pack:essentials:testDebugUnitTest               # Compile + unit tests
 ```
 
 ## Module Map
@@ -36,7 +36,7 @@ core/     — design, thermal, firebase, agentic (shell internals)
 codegen/  — plugin, agentic (KSP, build-time only)
 data/     — Proto + Preferences DataStore, .proto schemas
 feature/  — dashboard, settings, diagnostics, onboarding
-pack/     — free (+ free/snapshots), plus, themes, demo
+pack/     — essentials (+ essentials/snapshots), plus, themes, demo
 app/      — single-activity entry, DI assembly
 ```
 

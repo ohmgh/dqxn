@@ -43,7 +43,7 @@ Each profile owns an independent `DashboardCanvas` — its own widget set, posit
 ### Widgets
 
 Self-contained visual components that render data. Each widget:
-- Has a `typeId` scoped to its pack (e.g., `core:speedometer`)
+- Has a `typeId` scoped to its pack (e.g., `essentials:speedometer`)
 - Declares compatible data types it can consume
 - Provides a declarative settings schema for its configuration UI
 - Knows nothing about where its data comes from — the binder assigns providers
@@ -251,7 +251,7 @@ Extended visual customization.
 
 | Entitlement | Scope                                                                                                      | Price Range    |
 |-------------|------------------------------------------------------------------------------------------------------------|----------------|
-| `free`      | Core widgets (speedometer, clock, date, compass, battery, speed limit, shortcuts, solar, ambient light) + 2 themes + full customization | Free           |
+| `free`      | Essentials pack (speedometer, clock, date, compass, battery, speed limit, shortcuts, solar, ambient light) + 2 themes + full customization | Free           |
 | `themes`    | 22 premium themes + Theme Studio + Solar/Illuminance auto-switch                                           | $3.99–$5.99   |
 | `plus`      | *(Deferred with Plus Pack)* Trip computer, media controller, G-force, altimeter, weather widgets            | $4.99–$6.99   |
 
@@ -447,23 +447,23 @@ Extended visual customization.
 
 ## 5. Widgets Inventory
 
-### Essentials Pack (`core`) — Free
+### Essentials Pack (`essentials`) — Free
 
-| Widget              | Type ID                | Default Size | Data Types              | Description                                      | Key Settings                                                               |
-|---------------------|------------------------|--------------|-------------------------|--------------------------------------------------|----------------------------------------------------------------------------|
-| Speedometer         | `core:speedometer`     | 12x12        | SPEED, ACCELERATION     | Current speed with acceleration arc and limit warning | arcs, tick marks, speed unit, limit offset, warning bg, alert type        |
-| Clock (Digital)     | `core:clock`           | 10x9         | TIME                    | Large digital time display with timezone support  | seconds, 24h, leading zero, timezone, sizes                               |
-| Clock (Analog)      | `core:clock-analog`    | 10x10        | TIME                    | Traditional analog clock face                     | tick marks, timezone                                                       |
-| Date (Simple)       | `core:date-simple`     | —            | TIME                    | Current date in configurable format               | date format, timezone                                                      |
-| Date (Stack)        | `core:date-stack`      | —            | TIME                    | Current date in configurable format               | date format, timezone                                                      |
-| Date (Grid)         | `core:date-grid`       | 10x6         | TIME                    | Current date in configurable format               | timezone                                                                   |
-| Compass             | `core:compass`         | 10x10        | ORIENTATION             | Heading direction with tilt indicators            | tick marks, cardinal labels, tilt indicators                               |
-| Battery             | `core:battery`         | 6x6          | BATTERY                 | Battery level, charging state, temperature        | show percentage, show temperature, charging indicator                      |
-| Speed Limit (Circle)| `core:speedlimit-circle`| —           | SPEED_LIMIT             | European-style speed limit sign                   | border size, speed unit, digit color                                       |
-| Speed Limit (Rect)  | `core:speedlimit-rect` | —            | SPEED_LIMIT             | US-style speed limit sign                         | border size, speed unit                                                    |
-| Shortcuts           | `core:shortcuts`       | 9x9          | —                       | Tap to launch any installed app                   | app package, show label, InfoCard layout                                   |
-| Solar               | `core:solar`           | —            | SOLAR                   | Sunrise and sunset times with arc visualization   | arc, display mode, countdown                                               |
-| Ambient Light       | `core:ambient-light`   | 8x8          | AMBIENT_LIGHT           | Current ambient light level                       | InfoCard layout options                                                    |
+| Widget              | Type ID                       | Default Size | Data Types              | Description                                      | Key Settings                                                               |
+|---------------------|-------------------------------|--------------|-------------------------|--------------------------------------------------|----------------------------------------------------------------------------|
+| Speedometer         | `essentials:speedometer`      | 12x12        | SPEED, ACCELERATION     | Current speed with acceleration arc and limit warning | arcs, tick marks, speed unit, limit offset, warning bg, alert type        |
+| Clock (Digital)     | `essentials:clock`            | 10x9         | TIME                    | Large digital time display with timezone support  | seconds, 24h, leading zero, timezone, sizes                               |
+| Clock (Analog)      | `essentials:clock-analog`     | 10x10        | TIME                    | Traditional analog clock face                     | tick marks, timezone                                                       |
+| Date (Simple)       | `essentials:date-simple`      | —            | TIME                    | Current date in configurable format               | date format, timezone                                                      |
+| Date (Stack)        | `essentials:date-stack`       | —            | TIME                    | Current date in configurable format               | date format, timezone                                                      |
+| Date (Grid)         | `essentials:date-grid`        | 10x6         | TIME                    | Current date in configurable format               | timezone                                                                   |
+| Compass             | `essentials:compass`          | 10x10        | ORIENTATION             | Heading direction with tilt indicators            | tick marks, cardinal labels, tilt indicators                               |
+| Battery             | `essentials:battery`          | 6x6          | BATTERY                 | Battery level, charging state, temperature        | show percentage, show temperature, charging indicator                      |
+| Speed Limit (Circle)| `essentials:speedlimit-circle`| —            | SPEED_LIMIT             | European-style speed limit sign                   | border size, speed unit, digit color                                       |
+| Speed Limit (Rect)  | `essentials:speedlimit-rect`  | —            | SPEED_LIMIT             | US-style speed limit sign                         | border size, speed unit                                                    |
+| Shortcuts           | `essentials:shortcuts`        | 9x9          | —                       | Tap to launch any installed app                   | app package, show label, InfoCard layout                                   |
+| Solar               | `essentials:solar`            | —            | SOLAR                   | Sunrise and sunset times with arc visualization   | arc, display mode, countdown                                               |
+| Ambient Light       | `essentials:ambient-light`    | 8x8          | AMBIENT_LIGHT           | Current ambient light level                       | InfoCard layout options                                                    |
 
 ### Plus Pack (`plus`) — Premium
 
@@ -684,6 +684,6 @@ These are acknowledged gaps deferred to future versions:
 | Widget duplicate (F2.17)         | Delete + re-add sufficient for v1; duplicate button adds toolbar complexity for marginal benefit  |
 | Weather polling (F3.12)          | Weather widget (F5B.5) is Should priority; network-dependent feature deferred with its provider   |
 | Theme typography/font (F4.11)    | Core typography in `:core:design` sufficient for v1; per-theme font customization adds complexity without clear user demand |
-| Plus Pack (F5B.1-F5B.5)          | Entire pack deferred post-launch. Free pack validates architecture; Plus adds widgets, not risk  |
+| Plus Pack (F5B.1-F5B.5)          | Entire pack deferred post-launch. Essentials pack validates architecture; Plus adds widgets, not risk  |
 | Auto Backup (F7.10)              | Requires handling missing packs on restore; adds complexity without pre-launch user base          |
 | Preset import/export (F7.11)     | Share intent flow is polish; manual preset management sufficient for v1                          |

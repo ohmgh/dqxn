@@ -33,7 +33,7 @@ Incremental migration of the old codebase into the new architecture. Bottom-up, 
 2. **Old code is reference, not source.** Read `dqxn.old` to understand intent and logic, but write to `dqxn`'s architecture. Don't port-then-refactor — build correctly the first time against the new contracts.
 3. **Observability and tests are concurrent, not deferred.** Each phase includes its own test fixtures, logging integration, and metrics hooks. No "add tests later" phase.
 4. **Debug infrastructure before debuggable code.** The agentic framework and observability land early so every subsequent phase benefits from on-device autonomous debugging. You don't build the debugger after the thing you need to debug.
-5. **One pack proves the architecture.** The free pack migrates first as validation. If the contracts are wrong, fix them before touching other packs.
+5. **One pack proves the architecture.** The Essentials pack migrates first as validation. If the contracts are wrong, fix them before touching other packs.
 
 ## Dependency Graph
 
@@ -48,7 +48,7 @@ graph TD
     P5 --> P6
     P5 --> P7[Phase 7: Dashboard Shell]
     P6 --> P7
-    P7 --> P8[Phase 8: Free Pack]
+    P7 --> P8[Phase 8: Essentials Pack]
     P8 --> P9[Phase 9: Themes, Demo + Chaos]
     P7 --> P10[Phase 10: Features + Polish]
     P9 --> P10
@@ -110,7 +110,7 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 - `WidgetRenderer` — new signature with `ImmutableMap<String, Any>` settings, no `widgetData` param
 - `DataProvider<T : DataSnapshot>` — new generic contract, `provideState(): Flow<T>` compiler-enforced to match `snapshotType: KClass<T>`
 - `DataProviderInterceptor` — interface for chaos/debug interception of provider flows, registered via Hilt multibinding
-- `DataSnapshot` non-sealed interface (base only — no concrete subtypes here). `@DashboardSnapshot` annotation for KSP validation. Concrete subtypes live with their producing module: free pack snapshots in `:pack:free`, OBU snapshots in `:pack:sg-erp2`. If a second pack needs a snapshot from another pack, extract it to a snapshot sub-module (`:pack:{id}:snapshots`) — never promote to `:sdk:contracts`
+- `DataSnapshot` non-sealed interface (base only — no concrete subtypes here). `@DashboardSnapshot` annotation for KSP validation. Concrete subtypes live with their producing module: Essentials pack snapshots in `:pack:essentials`, OBU snapshots in `:pack:sg-erp2`. If a second pack needs a snapshot from another pack, extract it to a snapshot sub-module (`:pack:{id}:snapshots`) — never promote to `:sdk:contracts`
 - `WidgetData` with `KClass`-keyed multi-slot: `snapshot<T : DataSnapshot>()`
 - `WidgetContext`, `WidgetDefaults`, `WidgetStyle`
 - `SettingDefinition<T>` sealed interface (port + tighten types)
@@ -440,22 +440,22 @@ From this point forward, the agent can autonomously debug on a connected device:
 
 ---
 
-## Phase 8: Free Pack (Architecture Validation Gate)
+## Phase 8: Essentials Pack (Architecture Validation Gate)
 
 **What:** First pack migration. Proves the entire SDK→Pack contract works end-to-end.
 
-### `:pack:free`
+### `:pack:essentials`
 
 **Convention plugin validation** — `dqxn.pack` auto-wires deps, no manual `:sdk:*` imports.
 
-**Snapshot types** — partitioned between `:pack:free:snapshots` (cross-boundary, available for future packs) and `:pack:free` (pack-local). Each annotated with `@DashboardSnapshot`, validated by KSP. This is the first real test of the non-sealed `DataSnapshot` + KSP validation approach.
+**Snapshot types** — partitioned between `:pack:essentials:snapshots` (cross-boundary, available for future packs) and `:pack:essentials` (pack-local). Each annotated with `@DashboardSnapshot`, validated by KSP. This is the first real test of the non-sealed `DataSnapshot` + KSP validation approach.
 
-`:pack:free:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1):
+`:pack:essentials:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1):
 - `SpeedSnapshot`, `AccelerationSnapshot`, `BatterySnapshot`, `TimeSnapshot`, `OrientationSnapshot`, `AmbientLightSnapshot`
 
-`:pack:free` pack-local:
-- `SolarSnapshot` (only consumed by free pack's Solar widget)
-- `SpeedLimitSnapshot` (only consumed by free pack's Speed Limit widgets)
+`:pack:essentials` pack-local:
+- `SolarSnapshot` (only consumed by Essentials pack's Solar widget)
+- `SpeedLimitSnapshot` (only consumed by Essentials pack's Speed Limit widgets)
 
 **13 widgets** migrated to new contracts:
 
@@ -507,13 +507,13 @@ Action handler (not a typed `DataProvider<T>`):
 
 | Old artifact | Target | Notes |
 |---|---|---|
-| `SolarCalculator` — Meeus/NOAA solar algorithm, pure Kotlin, ±1min accuracy | `:pack:free` alongside providers | Port verbatim; no Android deps. Regeneration task (`updateIanaTimezones`) needs equivalent. **Add `SolarCalculatorTest`** — pure algorithm with known NOAA reference data; bugs produce plausible-but-wrong sunrise times affecting theme auto-switch app-wide |
-| `IanaTimezoneCoordinates` — 312-entry IANA zone → lat/lon lookup table | `:pack:free` alongside providers | Port verbatim; pure Kotlin. Spot-check 3–5 known cities to verify table integrity after port |
-| `RegionDetector` — timezone-first MPH country detection + `MPH_COUNTRIES` set | `:pack:free` | Port; only speed widgets use it — keep in pack unless second consumer appears. **Add `RegionDetectorTest`** — verify 3-step fallback chain (timezone→locale→"US") and `MPH_COUNTRIES` correctness (wrong entry = wrong speed unit for entire country) |
-| `TimezoneCountryMap` — IANA timezone → country code + city name | `:pack:free` | Port; co-located with `RegionDetector` |
+| `SolarCalculator` — Meeus/NOAA solar algorithm, pure Kotlin, ±1min accuracy | `:pack:essentials` alongside providers | Port verbatim; no Android deps. Regeneration task (`updateIanaTimezones`) needs equivalent. **Add `SolarCalculatorTest`** — pure algorithm with known NOAA reference data; bugs produce plausible-but-wrong sunrise times affecting theme auto-switch app-wide |
+| `IanaTimezoneCoordinates` — 312-entry IANA zone → lat/lon lookup table | `:pack:essentials` alongside providers | Port verbatim; pure Kotlin. Spot-check 3–5 known cities to verify table integrity after port |
+| `RegionDetector` — timezone-first MPH country detection + `MPH_COUNTRIES` set | `:pack:essentials` | Port; only speed widgets use it — keep in pack unless second consumer appears. **Add `RegionDetectorTest`** — verify 3-step fallback chain (timezone→locale→"US") and `MPH_COUNTRIES` correctness (wrong entry = wrong speed unit for entire country) |
+| `TimezoneCountryMap` — IANA timezone → country code + city name | `:pack:essentials` | Port; co-located with `RegionDetector` |
 | `InfoCardLayout` — deterministic weighted normalization for STACK/COMPACT/GRID modes | `:sdk:ui` | Port if widget designs retain layout modes; includes `getTightTextStyle` (font padding elimination). If ported, add test for `SizeOption.toMultiplier()` mapping and normalization calc per layout mode — wrong weights cause text clipping in 5+ widgets |
-| `WidgetPreviewData` — `PREVIEW_WIDGET_DATA` static data for picker previews | `:pack:free` | Port + adapt to typed snapshots |
-| `CornerRadius` presets enum + `styleSettingsSchema` | `:pack:free` (shared widget style settings) | Port verbatim |
+| `WidgetPreviewData` — `PREVIEW_WIDGET_DATA` static data for picker previews | `:pack:essentials` | Port + adapt to typed snapshots |
+| `CornerRadius` presets enum + `styleSettingsSchema` | `:pack:essentials` (shared widget style settings) | Port verbatim |
 
 **Tests:** Every widget extends `WidgetRendererContractTest`. Every provider extends `DataProviderContractTest`. Widget-specific rendering tests. On-device semantics verification via `assertWidgetRendered` + `assertWidgetText` for each widget type. `SolarCalculatorTest` — known reference data: summer/winter solstice at known cities (e.g., London 51.5°N), equatorial location, `minutesToLocalTime` edge cases (0, 1439, fractional), `toJulianDay` against NOAA reference. `RegionDetectorTest` — 3-step fallback chain + `MPH_COUNTRIES` set correctness.
 
@@ -522,7 +522,7 @@ Action handler (not a typed `DataProvider<T>`):
 1. **Contract tests green.** All 13 widgets pass `WidgetRendererContractTest`, all 9 data providers pass `DataProviderContractTest`.
 2. **End-to-end wiring.** On-device: `add-widget` + `dump-health` for each of the 13 widget types shows ACTIVE status (provider bound, data flowing). `query-semantics` confirms each widget's semantics node is visible with non-empty `contentDescription`.
 3. **Stability soak.** 60-second soak with all 13 widgets placed — safe mode not triggered (no 4-crash/60s event). `dump-semantics` at end confirms all 13 widget nodes visible with correct bounds.
-4. **Regression gate.** All Phase 2-7 tests pass with `:pack:free` in the `:app` dependency graph. Adding a pack must not cause Hilt binding conflicts, KSP annotation processing errors, or R8 rule collisions.
+4. **Regression gate.** All Phase 2-7 tests pass with `:pack:essentials` in the `:app` dependency graph. Adding a pack must not cause Hilt binding conflicts, KSP annotation processing errors, or R8 rule collisions.
 
 First real E2E test class (`AgenticTestClient`) starts here — wrapping `adb shell content call` with assertion helpers including semantics helpers (`querySemanticsOne`, `assertWidgetRendered`, `assertWidgetText`, `awaitSemanticsNode`). Test: `add-widget` for each type → `dump-health` → assert all ACTIVE → `assertWidgetRendered` for each → `get-metrics` → assert draw times within budget. This test grows in Phase 9 (chaos correlation + semantics verification of fallback UI) and Phase 10 (full user journey).
 
@@ -701,7 +701,7 @@ Not all code benefits equally from test-first. Mandatory TDD for code where the 
 
 1. **Phase 7 is the bottleneck.** The dashboard decomposition is the highest-risk, highest-effort phase. The old 1040-line ViewModel carries implicit coupling that won't surface until you try to split it. Full agentic debug infrastructure is available to help — use it.
 
-2. **Typed DataSnapshot design may need iteration.** The `@DashboardSnapshot` + KSP approach is designed in docs but untested. The free pack migration (Phase 8) will pressure-test it — be ready to revise contracts. Cross-pack snapshot promotion (from pack to `:sdk:contracts`) is the escape hatch if a snapshot type needs sharing.
+2. **Typed DataSnapshot design may need iteration.** The `@DashboardSnapshot` + KSP approach is designed in docs but untested. The Essentials pack migration (Phase 8) will pressure-test it — be ready to revise contracts. Cross-pack snapshot promotion (from pack to `:sdk:contracts`) is the escape hatch if a snapshot type needs sharing.
 
 3. **sg-erp2 pack depends on a proprietary SDK** (`sg.gov.lta:extol`). Compatibility check runs in Phase 1 (see toolchain checks). If incompatible, remove from Phase 9 scope immediately.
 

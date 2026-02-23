@@ -9,7 +9,7 @@
 ```kotlin
 @Test
 fun `adding widget triggers binding and persists layout`() = dashboardTest {
-    val speedometer = testWidget(typeId = "core:speedometer")
+    val speedometer = testWidget(typeId = "essentials:speedometer")
     dispatch(DashboardCommand.AddWidget(speedometer))
 
     assertThat(layoutState().widgets).hasSize(1)
@@ -162,14 +162,14 @@ fun `safe mode activates after 4 crashes in 60s`() = dashboardTest {
     repeat(4) { i ->
         dispatch(DashboardCommand.WidgetCrash(
             widgetId = "widget-$i",
-            typeId = "core:speedometer",
+            typeId = "essentials:speedometer",
             throwable = RuntimeException("test crash $i"),
         ))
         advanceTimeBy(10_000) // 10s between crashes
     }
     assertThat(safeMode().active).isTrue()
     assertThat(layoutState().widgets).hasSize(1) // clock only
-    assertThat(layoutState().widgets.first().typeId).isEqualTo("core:clock")
+    assertThat(layoutState().widgets.first().typeId).isEqualTo("essentials:clock")
 }
 
 ```
@@ -193,7 +193,7 @@ fun `corruption handler falls back to defaults and reports`() = runTest {
 fun `schema migration v1 to v2 preserves widget positions`() = runTest {
     // Write v1 proto
     val v1Layout = V1DashboardLayout.newBuilder()
-        .addWidgets(V1WidgetPlacement.newBuilder().setTypeId("core:speedometer").setX(0).setY(0))
+        .addWidgets(V1WidgetPlacement.newBuilder().setTypeId("essentials:speedometer").setX(0).setY(0))
         .build()
     layoutProtoFile.writeBytes(v1Layout.toByteArray())
 
@@ -202,7 +202,7 @@ fun `schema migration v1 to v2 preserves widget positions`() = runTest {
     val layout = store.data.first()
 
     assertThat(layout.widgetsList).hasSize(1)
-    assertThat(layout.widgetsList[0].typeId).isEqualTo("core:speedometer")
+    assertThat(layout.widgetsList[0].typeId).isEqualTo("essentials:speedometer")
     // v2 adds gridUnitSize field — verify it got a default
     assertThat(layout.widgetsList[0].gridUnitSize).isEqualTo(DEFAULT_GRID_UNIT_SIZE)
 }
@@ -384,7 +384,7 @@ Tier 5 — On-Device Smoke (if device available, ~30s):
   adb shell content call --method dump-semantics        # verify widget nodes rendered with correct test tags
   adb shell content call --method query-semantics --arg '{"testTagPattern":"widget_.*","isVisible":true}'
     # verify: matchCount == widgetCount from dump-health (all healthy widgets actually rendered)
-  adb shell content call --method chaos-inject --arg '{"fault":"provider-failure","providerId":"core:gps-speed","duration":3}'
+  adb shell content call --method chaos-inject --arg '{"fault":"provider-failure","providerId":"essentials:gps-speed","duration":3}'
   sleep 5
   adb shell content call --method dump-health   # affected widget in fallback, not Error
   adb shell content call --method query-semantics --arg '{"testTag":"widget_status_<affected-id>"}'
@@ -488,11 +488,11 @@ The `chaos-stop` summary maps each injection to its downstream effects:
 ```json
 {
   "injected_faults": [
-    {"type": "provider-failure", "target": "core:gps-speed", "at_ms": 5230, "resultingSnapshots": ["snap_perf_1708444805230.json"]},
-    {"type": "provider-failure", "target": "core:compass", "at_ms": 12400, "resultingSnapshots": []}
+    {"type": "provider-failure", "target": "essentials:gps-speed", "at_ms": 5230, "resultingSnapshots": ["snap_perf_1708444805230.json"]},
+    {"type": "provider-failure", "target": "essentials:compass", "at_ms": 12400, "resultingSnapshots": []}
   ],
   "system_responses": [
-    {"type": "fallback-activated", "widget": "abc-123", "from": "core:gps-speed", "to": "core:network-speed", "at_ms": 5235},
+    {"type": "fallback-activated", "widget": "abc-123", "from": "essentials:gps-speed", "to": "essentials:network-speed", "at_ms": 5235},
     {"type": "widget-status-change", "widget": "def-456", "status": "ProviderMissing", "at_ms": 12405}
   ],
   "diagnostic_snapshots_captured": 1
@@ -532,17 +532,17 @@ Step 5 is optional for configuration issues or device-specific limitations. It i
 
 **Provider failure recovery** (agent verifies fallback activation):
 ```
-chaos-inject {"fault":"provider-failure","providerId":"core:gps-speed","duration":10}
+chaos-inject {"fault":"provider-failure","providerId":"essentials:gps-speed","duration":10}
   → wait 2s
 dump-health
-  → verify: widget binding fell back to "core:network-speed"
+  → verify: widget binding fell back to "essentials:network-speed"
   → verify: widget status is "Ready", not "ProviderMissing"
 query-semantics {"testTag":"widget_<speedometer-id>"}
   → verify: widget node isVisible, contentDescription updated (not stale pre-fault text)
-chaos-inject {"fault":"provider-failure","providerId":"core:gps-speed","duration":0}  // clear
+chaos-inject {"fault":"provider-failure","providerId":"essentials:gps-speed","duration":0}  // clear
   → wait 2s
 dump-health
-  → verify: widget rebinds to primary "core:gps-speed"
+  → verify: widget rebinds to primary "essentials:gps-speed"
 ```
 
 **Thermal degradation** (agent verifies frame pacing):
@@ -567,7 +567,7 @@ diagnose-widget {plusWidgetId}
 
 **Provider flap** (agent verifies rebind stability under oscillation):
 ```
-chaos-inject {"fault":"provider-flap","providerId":"core:gps-speed","intervalMs":500,"durationMs":10000}
+chaos-inject {"fault":"provider-flap","providerId":"essentials:gps-speed","intervalMs":500,"durationMs":10000}
   → wait 12s
 dump-health
   → verify: widget in Ready or fallback state, NOT in rapid rebind loop
@@ -576,7 +576,7 @@ dump-health
 
 **Corrupt data** (agent verifies widget data validation):
 ```
-chaos-inject {"fault":"corrupt","providerId":"core:gps-speed","corruption":"nan-speed"}
+chaos-inject {"fault":"corrupt","providerId":"essentials:gps-speed","corruption":"nan-speed"}
   → wait 2s
 diagnose-widget {speedometerWidgetId}
   → verify: widget health shows data validation issue
@@ -785,7 +785,7 @@ This ensures E2E tests exercise the same command paths the agent uses — no par
 ```kotlin
 @Test
 fun `widget add persists across process death`() {
-    client.send("widget-add", mapOf("widgetType" to "core:speedometer"))
+    client.send("widget-add", mapOf("widgetType" to "essentials:speedometer"))
     client.assertState("$.data.layout.widgetCount", 1)
 
     // Simulate process death
@@ -807,7 +807,7 @@ fun `thermal degradation reduces frame rate`() {
 
 @Test
 fun `widget-add renders widget at correct position`() {
-    client.send("widget-add", mapOf("widgetType" to "core:speedometer"))
+    client.send("widget-add", mapOf("widgetType" to "essentials:speedometer"))
     val state = client.send("dump-state")
     val widgetId = state.firstWidgetId()
 
@@ -820,11 +820,11 @@ fun `widget-add renders widget at correct position`() {
 
 @Test
 fun `provider failure shows fallback UI in widget`() {
-    client.send("widget-add", mapOf("widgetType" to "core:speedometer"))
+    client.send("widget-add", mapOf("widgetType" to "essentials:speedometer"))
     val widgetId = client.send("dump-state").firstWidgetId()
 
     client.send("chaos-inject", mapOf(
-        "fault" to "provider-failure", "providerId" to "core:gps-speed", "duration" to 10))
+        "fault" to "provider-failure", "providerId" to "essentials:gps-speed", "duration" to 10))
     Thread.sleep(3000)
 
     // Verify fallback status overlay is rendered
@@ -860,7 +860,7 @@ fun `bottom bar auto-hides and contains expected controls`() {
 @Test
 fun `notification banner renders above widgets`() {
     // Inject a fault that triggers a banner
-    client.send("chaos-inject", mapOf("fault" to "provider-failure", "providerId" to "core:gps-speed", "duration" to 30))
+    client.send("chaos-inject", mapOf("fault" to "provider-failure", "providerId" to "essentials:gps-speed", "duration" to 30))
     Thread.sleep(3000)
 
     val banner = client.querySemanticsOrNull("banner_provider_unavailable")

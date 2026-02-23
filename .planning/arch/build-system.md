@@ -110,7 +110,7 @@ ContentProvider-based debug automation:
 adb shell content call \
   --uri content://app.dqxn.android.debug.agentic \
   --method {command} \
-  --arg '{"widgetType":"core:speedometer"}'
+  --arg '{"widgetType":"essentials:speedometer"}'
 ```
 
 ### Commands
@@ -213,7 +213,7 @@ Located in `:app:src/debug/`. Each overlay independently toggleable. V1 ships th
 `JsonFileLogSink` writes JSON-lines to `${filesDir}/debug/dqxn.jsonl` (debug builds only):
 
 ```json
-{"ts":1708444800123,"level":"DEBUG","tag":"BINDING","trace":"abc123","span":"bind-speedometer","session":"sess-001","msg":"Provider bound","providerId":"core:gps-speed","widgetId":"def456","elapsedMs":12}
+{"ts":1708444800123,"level":"DEBUG","tag":"BINDING","trace":"abc123","span":"bind-speedometer","session":"sess-001","msg":"Provider bound","providerId":"essentials:gps-speed","widgetId":"def456","elapsedMs":12}
 ```
 
 ### Crash Report Enrichment
@@ -222,7 +222,7 @@ Widget crashes include structured context via `ErrorReporter`:
 
 ```kotlin
 errorReporter.reportWidgetCrash(
-    typeId = "core:speedometer",
+    typeId = "essentials:speedometer",
     widgetId = "abc-123",
     throwable = throwable,
     context = WidgetErrorContext(
@@ -378,7 +378,7 @@ data class WidgetExpectations(
 
 **`diagnose-performance`** returns:
 - Frame histogram with CI-gate threshold annotations: `{ "p50Ms": 7, "p50ThresholdMs": 8, "p95Ms": 13, "p95ThresholdMs": 12, "p95Status": "EXCEEDED", "p99Ms": 14, "p99ThresholdMs": 16, "jankRate": 0.01, "jankThreshold": 0.02 }` — self-describing for autonomous agents, thresholds sourced from CI gate config
-- **Per-widget draw time**: `{ "core:speedometer": { "p50Ms": 2, "p99Ms": 5 }, "plus:trip": { "p50Ms": 8, "p99Ms": 14 } }` — enables performance bisection without trial-and-error widget removal. Measured via `System.nanoTime()` around widget draw in `WidgetContainer`'s draw modifier.
+- **Per-widget draw time**: `{ "essentials:speedometer": { "p50Ms": 2, "p99Ms": 5 }, "plus:trip": { "p50Ms": 8, "p99Ms": 14 } }` — enables performance bisection without trial-and-error widget removal. Measured via `System.nanoTime()` around widget draw in `WidgetContainer`'s draw modifier.
 - Thermal state + `ThermalTrendAnalyzer` prediction
 - Top 5 widgets by recomposition count
 - Slow command log (commands >100ms from ring buffer)
@@ -412,8 +412,8 @@ data class WidgetExpectations(
   "status": "ok",
   "data": {
     "widgets": {
-      "abc-123": {"typeId": "core:speedometer", "status": "Ready", "providerId": "core:gps-speed", "lastEmissionMs": 150},
-      "def-456": {"typeId": "plus:trip", "status": "BindingStalled", "providerId": "core:trip-accumulator", "lastEmissionMs": null}
+      "abc-123": {"typeId": "essentials:speedometer", "status": "Ready", "providerId": "essentials:gps-speed", "lastEmissionMs": 150},
+      "def-456": {"typeId": "plus:trip", "status": "BindingStalled", "providerId": "plus:trip-accumulator", "lastEmissionMs": null}
     },
     "systemContext": {
       "thermalLevel": "NORMAL",
@@ -439,9 +439,9 @@ The agent's first call after detecting an issue should be `dump-health` — it p
   "data": {
     "widgets": [
       {
-        "typeId": "core:speedometer",
+        "typeId": "essentials:speedometer",
         "displayName": "Speedometer",
-        "packId": "core",
+        "packId": "essentials",
         "compatibleSnapshots": ["SpeedSnapshot", "AccelerationSnapshot", "SpeedLimitSnapshot"],
         "requiredAnyEntitlement": null,
         "settingsSchema": ["speedUnit", "showArcs", "showDigital", "limitOffset"]
@@ -449,9 +449,9 @@ The agent's first call after detecting an issue should be `dump-health` — it p
     ],
     "providers": [
       {
-        "providerId": "core:gps-speed",
+        "providerId": "essentials:gps-speed",
         "snapshotType": "SpeedSnapshot",
-        "packId": "core",
+        "packId": "essentials",
         "isAvailable": true,
         "connectionState": "CONNECTED"
       }
@@ -469,12 +469,12 @@ Essential for agent autonomy — the agent needs this to verify widget-add resul
   "status": "ok",
   "data": {
     "snapshots": [
-      {"file": "snap_crash_1708444800456.json", "trigger": "WidgetCrash", "typeId": "core:speedometer", "widgetId": "abc-123", "timestamp": 1708444800456, "recommendedCommand": "diagnose-crash"},
+      {"file": "snap_crash_1708444800456.json", "trigger": "WidgetCrash", "typeId": "essentials:speedometer", "widgetId": "abc-123", "timestamp": 1708444800456, "recommendedCommand": "diagnose-crash"},
       {"file": "snap_thermal_1708444801000.json", "trigger": "ThermalEscalation", "from": "NORMAL", "to": "DEGRADED", "timestamp": 1708444801000, "recommendedCommand": "diagnose-thermal"},
       {"file": "snap_perf_1708444802000.json", "trigger": "BindingStalled", "typeId": "plus:trip", "widgetId": "def-456", "timestamp": 1708444802000, "recommendedCommand": "diagnose-bindings"}
     ],
     "anrLatest": "anr_latest.json",
-    "crashEvidence": {"exists": true, "typeId": "core:speedometer", "timestamp": 1708444800456}
+    "crashEvidence": {"exists": true, "typeId": "essentials:speedometer", "timestamp": 1708444800456}
   }
 }
 ```
@@ -761,7 +761,7 @@ KSP generates:
 Every agentic command receives a trace ID that propagates through the entire command chain:
 
 ```
-Agent sends: content call --method widget-add --arg '{"widgetType":"core:speedometer"}'
+Agent sends: content call --method widget-add --arg '{"widgetType":"essentials:speedometer"}'
   → AgenticContentProvider.call() generates traceId: "agentic-1708444800123"
   → DashboardCommand.AddWidget(traceId = "agentic-1708444800123")
   → WidgetBindingCoordinator.bind() runs under TraceContext(traceId)
@@ -803,7 +803,7 @@ adb shell content call \
 ```
 # Kill a specific provider
 adb shell content call --uri content://app.dqxn.android.debug.agentic \
-  --method chaos-inject --arg '{"fault":"provider-failure","providerId":"core:gps-speed","duration":10}'
+  --method chaos-inject --arg '{"fault":"provider-failure","providerId":"essentials:gps-speed","duration":10}'
 
 # Force thermal level
 adb shell content call --uri content://app.dqxn.android.debug.agentic \
@@ -815,11 +815,11 @@ adb shell content call --uri content://app.dqxn.android.debug.agentic \
 
 # Provider flap (rapid connect/disconnect)
 adb shell content call --uri content://app.dqxn.android.debug.agentic \
-  --method chaos-inject --arg '{"fault":"provider-flap","providerId":"core:gps-speed","intervalMs":500,"durationMs":10000}'
+  --method chaos-inject --arg '{"fault":"provider-flap","providerId":"essentials:gps-speed","intervalMs":500,"durationMs":10000}'
 
 # Corrupt data (valid-but-wrong snapshots)
 adb shell content call --uri content://app.dqxn.android.debug.agentic \
-  --method chaos-inject --arg '{"fault":"corrupt","providerId":"core:gps-speed","corruption":"nan-speed"}'
+  --method chaos-inject --arg '{"fault":"corrupt","providerId":"essentials:gps-speed","corruption":"nan-speed"}'
 
 # Process death + restart (handler returns response, then kills after 500ms delay)
 adb shell content call --uri content://app.dqxn.android.debug.agentic \
@@ -837,11 +837,11 @@ adb shell content call --uri content://app.dqxn.android.debug.agentic \
   "duration_ms": 30000,
   "seed": 42,
   "injected_faults": [
-    {"type": "provider-failure", "target": "core:gps-speed", "at_ms": 5230, "resultingSnapshots": ["snap_perf_1708444805230.json"]},
-    {"type": "provider-failure", "target": "core:compass", "at_ms": 12400, "resultingSnapshots": []}
+    {"type": "provider-failure", "target": "essentials:gps-speed", "at_ms": 5230, "resultingSnapshots": ["snap_perf_1708444805230.json"]},
+    {"type": "provider-failure", "target": "essentials:compass", "at_ms": 12400, "resultingSnapshots": []}
   ],
   "system_responses": [
-    {"type": "fallback-activated", "widget": "abc-123", "from": "core:gps-speed", "to": "core:network-speed", "at_ms": 5235},
+    {"type": "fallback-activated", "widget": "abc-123", "from": "essentials:gps-speed", "to": "essentials:network-speed", "at_ms": 5235},
     {"type": "widget-status-change", "widget": "def-456", "status": "ProviderMissing", "at_ms": 12405}
   ],
   "diagnostic_snapshots_captured": 1

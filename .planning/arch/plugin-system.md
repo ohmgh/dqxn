@@ -5,7 +5,7 @@
 ## Contracts (`:sdk:contracts`)
 
 **`WidgetRenderer`** — extends `WidgetSpec` + `Gated`:
-- `typeId: String` (e.g., `"core:speedometer"`)
+- `typeId: String` (e.g., `"essentials:speedometer"`)
 - `compatibleSnapshots: Set<KClass<out DataSnapshot>>` — snapshot types this widget can consume
 - `settingsSchema: List<SettingDefinition<*>>` — declarative settings UI
 - `getDefaults(context: WidgetContext): WidgetDefaults` — context-aware sizing
@@ -312,7 +312,7 @@ Create/edit custom themes: name, 5 color fields, 2 gradient fields (type + 2-5 c
 
 | ID | Scope |
 |---|---|
-| `free` | Core pack — all users (speedometer, clock, date, compass, battery, speed limit, shortcuts) |
+| `free` | Essentials pack — all users (speedometer, clock, date, compass, battery, speed limit, shortcuts) |
 | `plus` | Plus pack — trip computer, media controller, G-force, altimeter, weather |
 | `themes` | Themes pack — premium themes + Theme Studio + Solar/Illuminance auto-switch |
 

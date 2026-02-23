@@ -57,7 +57,7 @@ android/
 │   ├── diagnostics/              # Provider Health dashboard, connection log, retry actions
 │   └── onboarding/               # Progressive tips, first-launch theme selection, permission flows
 ├── pack/                         # Pack extensions (own convention plugin, own dependency rules)
-│   ├── free/                     # "Essentials" — core widgets, providers, themes
+│   ├── essentials/               # "Essentials" — core widgets, providers, themes
 │   │   └── snapshots/            # Cross-boundary snapshot types (SpeedSnapshot, BatterySnapshot, etc.)
 │   ├── plus/                     # "Plus" — trip computer, media, G-force, altimeter, weather
 │   ├── themes/                   # Premium themes (JSON-driven)
@@ -130,7 +130,7 @@ Packs depend on `:sdk:*` and snapshot sub-modules (`:pack:*:snapshots`) only, ne
 :core:agentic
   → :sdk:common, :sdk:contracts
 
-:pack:free:snapshots
+:pack:essentials:snapshots
   → :sdk:contracts
 
 :codegen:plugin

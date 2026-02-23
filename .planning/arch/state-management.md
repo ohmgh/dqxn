@@ -236,7 +236,7 @@ interface DataSnapshot {
     val timestamp: Long
 }
 
-// :pack:free:snapshots — cross-boundary snapshot types for the free pack
+// :pack:essentials:snapshots — cross-boundary snapshot types for the Essentials pack
 @DashboardSnapshot(dataType = "speed")
 @Immutable
 data class SpeedSnapshot(
@@ -285,8 +285,8 @@ data class BatterySnapshot(
     override val timestamp: Long,
 ) : DataSnapshot
 
-// Additional cross-boundary subtypes in :pack:free:snapshots: AmbientLightSnapshot
-// Pack-local subtypes in :pack:free: SolarSnapshot, SpeedLimitSnapshot
+// Additional cross-boundary subtypes in :pack:essentials:snapshots: AmbientLightSnapshot
+// Pack-local subtypes in :pack:essentials: SolarSnapshot, SpeedLimitSnapshot
 // Pack-local subtypes in :pack:plus (deferred): WeatherSnapshot, TripSnapshot, MediaSnapshot, AltitudeSnapshot
 // OBU-specific subtypes in :pack:sg-erp2: ObuTrafficSnapshot, BalanceSnapshot, etc.
 ```
@@ -298,7 +298,7 @@ The KSP processor (`@DashboardSnapshot`) enforces: no duplicate `dataType` strin
 The `KClass`-keyed API (`snapshot<SpeedSnapshot>()`, `compatibleSnapshots = setOf(SpeedSnapshot::class)`) requires compile-time visibility of the concrete snapshot class. Pack isolation rules forbid importing other packs or `:core:*`. Snapshot sub-modules resolve this without promoting types to `:sdk:contracts`:
 
 ```
-:pack:free:snapshots     — SpeedSnapshot, AccelerationSnapshot, BatterySnapshot, TimeSnapshot,
+:pack:essentials:snapshots     — SpeedSnapshot, AccelerationSnapshot, BatterySnapshot, TimeSnapshot,
                            OrientationSnapshot, AmbientLightSnapshot
 ```
 
@@ -309,7 +309,7 @@ Each snapshot sub-module:
 - Uses the `dqxn.snapshot` convention plugin
 
 ```kotlin
-// pack/free/snapshots/build.gradle.kts
+// pack/essentials/snapshots/build.gradle.kts
 plugins {
     id("dqxn.snapshot")  // auto-wires :sdk:contracts, no Compose, no Android
 }
@@ -318,13 +318,13 @@ plugins {
 **Cross-boundary access:** Packs and features depend on snapshot sub-modules, not on producing modules:
 
 ```kotlin
-// pack/plus/build.gradle.kts — plus pack consumes free pack's snapshot types
+// pack/plus/build.gradle.kts — plus pack consumes Essentials pack's snapshot types
 plugins {
     id("dqxn.pack")
 }
 dependencies {
-    implementation(project(":pack:free:snapshots"))       // SpeedSnapshot, etc.
-    // implementation(project(":pack:free"))              // ❌ still forbidden
+    implementation(project(":pack:essentials:snapshots"))       // SpeedSnapshot, etc.
+    // implementation(project(":pack:essentials"))              // ❌ still forbidden
 }
 ```
 
@@ -335,8 +335,8 @@ dependencies {
 
 | Location | Example Types | When |
 |---|---|---|
-| `:pack:free:snapshots` | `SpeedSnapshot`, `BatterySnapshot`, `TimeSnapshot` | Platform-level data consumed by multiple packs |
-| `:pack:free` (local) | `SolarSnapshot` | Only consumed by free pack's solar widget |
+| `:pack:essentials:snapshots` | `SpeedSnapshot`, `BatterySnapshot`, `TimeSnapshot` | Platform-level data consumed by multiple packs |
+| `:pack:essentials` (local) | `SolarSnapshot` | Only consumed by Essentials pack's solar widget |
 | `:pack:plus` (local) | `TripSnapshot` | Only consumed by plus pack's trip widget |
 | `:pack:sg-erp2` (local) | `ObuTrafficSnapshot`, `BalanceSnapshot` | Regional pack, no cross-boundary consumers |
 

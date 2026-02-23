@@ -17,7 +17,7 @@
 | 5. Core Infrastructure | Pending | |
 | 6. Deployable App + Agentic | Pending | First on-device deployment |
 | 7. Dashboard Shell | Pending | Highest risk phase |
-| 8. Free Pack | Pending | Architecture validation gate |
+| 8. Essentials Pack | Pending | Architecture validation gate |
 | 9. Remaining Packs + Chaos | Pending | |
 | 10. Features + Polish | Pending | |
 

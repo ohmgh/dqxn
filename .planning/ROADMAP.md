@@ -132,9 +132,9 @@
 
 ---
 
-## Phase 8: Free Pack (Architecture Validation Gate)
+## Phase 8: Essentials Pack (Architecture Validation Gate)
 
-**Goal:** First pack migration. Proves entire SDK-to-Pack contract works end-to-end. Cross-boundary snapshot types live in `:pack:free:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1).
+**Goal:** First pack migration. Proves entire SDK-to-Pack contract works end-to-end. Cross-boundary snapshot types live in `:pack:essentials:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1).
 
 **Requirements:** F5.1-F5.11
 
@@ -142,7 +142,7 @@
 1. **Contract tests green:** 13 widgets pass `WidgetRendererContractTest`, 9 data providers pass `DataProviderContractTest`
 2. **End-to-end wiring:** On-device `add-widget` + `dump-health` for each widget type shows ACTIVE; `query-semantics` confirms visible nodes
 3. **Stability soak:** 60-second soak with all 13 widgets — safe mode not triggered
-4. **Regression gate:** All Phase 2-7 tests pass with `:pack:free` in dependency graph
+4. **Regression gate:** All Phase 2-7 tests pass with `:pack:essentials` in dependency graph
 
 **Depends on:** Phase 7
 
@@ -199,7 +199,7 @@ graph TD
     P5 --> P6
     P5 --> P7[Phase 7: Dashboard Shell]
     P6 --> P7
-    P7 --> P8[Phase 8: Free Pack]
+    P7 --> P8[Phase 8: Essentials Pack]
     P8 --> P9[Phase 9: Themes, Demo + Chaos]
     P7 --> P10[Phase 10: Features + Polish]
     P9 --> P10
