@@ -2,19 +2,19 @@
 
 ## Current Position
 
-- **Phase:** 2 — SDK Contracts + Common
-- **Current Plan:** 5 of 5
+- **Phase:** 3 — SDK Observability + Analytics + UI
+- **Current Plan:** 1 of ?
 - **Milestone:** V1 Launch
-- **Next action:** Phase 2, Plan 05 — SDK contracts testFixtures
-- **Last session:** 2026-02-23T19:19:13Z
-- **Stopped at:** Completed 02-04-PLAN.md
+- **Next action:** Phase 3, Plan 01
+- **Last session:** 2026-02-23T19:24:43.249Z
+- **Stopped at:** Completed 02-05-PLAN.md (Phase 2 complete)
 
 ## Progress
 
 | Phase | Status | Notes |
 |---|---|---|
 | 1. Build System Foundation | Complete (4/4 plans) | All plans complete |
-| 2. SDK Contracts + Common | In Progress (4/5 plans) | Plan 04 complete — 72 unit tests for :sdk:contracts type surface |
+| 2. SDK Contracts + Common | Complete (5/5 plans) | All plans complete — types, unit tests, contract test infrastructure |
 | 3. SDK Observability + Analytics + UI | Pending | Concurrent with Phase 4 |
 | 4. KSP Codegen | Pending | Concurrent with Phase 3 |
 | 5. Core Infrastructure | Pending | |
@@ -84,6 +84,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **DashboardPackManifest @Serializable + @Immutable** — KSP generates at build time, runtime deserializable
 - **Test DataSnapshot subtypes without @Immutable** — compose.runtime is compileOnly, test sources use plain data classes
 - **compose.ui added to testFixtures deps** — Modifier reference in TestWidgetRenderer required compose.ui in testFixtures scope
+- **Non-Compose fallback for contract render tests** — :sdk:contracts has no Compose compiler, so contract tests #2/#3 verify accessibilityDescription instead of Render(). Real Compose render tests in pack modules (Phase 8+)
+- **testScheduler.advanceTimeBy for cancellation test** — advanceUntilIdle causes infinite loop with continuous-emitting providers; bounded time advance is correct pattern
 
 ## Performance Metrics
 
@@ -97,6 +99,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 02-02 | 5min | 2 | 28 |
 | 02-03 | 6min | 2 | 23 |
 | 02-04 | 7min | 2 | 8 |
+| 02-05 | 9min | 2 | 11 |
 
 ## Context
 
