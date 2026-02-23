@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.BeforeEach
@@ -66,14 +64,14 @@ public abstract class DataProviderContractTest {
 
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
-  public fun `respects cancellation without leaking`(): Unit =
-    runTest(StandardTestDispatcher()) {
-      val job = launch { provider.provideState().collect {} }
-      advanceUntilIdle()
-      job.cancelAndJoin()
-      advanceUntilIdle()
-      // If we reach here without hanging, the provider respects cancellation.
-    }
+  public fun `respects cancellation without leaking`(): Unit = runTest {
+    val job = launch { provider.provideState().collect {} }
+    // Let at least one emission through, then cancel
+    testScheduler.advanceTimeBy(200)
+    testScheduler.runCurrent()
+    job.cancelAndJoin()
+    // If we reach here without hanging, the provider respects cancellation.
+  }
 
   // --- Test #5: snapshotType is a valid DataSnapshot subtype ---
 
