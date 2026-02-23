@@ -8,20 +8,9 @@ Pre-launch greenfield. Source under `android/`. Namespace: `app.dqxn.android`. F
 
 ## Old Codebase Reference
 
-A prior implementation exists and is mapped in `.planning/oldcodebase/` (8 docs, ~6000 lines). Use these when building new modules to understand prior art — what worked, what to avoid, and how old components map to the new architecture.
+Prior implementation mapped in `.planning/oldcodebase/` (8 docs, ~6000 lines): `core-libraries.md` → `sdk/*`, `core/agentic`; `feature-dashboard.md` → `feature/dashboard`; `packs.md` → `pack/*`; `ksp-processors.md` → `codegen/*`; `app-module.md` → `app`; `build-system.md` → `android/build-logic`; `data-layer-docs.md` → `data`; `feature-driving-diagnostics.md` → `feature/diagnostics`.
 
-| Document | Covers |
-|---|---|
-| `core-libraries.md` | plugin-api, common, widget-primitives, agentic — full API surfaces → `sdk/*`, `core/agentic` |
-| `feature-dashboard.md` | Grid, edit mode, drag/resize, state, data binding — god-object ViewModel to decompose → `feature/dashboard` |
-| `packs.md` | 4 packs (free/demo/themes/sg-erp2), all widgets/providers/themes → `pack/*` |
-| `ksp-processors.md` | 7 plugin handlers + 2 agentic processors with codegen templates → `codegen/*` |
-| `app-module.md` | DI assembly, 17 nav routes, manifest, debug/release split → `app` |
-| `build-system.md` | Convention plugins, version catalog, module graph, pack isolation violations → `android/build-logic` |
-| `data-layer-docs.md` | Preferences DataStore (zero Proto), no corruption handlers → `data` (Proto schemas from scratch) |
-| `feature-driving-diagnostics.md` | Both empty stubs; real diagnostics in dashboard → `feature/diagnostics` (driving deferred) |
-
-**When to consult:** Building a module that has an old-codebase counterpart. Start with the mapping doc for orientation, then read actual source files in the old codebase at `../dqxn.old/android/` for implementation details, algorithm logic, and migration-ready code. The mapping docs are indexes — the real code is the source of truth for how things actually work. **Do not** copy old patterns that conflict with this CLAUDE.md — the new architecture intentionally diverges on state decomposition, Proto DataStore, pack isolation, and canvas model.
+**When to consult:** Building a module with an old-codebase counterpart. Mapping docs are indexes — actual source at `../dqxn.old/android/` is truth. **Do not** copy old patterns conflicting with this CLAUDE.md — new architecture diverges on state decomposition, Proto DataStore, pack isolation, and canvas model.
 
 ## Tech Stack
 
@@ -31,18 +20,15 @@ compileSdk 36, minSdk 31, targetSdk 36. AGP 9.0.1, Gradle 9.3.1, JDK 25. AGP 9 m
 
 ## Build & Run
 
+All commands from `android/` directory. Always use `--console=plain` for parseable output.
+
 ```bash
-# All commands from android/ directory. Always use --console=plain for parseable output.
-./gradlew assembleDebug                    # Debug build
-./gradlew assembleRelease                  # Release build
-./gradlew :app:installDebug                # Install on connected device
-./gradlew test                             # All unit tests
-./gradlew :feature:dashboard:test                                     # Single module tests
-./gradlew :feature:dashboard:testDebugUnitTest --tests "*.ClassName"  # Single test class
-./gradlew connectedAndroidTest             # Integration tests
-./gradlew lintDebug                        # Lint
-./gradlew :pack:essentials:compileDebugKotlin              # Compile check only
-./gradlew :pack:essentials:testDebugUnitTest               # Compile + unit tests
+./gradlew assembleDebug                                                # Debug build
+./gradlew test                                                         # All unit tests
+./gradlew :feature:dashboard:testDebugUnitTest --tests "*.ClassName"   # Single test class
+./gradlew connectedAndroidTest                                         # Integration tests
+./gradlew lintDebug                                                    # Lint
+./gradlew :pack:essentials:compileDebugKotlin                          # Compile check only
 ```
 
 ## Module Map
@@ -64,35 +50,31 @@ Other:    lint-rules, baselineprofile, benchmark (CI/quality, not app runtime)
 
 **`:pack:{packId}`** — CAN: `:sdk:*`, `:pack:*:snapshots`. CANNOT: `:feature:*`, `:core:*`, `:data`, other packs. Need something from dashboard? → belongs in `:sdk:contracts`.
 
-**`:pack:{packId}:snapshots`** — CAN: `:sdk:contracts` only. Pure Kotlin, no Compose compiler (no `dqxn.android.compose`). `@Immutable` available transitively via `:sdk:contracts` → `compose.runtime`. Only `@DashboardSnapshot` data classes. Uses `dqxn.snapshot` plugin.
+**`:pack:{packId}:snapshots`** — CAN: `:sdk:contracts` only. Pure Kotlin, no Compose compiler. `@Immutable` available transitively via `:sdk:contracts` → `compose.runtime`. Only `@DashboardSnapshot` data classes. Uses `dqxn.snapshot` plugin.
 
 **`:feature:dashboard`** — CAN: `:sdk:*`, `:core:design`, `:core:thermal`, `:data`. CANNOT: any `:pack:*`.
 
 **`:core:firebase`** — CAN: `:sdk:observability`, `:sdk:analytics`, `:sdk:common`. Only module with Firebase SDKs. Only `:app` imports it.
 
-**`:sdk:contracts`** — CAN: `:sdk:common` only. Pure Kotlin + coroutines + `compileOnly(compose.runtime)` for `@Composable` and `@Immutable` annotations. No Compose compiler — annotations only, no composable function bodies.
+**`:sdk:contracts`** — CAN: `:sdk:common` only. Pure Kotlin + coroutines + `compileOnly(compose.runtime)` for annotations. No Compose compiler — no composable function bodies.
 
-**All modules** (except `:pack:*:snapshots`) → `:sdk:observability` (universal observability dependency).
+**All modules** (except `:pack:*:snapshots`) → `:sdk:observability`.
 
 ### Compose Compiler Scope
 
-- `dqxn.android.compose` (explicit) — UI modules: `:app`, `:feature:*`, `:sdk:ui`, `:core:design`
-- `dqxn.pack` (applies `dqxn.android.compose` internally) — all `:pack:{packId}` modules (packs contain `@Composable Render()`)
-- `dqxn.snapshot` — `:pack:*:snapshots` (pure Kotlin, no Compose compiler — `@Immutable` available transitively via `compose.runtime`)
-- `dqxn.kotlin.jvm` — `:codegen:*` (pure JVM, no Android, no Compose)
-- WITHOUT Compose compiler: `:sdk:contracts` (`compileOnly(compose.runtime)` for annotations only), `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:firebase`, `:core:agentic`, `:data`
+WITH: `dqxn.android.compose` → `:app`, `:feature:*`, `:sdk:ui`, `:core:design`. `dqxn.pack` → `:pack:{packId}`. `dqxn.kotlin.jvm` → `:codegen:*`.
+WITHOUT: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:firebase`, `:core:agentic`, `:data`, `:pack:*:snapshots` (`dqxn.snapshot`).
 
 ## Critical Constraints
 
 ### State decomposition
 - Each coordinator owns its own `StateFlow` slice. No god-object state class.
 - Per-widget data via individual flows — `widgetData(widgetId)`. Clock tick must NOT recompose speedometer.
-- Discrete commands: sealed `DashboardCommand` → `Channel`. Continuous gestures: `MutableStateFlow<DragUpdate?>` (nullable, initialized to null, latest-value-wins).
+- Discrete commands: sealed `DashboardCommand` → `Channel`. Continuous gestures: `MutableStateFlow<DragUpdate?>` (nullable, null-initialized, latest-value-wins).
 
 ### Canvas model
 - **Unbounded canvas** per profile, viewport is a rendering window. Configuration boundaries (fold x orientation) shown in edit mode. **No-straddle snap**: widgets fully visible or fully invisible per configuration.
-- **No automatic relocation**: viewport shrinks → off-viewport widgets not rendered. Edit mode for rearrangement.
-- Free-sizing windows don't trigger config change.
+- **No automatic relocation**: viewport shrinks → off-viewport widgets hidden. Edit mode for rearrangement. Free-sizing windows don't trigger config change.
 
 ### Dashboard profiles
 - Per-profile independent `DashboardCanvas`. New profile clones current. Profile switching: horizontal swipe + bottom bar icons.
@@ -105,16 +87,17 @@ Other:    lint-rules, baselineprofile, benchmark (CI/quality, not app runtime)
 - `@Immutable`/`@Stable` on all UI types. `ImmutableList`/`ImmutableMap` everywhere.
 - Draw objects (`Path`, `Paint`, `Brush`) via `remember`/`drawWithCache` — never per frame
 - Glow: `RenderEffect.createBlurEffect()` — NOT `BlurMaskFilter`
-- Typed `@DashboardSnapshot` subtypes, `KClass`-keyed multi-slot `WidgetData`. Target <4KB alloc/frame.
+- `@DashboardSnapshot` subtypes, `KClass`-keyed multi-slot `WidgetData`. Target <4KB alloc/frame.
 - Grid: `Layout` + custom `MeasurePolicy` — NOT `LazyLayout`
 - Drag: `graphicsLayer` offset animation — NOT `movableContentOf`
 - Layer 0: `collectAsState()`. Layer 1: `collectAsStateWithLifecycle()`.
 - Frame pacing: `Window.setFrameRate()` API 34+, emission throttling API 31-33.
-- Entitlements: `Gated` interface on `WidgetRenderer`/`ThemeDefinition`/`DataProvider`. Three tiers: `free`, `plus`, `themes`. Pack developers annotate gated components; shell enforces.
+- Entitlements: `Gated` interface on `WidgetRenderer`/`ThemeDefinition`/`DataProvider`. Tiers: `free`, `plus`, `themes`.
 
-### Widget binding isolation
+### Widget isolation
 - `SupervisorJob` parent for all binding jobs. One crash must NOT cancel siblings.
-- `WidgetCoroutineScope` via CompositionLocal for effects. `CoroutineExceptionHandler` → `widgetStatus`, never propagate.
+- `WidgetCoroutineScope` via CompositionLocal. `CoroutineExceptionHandler` → `widgetStatus`, never propagate.
+- Catch boundary + fallback UI, never crash app. >3 crashes in 60s → safe mode.
 
 ### DataStore
 - All `@Singleton`. `ReplaceFileCorruptionHandler` required on ALL instances.
@@ -123,24 +106,17 @@ Other:    lint-rules, baselineprofile, benchmark (CI/quality, not app runtime)
 ## Creating New Components
 
 ### New Widget
-
-Path: `android/pack/{packId}/src/main/kotlin/app/dqxn/android/pack/{packId}/widgets/{widgetname}/{Name}Renderer.kt` + test.
-Package: `app.dqxn.android.pack.{packId}.widgets.{widgetname}` (flat, no hyphens). TypeId: `{packId}:{widget-name}` (hyphens OK).
-
-Key patterns: `@DashboardWidget` annotation with typeId/displayName/packId. Implements `WidgetRenderer`. `Render()` reads `LocalWidgetData.current`, uses `derivedStateOf` for high-frequency data. Coroutines via `LocalWidgetScope.current`. Test extends `WidgetRendererContractTest`.
+Path: `pack/{packId}/src/.../pack/{packId}/widgets/{widgetname}/{Name}Renderer.kt`. Package: `app.dqxn.android.pack.{packId}.widgets.{widgetname}` (flat, no hyphens). TypeId: `{packId}:{widget-name}` (hyphens OK).
+`@DashboardWidget(typeId, displayName, packId)` → `WidgetRenderer`. `Render()` reads `LocalWidgetData.current` + `derivedStateOf`. Test extends `WidgetRendererContractTest`.
 
 ### New Data Provider
+Path: `pack/{packId}/src/.../pack/{packId}/providers/{Name}Provider.kt`. Sensor/BLE: `callbackFlow` + `awaitClose`. Accumulation: aggregate on `Dispatchers.Default`.
 
-Path: `android/pack/{packId}/src/main/kotlin/app/dqxn/android/pack/{packId}/providers/{Name}Provider.kt` + test.
-Sensor/BLE flows MUST use `callbackFlow` + `awaitClose`. Accumulation providers aggregate internally on `Dispatchers.Default`.
-
-### New Snapshot Type (cross-boundary)
-
-Create `:pack:{packId}:snapshots` sub-module with `id("dqxn.snapshot")`. `@DashboardSnapshot` + `@Immutable` data class implementing `DataSnapshot`. Only extract to sub-module when a second consumer appears.
+### New Snapshot Type
+`:pack:{packId}:snapshots` sub-module, `id("dqxn.snapshot")`. `@DashboardSnapshot` + `@Immutable` data class implementing `DataSnapshot`. Only extract when a second consumer appears.
 
 ### New Pack Module
-
-1. `android/pack/{packId}/build.gradle.kts` — `id("dqxn.pack")`
+1. `pack/{packId}/build.gradle.kts` — `id("dqxn.pack")`
 2. `include(":pack:{packId}")` in settings.gradle.kts
 3. `implementation(project(":pack:{packId}"))` in `:app` build.gradle.kts
 4. **Never** add to `:feature:*` or `:core:*` deps
@@ -149,14 +125,13 @@ Create `:pack:{packId}:snapshots` sub-module with `id("dqxn.snapshot")`. `@Dashb
 
 - **Dashboard-as-shell**: Layer 0 always present. Overlays on Layer 1 via `OverlayNavHost`.
 - **IoC data binding**: `WidgetDataBinder` assigns providers by data type, fallback on failure.
-- **Widget error isolation**: Catch boundary + `WidgetCoroutineScope`. Failed → fallback UI, never crash. >3 crashes in 60s → safe mode.
-- **Notifications**: `NotificationCoordinator` (banners+toasts, `@ViewModelScoped`), `AlertSoundManager` (audio/haptic, `@Singleton`), `SystemNotificationBridge` (FGS). Priority levels: CRITICAL/HIGH/NORMAL/LOW.
-- **Thermal**: `ThermalManager` → `RenderConfig`. DEGRADED: glow → RadialGradient approximation, reduced frame rate. CRITICAL: glow disabled.
+- **Notifications**: `NotificationCoordinator` (banners+toasts, `@ViewModelScoped`), `AlertSoundManager` (audio/haptic, `@Singleton`), `SystemNotificationBridge` (FGS). Priority: CRITICAL/HIGH/NORMAL/LOW.
+- **Thermal**: `ThermalManager` → `RenderConfig`. DEGRADED: glow → RadialGradient, reduced fps. CRITICAL: glow off.
 - **Edge-to-edge**: Dashboard behind system bars. Overlays respect `WindowInsets.systemBars`.
 
 ## Observability
 
-`DqxnLogger` (zero-alloc when disabled, no Timber). `DiagnosticSnapshotCapture` on anomalies. `CrashEvidenceWriter` (sync SharedPrefs in UncaughtExceptionHandler). `AnrWatchdog`. `MetricsCollector` (per-widget draw time, frame histograms). Debug: agentic `ContentProvider` + `dump-semantics`/`query-semantics` for Compose semantics tree inspection.
+`DqxnLogger` (zero-alloc when disabled, no Timber). `DiagnosticSnapshotCapture` on anomalies. `CrashEvidenceWriter` (sync SharedPrefs in UncaughtExceptionHandler). `AnrWatchdog`. `MetricsCollector` (per-widget draw time, frame histograms). Debug: agentic `ContentProvider` + `dump-semantics`/`query-semantics`.
 
 ## Testing
 
@@ -168,7 +143,6 @@ JUnit5 + MockK + Truth (unit). JUnit4 + `HiltAndroidRule` (Hilt integration). Tu
 - No `var` in data classes. Prefer `sealed interface` over `sealed class`.
 - No `GlobalScope`, no `runBlocking` (except tests/debug agentic). Scopes via Hilt or `viewModelScope`.
 - All user-facing strings in Android string resources.
-- `ImmutableList`/`ImmutableMap` in all UI state.
 
 ## Naming
 
