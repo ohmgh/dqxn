@@ -3,18 +3,18 @@
 ## Current Position
 
 - **Phase:** 2 — SDK Contracts + Common
-- **Current Plan:** 1 of 5
+- **Current Plan:** 2 of 5
 - **Milestone:** V1 Launch
-- **Next action:** Phase 2, Plan 01 — SDK contracts foundation
-- **Last session:** 2026-02-23T17:44:33.369Z
-- **Stopped at:** Completed 01-04-PLAN.md (Phase 1 complete)
+- **Next action:** Phase 2, Plan 02 — SDK contracts widget/provider types
+- **Last session:** 2026-02-23T18:51:08.837Z
+- **Stopped at:** Completed 02-01-PLAN.md
 
 ## Progress
 
 | Phase | Status | Notes |
 |---|---|---|
 | 1. Build System Foundation | Complete (4/4 plans) | All plans complete |
-| 2. SDK Contracts + Common | Pending | |
+| 2. SDK Contracts + Common | In Progress (1/5 plans) | Plan 01 complete — sdk:common types + 75 tests |
 | 3. SDK Observability + Analytics + UI | Pending | Concurrent with Phase 4 |
 | 4. KSP Codegen | Pending | Concurrent with Phase 3 |
 | 5. Core Infrastructure | Pending | |
@@ -69,6 +69,13 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 
 **JUnit BOM version conflict**: `mannodermaus-junit` 2.0.1 upgrades JUnit BOM from 5.11.4 to 5.14.1. The 5.14.1 BOM no longer constrains `org.junit.vintage:junit-vintage-engine`. Fixed by applying BOM to both `testImplementation` and `testRuntimeOnly` configurations, plus correcting the artifact name from `vintage-engine` to `junit-vintage-engine`.
 
+### Phase 2 Decisions
+
+- **retryCount as public read-only property** for test observability (private set)
+- **Disconnect resets retryCount from all states** — clean disconnect = fresh retry budget
+- **SearchTimeout produces AppError.Device** (not Network) — device-discovery timeout, not network failure
+- **No DQXNDispatchers interface** — qualifier annotations only, per phase-02.md
+
 ## Performance Metrics
 
 | Phase-Plan | Duration | Tasks | Files |
@@ -77,6 +84,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 01-02 | 7min | 3 | 62 |
 | 01-03 | 16min | 2 | 14 |
 | 01-04 | 28min | 2 | 11 |
+| 02-01 | 10min | 2 | 12 |
 
 ## Context
 

@@ -100,6 +100,13 @@ Plans:
 
 **Note:** Observability is entirely greenfield — no prior implementation exists in the old codebase.
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Observability primitives: logging, sinks, tracing, crash interfaces, CrashEvidenceWriter, LongArrayRingBuffer
+- [ ] 03-02-PLAN.md — MetricsCollector, JankDetector, DiagnosticSnapshotCapture, AnrWatchdog, WidgetHealthMonitor, analytics contracts
+- [ ] 03-03-PLAN.md — `:sdk:ui`: DashboardThemeDefinition, WidgetContainer, InfoCardLayout, CompositionLocals, EnumPreviewRegistry
+
 **Depends on:** Phase 2
 **Concurrent with:** Phase 4
 
