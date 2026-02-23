@@ -6,6 +6,23 @@ DQXN — modular Android dashboard platform. Real-time data widgets on a grid ca
 
 Pre-launch greenfield. Source under `android/`. Namespace: `app.dqxn.android`. Full design: `.planning/ARCHITECTURE.md`. Requirements: `.planning/REQUIREMENTS.md`. Decision rationale: `.planning/DECISIONS.md`.
 
+## Old Codebase Reference
+
+A prior implementation exists and is mapped in `.planning/oldcodebase/` (8 docs, ~6000 lines). Use these when building new modules to understand prior art — what worked, what to avoid, and how old components map to the new architecture.
+
+| Document | Covers |
+|---|---|
+| `core-libraries.md` | plugin-api, common, widget-primitives, agentic — full API surfaces → `sdk/*`, `core/agentic` |
+| `feature-dashboard.md` | Grid, edit mode, drag/resize, state, data binding — god-object ViewModel to decompose → `feature/dashboard` |
+| `packs.md` | 4 packs (free/demo/themes/sg-erp2), all widgets/providers/themes → `pack/*` |
+| `ksp-processors.md` | 7 plugin handlers + 2 agentic processors with codegen templates → `codegen/*` |
+| `app-module.md` | DI assembly, 17 nav routes, manifest, debug/release split → `app` |
+| `build-system.md` | Convention plugins, version catalog, module graph, pack isolation violations → `android/build-logic` |
+| `data-layer-docs.md` | Preferences DataStore (zero Proto), no corruption handlers → `data` (Proto schemas from scratch) |
+| `feature-driving-diagnostics.md` | Both empty stubs; real diagnostics in dashboard → `feature/diagnostics` (driving deferred) |
+
+**When to consult:** Building a module that has an old-codebase counterpart. Start with the mapping doc for orientation, then read actual source files in the old codebase at `../dqxn.old/android/` for implementation details, algorithm logic, and migration-ready code. The mapping docs are indexes — the real code is the source of truth for how things actually work. **Do not** copy old patterns that conflict with this CLAUDE.md — the new architecture intentionally diverges on state decomposition, Proto DataStore, pack isolation, and canvas model.
+
 ## Tech Stack
 
 Kotlin 2.3+ (no Java). Jetpack Compose + Material 3. Hilt + KSP (no KAPT). Proto DataStore + Preferences DataStore. kotlinx-collections-immutable. kotlinx.serialization.
