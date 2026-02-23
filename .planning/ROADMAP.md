@@ -27,9 +27,9 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 Plans:
 - [x] 01-01-PLAN.md — Gradle infrastructure + version catalog + all 9 convention plugins
-- [ ] 01-02-PLAN.md — Module stubs + settings.gradle.kts + Spotless formatting
+- [x] 01-02-PLAN.md — Module stubs + settings.gradle.kts + Spotless formatting
 - [x] 01-03-PLAN.md — Custom lint rules (5 detectors + tests)
-- [ ] 01-04-PLAN.md — Gradle TestKit validation + throwaway toolchain checks
+- [x] 01-04-PLAN.md — Gradle TestKit validation + throwaway toolchain checks
 
 **Details:** [Phase 1 Details](migration/phase-01.md)
 

@@ -2,18 +2,18 @@
 
 ## Current Position
 
-- **Phase:** 1 — Build System Foundation
-- **Current Plan:** 4 of 4
+- **Phase:** 2 — SDK Contracts + Common
+- **Current Plan:** 1 of 5
 - **Milestone:** V1 Launch
-- **Next action:** Phase 1, Plan 04 — Gradle TestKit validation + throwaway toolchain checks
-- **Last session:** 2026-02-23T17:14:12Z
-- **Stopped at:** Completed 01-03-PLAN.md
+- **Next action:** Phase 2, Plan 01 — SDK contracts foundation
+- **Last session:** 2026-02-23T17:44:33.369Z
+- **Stopped at:** Completed 01-04-PLAN.md (Phase 1 complete)
 
 ## Progress
 
 | Phase | Status | Notes |
 |---|---|---|
-| 1. Build System Foundation | In Progress (3/4 plans) | Plans 01-01, 01-02, 01-03 complete |
+| 1. Build System Foundation | Complete (4/4 plans) | All plans complete |
 | 2. SDK Contracts + Common | Pending | |
 | 3. SDK Observability + Analytics + UI | Pending | Concurrent with Phase 4 |
 | 4. KSP Codegen | Pending | Concurrent with Phase 3 |
@@ -48,6 +48,10 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Standalone TestLintTask.lint() with JUnit5** over extending LintDetectorTest (JUnit3/4)
 - **Package-based module classification** for lint boundary enforcement (app.dqxn.android.pack.* = pack module)
 - **UElementHandler from com.android.tools.lint.client.api** (not Detector inner class) for lint API 32
+- **Root+submodule TestKit pattern** for Android convention plugin testing (AGP on buildscript classpath via apply-false)
+- **JUnit BOM dual-configuration scoping** — must apply to both testImplementation and testRuntimeOnly for vintage-engine resolution
+- **Proto DataStore plugin incompatible with AGP 9** — Phase 5 needs Wire migration or custom protoc Exec task
+- **EXTOL SDK not available** in public repositories — sg-erp2 pack deferred
 
 ### Phase 1 Toolchain Compatibility (Plan 04)
 
@@ -72,6 +76,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 01-01 | 12min | 2 | 20 |
 | 01-02 | 7min | 3 | 62 |
 | 01-03 | 16min | 2 | 14 |
+| 01-04 | 28min | 2 | 11 |
 
 ## Context
 
