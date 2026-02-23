@@ -100,7 +100,7 @@ Plans:
 
 **Note:** Observability is entirely greenfield — no prior implementation exists in the old codebase.
 
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 03-01-PLAN.md — Observability primitives: logging, sinks, tracing, crash interfaces, CrashEvidenceWriter, LongArrayRingBuffer
