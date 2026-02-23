@@ -6,8 +6,8 @@
 - **Current Plan:** 1 of 3 complete
 - **Milestone:** V1 Launch
 - **Next action:** Phase 3, Plan 02
-- **Last session:** 2026-02-23T19:48:03.665Z
-- **Stopped at:** Completed 03-01-PLAN.md
+- **Last session:** 2026-02-23T19:45:37Z
+- **Stopped at:** Completed 03-03-PLAN.md
 
 ## Progress
 
@@ -92,6 +92,9 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **FakeSharedPreferences over Robolectric** for CrashEvidenceWriter tests — JUnit5 @Test incompatible with @RunWith(RobolectricTestRunner)
 - **NEVER_REPORTED sentinel (Long.MIN_VALUE)** with explicit identity check for DeduplicatingErrorReporter first-report handling — arithmetic comparison overflows
 - **TraceContext created in Task 1** — DqxnLogger suspend extensions require it at compile time (forward dependency from Task 2)
+- **Adapted InfoCardLayout to Phase 2 SizeOption/InfoCardLayoutMode** — used SMALL/MEDIUM/LARGE/EXTRA_LARGE (0.75-1.5) and STANDARD/COMPACT/WIDE, not old-codebase NONE/SMALL/MEDIUM/LARGE/XL (0.0-1.0) and STACK/GRID/COMPACT
+- **ConcurrentHashMap null-value workaround** — CacheEntry wrapper in IconResolver for null ImageVector caching
+- **hilt-android annotations only** — :sdk:ui gets @Inject/@MapKey without full Hilt KSP plugin
 
 ## Performance Metrics
 
@@ -107,6 +110,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 02-04 | 7min | 2 | 8 |
 | 02-05 | 9min | 2 | 11 |
 | 03-01 | 10min | 3 | 28 |
+| 03-03 | 10min | 2 | 17 |
 
 ## Context
 
