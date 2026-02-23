@@ -145,6 +145,7 @@ Deliverables:
 
 **Note:** `ProviderFault` sealed interface lives in `:sdk:contracts` **main source set** (not testFixtures) — `ChaosProviderInterceptor` (Phase 9) needs it at debug runtime. Variants: `Kill`, `Delay(millis)`, `Error(exception)`, `ErrorOnNext`, `Corrupt(transform)`, `Flap(onMillis, offMillis)`, `Stall`. `TestDataProvider` stays in testFixtures (test-only)
 - `TestWidgetRenderer` — minimal stub implementing `WidgetRenderer`. Used to run concrete contract tests in Phase 2 (validates the abstract test base itself)
+- `TestWidgetScope` — test-only `WidgetCoroutineScope` wrapping `TestScope` from `kotlinx-coroutines-test`. Provides `LocalWidgetScope` in contract tests. Required by `WidgetRendererContractTest` jqwik property test (#9) which composes the widget with `LocalWidgetScope provides TestWidgetScope()`
 - `testWidget()`, `testTheme()`, `testDataSnapshot()` factories
 
 ## Contract Test Specification
@@ -172,7 +173,7 @@ Abstract methods pack tests must implement:
 - `fun createRenderer(): WidgetRenderer` (required)
 - `fun createTestWidgetData(): WidgetData` (required — for accessibility variation test)
 
-Note: JUnit4 base class (for Compose test rule) with jqwik property test as a separate companion abstract class. Document this framework split explicitly.
+**JUnit4/JUnit5 framework split:** `WidgetRendererContractTest` is a JUnit4 abstract class (required by `ComposeContentTestRule`). The jqwik property test (#9, "render survives arbitrary settings") lives in a separate abstract class `WidgetRendererPropertyTest` (JUnit5/jqwik). Pack widget tests extend BOTH: `class SpeedometerRendererContractTest : WidgetRendererContractTest()` and `class SpeedometerRendererPropertyTest : WidgetRendererPropertyTest()`. Two test files per widget in testFixtures consumption. `junit-vintage-engine` (from `dqxn.android.test`) ensures both run on the JUnit5 platform.
 
 **`DataProviderContractTest` inherited assertions:**
 
@@ -181,7 +182,7 @@ Note: JUnit4 base class (for Compose test rule) with jqwik property test as a se
 | 1 | `emits within firstEmissionTimeout` | Critical | `withTimeout(provider.firstEmissionTimeout) { provideState().first() }` |
 | 2 | `emitted type matches declared snapshotType` | Critical | `provideState().first()::class == snapshotType` — prevents silent null from `as? T` |
 | 3 | `emitted snapshot has non-zero timestamp` | Critical | `snapshot.timestamp > 0` — required for staleness detection |
-| 4 | `respects cancellation without leaking` | Critical | Cancel collector immediately, no exception |
+| 4 | `respects cancellation without leaking` | Critical | Cancel collector, `advanceUntilIdle()`, verify `testScheduler.isIdle` (no pending tasks — catches leaked coroutines). Note: fd-count approach deliberately dropped as unreliable; runtime leak detection via LeakCanary and `WidgetScopeBypass` lint rule |
 | 5 | `snapshotType is a valid DataSnapshot subtype` | High | Not `DataSnapshot::class` itself |
 | 6 | `connectionState emits at least one value` | High | `connectionState.first()` doesn't hang |
 | 7 | `connectionErrorDescription null when connected` | High | Consistency between connection flows |

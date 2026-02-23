@@ -51,12 +51,14 @@
 
 | Handler | Queries | Available from |
 |---|---|---|
+| `ping` | Returns `{"status":"ok"}` — used by E2E tests as startup probe | Phase 6 |
 | `dump-health` | `WidgetHealthMonitor` | Phase 6 (empty initially, populates as widgets land) |
 | `diagnose-crash` | `CrashEvidenceWriter` SharedPrefs, `DiagnosticSnapshotCapture` files | Phase 6 |
 | `diagnose-performance` | `MetricsCollector` snapshot | Phase 6 |
 | `list-diagnostics` | Diagnostic snapshot files with metadata, stale file filtering | Phase 6 |
 | `get-metrics` | `MetricsCollector` frame histogram + per-widget draw times | Phase 6 |
 | `dump-layout` | `:data` layout repository | Phase 6 |
+| `dump-state` | Aggregated view: layout + health + widget statuses + active profile (convenience alias combining `dump-layout` + `dump-health` fields) | Phase 7 (requires coordinators) |
 | `list-widgets` | `Set<WidgetRenderer>` from Hilt | Phase 6 (empty until Phase 8) |
 | `list-providers` | `Set<DataProvider<*>>` from Hilt | Phase 6 (empty until Phase 8) |
 | `list-themes` | `Set<ThemeProvider>` (via Hilt multibinding) | Phase 6 |
@@ -98,6 +100,9 @@
 - Handler tests for all starter diagnostic handlers against faked observability state
 - `SemanticsOwnerHolder`: registration/deregistration, `snapshot()` returns tree when owner set, `query()` filter matching
 - `dump-semantics`/`query-semantics` handlers: empty response when no owner registered, tree serialization correctness
+- `AlertSoundManager`: `fire(AlertProfile)` returns correct `AlertResult` variants — PLAYED for valid profile, SILENCED for zero-volume, FOCUS_DENIED when audio focus denied (mocked `AudioManager`), UNAVAILABLE when `SoundPool` load fails
+- `CrashRecovery`: 3 crashes in 60s → not triggered, 4 crashes in 60s → triggered, crashes >60s apart → counter resets, timestamp boundary condition (crash at exactly 60s boundary)
+- Debug overlay composition smoke tests: each of 6 debug overlays (Frame Stats, Widget Health, Thermal Trending, Recomposition Visualization, Provider Data Flow DAG, State Machine Viewer) composes without crashing when toggled on with empty/default state
 - E2E: `adb shell content call` round-trip on connected device
 - App startup: blank canvas renders without crash
 

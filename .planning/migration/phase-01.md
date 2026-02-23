@@ -79,6 +79,7 @@ Subsequent phases fill in source files; they do not modify `settings.gradle.kts`
 - Adds: MockK, Truth, Turbine, kotlinx-coroutines-test, Robolectric (testImplementation)
 - Configures `useJUnitPlatform()` in test tasks
 - Registers `fastTest` task (`--include-tags fast`) and `composeTest` task (`--include-tags compose`)
+- Gradle TestKit test: apply `dqxn.android.test` to a test project with both `@Tag("fast")` and `@Tag("compose")` tests → verify `fastTest` task executes only `fast`-tagged tests and `composeTest` executes only `compose`-tagged tests (catches misconfigured tag filtering where both tasks run all tests)
 - Configures structured test output to `{module}/build/test-results/{variant}/` (F13.8)
 
 **`dqxn.pack`** (most complex convention plugin — all responsibilities enumerated)

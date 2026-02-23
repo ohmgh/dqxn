@@ -7,3 +7,7 @@
 3. **sg-erp2 pack depends on a proprietary SDK** (`sg.gov.lta:extol`). Compatibility check runs in Phase 1 (see toolchain checks). If incompatible, remove from Phase 9 scope immediately.
 
 4. **Proto DataStore migration needs a data migration story.** Users of the old app (if any) would lose saved layouts. Given this is pre-launch, probably fine — but confirm.
+
+5. **90% coordinator coverage enforced 5 phases late.** The >90% line coverage CI gate for Phase 7's 6 coordinators doesn't enforce until Phase 12. If coordinators ship at 70% coverage, Phase 12 surfaces a retroactive test-writing debt that competes with benchmark work. Mitigation: Phase 7 implementation tracks coverage informally; Phase 8 gate includes a soft check (warning, not blocking) at 80%.
+
+6. **Phase 5 repository tests are the most impactful addition.** Phase 5 delivers 6 DataStore repositories with zero behavioral tests in the original plan. Phase 7 coordinators consume these repositories — fakes in coordinator tests mask repository bugs. The updated Phase 5 now includes CRUD tests for all repositories. If Phase 5 runs long, repository tests are the last thing to cut — they catch bugs that surface 2 phases later in ways that look like coordinator bugs.

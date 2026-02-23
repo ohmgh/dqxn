@@ -120,6 +120,11 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 4. Layout serialization round-trip tests pass (Proto DataStore) — `DashboardWidgetInstance`, `GridPosition`, `GridSize` survive serialize/deserialize
 5. `ThemeAutoSwitchEngine` tests pass with late-binding inputs
 6. Repository interfaces (`LayoutRepository`, `UserPreferencesRepository`, `PairedDeviceStore`, `ProviderSettingsStore`, `WidgetStyleStore`) all compile with implementations
+7. `LayoutRepository` CRUD tests pass — profile create/clone/switch/delete lifecycle, debounced save batching
+8. `ProviderSettingsStore` namespaced key format tests pass — `{packId}:{providerId}:{key}` isolation verified
+9. Schema migration tests pass — v1→v2 preserves widget positions, chained migration, failure → fallback
+10. `PresetLoader` region heuristic and fallback layout tests pass
+11. `FramePacer` API branching tests pass (API 34+ vs 31-33 paths)
 
 **Depends on:** Phase 3
 
@@ -140,6 +145,8 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 4. `./gradlew assembleRelease` succeeds — R8-processed APK installs without `ClassNotFoundException`
 5. CI pipeline running `./gradlew assembleDebug test lintDebug`
 6. Empty multibinding sets (`Set<WidgetRenderer>`, `Set<DataProvider<*>>`, `Set<ThemeProvider>`, `Set<DataProviderInterceptor>`, `Set<PackManifest>`) resolve — app starts with zero packs
+7. `ping` command returns `{"status":"ok"}` — E2E startup probe verified
+8. `dump-state` command returns aggregated layout + health + widget statuses (available from Phase 7 when coordinators land)
 
 **Depends on:** Phases 3, 4, 5 (Phase 3 direct: `:app` imports `:sdk:observability`, `:sdk:analytics`, `:sdk:ui`)
 
@@ -183,6 +190,8 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 3. **End-to-end wiring:** On-device `add-widget` + `dump-health` for each of 13 widget types shows ACTIVE; `query-semantics` confirms visible nodes with non-empty `contentDescription`
 4. **Stability soak:** 60-second soak with all 13 widgets — safe mode not triggered
 5. **Regression gate:** All Phase 2-7 tests pass with `:pack:essentials` in dependency graph
+6. **Widget-specific rendering tests:** At least one rendering behavior test per widget beyond contract base (e.g., speedometer arc angle, compass needle rotation)
+7. **Greenfield provider tests:** GpsSpeedProvider, BatteryProvider, AccelerometerProvider, SpeedLimitProvider have provider-specific unit tests beyond DataProviderContractTest
 
 **Depends on:** Phase 7
 
@@ -216,7 +225,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 **Requirements:** F2.7 (widget picker), F2.8-F2.9 (widget settings), F3.3-F3.5 (setup wizard), F3.14 (setup failure UX), F8.1 (entitlement gating enforcement in UI — contract from Phase 2), F8.7 (widget picker entitlement gating), F8.9 (refund overlay in picker — UI built here, verification requires Phase 9's `simulateRevocation()`), F10.4 (76dp touch targets in overlay context), F12.5 (analytics consent toggle in settings), F14.2 (diagnostics nav in settings), F14.4 (delete all data), NF29 (companion_device_setup manifest feature)
 
 **Success Criteria:**
-1. `SettingRowDispatcher` renders all 10 row types from `SettingDefinition` schema, value changes propagate to `ProviderSettingsStore`
+1. `SettingRowDispatcher` renders all 12 `SettingDefinition` subtypes, value changes propagate to `ProviderSettingsStore`
 2. `SetupSheet` navigation: multi-step setup with back, permission delegation, `DeviceScanStateMachine` unit tests pass
 3. `WidgetSettingsSheet` 3-tab navigation with schema rendering
 4. `MainSettings` renders all 4 sections, `DeleteAllData` clears all DataStore instances
@@ -263,6 +272,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 3. All 9 CI gates configured and enforced
 4. Compose stability: 0 unstable classes in app-owned modules
 5. APK size: base < 30MB verified
+6. Mutation kill rate tracking configured (Pitest setup) — **not enforced as gate at V1**, tracked for post-launch enforcement
 
 **Depends on:** Phase 8
 

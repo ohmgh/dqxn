@@ -37,7 +37,7 @@ All nine gates enforced:
 
 P50 trend detection: alert when P50 increases > 20% from 7-day rolling average.
 
-Mutation kill rate > 80% for critical modules (deferred to post-launch — tracked, not gated).
+Mutation kill rate > 80% for critical modules (deferred to post-launch — tracked, not gated). **CI gate row exists for tracking only — pipeline must NOT fail on this metric at V1. Enforce post-launch when Pitest infrastructure is in place.**
 
 ## Compose stability audit
 
@@ -53,5 +53,6 @@ Mutation kill rate > 80% for critical modules (deferred to post-launch — track
 
 **Tests:**
 - Benchmark stability: same benchmark run 3 times, P50 variance < 10%
+- Benchmark data source consistency: verify benchmark uses `DemoTimeProvider`/`DemoSpeedProvider` when `:pack:demo` is in classpath, falls back to `TestDataProvider` stubs otherwise. Both paths produce deterministic data — assert P50 variance < 15% across demo/stub configurations to catch measurement drift
 - Baseline profile generation: profile file present in release APK, covers startup + dashboard render methods
 - CI gate script tests: threshold comparison logic, trend detection calculation

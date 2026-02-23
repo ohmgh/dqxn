@@ -11,6 +11,7 @@ Not all code benefits equally from test-first. Mandatory TDD for code where the 
 | Banner derivation logic (`NotificationCoordinator` observer blocks) | Maps `(safeModeActive, bleAdapterOff, storageLow, ...)` → prioritized banner list. Incorrect derivation = CRITICAL banners invisible. Effectively a state machine — same rationale applies. | 7 |
 | `merge()+scan()` accumulation in `WidgetDataBinder` | Test: "widget with 3 slots renders correctly when slot 2 is delayed." Prevents accidental `combine()` starvation — the architecture's most critical flow invariant. | 7 |
 | Safe mode trigger logic | Boundary condition: ≥4 crashes in 60s rolling window (not total), cross-widget counting (4 different widgets each crashing once triggers it). Easy to get subtly wrong. | 7 |
+| Repository CRUD (`LayoutRepository` profile lifecycle, `ProviderSettingsStore` key format) | Data persistence bugs surface as coordinator bugs in Phase 7. Writing the CRUD test first validates the repository API is usable before coordinators are built on it. | 5 |
 | KSP validation rules | Compile-testing assertions for invalid `typeId`, missing `@Immutable`, duplicate `dataType` before writing the processor. The test IS the specification. | 4 |
 
 ## TDD not required (test-concurrent)

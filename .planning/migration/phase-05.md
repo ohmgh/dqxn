@@ -57,4 +57,52 @@
 | `TextEmphasis` — 4 alpha constants (`High=1.0f`, `Medium=0.7f`, `Disabled=0.4f`, `Pressed=0.12f`) | `:core:design` | Port verbatim |
 | `CardSize` enum — `SMALL(8dp)`, `MEDIUM(12dp)`, `LARGE(16dp)` corner radii | `:core:design` | Port verbatim |
 
-**Tests:** Thermal state transition tests, DataStore corruption recovery tests, layout serialization round-trip tests. `FakeThermalManager` flow emission tests.
+**Tests:**
+
+**Thermal:**
+- Thermal state transition tests (`FakeThermalManager` flow emission)
+- `FramePacer` API branching: verify `Window.setFrameRate()` called on API 34+ mock, verify emission throttling logic on API 31-33 mock
+
+**DataStore resilience:**
+- DataStore corruption recovery tests (all instances have `ReplaceFileCorruptionHandler`)
+- Layout serialization round-trip tests (Proto DataStore) — `DashboardWidgetInstance`, `GridPosition`, `GridSize` survive serialize/deserialize
+
+**Schema migration (F7.2):**
+- `LayoutMigration` v1→v2: widget positions preserved after schema upgrade
+- Chained migration: N→N+1→N+2 applied in sequence
+- Migration failure: corrupted proto → fallback to default preset (not crash)
+- Backup-before-migration: pre-migration snapshot exists on disk
+
+**Repository CRUD (Critical — 6 repositories, all consumed by Phase 7 coordinators):**
+- `LayoutRepository`: `createProfile()` → profile exists in flow, `cloneProfile()` duplicates widget list, `switchProfile()` updates active ID, `deleteProfile()` removes (cannot delete last), debounced save (500ms) batches rapid mutations
+- `UserPreferencesRepository`: read/write round-trip for theme mode, orientation lock, status bar, keep screen on
+- `ProviderSettingsStore`: key format `{packId}:{providerId}:{key}` round-trip, namespaced isolation (writing `essentials:gps-speed:unit` does not affect `essentials:compass:style`)
+- `PairedDeviceStore`: add/remove/list paired devices, duplicate MAC address rejection
+- `ConnectionEventStore`: rolling 50-event window — 51st event evicts oldest, ordering preserved
+- `WidgetStyleStore`: per-widget style persistence round-trip, default style for missing widget
+
+**Preset system:**
+- `PresetLoader`: timezone-based region heuristic returns correct region for known timezones (e.g., "America/New_York" → "US", "Europe/London" → "GB")
+- `PresetLoader` failure → `LayoutRepository.FALLBACK_LAYOUT` loaded (clock widget only)
+- Hardcoded fallback layout loads without asset files (code-level constant, no JSON parsing)
+
+**Theme:**
+- `ThemeAutoSwitchEngine` tests with late-binding inputs (existing)
+
+**Firebase (mock-based, no real Firebase):**
+- `FirebaseCrashReporter`: `recordException()` delegates to Crashlytics mock with correct params
+- `FirebaseAnalyticsTracker`: `logEvent()` delegates to Firebase Analytics mock, `setEnabled(false)` suppresses
+
+**Validation:**
+
+1. `./gradlew :core:design:compileDebugKotlin --console=plain` — theme system compiles with Compose
+2. `./gradlew :core:thermal:compileDebugKotlin --console=plain` — thermal module compiles
+3. `./gradlew :data:compileDebugKotlin --console=plain` — Proto DataStore schemas generate and compile
+4. `./gradlew :core:firebase:compileDebugKotlin --console=plain` — Firebase isolation module compiles
+5. `./gradlew :core:thermal:testDebugUnitTest --console=plain` — thermal tests pass
+6. `./gradlew :data:testDebugUnitTest --console=plain` — DataStore tests pass
+7. `LayoutRepository` CRUD tests pass — profile create/clone/switch/delete lifecycle verified
+8. `ProviderSettingsStore` namespaced key format tests pass
+9. Schema migration tests pass — v1→v2 preserves widget positions, chained migration works, failure falls back to default
+10. `PresetLoader` region heuristic and fallback tests pass
+11. `FramePacer` API branching tests pass

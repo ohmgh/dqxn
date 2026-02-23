@@ -46,5 +46,6 @@
 - Chaos correlation test: `seed=42` deterministic fault injection → diagnostic snapshot correlation
 - Multi-pack Hilt binding test: all 3 packs loaded, `Set<WidgetRenderer>` and `Set<DataProvider<*>>` contain expected counts
 - Export My Data: round-trip test — export → parse exported JSON → verify all DataStore keys present
-- In-app update: mock `AppUpdateInfo` with different availability states → verify correct flow triggered
-- Accessibility: programmatic contrast ratio calculation for all theme + text combinations
+- In-app update (NF-L2): mock `AppUpdateInfo` with IMMEDIATE priority → IMMEDIATE flow triggered, FLEXIBLE priority → FLEXIBLE flow triggered, no update available → no flow. Version code threshold logic: critical bug flag (hardcoded version range) → IMMEDIATE, all other updates → FLEXIBLE
+- In-app review trigger conditions (NF-L3): 3+ sessions AND 1+ layout customization AND no crash → review prompt shown. Fewer than 3 sessions → not shown. 90-day frequency cap → second trigger within 90 days suppressed. All conditions tracked in `UserPreferencesRepository`
+- Accessibility: programmatic contrast ratio: 4.5:1 minimum for normal text (<18sp), 3:1 minimum for large text (≥18sp bold or ≥24sp). Checked for all 24 themes against: speed value, clock time, date text, battery percentage, speed limit value. Failing theme+text combination logged with exact ratio

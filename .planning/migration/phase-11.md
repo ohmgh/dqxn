@@ -71,10 +71,13 @@ All events gated on analytics consent (F12.5). No events fire if user has not op
 **Tests:**
 - `InlineColorPicker` color conversion tests — `colorToHsl`/`colorToHex`/`parseHexToColor` with known values (black, white, pure RGB, achromatic grays, hue boundary 0/120/240/360). Round-trip accuracy: `color → hsl → color` within ±1/255 per channel
 - `IlluminanceThresholdControl`: `luxToPosition`/`positionToLux` logarithmic mapping inverses, boundary values (0 lux, 10000 lux), dashed line geometry
+- `GradientStopRow`: min 2 stops (remove button disabled at 2), max 5 stops (add button disabled at 5), stop position clamped to 0.0-1.0
 - `ThemeSelector`: free-first ordering, preview timeout (60s → auto-revert), clone-to-custom, entitlement lock icons
 - `ThemeStudio`: `isDirty` derivation, auto-save trigger, `buildCustomTheme()` output validation, max-12 custom theme limit
 - Provider Health dashboard: renders provider list, staleness indicator updates, retry triggers provider reconnect
 - Session recording: event capture ring buffer overflow, timeline rendering with event markers
 - Onboarding: analytics consent dialog blocks analytics, first-run tip sequence, permission rationale display
+- Default preset validation (F11.5): first-launch layout contains only clock + battery + date widgets — no GPS-dependent widgets present. Verified via `PresetLoader` unit test returning the default preset and asserting widget typeIds
+- Analytics event call sites: events fire after opt-in, suppressed before consent. Parameter completeness: `upsell_impression` includes `trigger_source` (F12.6), `session_end` includes `jank_percent` + `peak_thermal_level` + `widget_render_failures` + `provider_errors` (F12.7), `widget_add` includes `typeId` + `packId`
 - Overlay navigation completion: all 7 routes render, back navigation correct, theme preview overlay correctly blocks other navigation during active preview
 - On-device: full overlay interaction flow via manual testing and semantics queries where gesture simulation isn't feasible

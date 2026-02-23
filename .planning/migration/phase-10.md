@@ -102,9 +102,11 @@ Remaining routes (`ThemeSelector`, `Diagnostics`, `Onboarding`) populated in Pha
 **`PackBrowserContent`** — pack list with shared element transitions, entitlement status derivation, debug entitlement toggle. Old `PackBrowserContent.kt` (449 lines). Accessible from Settings → Behavior → Dash Packs.
 
 **Tests:**
-- `SettingRowDispatcher`: each of 10 row types renders from `SettingDefinition` schema, value changes propagate to `ProviderSettingsStore`. Coverage for `visibleWhen` evaluation, entitlement gating, `AnimatedVisibility` for hidden rows
+- `SettingRowDispatcher`: parameterized test rendering all 12 `SettingDefinition` subtypes (including `UriSetting` via `SoundPickerSettingRow` and `AppPickerSetting` via `AppPickerSettingRow`). Verifies: each subtype renders non-empty content, value changes propagate to `ProviderSettingsStore`, `visibleWhen` evaluation hides/shows correctly, entitlement gating shows lock icon for gated settings, `AnimatedVisibility` for hidden rows
 - `SetupSheet` navigation: multi-step setup with back navigation, permission request delegation, completion callback. `DeviceScanStateMachine` unit tests: 5-state transitions, retry logic boundaries, API-level dispatch, device limit enforcement
 - `WidgetSettingsSheet`: 3-page navigation, schema default extraction, settings merge, provider selection, style property updates
 - `MainSettings`: navigation dispatch, analytics consent toggle state transitions, `DeleteAllData` clears all DataStore instances
 - `WidgetPicker`: widget grouping by pack, entitlement badge display, scale calculation
+- Sub-overlay pickers: `TimezonePicker` search filters correctly, `DateFormatPicker` shows live preview, `AppPicker` renders launcher apps with search, `SoundPicker` launches system ringtone picker intent correctly
 - Overlay navigation: route to each Phase 10 overlay (WidgetPicker, Settings, WidgetSettings, Setup), verify content renders, back navigation returns to dashboard
+- NF-D1 speed disclaimer: `WidgetInfoContent` for speed/speed-limit widget types includes disclaimer string resource text (composition test with semantics assertion)

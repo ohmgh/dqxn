@@ -31,6 +31,8 @@
 - `ChaosEngine` with seed-based deterministic reproduction (`seed: Long`)
 - `inject-fault` handler wired to `ChaosProviderInterceptor`
 - `chaos-stop` session summary with `injected_faults` + `system_responses` + `resultingSnapshots`
+- `chaos-start` handler spec: params `{seed: Long, profile: String, durationMs: Long?}`. Starts a chaos session with seed-based deterministic fault sequence. Returns `{sessionId, activeFaults: [], startedAtMs}`. Routes to `ChaosEngine.start()`
+- `chaos-stop` handler spec: params `{sessionId: String?}` (optional — stops current if omitted). Returns `{injected_faults: [], system_responses: [], diagnostic_snapshots_captured: Int}`. Routes to `ChaosEngine.stop()`
 - Chaos ↔ diagnostic temporal correlation via `list-diagnostics since=<timestamp>`
 
 ## `AgenticTestClient`
@@ -39,4 +41,4 @@
 - `assertChaosCorrelation()` — validates every injected fault produced an expected downstream diagnostic snapshot
 - Used in CI chaos gate (deterministic `seed = 42`)
 
-**Tests:** Contract tests for all pack widgets/providers. Connection state machine exhaustive tests. Chaos E2E: `inject-fault` → `list-diagnostics since=` → verify correlated snapshot. `assertChaosCorrelation()` integration test. Seed determinism: same seed → same fault sequence → same diagnostics.
+**Tests:** Contract tests for all pack widgets/providers. Theme JSON structure validation: each of 22 premium theme JSON files in `:pack:themes` parsed without error, required fields present (`themeId`, `displayName`, `isDark`, `colors`, `gradients`), color values valid hex format, gradient stops in 0.0-1.0 range. Connection state machine exhaustive tests. Chaos E2E: `inject-fault` → `list-diagnostics since=` → verify correlated snapshot. `assertChaosCorrelation()` integration test. Seed determinism: same seed → same fault sequence → same diagnostics. ChaosEngine profile unit tests: each of 7 profiles (`provider-stress`, `provider-flap`, `thermal-ramp`, `entitlement-churn`, `widget-storm`, `process-death`, `combined`) produces a non-empty fault sequence with the declared seed, `combined` profile includes faults from at least 3 categories. `StubEntitlementManager`: `simulateRevocation(id)` → `entitlementChanges` emits updated set without revoked ID, `simulateGrant(id)` → set includes granted ID, initial state returns `free` only.

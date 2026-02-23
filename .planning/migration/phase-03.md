@@ -27,6 +27,7 @@
 - Engagement metric contracts (F12.3): `session_duration`, `widgets_per_layout`, `edit_frequency` (edit mode entries per session)
 - Upsell event contracts (F12.6): impression/conversion events with `trigger_source` parameter (`theme_preview`, `widget_picker`, `settings`)
 - Session quality metric contracts (F12.7): session end event carrying `jank_percent`, `peak_thermal_level`, `widget_render_failures`, `provider_errors`. Note: `:sdk:analytics` defines **contract interfaces only** (event data classes, `AnalyticsTracker` interface). No module dependency on `:sdk:observability` — the caller (`:feature:dashboard` or `:app`) reads from `MetricsCollector`/`WidgetHealthMonitor` and populates the event fields. `:core:firebase` implements `AnalyticsTracker` and forwards to Firebase
+- **`AnalyticsTracker` interface test (mock-based):** Verify `isEnabled()` gates all `logEvent()` calls, `setEnabled(false)` suppresses subsequent events, event parameter map structure matches contract. Test lives in `:sdk:analytics` (not deferred to Phase 11). Uses MockK stub — no Firebase dependency
 
 ## `:sdk:ui` (has Compose compiler — applies `dqxn.android.compose`)
 
@@ -52,3 +53,4 @@
 - `WidgetHealthMonitor`: stale vs stalled distinction, liveness check period
 - `WidgetContainer`: composition tests
 - `InfoCardLayout`: `SizeOption.toMultiplier()` mapping tests, normalization calculation per layout mode (STACK/COMPACT/GRID), `getTightTextStyle()` output verification
+- `AnalyticsTracker`: `isEnabled()` gating, `setEnabled()` toggle, event parameter structure validation

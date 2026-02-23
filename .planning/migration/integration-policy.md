@@ -12,6 +12,7 @@ From Phase 2 onward, every phase runs `./gradlew test` across all modules before
 |---|---|---|
 | 1 | Proto toolchain + EXTOL SDK compat (throwaway modules) | Toolchain incompatibility discovered in Phase 5/9 instead of Phase 1 |
 | 4 | `dqxn.pack` applied to stub module, resolved dependency graph verified | Convention plugin misconfiguration accumulating silently for 7 phases |
+| 5 | `LayoutRepository` CRUD cycle (create/clone/switch/delete profile) + `ProviderSettingsStore` key format round-trip | Repository bugs masked by Phase 7 fakes — coordinator tests pass but production persistence is broken |
 | 6 | `./gradlew assembleRelease` + install + dashboard renders | R8 stripping KSP-generated or proto-generated classes (passes all debug tests, crashes in release) |
 | 6 | `trigger-anomaly` → `diagnose-crash` round-trip in CI | Observability pipeline broken with no signal |
 | 7 | `DashboardTestHarness` with real coordinators (not fakes) | Coordinator-to-coordinator interactions (the decomposition actually works) |
@@ -19,7 +20,7 @@ From Phase 2 onward, every phase runs `./gradlew test` across all modules before
 | 7 | `NotificationCoordinator` re-derivation after ViewModel kill | CRITICAL banners silently lost on process death |
 | 7 | `dump-semantics` returns widget nodes with test tags after `DashboardLayer` registration | `SemanticsOwnerHolder` not wired — semantics commands return empty, all UI verification silently fails |
 | 8 | 4-criteria gate (contract tests, on-device wiring, stability soak, regression) | Architecture validation — contracts are usable, not just compilable |
-| 10 | `SettingRowDispatcher` renders all 10 row types from schema | Schema-driven rendering silently skips unsupported types — shows empty row |
+| 10 | `SettingRowDispatcher` renders all 12 `SettingDefinition` subtypes from schema | Schema-driven rendering silently skips unsupported types — shows empty row |
 | 10 | Overlay navigation round-trip: Phase 10 routes render, back returns to dashboard | Overlay routes registered but destination composables crash or never compose |
 | 11 | Overlay navigation completion: all 7 routes render, back returns to dashboard | Phase 11 routes (ThemeSelector, Diagnostics, Onboarding) + Phase 10 routes |
 | 11 | Analytics consent → event gating: opt-in fires events, opt-out stops | Analytics events fire without consent (PDPA/GDPR violation) |
@@ -39,3 +40,7 @@ These seams produce no error on failure — they degrade to empty/default state.
 - **Overlay route registration.** `OverlayNavHost` routes registered in Phases 10 and 11. If a route is registered but its destination composable throws during first composition, the overlay silently shows nothing (NavHost catches composition failures). Caught by Phase 10 and 11 integration checks: navigate to each route, verify content renders.
 - **`SettingRowDispatcher` type coverage.** If a `SettingDefinition` subtype has no matching row renderer, `SettingRowDispatcher` silently skips it — the setting is invisible. Caught by Phase 10 test that creates one of each 12 subtypes and verifies all render non-empty.
 - **Analytics consent gating.** If analytics events are wired (Phase 11) but consent check is bypassed, events fire without opt-in — PDPA/GDPR violation. Caught by Phase 11 integration check: verify `AnalyticsTracker.isEnabled()` returns false before consent, events suppressed.
+- **`DataProviderContractTest` cancellation assertion.** The contract test #4 ("respects cancellation without leaking") must verify `testScheduler.isIdle` after cancellation — not just "no exception." A vacuous assertion (always-true condition) silently certifies leaking providers. Caught by Phase 2 code review of the abstract test base.
+- **`FramePacer` API branching.** `Window.setFrameRate()` (API 34+) vs emission throttling (API 31-33). If the API check uses wrong constant or the throttling path is untested, frame pacing silently does nothing on API 31-33 devices (majority of minSdk 31 fleet). Caught by Phase 5 unit tests with mock `Window` at both API levels.
+- **`SettingRowDispatcher` type coverage (12 vs 10).** `SettingDefinition` has 12 subtypes (Phase 2) but Phase 10 settings rows table lists 10 row types. If `UriSetting` and `AppPickerSetting` don't have matching row renderers, settings from widgets using these types are silently invisible. Caught by Phase 10 parameterized test rendering all 12 subtypes.
+- **`AgenticTestClient` module assignment.** `AgenticTestClient` is referenced in Phases 8-13 but has no module assignment. If placed in the wrong module (e.g., `:app:src/androidTest/` vs dedicated `:test-e2e`), instrumented tests may fail to resolve UiDevice or Hilt test dependencies. Assign to `:app:src/androidTest/kotlin/` — colocated with `HiltAndroidRule`-based tests.
