@@ -1,7 +1,3 @@
-plugins {
-    id("dqxn.android.feature")
-}
+plugins { id("dqxn.android.feature") }
 
-android {
-    namespace = "app.dqxn.android.feature.settings"
-}
+android { namespace = "app.dqxn.android.feature.settings" }

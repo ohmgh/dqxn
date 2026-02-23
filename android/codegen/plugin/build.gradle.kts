@@ -1,3 +1,1 @@
-plugins {
-    id("dqxn.kotlin.jvm")
-}
+plugins { id("dqxn.kotlin.jvm") }

@@ -1,7 +1,3 @@
-plugins {
-    id("dqxn.android.library")
-}
+plugins { id("dqxn.android.library") }
 
-android {
-    namespace = "app.dqxn.android.benchmark"
-}
+android { namespace = "app.dqxn.android.benchmark" }

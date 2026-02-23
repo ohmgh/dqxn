@@ -1,0 +1,18 @@
+#!/bin/sh
+# Pre-commit hook: formatting + basic boundary checks
+cd "$(git rev-parse --show-toplevel)/android" || exit 0
+
+echo "Running Spotless check..."
+./gradlew spotlessCheck --console=plain --warning-mode=summary || exit 1
+
+echo "Checking for kapt usage..."
+if grep -r "kapt" --include="*.kts" */build.gradle.kts 2>/dev/null; then
+    echo "ERROR: kapt detected in build files. Use ksp instead."
+    exit 1
+fi
+
+echo "Checking for pack->dashboard boundary violation..."
+if grep -r "feature.dashboard" pack/ 2>/dev/null; then
+    echo "ERROR: Pack module imports from :feature:dashboard"
+    exit 1
+fi

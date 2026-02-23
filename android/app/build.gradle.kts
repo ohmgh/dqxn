@@ -1,37 +1,37 @@
 plugins {
-    id("dqxn.android.application")
-    id("dqxn.android.hilt")
-    id("dqxn.android.test")
+  id("dqxn.android.application")
+  id("dqxn.android.hilt")
+  id("dqxn.android.test")
 }
 
 android {
-    namespace = "app.dqxn.android"
+  namespace = "app.dqxn.android"
 
-    defaultConfig {
-        applicationId = "app.dqxn.android"
-        versionCode = 1
-        versionName = "0.1.0"
-    }
+  defaultConfig {
+    applicationId = "app.dqxn.android"
+    versionCode = 1
+    versionName = "0.1.0"
+  }
 }
 
 dependencies {
-    // Feature modules
-    implementation(project(":feature:dashboard"))
-    implementation(project(":feature:settings"))
-    implementation(project(":feature:diagnostics"))
-    implementation(project(":feature:onboarding"))
+  // Feature modules
+  implementation(project(":feature:dashboard"))
+  implementation(project(":feature:settings"))
+  implementation(project(":feature:diagnostics"))
+  implementation(project(":feature:onboarding"))
 
-    // Pack modules
-    implementation(project(":pack:essentials"))
+  // Pack modules
+  implementation(project(":pack:essentials"))
 
-    // Core modules
-    implementation(project(":core:firebase"))
+  // Core modules
+  implementation(project(":core:firebase"))
 
-    // Data layer
-    implementation(project(":data"))
+  // Data layer
+  implementation(project(":data"))
 
-    // SDK modules
-    implementation(project(":sdk:observability"))
-    implementation(project(":sdk:analytics"))
-    implementation(project(":sdk:ui"))
+  // SDK modules
+  implementation(project(":sdk:observability"))
+  implementation(project(":sdk:analytics"))
+  implementation(project(":sdk:ui"))
 }

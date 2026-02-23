@@ -4,13 +4,11 @@ import org.gradle.kotlin.dsl.configure
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 class KotlinJvmConventionPlugin : Plugin<Project> {
-    override fun apply(target: Project) {
-        with(target) {
-            pluginManager.apply("org.jetbrains.kotlin.jvm")
+  override fun apply(target: Project) {
+    with(target) {
+      pluginManager.apply("org.jetbrains.kotlin.jvm")
 
-            extensions.configure<KotlinJvmProjectExtension> {
-                jvmToolchain(25)
-            }
-        }
+      extensions.configure<KotlinJvmProjectExtension> { jvmToolchain(25) }
     }
+  }
 }

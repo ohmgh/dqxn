@@ -1,7 +1,3 @@
-plugins {
-    id("dqxn.snapshot")
-}
+plugins { id("dqxn.snapshot") }
 
-android {
-    namespace = "app.dqxn.android.pack.essentials.snapshots"
-}
+android { namespace = "app.dqxn.android.pack.essentials.snapshots" }

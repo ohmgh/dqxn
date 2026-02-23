@@ -1,7 +1,3 @@
-plugins {
-    id("dqxn.pack")
-}
+plugins { id("dqxn.pack") }
 
-android {
-    namespace = "app.dqxn.android.pack.themes"
-}
+android { namespace = "app.dqxn.android.pack.themes" }
