@@ -45,28 +45,32 @@ class AndroidTestConventionPlugin : Plugin<Project> {
 
     private fun Project.registerTagFilteredTestTasks(pluginId: String) {
         plugins.withId(pluginId) {
-            val debugTestTask = tasks.named("testDebugUnitTest")
+            // Defer task registration until afterEvaluate to ensure testDebugUnitTest exists.
+            // AGP registers test tasks during variant creation which happens after plugin apply.
+            afterEvaluate {
+                val debugTestTask = tasks.named("testDebugUnitTest")
 
-            tasks.register("fastTest", Test::class.java) {
-                description = "Run only @Tag(\"fast\") tests"
-                group = "verification"
-                classpath = debugTestTask.get().let { (it as Test).classpath }
-                testClassesDirs = debugTestTask.get().let { (it as Test).testClassesDirs }
-                useJUnitPlatform { includeTags("fast") }
-                reports.junitXml.outputLocation.set(
-                    layout.buildDirectory.dir("test-results/fastTest")
-                )
-            }
+                tasks.register("fastTest", Test::class.java) {
+                    description = "Run only @Tag(\"fast\") tests"
+                    group = "verification"
+                    classpath = (debugTestTask.get() as Test).classpath
+                    testClassesDirs = (debugTestTask.get() as Test).testClassesDirs
+                    useJUnitPlatform { includeTags("fast") }
+                    reports.junitXml.outputLocation.set(
+                        layout.buildDirectory.dir("test-results/fastTest")
+                    )
+                }
 
-            tasks.register("composeTest", Test::class.java) {
-                description = "Run only @Tag(\"compose\") tests"
-                group = "verification"
-                classpath = debugTestTask.get().let { (it as Test).classpath }
-                testClassesDirs = debugTestTask.get().let { (it as Test).testClassesDirs }
-                useJUnitPlatform { includeTags("compose") }
-                reports.junitXml.outputLocation.set(
-                    layout.buildDirectory.dir("test-results/composeTest")
-                )
+                tasks.register("composeTest", Test::class.java) {
+                    description = "Run only @Tag(\"compose\") tests"
+                    group = "verification"
+                    classpath = (debugTestTask.get() as Test).classpath
+                    testClassesDirs = (debugTestTask.get() as Test).testClassesDirs
+                    useJUnitPlatform { includeTags("compose") }
+                    reports.junitXml.outputLocation.set(
+                        layout.buildDirectory.dir("test-results/composeTest")
+                    )
+                }
             }
         }
     }
