@@ -14,7 +14,9 @@ class AndroidTestConventionPlugin : Plugin<Project> {
       val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
       dependencies {
-        add("testImplementation", platform(libs.findLibrary("junit-bom").get()))
+        val junitBom = platform(libs.findLibrary("junit-bom").get())
+        add("testImplementation", junitBom)
+        add("testRuntimeOnly", junitBom)
         add("testImplementation", libs.findLibrary("junit-jupiter-api").get())
         add("testImplementation", libs.findLibrary("junit-jupiter-params").get())
         add("testRuntimeOnly", libs.findLibrary("junit-jupiter-engine").get())

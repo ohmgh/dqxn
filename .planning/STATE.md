@@ -49,6 +49,22 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Package-based module classification** for lint boundary enforcement (app.dqxn.android.pack.* = pack module)
 - **UElementHandler from com.android.tools.lint.client.api** (not Detector inner class) for lint API 32
 
+### Phase 1 Toolchain Compatibility (Plan 04)
+
+| Area | Result | Details |
+|---|---|---|
+| Pack stub + empty KSP | PASS | `:pack:essentials:compileDebugKotlin` succeeds. Empty `:codegen:plugin` (JVM stub) works as no-op KSP processor. |
+| fastTest/composeTest tag isolation | PASS | `fastTest` runs 1 of 2 tests (only `@Tag("fast")`). `testDebugUnitTest` runs 2 of 2. Both work in same Gradle invocation. Independent `Test` task registration via `afterEvaluate` confirmed working. |
+| Compose compiler + AGP 9 | PASS | `@Composable` function compiles in `:sdk:ui` with `dqxn.android.compose` plugin. `org.jetbrains.kotlin.plugin.compose` correctly applied alongside AGP 9's built-in Kotlin. |
+| Proto DataStore + JDK 25 | FAIL | `protobuf-gradle-plugin` 0.9.6 casts to `BaseExtension` which was removed in AGP 9. Error: `Cannot cast LibraryExtensionImpl to BaseExtension`. No newer plugin version available (0.9.6 is latest). **Blocker for Phase 5**: need Wire migration, manual protoc task, or upstream fix. |
+| testFixtures + AGP 9 | PASS | `android { testFixtures { enable = true } }` works. Kotlin sources in `src/testFixtures/kotlin/` compile. `android.experimental.enableTestFixturesKotlinSupport=true` still required (prints warning). |
+| EXTOL SDK | NOT_AVAILABLE | Not in public Maven repositories. sg-erp2 pack deferred until SDK access is obtained. |
+| Clean build time (stubs) | 38s | `assembleDebug` across all 25 modules. 589 tasks, 425 executed. Well under NF35 120s target. |
+
+**Proto DataStore resolution path**: The most viable workaround for Phase 5 is registering a custom `Exec` task that invokes `protoc` directly (protoc is a native binary, not JVM-hosted, so AGP version doesn't matter). Alternatively, Square's Wire protobuf library generates Kotlin directly without the Gradle plugin. Decision deferred to Phase 5 planning.
+
+**JUnit BOM version conflict**: `mannodermaus-junit` 2.0.1 upgrades JUnit BOM from 5.11.4 to 5.14.1. The 5.14.1 BOM no longer constrains `org.junit.vintage:junit-vintage-engine`. Fixed by applying BOM to both `testImplementation` and `testRuntimeOnly` configurations, plus correcting the artifact name from `vintage-engine` to `junit-vintage-engine`.
+
 ## Performance Metrics
 
 | Phase-Plan | Duration | Tasks | Files |
@@ -66,3 +82,5 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - All 25 module stubs created with correct convention plugins, settings.gradle.kts stable
 - Spotless/ktfmt formatting enforced, pre-commit hook with boundary checks active
 - Custom lint rules: 5 detectors with 30 tests enforcing KAPT ban, secrets detection, module boundaries, Compose scope, agentic threading
+- TestKit tests: 18 tests validating convention plugin behavior (SDK versions, Compose, Hilt, Pack wiring, tag filtering, version catalog completeness)
+- Toolchain compatibility validated: Compose, testFixtures, KSP, tag filtering all pass. Proto DataStore plugin incompatible with AGP 9 (workaround identified). EXTOL SDK not available.

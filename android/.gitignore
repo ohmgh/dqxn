@@ -33,6 +33,7 @@ build/generated/ksp/
 # Test outputs
 **/test-results/
 **/reports/
+.jqwik-database
 
 # Benchmark results
 **/benchmarkData/

@@ -120,7 +120,7 @@ junit-bom = { group = "org.junit", name = "junit-bom", version = "5.11.4" }
 junit-jupiter-api = { group = "org.junit.jupiter", name = "junit-jupiter-api" }
 junit-jupiter-engine = { group = "org.junit.jupiter", name = "junit-jupiter-engine" }
 junit-jupiter-params = { group = "org.junit.jupiter", name = "junit-jupiter-params" }
-junit-vintage-engine = { group = "org.junit.vintage", name = "vintage-engine" }
+junit-vintage-engine = { group = "org.junit.vintage", name = "junit-vintage-engine" }
 
 # Testing
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
