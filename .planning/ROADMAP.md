@@ -145,9 +145,9 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 ## Phase 7: Dashboard Shell
 
-**Goal:** Decompose the god-ViewModel into coordinators. Structural transformation, not porting. Highest-risk phase. Overlay composables deferred to Phase 10a — agentic commands provide mutation paths for validation.
+**Goal:** Decompose the god-ViewModel into coordinators. Structural transformation, not porting. Highest-risk phase. Overlay composables deferred to Phase 10 — agentic commands provide mutation paths for validation.
 
-**Requirements:** F1.2-F1.17, F1.20-F1.21, F1.23, F1.26-F1.30, F2.3-F2.14, F2.16, F2.18-F2.20, F3.7, F3.9-F3.11, F3.14, F3.15, F9.1-F9.4, F10.4 (touch targets — 76dp in dashboard context), F10.9, NF1-NF8, NF15-NF19, NF38, NF41, NF42
+**Requirements:** F1.2-F1.17, F1.20-F1.21, F1.23, F1.26-F1.30, F2.3-F2.14, F2.16, F2.18-F2.20, F3.7, F3.9-F3.11, F3.14, F3.15, F9.1-F9.4, F10.4 (touch targets — 76dp in dashboard context), F10.9, NF1-NF8, NF15-NF19, NF38, NF39 (reduced motion), NF41, NF42, NF45 (config-aware presets), NF46 (foldable viewport), NF-L1 (lifecycle pause/resume)
 
 **Success Criteria:**
 1. Six coordinators (Layout, EditMode, Theme, WidgetBinding, Notification, Profile) unit tests pass
@@ -159,6 +159,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 7. `NotificationCoordinator` re-derives banners from singleton state after ViewModel kill
 8. `ProfileCoordinator` handles profile create/switch/clone/delete with per-profile canvas independence
 9. Content-aware resize preview: `LocalWidgetPreviewUnits` feeds target dimensions during resize gesture
+10. Reduced motion: `animator_duration_scale == 0` disables wiggle, replaces spring with instant transitions
 
 **Depends on:** Phases 5, 6
 
@@ -170,7 +171,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Goal:** First pack migration. Proves entire SDK-to-Pack contract works end-to-end. Cross-boundary snapshot types live in `:pack:essentials:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1). Includes 4 greenfield providers (GpsSpeed, Battery, Accelerometer, SpeedLimit).
 
-**Requirements:** F5.1-F5.11, NF14 (sensor batching for greenfield providers)
+**Requirements:** F5.1-F5.11, NF14 (sensor batching for greenfield providers), NF40 (color-blind safety — speed limit widget uses color + pattern + icon), NF-I2 (locale-aware formatting in renderers)
 
 **Success Criteria (all four required before Phase 9):**
 1. **Contract tests green:** 13 widgets pass `WidgetRendererContractTest`, 9 typed data providers pass `DataProviderContractTest` (`CallActionProvider` excluded — implements `ActionableProvider`)
@@ -181,7 +182,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Depends on:** Phase 7
 
-**Details:** [MIGRATION.md — Phase 8](MIGRATION.md#phase-8-free-pack-architecture-validation-gate)
+**Details:** [MIGRATION.md — Phase 8](MIGRATION.md#phase-8-essentials-pack-architecture-validation-gate)
 
 ---
 
@@ -198,50 +199,93 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 4. Deterministic chaos: same seed → same fault sequence → same diagnostics
 5. Connection state machine exhaustive transition tests pass (`:pack:sg-erp2` if EXTOL compatible)
 
-**Depends on:** Phase 8
+**Depends on:** Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing)
 
 **Details:** [MIGRATION.md — Phase 9](MIGRATION.md#phase-9-themes-demo--chaos)
 
 ---
 
-## Phase 10a: Feature Modules + Overlay UI
+## Phase 10: Settings Foundation + Setup UI
 
-**Goal:** All overlay composables deferred from Phase 7 + feature modules (settings, diagnostics, onboarding). UI work building on coordinator APIs validated by Phase 8.
+**Goal:** Schema-driven settings row system, widget/global settings, setup wizard UI, and widget picker. Foundation layer that all other overlay UI depends on. Deliberately sequenced before Phase 9 to unblock sg-erp2's BLE device pairing UI.
 
-**Requirements:** F3.13 (provider health dashboard), F4.6-F4.10, F4.12-F4.13, F7.6, F7.7, F8.1-F8.3, F8.5, F8.7-F8.9, F11.1, F11.2, F11.5-F11.7, F12.2-F12.7, F13.3 (session recording), F14.2, F14.4, NF-D1-NF-D3, NF24-NF26, NF27-NF29, NF9, NF10
+**Requirements:** F2.7 (widget picker), F2.8-F2.9 (widget settings), F3.3-F3.5 (setup wizard), F3.14 (setup failure UX), F7.7 (preset system — settings UI), F8.7 (widget picker entitlement gating), F8.9 (refund overlay in picker), F10.4 (76dp touch targets in overlay context = 48dp), F12.5 (analytics consent toggle in settings), F14.2 (diagnostics nav in settings), F14.4 (delete all data)
 
 **Success Criteria:**
-1. `OverlayNavHost` route table populated — navigate to each overlay, verify content renders, back navigation returns to dashboard
-2. `SettingRowDispatcher` renders all 10 row types from `SettingDefinition` schema
-3. `SetupSheet` navigation: multi-step setup with back, permission delegation, completion callback
-4. Provider Health dashboard renders provider list with staleness indicators (F3.13)
-5. Onboarding first-run flow: theme selection → permission requests → edit mode tour
-6. `InlineColorPicker` color conversion tests pass (`colorToHsl`/`colorToHex`/`parseHexToColor`)
+1. `SettingRowDispatcher` renders all 10 row types from `SettingDefinition` schema, value changes propagate to `ProviderSettingsStore`
+2. `SetupSheet` navigation: multi-step setup with back, permission delegation, `DeviceScanStateMachine` unit tests pass
+3. `WidgetSettingsSheet` 3-tab navigation with schema rendering
+4. `MainSettings` renders all 4 sections, `DeleteAllData` clears all DataStore instances
+5. `WidgetPicker` displays grouped widgets with entitlement badges
+6. Overlay navigation: Phase 10 routes (WidgetPicker, Settings, WidgetSettings, Setup) render and navigate back correctly
 
-**Depends on:** Phases 7, 8
+**Depends on:** Phase 8
 
-**Details:** [MIGRATION.md — Phase 10a](MIGRATION.md#phase-10a-feature-modules--overlay-ui)
+**Details:** [MIGRATION.md — Phase 10](MIGRATION.md#phase-10-settings-foundation--setup-ui)
 
 ---
 
-## Phase 10b: E2E Integration, CI Gates + Polish
+## Phase 11: Theme UI + Diagnostics + Onboarding
 
-**Goal:** Full system integration testing, CI gate enforcement, performance validation, and launch polish.
+**Goal:** Three independent feature clusters built on Phase 10's settings row system: theme editing/selection UI, diagnostics module (`:feature:diagnostics`), and onboarding flow (`:feature:onboarding`). Completes all `OverlayNavHost` routes.
 
-**Requirements:** F13.10, NF-P1-NF-P5, NF30, NF32, NF33, NF34, NF39, NF40, NF45, NF46, NF-L1-NF-L3, NF-I1, NF-I2, NF11 (battery drain validation target), NF37 (background battery validation target)
+**Requirements:** F3.13 (provider health dashboard), F4.6-F4.10, F4.12-F4.13, F7.6 (connection event log in diagnostics), F11.1, F11.2, F11.5-F11.7, F12.2-F12.7 (analytics event call sites), F13.3 (session recording), NF-D1 (speed disclaimer on widget info — already in Phase 10 `WidgetInfoContent`), NF-D3 (first-launch disclaimer in onboarding)
 
 **Success Criteria:**
-1. Full E2E: launch → load → bind → render → edit → add/remove/resize → theme switch with semantics verification at each step
+1. All 7 `OverlayNavHost` routes populated — navigate to each, verify content renders, back navigation correct
+2. `InlineColorPicker` color conversion tests pass (`colorToHsl`/`colorToHex`/`parseHexToColor`)
+3. `ThemeSelector`: free-first ordering, preview timeout (60s → revert), entitlement lock icons
+4. Provider Health dashboard renders provider list with staleness indicators (F3.13)
+5. Onboarding first-run flow: analytics consent → disclaimer → theme selection → edit mode tour
+6. Analytics event call sites: events fire after opt-in, suppressed before consent
+
+**Depends on:** Phase 10
+
+**Concurrent with:** Phase 9 (theme UI doesn't need `:pack:themes` to exist — works with free themes only)
+
+**Details:** [MIGRATION.md — Phase 11](MIGRATION.md#phase-11-theme-ui--diagnostics--onboarding)
+
+---
+
+## Phase 12: CI Gates + Benchmarking
+
+**Goal:** Performance measurement infrastructure, Compose stability enforcement, CI gate configuration. Starts immediately after Phase 8 — no dependency on overlay UI or additional packs.
+
+**Requirements:** NF9 (baseline profiles), NF10 (macrobenchmarks), NF34 (APK size), NF35 (build times — validation)
+
+**Success Criteria:**
+1. Baseline Profiles generated and included in release build
+2. `:benchmark` module: P50/P95/P99 frame times measured with 12 widgets
+3. All 9 CI gates configured and enforced
+4. Compose stability: 0 unstable classes in app-owned modules
+5. APK size: base < 30MB verified
+
+**Depends on:** Phase 8
+
+**Concurrent with:** Phases 9, 10, 11
+
+**Details:** [MIGRATION.md — Phase 12](MIGRATION.md#phase-12-ci-gates--benchmarking)
+
+---
+
+## Phase 13: E2E Integration + Launch Polish
+
+**Goal:** Full system integration testing, chaos CI gate, performance soak, accessibility audit, privacy features, and app lifecycle features. The convergence point — everything works together.
+
+**Requirements:** NF11 (battery drain), NF37 (background battery), NF30 (WCAG contrast), NF32 (TalkBack), NF33 (font scale), NF-I1 (string resource audit), NF-L2 (in-app updates), NF-L3 (in-app review), NF-P3 (PDPA verification), NF-P5 (Export My Data)
+
+**Success Criteria:**
+1. Full E2E: launch → load → bind → render → edit → add/remove/resize → theme switch → settings with semantics verification at each step
 2. CI chaos gate: deterministic seed=42 → `assertChaosCorrelation()` passes
-3. All 9 CI gates enforced (P50 <8ms, P95 <12ms, P99 <16ms, jank <2%, startup <1.5s, 0 unstable classes in app-owned modules, <=5 non-skippable in `:feature:dashboard`, >90% coordinator coverage, release smoke)
-4. Multi-pack validation: essentials + themes + demo loaded simultaneously without conflicts
-5. Battery drain < 5% /hour screen-on (NF11 — threshold TBD via baseline), near-zero background drain (NF37)
-6. Baseline Profiles generated and included in release build
-7. Export My Data (NF-P5): JSON export of all local DataStore data
+3. Multi-pack validation: essentials + themes + demo loaded simultaneously without conflicts
+4. Battery drain < 5%/hour screen-on (NF11), near-zero background drain (NF37)
+5. Export My Data (NF-P5): JSON export round-trip verified
+6. WCAG AA contrast audit passes for all 24 themes
+7. In-app update and review API integration tested with mock managers
 
-**Depends on:** Phases 9, 10a
+**Depends on:** Phases 9, 11, 12
 
-**Details:** [MIGRATION.md — Phase 10b](MIGRATION.md#phase-10b-e2e-integration-ci-gates--polish)
+**Details:** [MIGRATION.md — Phase 13](MIGRATION.md#phase-13-e2e-integration--launch-polish)
 
 ---
 
@@ -259,11 +303,13 @@ graph TD
     P5 --> P7[Phase 7: Dashboard Shell]
     P6 --> P7
     P7 --> P8[Phase 8: Essentials Pack]
-    P8 --> P9[Phase 9: Themes, Demo + Chaos]
-    P7 --> P10a[Phase 10a: Feature Modules]
-    P8 --> P10a
-    P9 --> P10b[Phase 10b: E2E, CI Gates + Polish]
-    P10a --> P10b
+    P8 --> P10[Phase 10: Settings Foundation]
+    P8 --> P12[Phase 12: CI Gates + Benchmarks]
+    P10 --> P9[Phase 9: Themes, Demo + Chaos]
+    P10 --> P11[Phase 11: Theme UI + Diagnostics + Onboarding]
+    P9 --> P13[Phase 13: E2E + Launch Polish]
+    P11 --> P13
+    P12 --> P13
 ```
 
-Phases 3+4 run concurrently after Phase 2. Phase 6 gates all on-device work. Phase 8 is the architecture validation gate. Phase 10a (feature modules) starts after Phase 8 — settings/diagnostics/onboarding have no dependency on Phase 9's theme/demo/chaos work. Phase 10b (E2E integration, CI gates, polish) needs both Phase 9 (chaos correlation) and Phase 10a (all feature modules functional).
+Phases 3+4 concurrent after Phase 2. Phase 6 gates on-device work. Phase 8 is the architecture validation gate and spawns three parallel streams: Phase 10 (settings/setup — unblocks sg-erp2), Phase 12 (CI/benchmarks — no UI dependency), and indirectly Phase 9 (runs after Phase 10's SetupSheet). Phase 11 (theme UI, diagnostics, onboarding) follows Phase 10 and runs concurrent with Phase 9. Phase 13 is the convergence point.

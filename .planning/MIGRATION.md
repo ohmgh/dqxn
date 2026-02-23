@@ -50,13 +50,16 @@ graph TD
     P6 --> P7
     P7 --> P8[Phase 8: Essentials Pack]
     P8 --> P9[Phase 9: Themes, Demo + Chaos]
-    P7 --> P10a[Phase 10a: Feature Modules]
-    P8 --> P10a
-    P9 --> P10b[Phase 10b: E2E, CI Gates + Polish]
-    P10a --> P10b
+    P8 --> P10[Phase 10: Settings Foundation + Setup UI]
+    P8 --> P12[Phase 12: CI Gates + Benchmarking]
+    P10 --> P9
+    P10 --> P11[Phase 11: Theme UI + Diagnostics + Onboarding]
+    P9 --> P13[Phase 13: E2E Integration + Launch Polish]
+    P11 --> P13
+    P12 --> P13
 ```
 
-Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + agentic) gates all subsequent on-device work. Phase 7 (dashboard) is the highest-risk phase and benefits from full agentic debug infrastructure. Phase 8 is the architecture validation gate. Phase 10a (feature modules) starts after Phase 8 — settings/diagnostics/onboarding have no dependency on Phase 9's theme/demo/chaos work. Phase 10b (E2E integration, CI gates, polish) needs Phase 9 for chaos correlation tests and multi-pack validation. Phase 7 defers overlay composables (widget picker, theme selector, settings, setup UI) to Phase 10a — agentic commands provide mutation paths for Phase 7/8 validation without UI overlays.
+Phases 3+4 concurrent after Phase 2. Phase 6 gates on-device work. Phase 8 is the architecture validation gate. After Phase 8, three streams run concurrently: Phase 10 (settings/setup — unblocks Phase 9's sg-erp2 dependency), Phase 9 (themes/demo/chaos — runs after Phase 10 delivers SetupSheet), and Phase 12 (CI/benchmarks — no overlay dependency). Phase 11 (theme UI, diagnostics, onboarding) follows Phase 10's settings row system. Phase 13 (E2E + polish) is the convergence point requiring all prior phases.
 
 ---
 
@@ -595,7 +598,7 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
 - `WidgetContainer` skeleton (migrate from `core:widget-primitives` — responsive sizing, border overlay, rim padding). Glow rendering (`RenderEffect.createBlurEffect()` rewrite) added in Phase 7
 - Icon name resolution utility — maps `iconName: String` (from Phase 2 `SetupDefinition`) to `ImageVector`. Material icon lookup
 - `GRID_UNIT_SIZE = 16.dp` constant
-- **Deferred from Phase 3 to first consumer:** `InfoCardLayout` (Phase 8, when first widget needs it), setup overlay composables (`SetupRequiredOverlay`, `DisconnectedOverlay` — Phase 10a), `PermissionRequestPage` (Phase 10a)
+- **Deferred from Phase 3 to first consumer:** `InfoCardLayout` (Phase 8, when first widget needs it), setup overlay composables (`SetupRequiredOverlay`, `DisconnectedOverlay` — Phase 10), `PermissionRequestPage` (Phase 10)
 
 **Ported from old:** `core:common/observability/*` (Logger, Metrics, CrashEvidence, AnrWatchdog — adapt to new module boundaries and add missing capabilities: JankDetector, rotation pools, storage pressure, trace IDs). `core:widget-primitives/*` → `sdk:ui`. Analytics is entirely new.
 
@@ -719,7 +722,7 @@ Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `co
   - Empty `Set<DashboardPackManifest>`
   - `AlertSoundManager : AlertEmitter` — `@Singleton` with `SoundPool`, `AudioManager`, `Vibrator`. Phase 2 defines the `AlertEmitter` interface; Phase 6 provides the implementation. Required by `NotificationCoordinator` in Phase 7
   - `CrashRecovery` — `@Singleton`, synchronous `SharedPreferences` read in `Application.onCreate()` before DataStore. Tracks crash timestamps for safe mode trigger (>3 crashes in 60s). Phase 7 wires safe mode response into coordinators/UI
-  - `StubEntitlementManager : EntitlementManager` — returns `free` only. Phase 10a replaces with Play Billing implementation
+  - `StubEntitlementManager : EntitlementManager` — returns `free` only. Phase 10 replaces with Play Billing implementation
 - Blank dashboard canvas (placeholder composable — real dashboard lands in Phase 7)
 - AndroidManifest: `resizeableActivity="false"` (F1.23), `android:permission="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"` (NF23)
 - ProGuard/R8 rules — `:app` aggregates `consumer-proguard-rules.pro` from `:data` (proto classes), `:codegen:plugin` (KSP-generated manifests), `:sdk:contracts` (serializable classes). Phase 6 validates via `assembleRelease` + install
@@ -859,7 +862,7 @@ From this point forward, the agent can autonomously debug on a connected device:
 
 **Mutation handlers wired:** All mutation handlers listed in Phase 6 table become functional as coordinators land. Agent can now `add-widget`, `set-theme`, `inject-fault` etc. on device.
 
-**Deferred to Phase 10a (overlay composables):** WidgetPicker, ThemeSelector, MainSettings, SetupSheet, SettingRowDispatcher (10+ row types), InlineColorPicker, GradientTypeSelector, GradientStopRow, AutoSwitchModeContent, IlluminanceThresholdControl. Phase 7 delivers the structural shell — coordinators, grid, binding, canvas. Overlays build on the shell in Phase 10a using the coordinator APIs established here. OverlayNavHost is scaffolded (empty route table) in Phase 7; routes populated in Phase 10a.
+**Deferred to Phase 10 (overlay composables):** WidgetPicker, ThemeSelector, MainSettings, SetupSheet, SettingRowDispatcher (10+ row types), InlineColorPicker, GradientTypeSelector, GradientStopRow, AutoSwitchModeContent, IlluminanceThresholdControl. Phase 7 delivers the structural shell — coordinators, grid, binding, canvas. Overlays build on the shell in Phase 10 using the coordinator APIs established here. OverlayNavHost is scaffolded (empty route table) in Phase 7; routes populated in Phase 10.
 
 **`DashboardViewModel`** — thin coordinator host, not a god-object:
 - Owns `Channel<DashboardCommand>` + consumption loop routing to coordinators
@@ -887,8 +890,8 @@ From this point forward, the agent can autonomously debug on a connected device:
 | `DashboardHaptics` — 6 semantic methods with API 30+ branching (`editModeEnter`, `editModeExit`, `dragStart`, `snapToGrid`, `boundaryHit`, `resizeStart`) | `:feature:dashboard` | Port; `REJECT`/`CONFIRM` constants API 30+ with fallbacks |
 | `GridPlacementEngine` — auto-placement algorithm for new widgets | `:feature:dashboard` (inside or alongside `LayoutCoordinator`) | Port; has existing `GridPlacementEngineTest` — port tests too |
 | `WidgetContainer` — glow rendering with `drawWithCache`, responsive sizing (3 tiers), border overlay, rim padding | `:sdk:ui` as `WidgetContainer` | Redesign required — old uses `BlurMaskFilter` (forbidden); new uses `RenderEffect.createBlurEffect()` API 31+. Phase 3 builds the skeleton; Phase 7 adds glow rendering with `RenderEffect` rewrite. Responsive sizing logic worth porting |
-| `ConfirmationDialog` — reusable modal with scrim + animation | `:core:design` | Port verbatim — reused by overlays in Phase 10a |
-| `OverlayScaffold` — scaffold wrapping overlay content with title bar | `:feature:dashboard` | Port + adapt. Scaffolded empty in Phase 7; overlay routes populated in Phase 10a |
+| `ConfirmationDialog` — reusable modal with scrim + animation | `:core:design` | Port verbatim — reused by overlays in Phase 10 |
+| `OverlayScaffold` — scaffold wrapping overlay content with title bar | `:feature:dashboard` | Port + adapt. Scaffolded empty in Phase 7; overlay routes populated in Phase 10 |
 | `UnknownWidgetPlaceholder` — fallback UI for deregistered/missing widget types | `:sdk:ui` | Port; required by F2.13 (Must). Must be in `:sdk:ui` so packs could theoretically reference it |
 | `DashboardCustomLayout` — `Layout` composable with `layoutId`-based matching, grid-unit coordinate system | `:feature:dashboard` | Port + adapt for new coordinator-owned state |
 | `BlankSpaceGestureHandler` — tap-on-blank to enter edit mode + long-press gesture detection | `:feature:dashboard` | Port; wires to `EditModeCoordinator.enterEditMode()`. Distinct from widget gesture handling |
@@ -897,13 +900,13 @@ From this point forward, the agent can autonomously debug on a connected device:
 | `LocalWidgetPreviewUnits` — CompositionLocal providing target dimensions during resize gesture | `:sdk:ui` | Port; 8 widgets read this for resize-aware relayout (see resize preview decision above) |
 | `ProfilePageTransition` — horizontal swipe between profile canvases with shared-element-like dot indicator | `:feature:dashboard` | New — no direct old equivalent (old had tabs). Implement as `HorizontalPager` + `ProfileCoordinator.switchProfile()`. Bottom bar profile dots act as both indicator and tap target |
 
-**Port inventory (deferred to Phase 10a — overlay composables):**
+**Port inventory (deferred to Phase 10 — overlay composables):**
 
 | Old artifact | Target | Notes |
 |---|---|---|
 | `InlineColorPicker` — HSL sliders + hex editor (412 lines, `WindowInsets.ime` keyboard handling) | `:feature:settings` | Port; non-trivial — do not rebuild from scratch or pull in third-party lib. Extract `colorToHsl`/`colorToHex`/`parseHexToColor` to a testable utility |
 | `GradientTypeSelector` + `GradientStopRow` + `ThemeSwatchRow` (5-slot swatch selector with `parseHexColor`/`gradientSpecToBrush` utils) | `:feature:settings` | Port + adapt |
-| `SetupSheetContent` + setup UI system — `SetupDefinitionRenderer`, `SetupNavigationBar`, `SetupPermissionCard`, `SetupToggleCard`, `DeviceScanCard`, `PairedDeviceCard`, `DeviceLimitCounter`, `InstructionCard` | `:feature:settings` | Port; required by F3.3/F3.4/F3.5/F3.14 (all Must). sg-erp2 pack (Phase 9) depends on this UI for BLE device pairing — Phase 9 must follow Phase 10a or pairing UI must be stubbed |
+| `SetupSheetContent` + setup UI system — `SetupDefinitionRenderer`, `SetupNavigationBar`, `SetupPermissionCard`, `SetupToggleCard`, `DeviceScanCard`, `PairedDeviceCard`, `DeviceLimitCounter`, `InstructionCard` | `:feature:settings` | Port; required by F3.3/F3.4/F3.5/F3.14 (all Must). sg-erp2 pack (Phase 9) depends on this UI for BLE device pairing — Phase 9 must follow Phase 10 or pairing UI must be stubbed |
 | `AutoSwitchModeContent` + `IlluminanceThresholdControl` — theme auto-switch mode selector + logarithmic Canvas-drawn lux meter (~280 lines) with drag-to-set | `:feature:settings` | Port; non-trivial custom Canvas drawing in lux meter — do not rebuild from scratch. Domain logic (`ThemeAutoSwitchEngine`) covered in Phase 5 |
 | `SettingRowDispatcher` + 10 row types (`Boolean`, `Enum`, `Int`, `Float`, `String`, `Info`, `Instruction`, `AppPicker`, `DateFormat`, `Timezone`, `Sound`) + `SettingComponents.kt` building blocks | `:feature:settings` | Port; `FeatureSettingsContent` renders full settings schema with collapsible groups |
 
@@ -922,7 +925,7 @@ From this point forward, the agent can autonomously debug on a connected device:
 - `BlankSpaceGestureHandler`: tap-on-blank → edit mode, long-press → edit mode, tap-on-widget in non-edit → no action
 - On-device validation: deploy, `dump-layout` confirms grid state, `dump-health` confirms widget liveness, `get-metrics` confirms frame timing, `query-semantics {"testTagPattern":"widget_.*"}` confirms all widgets rendered with correct test tags and non-zero bounds
 
-**Structural delivery vs functional validation:** Requirements that span coordinators + overlays (e.g., F1.2 widget creation = coordinator binding + widget picker overlay) are structurally delivered in Phase 7 (coordinator logic) and functionally validated end-to-end in Phase 10a (when overlays exist). Phase 7 tests validate coordinator behavior via `DashboardTestHarness` and agentic commands, not through overlay UI.
+**Structural delivery vs functional validation:** Requirements that span coordinators + overlays (e.g., F1.2 widget creation = coordinator binding + widget picker overlay) are structurally delivered in Phase 7 (coordinator logic) and functionally validated end-to-end in Phase 10 (when overlays exist). Phase 7 tests validate coordinator behavior via `DashboardTestHarness` and agentic commands, not through overlay UI.
 
 ---
 
@@ -1041,7 +1044,7 @@ If contracts feel wrong, fix them in Phase 2 before proceeding.
 - 8 providers → typed snapshots in `:pack:sg-erp2:snapshots` (cross-boundary: `ErpBalanceSnapshot`, `ErpTransactionSnapshot`, etc.)
 - 4 widgets → new contracts
 - `CompanionDeviceHandler` — CDM association for BLE OBU pairing
-- **SetupSheet dependency:** BLE device pairing UI (`DeviceScanCard`, `PairedDeviceCard`, etc.) lives in Phase 10a's overlay port. If Phase 9 runs before Phase 10a completes, stub the setup UI or run Phase 10a first for the SetupSheet port. The `SetupDefinition` schema (Phase 2) and `SetupEvaluator` (Phase 2) work without the UI — only the visual overlay is Phase 10a
+- **SetupSheet dependency resolved:** BLE device pairing UI (`DeviceScanCard`, `PairedDeviceCard`, etc.) is delivered in Phase 10 (Settings Foundation + Setup UI). Phase 10 is now a predecessor of Phase 9 — no stub needed. The `SetupDefinition` schema (Phase 2) and `SetupEvaluator` (Phase 2) provide the contracts; Phase 10 provides the visual overlay
 
 ### Chaos infrastructure
 
@@ -1063,79 +1066,222 @@ If contracts feel wrong, fix them in Phase 2 before proceeding.
 
 ---
 
-## Phase 10a: Feature Modules + Overlay UI
+## Phase 10: Settings Foundation + Setup UI
 
-**What:** All overlay composables deferred from Phase 7 + feature modules (settings, diagnostics, onboarding). This is UI work that builds on the coordinator APIs established in Phase 7 and validated by Phase 8.
+**What:** Schema-driven settings row system, widget/global settings screens, setup wizard UI, and widget picker. This is the foundation layer that all other overlay UI depends on. Deliberately sequenced before Phase 9 to unblock sg-erp2's BLE device pairing UI.
 
-**Depends on:** Phase 7 (coordinator APIs), Phase 8 (architecture validation gate — confirms coordinator APIs are correct before building full UI on them)
+**Depends on:** Phase 8 (architecture validation gate — coordinator APIs confirmed correct before building UI on them)
 
-### `:feature:settings`
+**Composable count:** ~35. **Port volume:** ~3,500 lines from old codebase + ~500 lines new.
 
-**Overlay composables ported from Phase 7 deferral:**
-- `WidgetPicker` — grid of available widgets with previews, `WidgetPreviewData` from pack
-- `ThemeSelector` — free themes first, then custom, then premium (gated). Theme preview + apply/revert
-- `MainSettings` — appearance, behavior, data & privacy, danger zone sections
-- `SetupSheet` + setup UI system — `SetupDefinitionRenderer`, `SetupNavigationBar`, `SetupPermissionCard`, `SetupToggleCard`, `DeviceScanCard`, `PairedDeviceCard`, `DeviceLimitCounter`, `InstructionCard`. Required for F3.3/F3.4/F3.5/F3.14 (all Must)
-- `SettingRowDispatcher` — 10 row types: `Boolean`, `Enum`, `Int`, `Float`, `String`, `Info`, `Instruction`, `AppPicker`, `DateFormat`, `Timezone`, `Sound`. Plus building blocks: `SelectionChip`, `PreviewSelectionCard`, `SelectionBox`, `CornerRadiusPreview`
-- `InlineColorPicker` — HSL sliders + hex editor (412 lines, `WindowInsets.ime` keyboard handling). Extract `colorToHsl`/`colorToHex`/`parseHexToColor` to testable utility
-- `GradientTypeSelector` + `GradientStopRow` + `ThemeSwatchRow`
-- `AutoSwitchModeContent` + `IlluminanceThresholdControl` — logarithmic Canvas-drawn lux meter (~280 lines) with drag-to-set
-- Full sub-overlays: Timezone picker, DateFormat picker, AppPicker, Sound picker
+### Settings row system
 
-**Schema-driven settings architecture:**
-- Per-pack settings rendered via `SettingDefinition` schemas from Phase 2
-- Per-widget settings sheet: `WidgetSettingsSheet(widgetId)` → `SettingRowDispatcher` renders schema from `WidgetRenderer.settingsSchema`
-- Global settings: appearance (theme, corner radius, glow), behavior (auto-switch, tap actions), data & privacy (location, analytics opt-out), danger zone (reset layout, clear data)
-- Settings persistence: `ProviderSettingsStore` (per-provider, `{packId}:{providerId}:{key}`), `UserPreferencesRepository` (global)
+**`SettingRowDispatcher`** — dispatch hub routing `SettingDefinition` subtypes to row composables. Old code: 158 lines, 12-branch `when` with `AnimatedVisibility`, `visibleWhen` evaluation, entitlement gating. Each row type:
 
-**Touch target enforcement (F10.4):** All interactive elements ≥ 76dp in dashboard context (gloved/in-motion use). Standard 48dp for overlay/settings context. Enforced via custom lint check or Compose modifier helper
+| Row type | Old lines | Complexity | Notes |
+|---|---|---|---|
+| `BooleanSettingRow` | 57 | Low | Stateless toggle |
+| `EnumSettingRow` | 198 | Medium | 3-way render: dropdown (>10 options), preview cards, chips (≤10). Chunked layout (rows of 5) |
+| `IntSettingRow` | 71 | Low | Dynamic presets via `getEffectivePresets(currentSettings)` |
+| `FloatSettingRow` | 52 | Low | Discrete selection (no sliders — conflicts with pager swipe) |
+| `StringSettingRow` | 175 | Medium | `textFieldValue` + `isEditing` + keyboard auto-defocus (ADR-003), `maxLength` filter |
+| `InfoSettingRow` | 84 | Low | 4-style color mapping (INFO/WARNING/SUCCESS/ERROR) |
+| `InstructionSettingRow` | 127 | Low | Step number badge, action button, direct intent launch |
+| `AppPickerSettingRow` | 81 | Low | Package name → app name resolution, navigation to app picker |
+| `DateFormatSettingRow` | 79 | Low | Live date preview, navigation to format picker |
+| `TimezoneSettingRow` | 110 | Low | City + GMT offset display, navigation to timezone picker |
+| `SoundPickerSettingRow` | 117 | Medium | `ActivityResultLauncher` for system ringtone picker, URI-to-name resolution |
 
-### `:feature:diagnostics`
+Building blocks: `SettingComponents.kt` (189 lines) — `SettingLabel`, `SelectionChip`, `PreviewSelectionCard` + `formatGmtOffset`, `executeInstructionAction`.
 
-- **Provider Health dashboard (F3.13):** list all registered providers with connection state, last emission time, error count, staleness indicator. `DataProviderRegistry.registeredProviders()` + `WidgetBindingCoordinator.providerStatuses()`. Tap provider → detail view with connection log, retry button
-- **Diagnostic snapshot viewer:** browse snapshots from `DiagnosticSnapshotCapture`, sorted by timestamp, filterable by type (crash, ANR, anomaly, chaos)
-- **Session recording capture (F13.3):** tap, move, resize, navigation events logged with timestamps. Replay viewer shows timeline with event markers. Recording toggle in diagnostics — not always-on (storage/perf concerns)
-- **Observability data display:** metrics dashboard (frame times, recomposition counts, memory), log viewer with level filtering
+Additional building blocks: `SelectionBox`, `CornerRadiusPreview` (extracted from `StyleSettingsContent`).
 
-### `:feature:onboarding`
+### Sub-overlay pickers
 
-- **First-run flow:** theme selection (free themes only), permission requests (location for GPS speed, if essentials pack installed), quick tour of edit mode (tap-and-hold explainer)
-- **Progressive tips:** contextual hints on first encounter (first edit mode entry, first widget add, first theme change). Backed by `UserPreferencesRepository` flags — shown once per tip
-- **Permission rationale:** explain why each permission is needed before requesting. Location → GPS speed. Bluetooth → ERP device pairing (if sg-erp2 installed)
+Full-screen sub-overlays consumed by setting row types:
+- `TimezonePicker` — timezone search/filter with city + GMT offset (from old `FeatureSettingsContent.kt` timezone section, ~100 lines)
+- `DateFormatPicker` — live preview of date formats (from old `FeatureSettingsContent.kt` date format section, ~80 lines)
+- `AppPicker` — launcher app grid with search, suggested-first sorting (old `AppPickerContent.kt`, 270 lines)
+- `SoundPicker` — system ringtone picker integration via `ActivityResultContracts`
 
-### `OverlayNavHost` route table
+### Widget settings sheet
 
-Populated in this phase — scaffolded empty in Phase 7:
+**`WidgetSettingsSheet`** — 3-tab pager (Feature / Data Source / Info). Old `WidgetSettingsPager.kt` (157 lines) + `SettingsSheetDispatcher` (270 lines — orchestrates schema merging, feature + style settings persistence) + `FeatureSettingsContent` (376 lines) + `StyleSettingsContent` (282 lines) + `DataProviderSettingsContent` (256 lines) + `WidgetInfoContent` (353 lines with shared element transitions, 5 issue types with resolution actions).
+
+Key risk: `SettingsSheetDispatcher` in old code threads state through `DashboardViewModel` (god-object). New architecture routes through `WidgetBindingCoordinator.updateSettings()` — decompose the dispatcher into a state holder per widget.
+
+**NF-D1 (speed disclaimer):** `WidgetInfoContent` for speed/speed-limit widgets includes disclaimer text: "Speed and speed limit data are approximate. Always refer to your vehicle speedometer and posted signs." Sourced from Android string resources.
+
+### Main settings
+
+**`MainSettings`** — 4 sections: Appearance, Behavior, Data & Privacy, Danger Zone. Old `MainSettingsContent.kt` (390 lines). Mostly navigation dispatch with a status bar toggle.
+
+**`DeleteAllData` (F14.4):** Clear ALL DataStores, revoke Firebase analytics ID, reset to factory state. Confirmation dialog with destructive styling. Implementation: iterate `DataStoreRegistry` (all registered DataStore instances), call `updateData { defaultValue }` on each, then `FirebaseAnalytics.resetAnalyticsData()`.
+
+**Analytics toggle (F12.5):** Settings → Data & Privacy includes analytics consent toggle. Default OFF (opt-in per PDPA/GDPR). State persisted in `UserPreferencesRepository`. Toggling ON shows consent dialog explaining data collected, purpose, and right to revoke. Toggling OFF immediately stops analytics collection via `AnalyticsTracker.setEnabled(false)`. No analytics events fire before opt-in.
+
+### Widget picker
+
+**`WidgetPicker`** — staggered grid grouped by pack, live previews via `WidgetPreviewData` (scaled composables fed by single-shot data providers). Old `WidgetPickerContent.kt` (300 lines) + `WidgetPreviewData.kt` (56 lines). Shows entitlement badges, one-line descriptions from `WidgetSpec.description`, required data type icons (GPS/BLE/none).
+
+**Entitlement gating in picker (F8.7):** Preview-regardless-of-entitlement, gate-at-persistence. Gated widgets show lock icon + "Coming soon" for purchase. `StubEntitlementManager` from Phase 6 treats all as free.
+
+### Setup wizard UI
+
+**`SetupSheet`** + setup card system. Old `SetupSheetContent.kt` (354 lines) — multi-page paginated flow, `persistedSettings` (produceState from DataStore), verification results (`mutableStateMapOf`), ON_RESUME re-verification.
+
+Setup card composables:
+
+| Card | Old lines | Complexity | Notes |
+|---|---|---|---|
+| `SetupDefinitionRenderer` | 151 | Low | Dispatch to 7 card types with visibility/entitlement gating |
+| `SetupNavigationBar` | 167 | Low | Done button disabled until all items satisfied |
+| `SetupPermissionCard` | 189 | Medium | 3 states (granted, rationale, permanently denied). Replace Accompanist with native `rememberLauncherForActivityResult` + `ActivityResultContracts.RequestMultiplePermissions` |
+| `SetupToggleCard` + `SystemServiceCard` | 225 | Low | Satisfied/unsatisfied binary state |
+| `DeviceScanCard` | 759 | **Very High** | CDM/BLE state machine (5 states), multi-attempt verification (3 attempts, 2s retry, 30s timeout), API-level branching (31-32, 33+, 36+), paired device management with forget dialog. Extract state machine to testable non-UI class |
+| `PairedDeviceCard` | 161 | Low | 3-state border color, `isForgetting` progress indicator |
+| `DeviceLimitCounter` | 47 | Low | Visibility gated on `pairedCount >= 2` |
+| `InstructionCard` | 65 | Low | Bridge to `SettingRowDispatcher` |
+| `InfoCard` | 37 | Low | Bridge to `InfoSettingRow` |
+
+**Critical migration note:** `DeviceScanCard` is the single highest-complexity composable in Phase 10. Extract the CDM state machine (`ScanState` sealed interface, verification retry logic, API-level dispatch) into a `DeviceScanStateMachine` class — testable without Compose, ~300 lines of pure logic separated from ~450 lines of UI.
+
+### OverlayNavHost partial population
+
+Scaffold empty `OverlayNavHost` from Phase 7 receives its first routes:
 
 | Route | Destination | Coordinator interaction |
 |---|---|---|
 | `WidgetPicker` | Widget selection grid | `LayoutCoordinator.addWidget()` |
-| `ThemeSelector` | Theme browser + preview | `ThemeCoordinator.preview()/apply()/revert()` |
 | `Settings` | Main settings sheet | Various coordinators via commands |
 | `WidgetSettings(widgetId)` | Per-widget settings | `WidgetBindingCoordinator.updateSettings()` |
 | `Setup(providerId)` | Provider setup wizard | Provider-specific, driven by `SetupDefinition` |
-| `Diagnostics` | Provider health + snapshots | Read-only from observability |
-| `Onboarding` | First-run flow | Theme selection → `ThemeCoordinator` |
 
-### Entitlements (stub)
+Remaining routes (`ThemeSelector`, `Diagnostics`, `Onboarding`) populated in Phase 11.
 
-`StubEntitlementManager` from Phase 6 remains — all content treated as free. Play Billing integration deferred post-launch. `EntitlementManager.purchaseProduct()` and `restorePurchases()` are no-ops returning `AppResult.Success`. Premium themes in `:pack:themes` render but `Gated.requiredEntitlements` is respected by `ThemeSelector` UI (shows lock icon, purchase button disabled with "Coming soon").
+### `OverlayScaffold` infrastructure
+
+**`OverlayScaffold`** — shared container for all overlay composables. Old `OverlayScaffold.kt` (175 lines). `OverlayType` enum (Hub/Preview/Confirmation) determines sheet shape + padding. `OverlayTitleBar` with close button.
+
+**`ConfirmationDialog`** — animated entry/exit state machine (`dialogVisible`, `pendingAction`), dismiss with 150ms delay. Old `ConfirmationDialog.kt` (195 lines). Used by Delete All Data, Reset Dash, widget delete.
+
+### `PackBrowserContent`
+
+**`PackBrowserContent`** — pack list with shared element transitions, entitlement status derivation, debug entitlement toggle. Old `PackBrowserContent.kt` (449 lines). Accessible from Settings → Behavior → Dash Packs.
 
 **Tests:**
-- `InlineColorPicker` color conversion tests — `colorToHsl`/`colorToHex`/`parseHexToColor` with known values (black, white, pure RGB, achromatic grays, hue boundary 0/120/240/360)
-- `SettingRowDispatcher`: each of 10 row types renders from `SettingDefinition` schema, value changes propagate to `ProviderSettingsStore`
-- `SetupSheet` navigation: multi-step setup with back navigation, permission request delegation, completion callback
-- Provider Health dashboard: renders provider list, staleness indicator updates, retry triggers provider reconnect
-- Overlay navigation: route to each overlay, verify content renders, back navigation returns to dashboard
-- On-device: full overlay interaction flow via manual testing (overlay composables are hard to validate via agentic commands — semantics queries work but gesture simulation doesn't)
+- `SettingRowDispatcher`: each of 10 row types renders from `SettingDefinition` schema, value changes propagate to `ProviderSettingsStore`. Coverage for `visibleWhen` evaluation, entitlement gating, `AnimatedVisibility` for hidden rows
+- `SetupSheet` navigation: multi-step setup with back navigation, permission request delegation, completion callback. `DeviceScanStateMachine` unit tests: 5-state transitions, retry logic boundaries, API-level dispatch, device limit enforcement
+- `WidgetSettingsSheet`: 3-page navigation, schema default extraction, settings merge, provider selection, style property updates
+- `MainSettings`: navigation dispatch, analytics consent toggle state transitions, `DeleteAllData` clears all DataStore instances
+- `WidgetPicker`: widget grouping by pack, entitlement badge display, scale calculation
+- Overlay navigation: route to each Phase 10 overlay (WidgetPicker, Settings, WidgetSettings, Setup), verify content renders, back navigation returns to dashboard
 
 ---
 
-## Phase 10b: E2E Integration, CI Gates + Polish
+## Phase 11: Theme UI + Diagnostics + Onboarding
 
-**What:** Full system integration testing, CI gate enforcement, performance validation, and launch polish. Everything must work together.
+**What:** Three independent feature clusters built on the settings row system from Phase 10: theme editing/selection UI, diagnostics module, and onboarding flow. These clusters share no dependencies and can be developed in any order or concurrently.
 
-**Depends on:** Phase 9 (chaos infrastructure for CI chaos gate, multi-pack validation), Phase 10a (all feature modules functional)
+**Depends on:** Phase 10 (settings row system, overlay scaffold, OverlayNavHost infrastructure)
+
+**Composable count:** ~26. **Port volume:** ~2,200 lines from old codebase + ~2,000 lines new.
+
+### Theme editing UI (`:feature:settings`)
+
+**`ThemeSelector`** — 2-page horizontal pager (built-in, custom). Free themes first, then custom, then premium (gated). Theme preview + apply/revert lifecycle (preview times out after 60s with toast). Long-press built-in → clone to custom. Long-press custom → open in Theme Studio. Old `ThemeSelectorContent.kt` (399 lines, 5 internal composables).
+
+**`ThemeStudio`** — custom theme CRUD (max 12). Old `ThemeStudioContent.kt` (672 lines, 5+ composables). 8 mutable color/gradient state vars, `isDirty` via `derivedStateOf`, auto-save `LaunchedEffect`. Key risk: tightly coupled state — decompose into `ThemeStudioStateHolder` class.
+
+**`InlineColorPicker`** — HSL sliders + hex editor. Old 413 lines, 2 internal composables. 4 mutable float states (H/S/L/A), bidirectional HSL-to-RGB sync, keyboard focus management. Extract `colorToHsl`/`colorToHex`/`parseHexToColor` to testable utility — these are the most valuable test targets.
+
+**`GradientTypeSelector`** — 5 gradient types via `FilterChip`. Old 80 lines. Trivial.
+
+**`GradientStopRow`** — 2-5 stop gradient editor. Old 145 lines. Stop add/remove boundary logic.
+
+**`ThemeSwatchRow`** — 7-value `SwatchType` enum selector. Old 204 lines.
+
+**`AutoSwitchModeContent`** — 5 auto-switch modes with premium gating. Old 205 lines.
+
+**`IlluminanceThresholdControl`** — custom Canvas logarithmic lux meter (~283 lines) with tap+drag gesture. Port the drawing math directly — do not rebuild. Extract `luxToPosition`/`positionToLux` logarithmic mapping to testable utility.
+
+**Entitlement stub UI:** `StubEntitlementManager` from Phase 6 remains. Premium themes in `:pack:themes` render but `Gated.requiredEntitlements` respected by `ThemeSelector` UI (lock icon, purchase button disabled with "Coming soon"). Play Billing integration deferred post-launch.
+
+### `:feature:diagnostics` (new module)
+
+Entirely new code — no old codebase equivalent. Debug builds only.
+
+- **Provider Health dashboard (F3.13):** list all registered providers with connection state, last emission time, error count, staleness indicator. Data from `DataProviderRegistry.registeredProviders()` + `WidgetBindingCoordinator.providerStatuses()`. Tap provider → detail view with connection log (F7.6, rolling 50 events), retry button
+- **Diagnostic snapshot viewer:** browse snapshots from `DiagnosticSnapshotCapture`, sorted by timestamp, filterable by type (crash, ANR, anomaly, chaos)
+- **Session recording capture (F13.3):** tap, move, resize, navigation events logged with timestamps. `SessionRecorder` service class captures events to a ring buffer (max 10,000 events, ~500KB). Replay viewer shows scrollable timeline with event markers. Recording toggle in diagnostics — not always-on. **Highest-risk novel component** — no old code to reference. Keep scope minimal for V1: event capture + text-based timeline. Graphical replay viewer is stretch
+- **Observability data display:** metrics dashboard (frame times from `MetricsCollector`, recomposition counts, memory), log viewer with level filtering from `DqxnLogger` JSON-lines file
+
+### `:feature:onboarding` (new module)
+
+New code — old codebase had no onboarding flow.
+
+- **Analytics consent dialog (F12.5):** Shown before first-run flow if analytics not yet opted-in. Explains data collected, purpose, right to revoke. Opt-IN required per PDPA/GDPR. Consent persisted in `UserPreferencesRepository`. Must gate ALL analytics collection — no Firebase events before consent
+- **First-launch disclaimer (NF-D3):** Brief, dismissable notice that the app supplements — does not replace — the vehicle dashboard. Shown once. Applies only when app is being used in-vehicle context
+- **First-run flow (F11.1):** Theme selection (free themes only — reuses simplified `ThemeSelector` subset), permission requests (lazy — only if user adds GPS-dependent widget), quick tour of edit mode (tap-and-hold explainer)
+- **Progressive tips (F11.1):** Contextual hints on first encounter: (a) first launch → "Tap Edit to customize", (b) first edit mode → "Tap a widget to select it. Drag to move.", (c) first widget focus → "Use corners to resize. Tap the gear for settings.", (d) first widget settings → dot indicators with page labels. Tracked via `UserPreferencesRepository` flags — shown once per tip
+- **Permission rationale (F11.6/F11.7):** Explain why each permission is needed before requesting. Location → GPS speed. Bluetooth → ERP device pairing. Denied permission → widget shows "Setup Required" overlay with tap-to-setup. Permanently denied → link to system settings
+- **Default preset validation (F11.5):** First launch layout is clock + battery + date only — no GPS-dependent widgets until location permission granted
+
+### OverlayNavHost completion
+
+Remaining routes added to `OverlayNavHost`:
+
+| Route | Destination | Coordinator interaction |
+|---|---|---|
+| `ThemeSelector` | Theme browser + preview | `ThemeCoordinator.preview()/apply()/revert()` |
+| `Diagnostics` | Provider health + snapshots | Read-only from observability |
+| `Onboarding` | First-run flow | Theme selection → `ThemeCoordinator` |
+
+All 7 routes now populated. Integration test: navigate to each route, verify content renders, back navigation returns to dashboard.
+
+### Analytics event call sites (F12.2, F12.3, F12.6, F12.7)
+
+Wire `AnalyticsTracker` (contract from Phase 3, Firebase impl from Phase 5) at overlay interaction points:
+- F12.2: `widget_add`, `theme_change`, `upsell_impression`, `purchase_start` (no-op with stub)
+- F12.3: `session_start`, `session_end` (with widget count, edit frequency)
+- F12.6: upsell events include `trigger_source` parameter (`theme_preview`, `widget_picker`, `settings`)
+- F12.7: session end includes `jank_percent`, `peak_thermal_level`, `widget_render_failures`, `provider_errors`
+
+All events gated on analytics consent (F12.5). No events fire if user has not opted in.
+
+**Tests:**
+- `InlineColorPicker` color conversion tests — `colorToHsl`/`colorToHex`/`parseHexToColor` with known values (black, white, pure RGB, achromatic grays, hue boundary 0/120/240/360). Round-trip accuracy: `color → hsl → color` within ±1/255 per channel
+- `IlluminanceThresholdControl`: `luxToPosition`/`positionToLux` logarithmic mapping inverses, boundary values (0 lux, 10000 lux), dashed line geometry
+- `ThemeSelector`: free-first ordering, preview timeout (60s → auto-revert), clone-to-custom, entitlement lock icons
+- `ThemeStudio`: `isDirty` derivation, auto-save trigger, `buildCustomTheme()` output validation, max-12 custom theme limit
+- Provider Health dashboard: renders provider list, staleness indicator updates, retry triggers provider reconnect
+- Session recording: event capture ring buffer overflow, timeline rendering with event markers
+- Onboarding: analytics consent dialog blocks analytics, first-run tip sequence, permission rationale display
+- Overlay navigation completion: all 7 routes render, back navigation correct, theme preview overlay correctly blocks other navigation during active preview
+- On-device: full overlay interaction flow via manual testing and semantics queries where gesture simulation isn't feasible
+
+---
+
+## Phase 12: CI Gates + Benchmarking
+
+**What:** Performance measurement infrastructure, Compose stability enforcement, and CI gate configuration. Deliberately decoupled from Phase 9/10/11 — starts as soon as Phase 8 provides enough running code to benchmark.
+
+**Depends on:** Phase 8 (essentials pack provides 13 widgets for benchmarking)
+
+**Concurrent with:** Phases 9, 10, 11
+
+### Baseline Profiles (NF9)
+
+- `:baselineprofile` module generates profiles for critical paths: app startup, dashboard render, edit mode enter/exit
+- Theme switch profile added when `:pack:themes` exists (Phase 9) — conditional inclusion, doesn't block the module
+- Profiles included in release build via `BaselineProfileRule`
+
+### Benchmark module (NF10)
+
+- `:benchmark` module runs macrobenchmarks measuring frame times, startup, and memory
+- 12-widget soak benchmark: `DemoTimeProvider` + `DemoSpeedProvider` (from `:pack:demo` if available, otherwise `TestDataProvider` stubs)
+- Startup benchmark: cold start to first meaningful paint
+- Edit mode benchmark: enter → drag → resize → exit cycle
 
 ### CI Gates
 
@@ -1157,29 +1303,75 @@ P50 trend detection: alert when P50 increases > 20% from 7-day rolling average.
 
 Mutation kill rate > 80% for critical modules (deferred to post-launch — tracked, not gated).
 
-### Baseline Profiles
+### Compose stability audit
 
-- `:baselineprofile` module generates profiles for critical paths: app startup, dashboard render, theme switch, edit mode enter/exit
-- `:benchmark` module runs macrobenchmarks measuring frame times, startup, and memory
-- Profiles included in release build via `BaselineProfileRule`
+- Run `./gradlew assembleRelease -Pandroidx.compose.metrics=true -Pandroidx.compose.metrics.output=<path>` on all app-owned modules
+- Parse stability report: zero unstable classes in app-owned modules, max 5 non-skippable in `:feature:dashboard`
+- CI job fails on regression — new unstable class or non-skippable composable added without `@Immutable`/`@Stable` annotation
+
+### APK size gate (NF34)
+
+- CI step: `./gradlew assembleRelease`, measure APK size
+- Gate: base APK < 30MB, with all packs < 50MB
+- Alert on >5% increase from previous release
+
+**Tests:**
+- Benchmark stability: same benchmark run 3 times, P50 variance < 10%
+- Baseline profile generation: profile file present in release APK, covers startup + dashboard render methods
+- CI gate script tests: threshold comparison logic, trend detection calculation
+
+---
+
+## Phase 13: E2E Integration + Launch Polish
+
+**What:** Full system integration testing, chaos CI gate, performance soak validation, accessibility audit, privacy feature implementation, and app lifecycle features. Everything must work together.
+
+**Depends on:** Phases 9 (chaos infrastructure, multi-pack), 11 (all overlay UI), 12 (benchmark infrastructure)
 
 ### Integration Testing
 
-- Full E2E: launch → load layout → bind data → render widgets → edit mode → add/remove/resize → theme switch. Semantics verification at each step: `assertWidgetRendered` after add, `assertWidgetNotRendered` after remove, bounds change after resize
+- Full E2E: launch → load layout → bind data → render widgets → edit mode → add/remove/resize → theme switch → settings → widget settings. Semantics verification at each step: `assertWidgetRendered` after add, `assertWidgetNotRendered` after remove, bounds change after resize
 - CI chaos gate: deterministic `seed = 42` chaos profile → `assertChaosCorrelation()` passes. Semantics verification: fallback UI rendered for failed providers, no "NaN" text in widget subtrees
 - CI diagnostic artifact collection: `adb pull` diagnostic snapshots + `list-diagnostics` + `dump-health` + `dump-semantics` as CI artifacts on failure
 - Agentic debug loop validation: inject fault → detect via `list-diagnostics` → investigate via `diagnose-crash` + `query-semantics` → verify via `dump-health` + `assertWidgetRendered` after fix
 - Multi-pack validation: essentials + themes + demo all loaded simultaneously — no Hilt binding conflicts, no KSP annotation collisions, no R8 rule conflicts
 
-### Performance validation (NF11, NF37)
+### Performance soak (NF11, NF37)
 
-- Battery drain measurement: 1-hour screen-on soak with 12 widgets → target < 5% battery/hour (NF11 — exact threshold TBD via baseline measurement)
+- Battery drain measurement: 1-hour screen-on soak with 12 widgets → target < 5% battery/hour (NF11 — exact threshold TBD via baseline from Phase 12 benchmarks)
 - Background battery: app backgrounded for 1 hour → near-zero drain. Verify all sensor `callbackFlow`s properly `awaitClose` and unregister (NF37)
 - Memory: heap dump after 30-min session — no leaked `Activity`, `ViewModel`, or `CoroutineScope`. LeakCanary in debug builds catches these earlier, but explicit verification here
 
-### Data privacy (NF-P5)
+### Data privacy feature (NF-P5)
 
-- Export My Data: JSON export of all user data (layouts, settings, profiles, paired devices). Accessible from Settings → Data & Privacy. Format documented. No server-side data — everything is local Proto/Preferences DataStore, so export = serialize all DataStore files to JSON
+- **Export My Data:** JSON export of all user data (layouts, settings, profiles, paired devices). Accessible from Settings → Data & Privacy. Format documented. Implementation: iterate `DataStoreRegistry`, serialize each DataStore's current value to JSON via kotlinx.serialization, write to user-selected file via `ActivityResultContracts.CreateDocument`. No server-side data — everything is local Proto/Preferences DataStore
+- **NF-P3 (PDPA compliance) verification:** Analytics consent flow works end-to-end (consent dialog → opt-in → events fire → opt-out → events stop). Privacy policy URL reachable. "Delete All Data" (F14.4, implemented in Phase 10) verified to clear all stores
+
+### Accessibility audit (NF30, NF32, NF33, NF39, NF40)
+
+- **NF30 (WCAG AA contrast):** Systematic audit of all themes — critical text (speed, time, speed limit) meets 4.5:1 contrast ratio against theme backgrounds. Automated: extract theme colors + measure contrast ratios programmatically for all 24 themes (2 free + 22 premium)
+- **NF32 (TalkBack):** Settings and setup flow TalkBack traversal test — all interactive elements have `contentDescription`, focus order is logical, no focus traps. Dashboard rendering explicitly excluded per requirement
+- **NF33 (font scale):** Settings UI renders correctly at system font scales 1.0x through 2.0x (Compose `sp` units handle this, but verify no layout overflow or clipping)
+- **NF39 (reduced motion):** When `Settings.Global.ANIMATOR_DURATION_SCALE == 0`: disable wiggle animation in edit mode, replace spring transitions with instant, disable pixel-shift (deferred). Glow remains. Verify via `adb shell settings put global animator_duration_scale 0`
+- **NF40 (color-blind safety):** Speed limit warnings use color + pulsing border + warning icon (not color alone). Free themes verified for deuteranopia contrast via simulated color filter
+
+### App lifecycle (NF-L2, NF-L3)
+
+- **NF-L2 (In-app updates):** Google Play In-App Updates API via `com.google.android.play:app-update` library. IMMEDIATE flow for critical bugs (version code flagged in Play Console), FLEXIBLE flow for feature updates. Add library to version catalog → implement `AppUpdateManager` check in `:app` `MainActivity.onResume()`
+- **NF-L3 (In-app review):** Google Play In-App Review API via `com.google.android.play:review`. Trigger conditions: 3+ sessions AND 1+ layout customization AND no crash in current session. Frequency cap: once per 90 days (tracked in `UserPreferencesRepository`). Non-intrusive. Add library to version catalog → implement `ReviewManager` trigger in `:app`
+
+### Localization validation (NF-I1, NF-I2)
+
+- **NF-I1:** Run Android lint `HardcodedText` check across all modules — zero violations. Grep for string literals in `@Composable` functions as secondary check
+- **NF-I2:** Widget data formatting uses locale-aware APIs (`NumberFormat`, `DateTimeFormatter`) — verify decimal separators and unit labels respect `Locale.getDefault()` across essentials pack renderers
+
+**Tests:**
+- E2E journey test: full user flow from launch through all major interactions with semantics assertions
+- Chaos correlation test: `seed=42` deterministic fault injection → diagnostic snapshot correlation
+- Multi-pack Hilt binding test: all 3 packs loaded, `Set<WidgetRenderer>` and `Set<DataProvider<*>>` contain expected counts
+- Export My Data: round-trip test — export → parse exported JSON → verify all DataStore keys present
+- In-app update: mock `AppUpdateInfo` with different availability states → verify correct flow triggered
+- Accessibility: programmatic contrast ratio calculation for all theme + text combinations
 
 ---
 
@@ -1204,11 +1396,13 @@ From Phase 2 onward, every phase runs `./gradlew test` across all modules before
 | 7 | `NotificationCoordinator` re-derivation after ViewModel kill | CRITICAL banners silently lost on process death |
 | 7 | `dump-semantics` returns widget nodes with test tags after `DashboardLayer` registration | `SemanticsOwnerHolder` not wired — semantics commands return empty, all UI verification silently fails |
 | 8 | 4-criteria gate (contract tests, on-device wiring, stability soak, regression) | Architecture validation — contracts are usable, not just compilable |
-| 10a | Overlay navigation round-trip: each route renders, back returns to dashboard | Overlay routes registered but destination composables crash or never compose |
-| 10a | `SettingRowDispatcher` renders all 10 row types from schema | Schema-driven rendering silently skips unsupported types — shows empty row |
-| 10b | Full E2E: launch → bind → render → edit → add/remove/resize → theme → settings | End-to-end user journey — the whole system works, not just individual components |
-| 10b | Multi-pack load: essentials + themes + demo simultaneously | Hilt binding conflicts, KSP collisions, R8 rule conflicts across packs |
-| 10b | CI chaos gate: `seed=42` → `assertChaosCorrelation()` | Chaos infrastructure actually produces diagnosable anomalies |
+| 10 | `SettingRowDispatcher` renders all 10 row types from schema | Schema-driven rendering silently skips unsupported types — shows empty row |
+| 10 | Overlay navigation round-trip: Phase 10 routes render, back returns to dashboard | Overlay routes registered but destination composables crash or never compose |
+| 11 | Overlay navigation completion: all 7 routes render, back returns to dashboard | Phase 11 routes (ThemeSelector, Diagnostics, Onboarding) + Phase 10 routes |
+| 11 | Analytics consent → event gating: opt-in fires events, opt-out stops | Analytics events fire without consent (PDPA/GDPR violation) |
+| 13 | Full E2E: launch → bind → render → edit → add/remove/resize → theme → settings | End-to-end user journey — the whole system works, not just individual components |
+| 13 | Multi-pack load: essentials + themes + demo simultaneously | Hilt binding conflicts, KSP collisions, R8 rule conflicts across packs |
+| 13 | CI chaos gate: `seed=42` → `assertChaosCorrelation()` | Chaos infrastructure actually produces diagnosable anomalies |
 
 ### Silent failure seams
 
@@ -1219,8 +1413,9 @@ These seams produce no error on failure — they degrade to empty/default state.
 - **`DataProviderInterceptor` chain.** `WidgetDataBinder` must apply all registered interceptors. If it skips them on fallback paths, chaos testing gives wrong results. Caught by `ProviderFault` tests using `TestDataProvider` that asserts interceptor invocation.
 - **`merge()+scan()` vs `combine()`.** If someone "simplifies" the binder to `combine()`, any widget with a slow or missing provider silently receives no data (combine waits for all upstreams). Caught by test-first multi-slot delivery test (TDD Policy).
 - **`SemanticsOwnerHolder` registration.** If `DashboardLayer` doesn't register (or registers too late), `dump-semantics`/`query-semantics` return empty results — all semantics-based E2E assertions silently pass with "no match found" instead of failing meaningfully. Caught by Phase 7 integration check: `dump-semantics` must return nodeCount > 0 after `DashboardLayer` composition.
-- **Overlay route registration.** `OverlayNavHost` routes registered in Phase 10a. If a route is registered but its destination composable throws during first composition, the overlay silently shows nothing (NavHost catches composition failures). Caught by Phase 10a integration check: navigate to each route, verify content renders.
-- **`SettingRowDispatcher` type coverage.** If a `SettingDefinition` subtype has no matching row renderer, `SettingRowDispatcher` silently skips it — the setting is invisible. Caught by test that creates one of each 12 subtypes and verifies all render non-empty.
+- **Overlay route registration.** `OverlayNavHost` routes registered in Phases 10 and 11. If a route is registered but its destination composable throws during first composition, the overlay silently shows nothing (NavHost catches composition failures). Caught by Phase 10 and 11 integration checks: navigate to each route, verify content renders.
+- **`SettingRowDispatcher` type coverage.** If a `SettingDefinition` subtype has no matching row renderer, `SettingRowDispatcher` silently skips it — the setting is invisible. Caught by Phase 10 test that creates one of each 12 subtypes and verifies all render non-empty.
+- **Analytics consent gating.** If analytics events are wired (Phase 11) but consent check is bypassed, events fire without opt-in — PDPA/GDPR violation. Caught by Phase 11 integration check: verify `AnalyticsTracker.isEnabled()` returns false before consent, events suppressed.
 
 ## TDD Policy
 
@@ -1242,7 +1437,8 @@ Not all code benefits equally from test-first. Mandatory TDD for code where the 
 | Category | Why not test-first | Phase |
 |---|---|---|
 | Build system / convention plugins | Configuration, not logic. `./gradlew tasks` is the test. | 1 |
-| UI rendering (widget `Render()` bodies) | Visual output verified via on-device semantics (text content, bounds, visibility) and draw-math unit tests. Contract tests (null data handling, accessibility) are test-first via `WidgetRendererContractTest` inheritance, but rendering itself isn't. | 8-9 |
+| UI rendering (widget `Render()` bodies) | Visual output verified via on-device semantics (text content, bounds, visibility) and draw-math unit tests. Contract tests (null data handling, accessibility) are test-first via `WidgetRendererContractTest` inheritance, but rendering itself isn't. | 8–9 |
+| Overlay composables (settings rows, theme editor, diagnostics, onboarding) | UI porting / greenfield UI. Visual correctness verified via semantics assertions and manual on-device testing. Non-UI logic (color conversion, CDM state machine, lux mapping) extracted to testable utilities and test-concurrent. | 10–11 |
 | Observability plumbing (`DqxnLogger`, `CrashEvidenceWriter`, `AnrWatchdog`) | Well-understood patterns ported from old codebase. Unit tests verify behavior but writing them first doesn't improve design. | 3 |
 | `SupervisorJob` / `CoroutineExceptionHandler` error boundaries | Established boilerplate, not discovery work. The pattern is known before the test is written. Test-concurrent — verify isolation works, but test-first adds ceremony without catching real bugs. | 7 |
 | Proto DataStore schemas | Declarative `.proto` files. Round-trip serialization tests should exist but don't benefit from being written first. | 5 |
