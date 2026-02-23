@@ -3,18 +3,18 @@
 ## Current Position
 
 - **Phase:** 2 — SDK Contracts + Common
-- **Current Plan:** 2 of 5
+- **Current Plan:** 3 of 5
 - **Milestone:** V1 Launch
-- **Next action:** Phase 2, Plan 02 — SDK contracts widget/provider types
-- **Last session:** 2026-02-23T18:51:08.837Z
-- **Stopped at:** Completed 02-01-PLAN.md
+- **Next action:** Phase 2, Plan 03 — SDK contracts settings/setup/notification/theme/status/pack types
+- **Last session:** 2026-02-23T18:57:53Z
+- **Stopped at:** Completed 02-02-PLAN.md
 
 ## Progress
 
 | Phase | Status | Notes |
 |---|---|---|
 | 1. Build System Foundation | Complete (4/4 plans) | All plans complete |
-| 2. SDK Contracts + Common | In Progress (1/5 plans) | Plan 01 complete — sdk:common types + 75 tests |
+| 2. SDK Contracts + Common | In Progress (2/5 plans) | Plan 02 complete — sdk:contracts widget/provider/entitlement/fault types |
 | 3. SDK Observability + Analytics + UI | Pending | Concurrent with Phase 4 |
 | 4. KSP Codegen | Pending | Concurrent with Phase 3 |
 | 5. Core Infrastructure | Pending | |
@@ -75,6 +75,10 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Disconnect resets retryCount from all states** — clean disconnect = fresh retry budget
 - **SearchTimeout produces AppError.Device** (not Network) — device-discovery timeout, not network failure
 - **No DQXNDispatchers interface** — qualifier annotations only, per phase-02.md
+- **compileOnly(platform(compose-bom))** resolves compose-runtime/ui versions without Compose compiler in :sdk:contracts
+- **AGP 9 testFixtures via android block** — `java-test-fixtures` plugin conflicts; use `android { testFixtures { enable = true } }` instead
+- **WidgetData.withSlot PersistentMap handling** — runtime type check for ImmutableMap→PersistentMap.put()
+- **DataSnapshot created in Task 1** — forward-dependency from WidgetSpec.compatibleSnapshots required early creation
 
 ## Performance Metrics
 
@@ -85,6 +89,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 01-03 | 16min | 2 | 14 |
 | 01-04 | 28min | 2 | 11 |
 | 02-01 | 10min | 2 | 12 |
+| 02-02 | 5min | 2 | 28 |
 
 ## Context
 
