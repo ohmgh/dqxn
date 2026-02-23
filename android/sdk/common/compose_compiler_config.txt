@@ -1,0 +1,4 @@
+// Compose compiler stability configuration
+// See https://developer.android.com/develop/ui/compose/performance/stability/fix#configuration-file
+// Classes listed here are treated as stable by the Compose compiler.
+// Add fully-qualified class names, one per line. Wildcards supported.
