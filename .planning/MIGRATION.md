@@ -85,3 +85,4 @@ Phases 3+4 concurrent after Phase 2. Phase 6 gates on-device work. Phase 8 is th
 - [TDD Policy](migration/tdd-policy.md)
 - [What NOT to Port](migration/exclusions.md)
 - [Risk Flags](migration/risk-flags.md)
+- [Replication Advisory](migration/replication-advisory.md) — 6 areas of nuanced old-codebase UX logic (preview mode, navigation, themes, transitions, design system, drag/resize) with exact state machines, animation specs, and edge cases to replicate
