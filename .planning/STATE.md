@@ -3,17 +3,17 @@
 ## Current Position
 
 - **Phase:** 1 — Build System Foundation
-- **Current Plan:** 2 of 4
+- **Current Plan:** 4 of 4
 - **Milestone:** V1 Launch
-- **Next action:** Phase 1, Plan 02 — Module stubs
-- **Last session:** 2026-02-23T16:52:42Z
-- **Stopped at:** Completed 01-01-PLAN.md
+- **Next action:** Phase 1, Plan 04 — Gradle TestKit validation + throwaway toolchain checks
+- **Last session:** 2026-02-23T17:14:12Z
+- **Stopped at:** Completed 01-03-PLAN.md
 
 ## Progress
 
 | Phase | Status | Notes |
 |---|---|---|
-| 1. Build System Foundation | In Progress (1/4 plans) | Plan 01 complete: Gradle infrastructure + convention plugins |
+| 1. Build System Foundation | In Progress (3/4 plans) | Plans 01, 03 complete. Plans 02, 04 remaining |
 | 2. SDK Contracts + Common | Pending | |
 | 3. SDK Observability + Analytics + UI | Pending | Concurrent with Phase 4 |
 | 4. KSP Codegen | Pending | Concurrent with Phase 3 |
@@ -43,12 +43,16 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **KSP 2.3.6** with new simplified versioning scheme (no longer Kotlin-version-prefixed)
 - **Single shared libs.versions.toml** between root and build-logic (via versionCatalogs create/from)
 - **JDK 25 toolchain** with Kotlin JVM_24 fallback (Kotlin 2.3.10 does not support JVM 25 target yet)
+- **Standalone TestLintTask.lint() with JUnit5** over extending LintDetectorTest (JUnit3/4)
+- **Package-based module classification** for lint boundary enforcement (app.dqxn.android.pack.* = pack module)
+- **UElementHandler from com.android.tools.lint.client.api** (not Detector inner class) for lint API 32
 
 ## Performance Metrics
 
 | Phase-Plan | Duration | Tasks | Files |
 |---|---|---|---|
 | 01-01 | 12min | 2 | 20 |
+| 01-03 | 16min | 2 | 14 |
 
 ## Context
 
@@ -56,3 +60,4 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - Old codebase mapped in `.planning/oldcodebase/` (8 docs, ~6000 lines)
 - Replication advisory at `.planning/migration/replication-advisory.md` — 7 hard-to-replicate UX areas cross-referenced in phase files and risk-flags.md
 - Build infrastructure established: Gradle 9.3.1, AGP 9.0.1, Kotlin 2.3.10, all convention plugins compiling
+- Custom lint rules: 5 detectors with 30 tests enforcing KAPT ban, secrets detection, module boundaries, Compose scope, agentic threading
