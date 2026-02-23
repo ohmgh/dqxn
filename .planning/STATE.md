@@ -3,18 +3,18 @@
 ## Current Position
 
 - **Phase:** 2 — SDK Contracts + Common
-- **Current Plan:** 4 of 5
+- **Current Plan:** 5 of 5
 - **Milestone:** V1 Launch
-- **Next action:** Phase 2, Plan 04 — SDK contracts unit tests
-- **Last session:** 2026-02-23T19:10:15.696Z
-- **Stopped at:** Completed 02-03-PLAN.md
+- **Next action:** Phase 2, Plan 05 — SDK contracts testFixtures
+- **Last session:** 2026-02-23T19:19:13Z
+- **Stopped at:** Completed 02-04-PLAN.md
 
 ## Progress
 
 | Phase | Status | Notes |
 |---|---|---|
 | 1. Build System Foundation | Complete (4/4 plans) | All plans complete |
-| 2. SDK Contracts + Common | In Progress (3/5 plans) | Plan 03 complete — sdk:contracts setup/settings/notification/theme/status/pack/registry types |
+| 2. SDK Contracts + Common | In Progress (4/5 plans) | Plan 04 complete — 72 unit tests for :sdk:contracts type surface |
 | 3. SDK Observability + Analytics + UI | Pending | Concurrent with Phase 4 |
 | 4. KSP Codegen | Pending | Concurrent with Phase 3 |
 | 5. Core Infrastructure | Pending | |
@@ -82,6 +82,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **InfoStyle and InstructionAction in setup package** — shared by SetupDefinition and SettingDefinition; settings imports from setup
 - **Setting wrapper defaults delegated from inner SettingDefinition** — all fields overridable per-instance
 - **DashboardPackManifest @Serializable + @Immutable** — KSP generates at build time, runtime deserializable
+- **Test DataSnapshot subtypes without @Immutable** — compose.runtime is compileOnly, test sources use plain data classes
+- **compose.ui added to testFixtures deps** — Modifier reference in TestWidgetRenderer required compose.ui in testFixtures scope
 
 ## Performance Metrics
 
@@ -94,6 +96,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 02-01 | 10min | 2 | 12 |
 | 02-02 | 5min | 2 | 28 |
 | 02-03 | 6min | 2 | 23 |
+| 02-04 | 7min | 2 | 8 |
 
 ## Context
 
