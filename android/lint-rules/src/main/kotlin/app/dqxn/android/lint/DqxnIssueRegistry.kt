@@ -17,21 +17,23 @@ import com.android.tools.lint.detector.api.Issue
  */
 class DqxnIssueRegistry : IssueRegistry() {
 
-    override val issues: List<Issue> = listOf(
-        KaptDetectionDetector.ISSUE,
-        NoHardcodedSecretsDetector.ISSUE,
-        ModuleBoundaryViolationDetector.ISSUE,
-        ComposeInNonUiModuleDetector.ISSUE,
-        AgenticMainThreadBanDetector.ISSUE,
+  override val issues: List<Issue> =
+    listOf(
+      KaptDetectionDetector.ISSUE,
+      NoHardcodedSecretsDetector.ISSUE,
+      ModuleBoundaryViolationDetector.ISSUE,
+      ComposeInNonUiModuleDetector.ISSUE,
+      AgenticMainThreadBanDetector.ISSUE,
     )
 
-    override val api: Int = CURRENT_API
+  override val api: Int = CURRENT_API
 
-    override val minApi: Int = CURRENT_API
+  override val minApi: Int = CURRENT_API
 
-    override val vendor: Vendor = Vendor(
-        vendorName = "DQXN",
-        identifier = "app.dqxn.android.lint",
-        feedbackUrl = "https://github.com/dqxn/android/issues",
+  override val vendor: Vendor =
+    Vendor(
+      vendorName = "DQXN",
+      identifier = "app.dqxn.android.lint",
+      feedbackUrl = "https://github.com/dqxn/android/issues",
     )
 }

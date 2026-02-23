@@ -16,8 +16,11 @@ dependencies {
   testImplementation(platform(libs.junit.bom))
   testImplementation(libs.junit.jupiter.api)
   testRuntimeOnly(libs.junit.jupiter.engine)
+  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
   testImplementation(libs.truth)
 }
+
+tasks.withType<Test>().configureEach { useJUnitPlatform() }
 
 gradlePlugin {
   plugins {
