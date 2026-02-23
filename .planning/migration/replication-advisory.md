@@ -422,3 +422,248 @@ Overlap is allowed. Z-ordering via `zIndex`. `BringWidgetToFront` on touch sets 
 2. **No snap-back on drag cancel** — widget teleports back. Add spring return.
 3. **Landscape viewport fraction mismatch** — sheet uses 0.38f, widget targets 0.28f. Coordinate both values.
 4. **`Modifier.offset` for drag** — old code uses layout-pass offset. New arch mandates `graphicsLayer` offset per CLAUDE.md.
+
+---
+
+## 7. Widget Setup Architecture and UI
+
+**Old source:** `SetupDefinition.kt`, `SettingDefinition.kt`, `SetupSheetContent.kt`, `SetupDefinitionRenderer.kt`, `SettingRowDispatcher.kt`, `SettingsSheetDispatcher.kt`, `WidgetSettingsPager.kt`, `PermissionCard.kt`, `DeviceScanCard.kt`, `OverlayNavHost.kt`, `ProviderSettingsStore.kt`, `PairedDeviceStore.kt`, `SetupEvaluator.kt`
+
+### Setup Definition Schema (7 Types in 3 Categories)
+
+**Requirement types** (have pass/fail semantics, can block forward navigation):
+
+| Type | Key Fields | UI |
+|---|---|---|
+| `RuntimePermission` | `permissions: List<String>`, `minSdk: Int` | Permission card with Grant/Open Settings |
+| `SystemServiceToggle` | `settingsAction: String`, `checkEnabled: (Context) -> Boolean` | Toggle card with system settings link |
+| `SystemService` | `serviceType: ServiceType` (BLUETOOTH, LOCATION, WIFI) | Service enable card |
+| `DeviceScan` | `handlerId`, `deviceNamePattern`, `serviceUuids`, `maxDevices`, `onPaired`, `onCancel` | BLE scan card with CDM |
+
+**Display types** (always satisfied):
+
+| Type | Key Fields | UI |
+|---|---|---|
+| `Instruction` | `stepNumber`, `action: InstructionAction`, `verificationStrategy`, `verificationOptional`, `alternativeResolution` | Step card with action button + verification |
+| `Info` | `icon`, `style: InfoStyle` (INFO/WARNING/SUCCESS/ERROR) | Styled info card |
+
+**Input wrapper** (always satisfied, delegates to `SettingDefinition`):
+
+| Type | Key Fields | UI |
+|---|---|---|
+| `Setting` | `definition: SettingDefinition<*>` | Dispatched to `SettingRowDispatcher` |
+
+The `Setting` wrapper exists so packs can intermix input rows with requirement cards on the same setup page. It delegates `id`, `label`, `visibleWhen`, `requiredAnyEntitlement`, `hidden`, and `default` to the wrapped definition. `asSetup()` extension converts `SettingDefinition` → `SetupDefinition.Setting`.
+
+### Setting Definition Schema (11 Types)
+
+Every type carries: `key`, `label`, `description?`, `default: T`, `visibleWhen?`, `groupId?`, `hidden`, `requiredAnyEntitlement?`.
+
+| Type | T | UI | Notes |
+|---|---|---|---|
+| `BooleanSetting` | Boolean | Switch | — |
+| `IntSetting` | Int | Chips (if presets) or Slider | `presetsWhen` dynamic lambda overrides static `presets` — call `getEffectivePresets(currentSettings)` |
+| `FloatSetting` | Float | Slider | `min`, `max`, `step?` |
+| `StringSetting` | String | Text field | `placeholder?`, `maxLength?` |
+| `EnumSetting<E>` | E | Chips (≤10), Dropdown (>10), or preview thumbnails | Serialized as `.name` string — compare with `value?.toString() == option.name` |
+| `TimezoneSetting` | String? | Row → fullscreen picker | `null` = system default; `"SYSTEM"` sentinel |
+| `DateFormatSetting` | DateFormatOption | Row → popup picker | Stored as `.name` string, deserialize before emitting |
+| `AppPickerSetting` | String? | Row → fullscreen grid | `suggestedPackages` sorted first |
+| `SoundPickerSetting` | String? | Row → system `ACTION_RINGTONE_PICKER` | Display via `RingtoneManager.getRingtone().getTitle()` |
+| `InstructionSetting` | Unit | Step card (display-only) | `default = Unit`, parallels `SetupDefinition.Instruction` |
+| `InfoSetting` | Unit | Info card (display-only) | `default = Unit`, parallels `SetupDefinition.Info` |
+
+### Three-Layer Conditional Visibility
+
+All three checked in both `SetupDefinitionRenderer` and `SettingRowDispatcher`:
+
+1. **`hidden: Boolean`** — hard skip, no animation. For feature-flagged definitions.
+2. **`visibleWhen: ((Map<String, Any?>) -> Boolean)?`** — evaluated as `!= false` (null = always visible). **Double-gating:** `SetupDefinition.Setting` wrapper checks its own `visibleWhen` first, then `SettingRowDispatcher` checks the inner `SettingDefinition`'s `visibleWhen` again. This is intentional — the wrapper may add setup-context constraints beyond the raw definition's own.
+3. **`requiredAnyEntitlement: List<String>?`** — "any" semantics (one match sufficient). `null` list = no gating. Empty list = no gating. Missing `entitlementManager` defaults to permissive.
+
+Render order: `hidden` (hard skip) → `AnimatedVisibility(visible = isVisible && hasEntitlement)` with `expandEnter/expandExit`.
+
+### Setup Flow Lifecycle
+
+`SetupSheetContent` is fullscreen paginated (not a bottom sheet despite the name).
+
+**Page structure:**
+```
+SetupSchema: List<SetupPageDefinition>
+    └── SetupPageDefinition(title, description, items: List<SetupDefinition>)
+```
+
+**Settings loading:** One-shot `produceState` from `providerSettingsStore.getAllSettings(providerId)`, NOT a live Flow. Local `currentSettings: MutableMap` mutated in-memory during the flow.
+
+**Settings persistence:** Immediate write-through on every change — no debounce (unlike layout saves which are debounced 500ms).
+
+**Forward navigation gating:**
+```kotlin
+val allSatisfied = page.items.all { def ->
+    def is SetupDefinition.Setting || def.id in satisfiedDefinitions
+}
+```
+
+Input types (`Setting`) always count as satisfied — only requirement types block forward navigation. Done button uses the same check on the final page. **Buttons are alpha-dimmed (50%) when disabled but remain tappable** — don't disable them outright.
+
+**Back navigation:** Two exclusive `BackHandler` instances — page > 0 goes back a page, page == 0 dismisses. Don't unify them; the exclusivity is load-bearing.
+
+**Page transitions:** `AnimatedContent` with directional `slideInHorizontally/slideOutHorizontally` based on `targetState > initialState`.
+
+### Re-Evaluation Trigger Pattern (Critical)
+
+The `evaluationTrigger` counter keeps satisfied state current across async events:
+
+```kotlin
+var evaluationTrigger by remember { mutableIntStateOf(0) }
+
+LaunchedEffect(provider, evaluationTrigger) {
+    satisfiedDefinitions = SetupEvaluator.evaluateWithPersistence(...)
+        .filter { it.satisfied }.map { it.definition.id }.toSet()
+}
+```
+
+Three triggers increment the counter:
+1. Initial composition
+2. `ON_RESUME` lifecycle event (returning from system settings / permission dialog)
+3. Device pairing success callback
+
+Without the counter pattern, `LaunchedEffect` won't re-run when only external state changes (permissions granted, services enabled) — the `provider` key hasn't changed.
+
+### Instruction Verification Lifecycle
+
+Per-instruction state is session-only (`SnapshotStateMap`, not persisted):
+
+1. User taps action button → `actionPerformedKeys[def.id] = true`
+2. User returns to app → `ON_RESUME` fires → iterates all instructions with `actionPerformedKeys[id] == true`
+3. Runs `VerificationStrategy` for each → stores result in `verificationResults[def.id]`
+4. Inline `Info` card synthesized at render time (not in schema) showing Verified/Failed/Skipped
+5. `verificationOptional: Boolean` — if true, failed verification does NOT block `canGoForward`
+
+### Permission Card — Three States
+
+| State | Detection | UI |
+|---|---|---|
+| All granted | `state.allPermissionsGranted` | Accent-tinted "Granted" label, no button |
+| Can request | `!allGranted && (!hasRequestedPermissions \|\| shouldShowRationale)` | "Grant" button → `launchMultiplePermissionRequest()` |
+| Permanently denied | `hasRequestedPermissions && !shouldShowRationale && !allGranted` | "Open Settings" → `ACTION_APPLICATION_DETAILS_SETTINGS` |
+
+**Critical:** `hasRequestedPermissions` local state is mandatory. Without it, the pre-request state (where `shouldShowRationale = false` and `allGranted = false`) is indistinguishable from permanent denial. The guard prevents false permanent-denial detection on first check.
+
+**minSdk gating:** If `RuntimePermission.minSdk > Build.VERSION.SDK_INT`, `SetupEvaluator` returns `null` — definition is skipped entirely. Renderer never sees it.
+
+### BLE Device Scan — State Machine
+
+```
+PreCDM → (tap Scan) → Waiting
+Waiting → (CDM returns device) → Verifying(device, attempt=1, max=3)
+Verifying → (onPaired success) → Success(device)
+Verifying → (onPaired failure, attempt < 3) → Verifying(attempt+1) [after 2000ms]
+Verifying → (onPaired failure, attempt == 3) → Failed(device, error)
+Failed → (auto-return 1500ms) → PreCDM
+Waiting → (user cancels CDM) → PreCDM [silent, no error]
+Verifying → (user cancels) → cancel job + onCancel() → PreCDM
+```
+
+**CDM setup:** `BluetoothLeDeviceFilter` with `deviceNamePattern` (compiled to `Pattern`) and `serviceUuids` (`ParcelUuid`). `setSingleDevice(true)`. Result callback handles two API variants: API 33+ tries `ScanResult` for `associationId`; fallback to `BluetoothDevice` for older APIs.
+
+**Verification:** `withTimeoutOrNull(30_000L)` on `onPaired?.invoke(device.address)`. Null `onPaired` = immediate success. Retries up to 3 with 2000ms delay.
+
+**Persistence on success:** `pairedDeviceStore.markPaired(definitionId, PairedDeviceMetadata(mac, associationId, ...))`. Then activates CDM presence observation (API 36+ via `ObservingDevicePresenceRequest`, API 31-35 via deprecated MAC-based approach).
+
+**Already paired:** Shows `SuccessContent` directly, no state machine. Scan button disabled when `pairedDevices.size >= maxDevices`. Forget device requires `AlertDialog` confirmation with `forgettingMac: String?` guard against double-tap.
+
+**CDM cancel handling:** "user_rejected"/"canceled" in error string → silent return to PreCDM. Any other error → `Failed` with `lastErrorMessage`.
+
+### Picker Architecture — Four Patterns
+
+| Picker | Navigation Event | Route Type | Result Type |
+|---|---|---|---|
+| Timezone | `SettingNavigation.ToTimezonePicker(key, current?)` | Fullscreen Hub | Zone ID string or `"SYSTEM"` sentinel |
+| Date format | `SettingNavigation.ToDateFormatPicker(key, current)` | Popup (not fullscreen) | `DateFormatOption.name` string |
+| App | `SettingNavigation.ToAppPicker(key, currentPackage?)` | Fullscreen Hub, `LazyVerticalGrid(Fixed(4))` | Package name string |
+| Sound | System `ACTION_RINGTONE_PICKER` via `ActivityResultLauncher` | External activity | URI string |
+
+**Timezone display logic:**
+- `null` → show system timezone as "CityName (GMToffset)" with "System Default" subtitle
+- `"SYSTEM"` → show `displayTitle` without subtitle (avoid duplicate)
+- else → parse zone ID, extract city from last "/" segment, format with GMT offset
+
+**App picker details:** `ACTION_MAIN` + `CATEGORY_LAUNCHER`, `distinctBy { packageName }`, suggested packages first (ordered by index), remaining alphabetical. Icons: 48×48 bitmap. Search via `BasicTextField` (not `TextField`). Current selection: accent 20% alpha background.
+
+### SettingNavigation Sealed Interface
+
+Single unified callback `onNavigate: ((SettingNavigation) -> Unit)?` with 4 events:
+- `ToTimezonePicker(settingKey, currentValue?)`
+- `ToDateFormatPicker(settingKey, currentValue)`
+- `ToAppPicker(settingKey, currentPackage?)`
+- `OnInstructionAction(settingKey, action)` — fires BOTH local action execution AND nav callback. Local handles `OpenUrl`/`LaunchApp`. Nav callback tracks `actionPerformedKeys` for verification lifecycle.
+
+### Two-Layer Dispatcher Pattern
+
+```
+SetupDefinitionRenderer        → dispatches SetupDefinition subtypes
+    └── SettingRowDispatcher   → dispatches SettingDefinition subtypes (via Setting wrapper)
+
+SettingsSheetDispatcher        → also uses SettingRowDispatcher directly (widget settings tab)
+```
+
+Both dispatchers apply visibility/entitlement gating independently. `SettingRowDispatcher` has a fallback: `else -> SettingLabel(label, description, theme)` for unimplemented types (`UriSetting`). Do not crash on unrecognized types.
+
+### Settings Persistence
+
+**ProviderSettingsStore** — Preferences DataStore, key format `"$providerId:$key"`. Type-prefixed serialization:
+
+| Type | Format | Example |
+|---|---|---|
+| null | `"null"` | — |
+| String | `"s:value"` | `"s:America/New_York"` |
+| Int | `"i:value"` | `"i:42"` |
+| Long | `"l:value"` | `"l:1234567890"` |
+| Float | `"f:value"` | `"f:3.14"` |
+| Double | `"d:value"` | `"d:2.718"` |
+| Boolean | `"b:value"` | `"b:true"` |
+| Other | `"j:{json}"` | kotlinx.serialization |
+
+Legacy fallback: no recognized prefix → treat as raw String. Must be preserved for pre-prefix data.
+
+**PairedDeviceStore** — Preferences DataStore, key = `definitionId`, value = JSON `List<PairedDeviceMetadata>`. Decode order: try list first, fall back to single object (legacy). `markPaired` is additive upsert by MAC (case-insensitive). `removePairedDevice` removes from list; empty list removes key. `getAllPairedEntries()` used by `CdmPresenceActivator` on app startup for CDM re-registration.
+
+### Widget Overlay States
+
+`WidgetRenderState` determines what renders on top of a widget cell:
+
+| State | Scrim | Trigger |
+|---|---|---|
+| `Ready` | None | Normal operation |
+| `SetupRequired(requirementType)` | 0.60 | Setup incomplete |
+| `ConnectionError(message)` | 0.30 | Provider connected but erroring |
+| `Disconnected` | 0.15 | Known device not currently connected |
+| `EntitlementRevoked` | 0.60 | User lost access |
+| `ProviderMissing` | 0.60 | No provider bound for type |
+
+**`requirementType`** classifies the entry point:
+- `"permission"` → `Route.PermissionRequest(widgetId, sourceId)` (permission-only flow)
+- `"hardware"` → `Route.ProviderSetup(sourceId)` (full setup)
+- `"onboarding"` / null → `Route.ProviderSetup(sourceId)` (full setup)
+
+Computed by evaluating source's `setupSchema` with `SetupEvaluator.evaluate()` and checking unsatisfied definition types.
+
+### Evaluator Variants
+
+Two evaluators with different persistence semantics:
+
+| Evaluator | Persistence | Usage |
+|---|---|---|
+| `evaluateWithPersistence()` | Checks `pairedDeviceStore.wasPaired()` — device previously paired = satisfied even if disconnected | Setup flow (allows proceeding without device present) |
+| `evaluate()` | Only `isDeviceConnected()` — real-time check | Widget status overlay (shows `Disconnected` when device away) |
+
+### Edge Cases to Handle
+
+1. **`visibleWhen` during initial load:** `produceState` initializes to `emptyMap()`. Lambdas checking `currentSettings["key"] == true` will see `null`. Ensure default-visible behavior when map is empty.
+2. **Setup interrupted mid-flow:** Settings are already persisted per-change. Re-entry loads partial state. No transaction boundary — `onComplete` fires only on Done tap, but settings are committed regardless.
+3. **CDM not available:** Handle `ActivityNotFoundException` and `UnsupportedOperationException` from CDM association launch. Fall back to `Failed` state.
+4. **Verification timeout:** `withTimeoutOrNull(30s)` returns `null` → treat same as `Result.failure`. Counts as a failed attempt.
+5. **Re-evaluation race:** `ON_RESUME` evaluationTrigger fires before system finishes reflecting permission grant. Android permission grants are synchronous from app's perspective, but if async verification is added later, use a short delay.
+6. **EnumSetting serialization:** Settings map stores `Any?`. Enum values serialized as `.name` string. Compare with `value == option || value?.toString() == option.name`.
+7. **InstructionAction dual execution:** Row executes action locally AND fires nav callback. Both paths are required — row handles the launch, callback handles verification tracking. Splitting to one path breaks either launch or verification.
