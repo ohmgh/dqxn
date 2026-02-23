@@ -25,6 +25,7 @@ dependencies {
   testFixturesImplementation(project(":sdk:common"))
   testFixturesImplementation(platform(libs.compose.bom))
   testFixturesImplementation(libs.compose.runtime)
+  testFixturesImplementation(libs.compose.ui)
   testFixturesImplementation(libs.kotlinx.collections.immutable)
   testFixturesImplementation(libs.kotlinx.coroutines.core)
   testFixturesImplementation(libs.kotlinx.coroutines.test)
