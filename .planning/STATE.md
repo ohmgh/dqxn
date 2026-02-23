@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 3 — SDK Observability + Analytics + UI
-- **Current Plan:** 1 of 3 complete
+- **Current Plan:** 3 of 3 complete
 - **Milestone:** V1 Launch
-- **Next action:** Phase 3, Plan 02
-- **Last session:** 2026-02-23T19:45:37Z
-- **Stopped at:** Completed 03-03-PLAN.md
+- **Next action:** Phase 4 (KSP Codegen) or Phase 5 (Core Infrastructure)
+- **Last session:** 2026-02-23T20:13:52Z
+- **Stopped at:** Completed 03-02-PLAN.md (Phase 3 fully complete)
 
 ## Progress
 
@@ -15,7 +15,7 @@
 |---|---|---|
 | 1. Build System Foundation | Complete (4/4 plans) | All plans complete |
 | 2. SDK Contracts + Common | Complete (5/5 plans) | All plans complete — types, unit tests, contract test infrastructure |
-| 3. SDK Observability + Analytics + UI | In Progress (1/3 plans) | Plan 01 complete — observability foundation |
+| 3. SDK Observability + Analytics + UI | Complete (3/3 plans) | All plans complete — observability, metrics/health/diagnostics/analytics, SDK UI |
 | 4. KSP Codegen | Pending | Concurrent with Phase 3 |
 | 5. Core Infrastructure | Pending | |
 | 6. Deployable App + Agentic | Pending | First on-device deployment |
@@ -95,6 +95,10 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Adapted InfoCardLayout to Phase 2 SizeOption/InfoCardLayoutMode** — used SMALL/MEDIUM/LARGE/EXTRA_LARGE (0.75-1.5) and STANDARD/COMPACT/WIDE, not old-codebase NONE/SMALL/MEDIUM/LARGE/XL (0.0-1.0) and STACK/GRID/COMPACT
 - **ConcurrentHashMap null-value workaround** — CacheEntry wrapper in IconResolver for null ImageVector caching
 - **hilt-android annotations only** — :sdk:ui gets @Inject/@MapKey without full Hilt KSP plugin
+- **Open classes for testability** — DiagnosticSnapshotCapture/DiagnosticFileWriter made open; MockK cannot mock final classes with constructor-initialized AtomicBoolean on JDK 25
+- **compileOnly(compose.runtime) for @Immutable in :sdk:observability** — same pattern as :sdk:contracts
+- **EnrichedEvent for PackAnalytics** — anonymous object cannot extend sealed interface; concrete data class subtype instead
+- **WidgetHealthMonitor uses scope dispatcher** — hardcoded Dispatchers.Default prevented backgroundScope in tests
 
 ## Performance Metrics
 
@@ -110,6 +114,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 02-04 | 7min | 2 | 8 |
 | 02-05 | 9min | 2 | 11 |
 | 03-01 | 10min | 3 | 28 |
+| 03-02 | 23min | 2 | 21 |
 | 03-03 | 10min | 2 | 17 |
 
 ## Context
