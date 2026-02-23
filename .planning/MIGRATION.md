@@ -77,7 +77,9 @@ Phases 3, 4 can run concurrently after Phase 2. Phase 6 (first deployable APK + 
   - `dqxn.pack` (auto-wires all `:sdk:*` dependencies — packs never manually add them)
   - `dqxn.snapshot` (configures `:pack:*:snapshots` sub-modules — pure Kotlin, `:sdk:contracts` only, no Android/Compose)
   - `dqxn.android.feature`
+- JUnit5 test tags (`fast`, `compose`, `integration`, `benchmark`) and convention plugin `fastTest`/`composeTest` Gradle tasks (F13.10) — available from Phase 2 onward so every module benefits
 - `AgenticMainThreadBan` lint rule (enforced from Phase 6 onward when first handler lands)
+- `NoHardcodedSecrets` lint rule (NF20) — flags SDK keys, API tokens, credentials in source; secrets via `local.properties` or secrets plugin
 - Gradle wrapper (9.3.1)
 
 **Ported from old:** Convention plugin structure (4 plugins → 7+, significantly expanded). Version catalog (updated versions, added missing deps like kotlinx-collections-immutable, Proto DataStore, JUnit5, jqwik).
@@ -141,6 +143,7 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 ### `:sdk:observability`
 
 - `DqxnLogger` with inline extensions (migrate from `core:common`, adapt to zero-allocation when disabled)
+- `JsonLinesLogSink` — machine-readable JSON-lines file log sink (F13.7). Rotated 10MB, max 3 files. Debug builds only. Wired as a `DqxnLogger` sink
 - `LogTag` as `@JvmInline value class`
 - `DqxnTracer` — structured tracing with span IDs, `agenticTraceId` field for causal correlation
 - `MetricsCollector` — `AtomicLongArray(6)` frame histogram, `ConcurrentHashMap` + `LongArrayRingBuffer(64)` per-widget draw time and per-provider latency. Pre-populated from registries at construction. Performance budget: record < 25ns (`System.nanoTime()` + ring buffer write)
@@ -154,6 +157,10 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 
 - Event tracking contracts (new — old codebase has none)
 - Domain-free API surface
+- Funnel event contracts (F12.2): `install`, `onboarding_complete`, `first_widget_added`, `first_customization` (theme change or widget settings edit)
+- Engagement metric contracts (F12.3): `session_duration`, `widgets_per_layout`, `edit_frequency` (edit mode entries per session)
+- Upsell event contracts (F12.6): impression/conversion events with `trigger_source` parameter (`theme_preview`, `widget_picker`, `settings`)
+- Session quality metric contracts (F12.7): session end event carrying `jank_percent`, `peak_thermal_level`, `widget_render_failures`, `provider_errors` — depends on `:sdk:observability` signals (`MetricsCollector`, `WidgetHealthMonitor`)
 
 ### `:sdk:ui` (has Compose compiler)
 
@@ -326,6 +333,9 @@ Delete throwaway modules after checks. These are 10-minute verifications that pr
 - Frame Stats overlay
 - Widget Health overlay
 - Thermal Trending overlay
+- Recomposition Visualization overlay (F13.6)
+- Provider Data Flow DAG overlay (F13.6)
+- State Machine Viewer overlay (F13.6)
 
 **Ported from old:** `AgenticEngine`, `CommandDispatcher`, handler structure (adapt from BroadcastReceiver to ContentProvider transport). `AgenticReceiver` deleted — replaced by `AgenticContentProvider`. Old handlers adapted to new coordinator APIs incrementally. Debug overlays ported with UI adaptation.
 
@@ -572,6 +582,7 @@ If contracts feel wrong, fix them in Phase 2 before proceeding.
 
 - Diagnostic snapshot viewer
 - Observability data display
+- Session recording capture (F13.3): tap, move, resize, navigation events logged for replay/analysis
 
 ### `:feature:onboarding`
 

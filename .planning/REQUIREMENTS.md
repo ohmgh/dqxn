@@ -80,7 +80,7 @@ The always-present canvas that hosts widgets and controls.
 | F1.5  | Edit mode via Edit button (primary) or long-press on blank space (parked only)                | Must     |
 | F1.6  | Drag-to-move widgets in edit mode                                                             | Must     |
 | F1.7  | 4-corner resize handles in edit mode (minimum 48dp touch targets)                             | Must     |
-| F1.8  | Widget focus animation (translate to center, scale up)                                        | Must     |
+| F1.8  | Widget focus state (overlay toolbar: delete/settings). No translate or scale — follow old codebase | Must     |
 | F1.9  | Auto-hide bottom bar: Settings button (always), profile icons (when 2+ profiles exist, active profile highlighted), Add Widget button (edit mode only). Tap to reveal, auto-hide after 3s inactivity. Floats over canvas (no layout shift). Minimum 76dp touch targets | Must     |
 | F1.10 | Z-index stacking for overlapping widgets                                                      | Must     |
 | F1.11 | Edit mode visual feedback (wiggle animation, corner brackets)                                 | Must     |
@@ -286,11 +286,9 @@ Extended visual customization.
 |-------|-----------------------------------------------------------------------------------------------|----------|
 | F11.1 | Progressive onboarding — each tip shown once, tracked via Preferences DataStore: (a) First launch: "Tap Edit to customize your dashboard" (b) First edit mode entry: "Tap a widget to select it. Drag to move." (c) First widget focus: "Use corners to resize. Tap the gear for settings." (d) First widget settings open: dot indicators with brief page labels | Must     |
 | F11.2 | Theme selection prompt on first launch — free themes listed first, then premium (upsell moment) | Must     |
-| F11.3 | BLE device pairing prompt if BLE-dependent widgets are in default layout                      | Should   |
-| F11.4 | Recommended layout guidance: 3-5 widgets for phone, 6-10 for tablet                          | Should   |
 | F11.5 | Default preset for first launch must NOT include GPS-dependent widgets until location permission is granted. Initial layout: clock, battery, date only | Must     |
 | F11.6 | Permission requests are lazy — triggered when user adds a GPS-dependent widget or enters setup for a BLE provider, not during splash screen | Must     |
-| F11.7 | Permission flow: widget shows "Setup Required" overlay → tap opens setup wizard → wizard requests permissions → granted: widget binds data; denied: widget shows "Permission needed" with link to system settings | Must     |
+| F11.7 | Permission flow: widget shows "Setup Required" overlay → tap opens setup wizard → wizard requests permissions → granted: widget binds data; denied: widget shows "Permission needed" with link to system settings. Follow old codebase behavior | Must     |
 
 ### F12: Analytics & Crash Reporting
 
@@ -298,35 +296,33 @@ Extended visual customization.
 |-------|-----------------------------------------------------------------------------------------------|----------|
 | F12.1 | Crash reporting integration (Firebase Crashlytics or equivalent)                              | Must     |
 | F12.2 | Key funnel events: install, first edit, widget add, theme change, upsell impression, purchase start/complete | Must     |
-| F12.3 | Engagement metrics: session duration, widgets per layout, edit frequency                      | Should   |
+| F12.3 | Engagement metrics: session duration, widgets per layout, edit frequency                      | Must     |
 | F12.4 | Privacy-compliant (Singapore PDPA, no PII in analytics)                                       | Must     |
-| F12.5 | Analytics consent: opt-IN on first launch (consent dialog before collection begins). Toggle in settings to revoke consent at any time. Singapore PDPA requires consent before collection, not after | Must     |
+| F12.5 | Analytics consent: opt-IN on first launch (consent dialog before collection begins). Toggle in settings to revoke consent at any time. Shown to all users — PDPA/GDPR require consent before collection, residency ≠ install location so country-gating is insufficient | Must     |
 | F12.6 | Upsell funnel parameters: upsell events include trigger source (`theme_preview`, `widget_picker`, `settings`) as event parameter | Must     |
-| F12.7 | Session quality metrics: session end events include jank%, peak thermal level, widget render failures, provider errors | Should   |
+| F12.7 | Session quality metrics: session end events include jank%, peak thermal level, widget render failures, provider errors | Must     |
 
 ### F13: Debug & Development
 
 | Req   | Description                                                                                   | Priority |
 |-------|-----------------------------------------------------------------------------------------------|----------|
-| F13.1 | Demo pack with simulated providers for all data types                                         | Must     |
-| F13.2 | Agentic framework for ADB-driven automation                                                   | Should   |
-| F13.3 | Capture session recording (tap, move, resize, navigation events)                              | Should   |
+| F13.1 | Demo pack with simulated providers for all data types. Can be used for tests                  | Must     |
+| F13.2 | Agentic framework for ADB-driven automation                                                   | Must     |
+| F13.3 | Capture session recording (tap, move, resize, navigation events)                              | Must     |
 | F13.4 | Demo mode flag (debug builds only)                                                            | Must     |
 | F13.5 | Structured state dumps: ADB-queryable JSON state dumps — dashboard state, provider health, metrics snapshot, trace history, log buffer. Debug builds only | Must     |
-| F13.6 | Debug overlays: toggleable overlays for frame stats, recomposition visualization, provider data flow DAG, state machine viewer, thermal trending, widget health. Debug builds only | Should   |
-| F13.7 | Machine-readable logs: JSON-lines file log sink (rotated 10MB, max 3 files) for agent-parseable diagnostics. Debug builds only | Should   |
+| F13.6 | Debug overlays: toggleable overlays for frame stats, recomposition visualization, provider data flow DAG, state machine viewer, thermal trending, widget health. Debug builds only | Must     |
+| F13.7 | Machine-readable logs: JSON-lines file log sink (rotated 10MB, max 3 files) for agent-parseable diagnostics. Debug builds only | Must     |
 | F13.8 | Structured test output: all test tasks output JUnit XML to predictable paths. Convention plugin configures `{module}/build/test-results/{variant}/` | Must     |
 | F13.9 | Tiered validation pipeline documented for agentic development: compile check (~8s) → fast tests (~12s) → full module tests (~30s) → dependent tests (~60s) → on-device smoke with semantics verification (~30s) → full suite | Must     |
-| F13.10 | Test categorization via JUnit5 tags: `fast`, `compose`, `integration`, `benchmark`. Convention plugin provides `fastTest`/`composeTest` tasks | Should   |
-| F13.11 | Semantics tree inspection: ADB-queryable Compose semantics tree — element bounds, visibility, test tags, text content, actions, content descriptions. Enables agentic UI verification and autonomous accessibility auditing. Debug builds only | Should   |
+| F13.10 | Test categorization via JUnit5 tags: `fast`, `compose`, `integration`, `benchmark`. Convention plugin provides `fastTest`/`composeTest` tasks | Must     |
+| F13.11 | Semantics tree inspection: ADB-queryable Compose semantics tree — element bounds, visibility, test tags, text content, actions, content descriptions. Enables agentic UI verification and autonomous accessibility auditing. Debug builds only | Must     |
 
 ### F14: Settings
 
 | Req   | Description                                                                                   | Priority |
 |-------|-----------------------------------------------------------------------------------------------|----------|
-| F14.1 | Orientation lock expanded: Landscape / Reverse Landscape / Portrait / Reverse Portrait        | Must     |
-| F14.2 | Diagnostics: navigation to Provider Health dashboard                                          | Must     |
-| F14.3 | Report a Problem: opens email intent with pre-filled device info, app version, connection event log | Should   |
+| F14.2 | Diagnostics: navigation to Provider Health dashboard. Part of diagnostics UI                   | Must     |
 | F14.4 | Delete All Data: clear all DataStores, revoke analytics ID, reset to factory state (GDPR compliance) | Must     |
 
 ## 4. Non-Functional Requirements
@@ -375,7 +371,7 @@ Extended visual customization.
 
 | Req  | Description                                                                                    |
 |------|------------------------------------------------------------------------------------------------|
-| NF20 | No hardcoded secrets in source (SDK keys via local.properties or secrets plugin)                |
+| NF20 | No hardcoded secrets in source (SDK keys via local.properties or secrets plugin). Make this a lint rule |
 | NF21 | Agentic receiver restricted to debug builds                                                    |
 | NF22 | Demo providers gated to debug builds only                                                      |
 | NF23 | `neverForLocation="true"` on BT scan permission                                               |
@@ -396,7 +392,7 @@ Extended visual customization.
 |-------|-----------------------------------------------------------------------------------------------|
 | NF-D1 | Speed and speed limit displays are for informational purposes only. Widget Info page must include disclaimer: "Speed and speed limit data are approximate. Always refer to your vehicle speedometer and posted signs." |
 | NF-D2 | Terms of service must explicitly disclaim liability for speed data accuracy |
-| NF-D3 | First-launch onboarding includes a brief, dismissable disclaimer that the app supplements — does not replace — the vehicle dashboard |
+| NF-D3 | First-launch onboarding includes a brief, dismissable disclaimer that the app supplements — does not replace — the vehicle dashboard. When used in-vehicle |
 
 ### Offline
 
@@ -413,7 +409,6 @@ Extended visual customization.
 | NF27 | minSdk 31 (Android 12) — required for CDM, BT permission model, RenderEffect                  |
 | NF28 | targetSdk 36 with API 36 CDM event handling                                                    |
 | NF29 | Required hardware: `companion_device_setup`                                                    |
-| NF44 | App must handle display cutouts, punch-holes, and camera notches. Dashboard renders behind cutouts (edge-to-edge) but widget placement warnings surface when content overlaps |
 | NF45 | Default presets are configuration-aware: core widgets placed in the intersection region visible across all device display configurations (fold states × orientation). Secondary widgets placed in larger-viewport zones. Every configuration renders a coherent subset |
 | NF46 | Foldable behavior: when display configuration changes (fold/unfold), viewport recalculates. Widgets outside the new viewport are simply not rendered (no reflow, no relocation). The no-straddle constraint (F1.27) ensures widgets are always fully visible or fully invisible — never partially clipped. Configuration boundary lines in edit mode (F1.26) let users make informed placement decisions |
 
@@ -422,12 +417,10 @@ Extended visual customization.
 | Req  | Description                                                                                    |
 |------|------------------------------------------------------------------------------------------------|
 | NF30 | WCAG 2.1 AA contrast ratios for critical text (speed, time, speed limit)                       |
-| NF31 | Minimum text size for at-a-glance readability (speed: 48sp+, secondary info: 24sp+)       |
 | NF32 | TalkBack support for setup/settings flows. Dashboard rendering is explicitly excluded from screen reader support — real-time updating Canvas content at 60fps is fundamentally incompatible with screen reader patterns. Per-widget `accessibilityDescription` (F2.19) provides read-only value announcements on demand |
 | NF33 | System font scale respected in settings UI (dashboard widgets use fixed sizes for layout stability) |
 | NF39 | Reduced motion: when system `animator_duration_scale` = 0, disable wiggle, replace spring with instant transitions, disable pixel-shift. Glow remains |
 | NF40 | Color-blind safety: speed limit warnings use color + pattern/icon (pulsing border + warning icon), not color alone. Free themes verified for deuteranopia contrast |
-| NF47 | Critical data (speed, speed limit, time) must be readable at 10,000 lux ambient light. Free themes must include at least one high-contrast variant optimized for direct sunlight |
 
 ### Build & APK
 
@@ -442,7 +435,7 @@ Extended visual customization.
 |------|------------------------------------------------------------------------------------------------|
 | NF-L1 | Phone calls: dashboard pauses state collection, resumes on return. BLE connection maintained via foreground service. `FLAG_KEEP_SCREEN_ON` behavior standard (released when Activity stops) |
 | NF-L2 | In-app updates: Google Play In-App Updates API — IMMEDIATE for critical bugs, FLEXIBLE for features |
-| NF-L3 | In-app review: Google Play In-App Review API. Trigger after 3+ sessions, 1+ layout customization, no crash in current session. Frequency cap: once per 90 days |
+| NF-L3 | In-app review: Google Play In-App Review API. Trigger after 3+ sessions, 1+ layout customization, no crash in current session. Frequency cap: once per 90 days. Non-intrusive. Deferred: settings menu item |
 
 ### Localization
 
@@ -578,7 +571,7 @@ Three-page pager:
 
 1. Tap Edit button → enter edit mode (long-press only available when parked)
 2. Widgets show wiggle animation + corner brackets. Configuration boundary lines appear with labels
-3. Tap widget → focus (translate to center, scale up, show overlay toolbar: delete/settings)
+3. Tap widget → focus (show overlay toolbar: delete/settings). No translate or scale — follow old codebase
 4. Drag to move (snaps to 2-unit grid + no-straddle boundary snap), corner handles to resize (48dp minimum touch targets)
 5. Profile switching disabled during edit mode — horizontal swipe is widget drag territory. Edits apply to the current profile's canvas only
 6. Tapping widget content area unfocuses; tapping blank space or Edit button exits edit mode
@@ -591,6 +584,10 @@ See F10. Driving mode is deferred to post-launch. When implemented, driving dete
 ## 9. Settings
 
 ### Main Settings Sheet
+
+**App Intro**
+
+Non-interactive section at top of settings. Displays app icon, app name, version, and brief tagline. Follow old codebase.
 
 **Appearance**
 
@@ -608,7 +605,7 @@ See F10. Driving mode is deferred to post-launch. When implemented, driving dete
 | Setting                | Type                                                                              | Description                                                      |
 |------------------------|-----------------------------------------------------------------------------------|------------------------------------------------------------------|
 | Keep Screen On         | Toggle (default: on)                                                              | Prevents screen timeout while dashboard is active                |
-| Orientation Lock       | Selection (Landscape / Reverse Landscape / Portrait / Reverse Portrait)           | Locks display orientation                                        |
+| Orientation Lock       | Selection                                                                         | Locks display orientation (landscape default, configurable)      |
 | Profiles               | Navigation                                                                        | Profile management: create/edit/delete profiles, configure auto-switch triggers and priority ordering. Also accessible via bottom bar profile dots |
 | Dash Packs             | Navigation                                                                        | Opens Pack Browser                                               |
 
@@ -626,9 +623,12 @@ See F10. Driving mode is deferred to post-launch. When implemented, driving dete
 |------------------------|-----------------------------------------------------------------------------------|------------------------------------------------------------------|
 | Reset Dash             | Destructive action                                                                | Resets layout to default preset                                  |
 | Delete All Data        | Destructive action                                                                | Clears all DataStores, revokes analytics ID, resets to factory state |
-| Report a Problem       | Action                                                                            | Opens email intent with pre-filled device info, app version, connection event log |
 
-### Widget Style Properties (per-widget)
+### Widget Properties Pages (follow old codebase)
+
+Per-widget settings presented as three pages following old codebase: (1) Feature (includes style properties), (2) Data Source, (3) Info.
+
+#### Style Properties
 
 | Property             | Range     | Description                                            |
 |----------------------|-----------|--------------------------------------------------------|
@@ -644,7 +644,6 @@ See F10. Driving mode is deferred to post-launch. When implemented, driving dete
 | Screen                     | Empty/Error State              | User-Facing Message                                                                        |
 |----------------------------|--------------------------------|--------------------------------------------------------------------------------------------|
 | Dashboard (0 widgets)      | Empty dashboard                | Show persistent coach-mark + "Add your first widget" CTA                                   |
-| Widget picker (all added)  | All widgets placed             | Show "All widgets placed" message                                                          |
 | Theme selector (no customs)| No custom themes               | Show "Create your first theme" CTA                                                        |
 | BLE scan (no devices)      | No devices found               | Show "No devices found" + troubleshooting tips                                             |
 | Provider setup (denied)    | Permission denied              | Inline error + retry + system settings link                                                |

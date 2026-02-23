@@ -172,7 +172,7 @@
 
 **Goal:** Settings, diagnostics, onboarding, entitlements, CI gates, full E2E integration.
 
-**Requirements:** F4.6-F4.10, F4.12-F4.13, F7.6, F7.7, F8.1-F8.3, F8.5, F8.7-F8.9, F11.1-F11.7, F12.2-F12.7, F13.3, F13.10, F14.1-F14.4, NF-P1-NF-P5, NF-D1-NF-D3, NF24-NF26, NF27-NF29, NF30-NF33, NF34, NF39, NF40, NF44-NF47, NF-L1-NF-L3, NF-I1, NF-I2, NF9, NF10
+**Requirements:** F4.6-F4.10, F4.12-F4.13, F7.6, F7.7, F8.1-F8.3, F8.5, F8.7-F8.9, F11.1, F11.2, F11.5-F11.7, F12.2-F12.7, F13.3, F13.10, F14.2, F14.4, NF-P1-NF-P5, NF-D1-NF-D3, NF24-NF26, NF27-NF29, NF30, NF32, NF33, NF34, NF39, NF40, NF45, NF46, NF-L1-NF-L3, NF-I1, NF-I2, NF9, NF10
 
 **Success Criteria:**
 1. Full E2E: launch → load → bind → render → edit → add/remove/resize → theme switch with semantics verification at each step
