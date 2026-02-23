@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 3 — SDK Observability + Analytics + UI
-- **Current Plan:** Not started
+- **Current Plan:** 1 of 3 complete
 - **Milestone:** V1 Launch
-- **Next action:** Phase 3, Plan 01
-- **Last session:** 2026-02-23T19:24:43.249Z
-- **Stopped at:** Completed 02-05-PLAN.md (Phase 2 complete)
+- **Next action:** Phase 3, Plan 02
+- **Last session:** 2026-02-23T19:48:03.665Z
+- **Stopped at:** Completed 03-01-PLAN.md
 
 ## Progress
 
@@ -15,7 +15,7 @@
 |---|---|---|
 | 1. Build System Foundation | Complete (4/4 plans) | All plans complete |
 | 2. SDK Contracts + Common | Complete (5/5 plans) | All plans complete — types, unit tests, contract test infrastructure |
-| 3. SDK Observability + Analytics + UI | Pending | Concurrent with Phase 4 |
+| 3. SDK Observability + Analytics + UI | In Progress (1/3 plans) | Plan 01 complete — observability foundation |
 | 4. KSP Codegen | Pending | Concurrent with Phase 3 |
 | 5. Core Infrastructure | Pending | |
 | 6. Deployable App + Agentic | Pending | First on-device deployment |
@@ -87,6 +87,12 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Non-Compose fallback for contract render tests** — :sdk:contracts has no Compose compiler, so contract tests #2/#3 verify accessibilityDescription instead of Render(). Real Compose render tests in pack modules (Phase 8+)
 - **testScheduler.advanceTimeBy for cancellation test** — advanceUntilIdle causes infinite loop with continuous-emitting providers; bounded time advance is correct pattern
 
+### Phase 3 Decisions
+
+- **FakeSharedPreferences over Robolectric** for CrashEvidenceWriter tests — JUnit5 @Test incompatible with @RunWith(RobolectricTestRunner)
+- **NEVER_REPORTED sentinel (Long.MIN_VALUE)** with explicit identity check for DeduplicatingErrorReporter first-report handling — arithmetic comparison overflows
+- **TraceContext created in Task 1** — DqxnLogger suspend extensions require it at compile time (forward dependency from Task 2)
+
 ## Performance Metrics
 
 | Phase-Plan | Duration | Tasks | Files |
@@ -100,6 +106,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 02-03 | 6min | 2 | 23 |
 | 02-04 | 7min | 2 | 8 |
 | 02-05 | 9min | 2 | 11 |
+| 03-01 | 10min | 3 | 28 |
 
 ## Context
 
