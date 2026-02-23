@@ -35,11 +35,12 @@ public class DeduplicatingErrorReporter(
 
   private fun shouldReport(key: String): Boolean {
     val now = clock()
-    val lastTime = lastReported.computeIfAbsent(key) { AtomicLong(0L) }
+    val lastTime = lastReported.computeIfAbsent(key) { AtomicLong(NEVER_REPORTED) }
 
     while (true) {
       val last = lastTime.get()
-      if (now - last < cooldownMillis) {
+      // First report (sentinel) always passes; subsequent reports check cooldown
+      if (last != NEVER_REPORTED && now - last < cooldownMillis) {
         return false
       }
       if (lastTime.compareAndSet(last, now)) {
@@ -51,5 +52,6 @@ public class DeduplicatingErrorReporter(
 
   private companion object {
     const val DEFAULT_COOLDOWN_MILLIS = 60_000L
+    const val NEVER_REPORTED = Long.MIN_VALUE
   }
 }
