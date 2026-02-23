@@ -95,4 +95,10 @@ First real E2E test class (`AgenticTestClient`) starts here — wrapping `adb sh
 | **Why load-bearing** | After fd-count leak detection was dropped from `DataProviderContractTest` (#4), this rule + LeakCanary are the only remaining resource leak guards. A widget launching on `rememberCoroutineScope()` bypasses `SupervisorJob` isolation — one widget crash cancels siblings |
 | **Tests** | Positive: `rememberCoroutineScope().launch {}` in Render → fires. `GlobalScope.launch {}` in Render → fires. Negative: `LocalWidgetScope.current.launch {}` → does not fire. `derivedStateOf {}` → does not fire. Test files → does not fire |
 
+## Replication Advisory References
+
+Before implementing Phase 8, consult the following section of [replication-advisory.md](replication-advisory.md):
+
+- **§7 Widget Setup Architecture** — `SetupEvaluator` two variants: `evaluateWithPersistence()` (checks `pairedDeviceStore.wasPaired()` — paired = satisfied even if disconnected) vs `evaluate()` (real-time `isDeviceConnected()` only). Phase 8 providers that define `setupSchema` must coordinate with the evaluator semantics. `WidgetRenderState` overlay states (Ready, SetupRequired, ConnectionError, Disconnected, EntitlementRevoked, ProviderMissing) with scrim progressions (0.15/0.30/0.60) and `requirementType` classification ("permission"→PermissionRequest route, "hardware"→ProviderSetup route). `visibleWhen` during initial load: settings map starts empty, lambdas checking `currentSettings["key"] == true` see `null` — ensure default-visible behavior.
+
 If contracts feel wrong, fix them in Phase 2 before proceeding.

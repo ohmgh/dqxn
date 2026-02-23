@@ -68,6 +68,13 @@ Wire `AnalyticsTracker` (contract from Phase 3, Firebase impl from Phase 5) at o
 
 All events gated on analytics consent (F12.5). No events fire if user has not opted in.
 
+## Replication Advisory References
+
+Before implementing Phase 11, consult the following sections of [replication-advisory.md](replication-advisory.md):
+
+- **§3 Theme & Studio Preview** — `displayTheme = previewTheme ?: currentTheme` pattern. Caller-managed preview: `SetPreviewTheme` fired BEFORE navigation (prevents flash of non-previewed theme during transition). Race condition fix: dual cleanup — `DisposableEffect(Unit) { onDispose { ClearPreviewTheme } }` in ThemeSelector AND `LaunchedEffect(Unit) { ClearPreviewTheme }` in Settings (both required — `LaunchedEffect(Unit)` only runs once since NavHost keeps Settings in composition during child pushes). Studio auto-save: `LaunchedEffect(all color state vars) { if (isDirty) { onAutoSave(buildCustomTheme(...)) } }` with single `stableThemeId = remember { existingId ?: "custom_${currentTimeMillis()}" }`. Delete-while-previewing: revert to active dark/light default before dispatching delete. Undo edge case: restores editor state but NOT file on disk — `isDirty = false` prevents next auto-save. Overlay chrome theming: ThemeSelector header adopts previewed theme colors, ThemeEditor chrome matches live dashboard.
+- **§4 Source-Varying Transitions** — ThemeModeSelector/ThemeSelector/ThemeEditor popEnter: `fadeIn(150ms)` NOT previewEnter (avoids double-slide). All 7 OverlayNavHost routes must have correct source-varying transition assignments per the full transition table.
+
 **Tests:**
 - `InlineColorPicker` color conversion tests — `colorToHsl`/`colorToHex`/`parseHexToColor` with known values (black, white, pure RGB, achromatic grays, hue boundary 0/120/240/360). Round-trip accuracy: `color → hsl → color` within ±1/255 per channel
 - `IlluminanceThresholdControl`: `luxToPosition`/`positionToLux` logarithmic mapping inverses, boundary values (0 lux, 10000 lux), dashed line geometry

@@ -41,6 +41,12 @@
 - `EnumSetting.optionPreviews` replacement — registry or extension function pattern for packs to register preview composables for `EnumSetting<E>` options. Old code had `(@Composable (E) -> Unit)?` lambda on `EnumSetting` which was stripped in Phase 2. Packs need a way to provide option previews
 - **Deferred from Phase 3 to first consumer:** setup overlay composables (`SetupRequiredOverlay`, `DisconnectedOverlay` — Phase 10), `PermissionRequestPage` (Phase 10)
 
+## Replication Advisory References
+
+Before implementing Phase 3, consult the following sections of [replication-advisory.md](replication-advisory.md):
+
+- **§5 UI Design System** — 6-token color model (`primaryTextColor`, `secondaryTextColor`, `accentColor`, `highlightColor`, `widgetBorderColor`, `backgroundBrush`/`widgetBackgroundBrush`), typography scale (8 roles with specific sp overrides), emphasis alpha levels (1.0/0.7/0.4/0.12), scrim progression (0.15/0.30/0.60). The `DashboardThemeDefinition` in `:sdk:ui` must expose these exact tokens. Note the gap to fix: no error/warning/success semantic tokens in old code — add them in new arch.
+
 **Ported from old:** `core:widget-primitives/*` → `sdk:ui` (WidgetContainer, InfoCardLayout, SetupOverlays, LocalWidgetScale, LocalWidgetPreviewUnits). Analytics is entirely new. **Observability is entirely new** — exhaustive search of old codebase found zero observability code (no logger, no metrics, no crash evidence, no ANR watchdog, no diagnostic snapshots). Old code uses raw `android.util.Log` directly. The entire `:sdk:observability` module is greenfield.
 
 **Tests:**

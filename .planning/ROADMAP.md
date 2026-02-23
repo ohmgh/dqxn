@@ -60,6 +60,8 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Depends on:** Phase 1
 
+**Replication Advisory:** §7 (setup/setting definition schemas, three-layer visibility, evaluator semantics, type-prefixed serialization).
+
 **Details:** [MIGRATION.md — Phase 2](MIGRATION.md#phase-2-sdk-contracts--common)
 
 ---
@@ -83,6 +85,8 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Depends on:** Phase 2
 **Concurrent with:** Phase 4
+
+**Replication Advisory:** §5 (6-token color model for DashboardThemeDefinition, emphasis levels, gap: add error/warning/success tokens).
 
 **Details:** [MIGRATION.md — Phase 3](MIGRATION.md#phase-3-sdk-observability--analytics--ui)
 
@@ -127,6 +131,8 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 11. `FramePacer` API branching tests pass (API 34+ vs 31-33 paths)
 
 **Depends on:** Phase 3
+
+**Replication Advisory:** §3 (ThemeAutoSwitchEngine modes), §4 (spring configs + named transitions to core:design), §5 (spacing/typography/radii/emphasis to core:design — fix known inconsistencies).
 
 **Details:** [MIGRATION.md — Phase 5](MIGRATION.md#phase-5-core-infrastructure)
 
@@ -174,6 +180,8 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Depends on:** Phases 5, 6
 
+**Replication Advisory:** §1 (widget preview mode), §2 (jankless navigation), §3 (theme preview — coordinator state), §4 (widget-level animations), §6 (drag/snap/resize/gestures). Densest advisory coverage of any phase.
+
 **Details:** [MIGRATION.md — Phase 7](MIGRATION.md#phase-7-dashboard-shell)
 
 ---
@@ -194,6 +202,8 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 7. **Greenfield provider tests:** GpsSpeedProvider, BatteryProvider, AccelerometerProvider, SpeedLimitProvider have provider-specific unit tests beyond DataProviderContractTest
 
 **Depends on:** Phase 7
+
+**Replication Advisory:** §7 (evaluator two-variant semantics, WidgetRenderState overlay states + scrim progressions, visibleWhen empty-map edge case).
 
 **Details:** [MIGRATION.md — Phase 8](MIGRATION.md#phase-8-essentials-pack-architecture-validation-gate)
 
@@ -234,6 +244,8 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Depends on:** Phase 8
 
+**Replication Advisory:** §1 (preview dismissal), §2 (source-varying transitions, shared elements), §4 (route-level transitions), §5 (design system tokens), §7 (full setup flow, BLE state machine, pickers, dispatchers). Second-densest advisory coverage.
+
 **Details:** [MIGRATION.md — Phase 10](MIGRATION.md#phase-10-settings-foundation--setup-ui)
 
 ---
@@ -255,6 +267,8 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 **Depends on:** Phase 10
 
 **Concurrent with:** Phase 9 (theme UI doesn't need `:pack:themes` to exist — works with free themes only)
+
+**Replication Advisory:** §3 (theme/studio preview lifecycle, race condition fix, auto-save), §4 (route-level transitions for theme overlays).
 
 **Details:** [MIGRATION.md — Phase 11](MIGRATION.md#phase-11-theme-ui--diagnostics--onboarding)
 

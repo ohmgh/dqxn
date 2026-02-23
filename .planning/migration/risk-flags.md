@@ -12,4 +12,14 @@
 
 6. **Phase 5 repository tests are the most impactful addition.** Phase 5 delivers 6 DataStore repositories with zero behavioral tests in the original plan. Phase 7 coordinators consume these repositories — fakes in coordinator tests mask repository bugs. The updated Phase 5 now includes CRUD tests for all repositories. If Phase 5 runs long, repository tests are the last thing to cut — they catch bugs that surface 2 phases later in ways that look like coordinator bugs.
 
-7. **Six areas of nuanced old-codebase UX logic require careful replication.** Documented in [replication-advisory.md](replication-advisory.md). These are hard-to-get-right behaviors where naive reimplementation introduces subtle bugs. Consult the advisory before implementing phases that touch: (1) widget preview/settings peek — Phase 7/10, (2) overlay navigation without collapsing preview — Phase 7/10, (3) theme/studio live preview — Phase 8/10, (4) source-varying transitions and shared elements — Phase 10, (5) design system consistency — Phase 6/10, (6) drag/snap/resize gestures — Phase 7, (7) widget setup architecture and UI — Phase 8/10. Each section documents exact state machines, animation specs, race conditions, and edge cases from verified old source.
+7. **Seven areas of nuanced old-codebase UX logic require careful replication.** Documented in [replication-advisory.md](replication-advisory.md). These are hard-to-get-right behaviors where naive reimplementation introduces subtle bugs. Each advisory section is now cross-referenced directly in the affected phase files as a "Replication Advisory References" callout. Summary of phase mappings:
+
+   | Advisory Section | Affected Phases |
+   |---|---|
+   | §1 Widget Preview Mode | Phase 7 (state machine, animations, gesture locking), Phase 10 (sheet dismissal, viewport coordination) |
+   | §2 Jankless Navigation | Phase 7 (Layer 0/1 architecture, OverlayNavHost scaffold), Phase 10 (source-varying transitions, shared element pack card morph) |
+   | §3 Theme & Studio Preview | Phase 5 (ThemeAutoSwitchEngine), Phase 7 (ThemeCoordinator displayTheme pattern), Phase 11 (preview lifecycle, race condition fix, studio auto-save) |
+   | §4 Source-Varying Transitions | Phase 5 (spring configs to core:design), Phase 7 (widget-level animations, DashboardMotion), Phase 10/11 (route-level transitions) |
+   | §5 UI Design System | Phase 3 (DashboardThemeDefinition token model), Phase 5 (core:design spacing/typography/radii/emphasis) |
+   | §6 Drag/Snap/Resize/Gestures | Phase 7 (coordinate system, gesture filtering, snap calc, resize mechanics, haptics) |
+   | §7 Widget Setup Architecture | Phase 2 (SetupDefinition/SettingDefinition schemas), Phase 8 (evaluator semantics, overlay states), Phase 10 (setup flow UI, BLE state machine, pickers, dispatchers) |

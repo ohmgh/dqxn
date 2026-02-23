@@ -262,6 +262,12 @@ Abstract methods pack tests must implement:
 
 Phase 2 establishes the pattern for non-UI modules needing `@Immutable`: add `compileOnly(libs.compose.runtime)` (standalone artifact, not BOM-mediated). Phase 3's `:sdk:observability` will need the same pattern. Document in Phase 2 implementation notes.
 
+## Replication Advisory References
+
+Before implementing Phase 2, consult the following sections of [replication-advisory.md](replication-advisory.md):
+
+- **§7 Widget Setup Architecture** — `SetupDefinition` 7-type schema (3 categories: requirement/display/input), `SettingDefinition` 11-type schema, three-layer conditional visibility (`hidden` → `visibleWhen` → `requiredAnyEntitlement`), `Setting` wrapper double-gating pattern, `SetupEvaluator` two-variant persistence semantics, `ProviderSettingsStore` type-prefixed serialization format with legacy fallback. The schemas defined here must match the exact semantics documented in §7 — particularly the `Setting` wrapper delegation pattern and `visibleWhen` null-means-visible convention.
+
 **Ported from old:** `core/plugin-api/*` — but every interface changes signature significantly. Key transformations: `DataSnapshot` from `Map<String, Any?>` to typed `@DashboardSnapshot` subtypes (new design informed by old data shapes). `WidgetData` from string-keyed to `KClass`-keyed multi-slot. `WidgetRenderer.Render()` drops `widgetData` param (read via `LocalWidgetData`). `SetupDefinition` subtypes lose `ImageVector` and `Context` dependencies (replaced with string icon names and declarative `ServiceType` enums). `EnumSetting.optionPreviews` (`@Composable`) stripped from contracts. `Gated.requiredAnyEntitlement` changes from `List<String>?` to `Set<String>?`. `SettingDefinition` ports cleanly. `ConnectionStateMachine` ports nearly verbatim (implementation) with significantly expanded test coverage.
 
 **Validation:**

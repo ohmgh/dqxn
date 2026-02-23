@@ -46,6 +46,14 @@
 - `FirebasePerformanceTracer` — wraps Firebase Performance: custom traces, HTTP metrics (if applicable)
 - Requires `google-services.json` in `:app` — Phase 5 test strategy: unit tests mock Firebase interfaces, no real Firebase calls. Binding verification via Hilt test in Phase 6
 
+## Replication Advisory References
+
+Before implementing Phase 5, consult the following sections of [replication-advisory.md](replication-advisory.md):
+
+- **§3 Theme & Studio Preview** — `ThemeAutoSwitchEngine` five modes (LIGHT, DARK, SYSTEM, SOLAR_AUTO, ILLUMINANCE_AUTO), `combine(isDarkActive, lightTheme, darkTheme)` → `activeTheme: StateFlow`. Old code has a pack isolation violation (hard dep on free pack sensor providers) — fix in new arch. Auto-switch engine is delivered here; the preview lifecycle (`displayTheme`, caller-managed `SetPreviewTheme`, race condition fix) is Phase 7/11.
+- **§4 Source-Varying Transitions** — Spring configs (`standardSpring` 0.65/300, `hubSpring` 0.50/300, `previewSpring` 0.75/380) and all named enter/exit transitions port to `:core:design`. Duration asymmetry pattern: enter 200ms, exit 150ms. These are tuned values — port verbatim, do not re-guess.
+- **§5 UI Design System** — Spacing system (4dp grid, `SpaceXXS`–`SpaceXXL` with 10 semantic aliases), `CardSize` enum (`SMALL` 8dp, `MEDIUM` 12dp, `LARGE` 16dp), `DashboardTypography` (8 roles), `TextEmphasis` (4 alpha constants) all port to `:core:design`. Fix known inconsistencies: radius fragmentation (inline hardcoded values), `OverlayScaffold` conflating spacing with shape, `OverlayTitleBar` using 0.6 alpha instead of 0.7.
+
 **Ported from old:** `UserPreferencesRepository` (rewritten for Proto — old used Preferences DataStore with Gson blobs), `LayoutDataStore` (rewritten from JSON-in-Preferences to Proto DataStore). Theme JSON loading (schema parser). `DashboardThemeExtensions.kt`, `DashboardTypography`, `TextEmphasis`, `CardSize` from `feature/dashboard` → `:core:design`. **Greenfield:** `ThermalManager`, `RenderConfig`, `FramePacer` — no thermal management exists in old codebase. Proto DataStore schemas are new (old uses Preferences DataStore exclusively). `ConnectionEventStore` is new.
 
 **Port inventory:**
