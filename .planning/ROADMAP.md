@@ -23,7 +23,7 @@
 
 All convention plugins defined: `dqxn.android.application`, `dqxn.android.library`, `dqxn.android.compose`, `dqxn.android.hilt`, `dqxn.android.test`, `dqxn.pack`, `dqxn.snapshot`, `dqxn.android.feature`, `dqxn.kotlin.jvm`
 
-**Details:** [MIGRATION.md — Phase 1](MIGRATION.md#phase-1-build-system-foundation)
+**Details:** [Phase 1 Details](migration/phase-01.md)
 
 ---
 
@@ -62,7 +62,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Replication Advisory:** §7 (setup/setting definition schemas, three-layer visibility, evaluator semantics, type-prefixed serialization).
 
-**Details:** [MIGRATION.md — Phase 2](MIGRATION.md#phase-2-sdk-contracts--common)
+**Details:** [Phase 2 Details](migration/phase-02.md)
 
 ---
 
@@ -88,7 +88,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Replication Advisory:** §5 (6-token color model for DashboardThemeDefinition, emphasis levels, gap: add error/warning/success tokens).
 
-**Details:** [MIGRATION.md — Phase 3](MIGRATION.md#phase-3-sdk-observability--analytics--ui)
+**Details:** [Phase 3 Details](migration/phase-03.md)
 
 ---
 
@@ -107,7 +107,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 **Depends on:** Phase 2
 **Concurrent with:** Phase 3
 
-**Details:** [MIGRATION.md — Phase 4](MIGRATION.md#phase-4-ksp-codegen)
+**Details:** [Phase 4 Details](migration/phase-04.md)
 
 ---
 
@@ -134,7 +134,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Replication Advisory:** §3 (ThemeAutoSwitchEngine modes), §4 (spring configs + named transitions to core:design), §5 (spacing/typography/radii/emphasis to core:design — fix known inconsistencies).
 
-**Details:** [MIGRATION.md — Phase 5](MIGRATION.md#phase-5-core-infrastructure)
+**Details:** [Phase 5 Details](migration/phase-05.md)
 
 ---
 
@@ -156,7 +156,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Depends on:** Phases 3, 4, 5 (Phase 3 direct: `:app` imports `:sdk:observability`, `:sdk:analytics`, `:sdk:ui`)
 
-**Details:** [MIGRATION.md — Phase 6](MIGRATION.md#phase-6-deployable-app--agentic-framework)
+**Details:** [Phase 6 Details](migration/phase-06.md)
 
 ---
 
@@ -182,7 +182,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Replication Advisory:** §1 (widget preview mode), §2 (jankless navigation), §3 (theme preview — coordinator state), §4 (widget-level animations), §6 (drag/snap/resize/gestures). Densest advisory coverage of any phase.
 
-**Details:** [MIGRATION.md — Phase 7](MIGRATION.md#phase-7-dashboard-shell)
+**Details:** [Phase 7 Details](migration/phase-07.md)
 
 ---
 
@@ -205,7 +205,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Replication Advisory:** §7 (evaluator two-variant semantics, WidgetRenderState overlay states + scrim progressions, visibleWhen empty-map edge case).
 
-**Details:** [MIGRATION.md — Phase 8](MIGRATION.md#phase-8-essentials-pack-architecture-validation-gate)
+**Details:** [Phase 8 Details](migration/phase-08.md)
 
 ---
 
@@ -224,7 +224,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Depends on:** Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing)
 
-**Details:** [MIGRATION.md — Phase 9](MIGRATION.md#phase-9-themes-demo--chaos)
+**Details:** [Phase 9 Details](migration/phase-09.md)
 
 ---
 
@@ -246,7 +246,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Replication Advisory:** §1 (preview dismissal), §2 (source-varying transitions, shared elements), §4 (route-level transitions), §5 (design system tokens), §7 (full setup flow, BLE state machine, pickers, dispatchers). Second-densest advisory coverage.
 
-**Details:** [MIGRATION.md — Phase 10](MIGRATION.md#phase-10-settings-foundation--setup-ui)
+**Details:** [Phase 10 Details](migration/phase-10.md)
 
 ---
 
@@ -270,7 +270,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Replication Advisory:** §3 (theme/studio preview lifecycle, race condition fix, auto-save), §4 (route-level transitions for theme overlays).
 
-**Details:** [MIGRATION.md — Phase 11](MIGRATION.md#phase-11-theme-ui--diagnostics--onboarding)
+**Details:** [Phase 11 Details](migration/phase-11.md)
 
 ---
 
@@ -292,7 +292,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Concurrent with:** Phases 9, 10, 11
 
-**Details:** [MIGRATION.md — Phase 12](MIGRATION.md#phase-12-ci-gates--benchmarking)
+**Details:** [Phase 12 Details](migration/phase-12.md)
 
 ---
 
@@ -313,7 +313,7 @@ All convention plugins defined: `dqxn.android.application`, `dqxn.android.librar
 
 **Depends on:** Phases 9, 11, 12
 
-**Details:** [MIGRATION.md — Phase 13](MIGRATION.md#phase-13-e2e-integration--launch-polish)
+**Details:** [Phase 13 Details](migration/phase-13.md)
 
 ---
 
@@ -333,7 +333,7 @@ graph TD
     P7 --> P8[Phase 8: Essentials Pack]
     P8 --> P9[Phase 9: Themes, Demo + Chaos]
     P8 --> P10[Phase 10: Settings Foundation]
-    P8 --> P12[Phase 12: CI Gates + Benchmarks]
+    P8 --> P12[Phase 12: CI Gates + Benchmarking]
     P10 --> P9
     P10 --> P11[Phase 11: Theme UI + Diagnostics + Onboarding]
     P9 --> P13[Phase 13: E2E + Launch Polish]

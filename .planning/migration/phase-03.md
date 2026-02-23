@@ -1,5 +1,7 @@
 # Phase 3: SDK Observability + Analytics + UI
 
+**Depends on:** Phase 2 | **Concurrent with:** Phase 4
+
 **What:** Remaining SDK modules that packs and features import. Observability is the foundation for all autonomous debugging — it must be solid before the agentic framework wires to it in Phase 6.
 
 ## `:sdk:observability` (Android library — uses `SharedPreferences`, `StatFs`, `PowerManager`; no Compose compiler)

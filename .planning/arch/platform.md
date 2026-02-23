@@ -238,7 +238,6 @@ Every user-facing message in the requirements maps to exactly one owner:
 | F7.2 | "Your layout was reset after an update" | `NotificationCoordinator` | Toast, NORMAL |
 | F4.6 | "Theme preview ended" | `NotificationCoordinator` | Toast, NORMAL |
 | F8.9 | Entitlement revocation explanation | `NotificationCoordinator` | Toast, NORMAL |
-| F8.10 | 7-day offline grace period expired | `NotificationCoordinator` | Banner, HIGH |
 | NF42 | "Unable to save. Free up storage space" | `NotificationCoordinator` | Toast, HIGH |
 | F10.5 | Speed limit alert (audio/haptic) | `AlertSoundManager` | AlertProfile only |
 | F9.1 | Connection status | `SystemNotificationBridge` | System notification |

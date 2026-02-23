@@ -2,9 +2,7 @@
 
 **What:** Performance measurement infrastructure, Compose stability enforcement, and CI gate configuration. Deliberately decoupled from Phase 9/10/11 — starts as soon as Phase 8 provides enough running code to benchmark.
 
-**Depends on:** Phase 8 (essentials pack provides 13 widgets for benchmarking)
-
-**Concurrent with:** Phases 9, 10, 11
+**Depends on:** Phase 8 (essentials pack provides 13 widgets for benchmarking) | **Concurrent with:** Phases 9, 10, 11
 
 ## Baseline Profiles (NF9)
 

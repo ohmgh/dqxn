@@ -16,7 +16,7 @@ Modular Android dashboard platform for real-time data display through configurab
 | [ROADMAP.md](ROADMAP.md) | 13-phase index with requirement mappings, success criteria, and dependency graph |
 | [MIGRATION.md](MIGRATION.md) | Migration assessment, guiding principles, and phase index |
 | [migration/](migration/) | Per-phase implementation playbooks (phase-01..13), TDD policy, integration policy, replication advisory, risk flags |
-| [DECISIONS.md](DECISIONS.md) | 88 architectural decisions with rejected alternatives and rationale |
+| [DECISIONS.md](DECISIONS.md) | 89 architectural decisions with rejected alternatives and rationale |
 | [STATE.md](STATE.md) | Current project state, phase progress, accumulated decisions and context |
 | [oldcodebase/](oldcodebase/) | 8 mapping docs (~6000 lines) indexing prior implementation for migration reference |
 
@@ -56,4 +56,4 @@ android/
 
 ## Current State
 
-Phase 1 not started. 13 phases planned across 4 parallel streams after Phase 8 (architecture validation gate). See [STATE.md](STATE.md) for progress, [ROADMAP.md](ROADMAP.md) for phase structure, [migration/](migration/) for per-phase implementation details.
+Phase 1 not started. 13 phases planned across 3 parallel streams after Phase 8 (architecture validation gate). See [STATE.md](STATE.md) for progress, [ROADMAP.md](ROADMAP.md) for phase structure, [migration/](migration/) for per-phase implementation details.

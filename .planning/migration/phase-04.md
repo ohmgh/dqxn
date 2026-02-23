@@ -1,5 +1,7 @@
 # Phase 4: KSP Codegen
 
+**Depends on:** Phase 2 | **Concurrent with:** Phase 3
+
 **What:** Build-time code generation that packs and agentic depend on.
 
 ## `:codegen:plugin`

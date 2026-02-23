@@ -20,6 +20,6 @@
    | §2 Jankless Navigation | Phase 7 (Layer 0/1 architecture, OverlayNavHost scaffold), Phase 10 (source-varying transitions, shared element pack card morph) |
    | §3 Theme & Studio Preview | Phase 5 (ThemeAutoSwitchEngine), Phase 7 (ThemeCoordinator displayTheme pattern), Phase 11 (preview lifecycle, race condition fix, studio auto-save) |
    | §4 Source-Varying Transitions | Phase 5 (spring configs to core:design), Phase 7 (widget-level animations, DashboardMotion), Phase 10/11 (route-level transitions) |
-   | §5 UI Design System | Phase 3 (DashboardThemeDefinition token model), Phase 5 (core:design spacing/typography/radii/emphasis) |
+   | §5 UI Design System | Phase 3 (DashboardThemeDefinition token model), Phase 5 (core:design spacing/typography/radii/emphasis), Phase 10 (spacing tokens, DashboardTypography roles, emphasis levels in OverlayScaffold) |
    | §6 Drag/Snap/Resize/Gestures | Phase 7 (coordinate system, gesture filtering, snap calc, resize mechanics, haptics) |
    | §7 Widget Setup Architecture | Phase 2 (SetupDefinition/SettingDefinition schemas), Phase 8 (evaluator semantics, overlay states), Phase 10 (setup flow UI, BLE state machine, pickers, dispatchers) |

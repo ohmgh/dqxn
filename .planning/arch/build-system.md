@@ -403,7 +403,7 @@ data class WidgetExpectations(
 - Final fallback: assembles a live diagnostic from current `WidgetHealthMonitor`, `MetricsCollector`, and `RingBufferSink` state — no `OnDemandCapture` trigger needed
 - Includes `agenticTraceId` if the crash was triggered by an agentic command
 
-**`diagnose-thermal`** returns correlated thermal diagnostics — thermal is the primary automotive failure mode requiring cross-source correlation:
+**`diagnose-thermal`** returns correlated thermal diagnostics — thermal is the primary sustained-use failure mode requiring cross-source correlation:
 - Current thermal level + headroom + `ThermalTrendAnalyzer` prediction (time to next tier)
 - **Headroom history**: raw samples from `ThermalTrendAnalyzer` ring buffer (last 60s at 5s intervals)
 - **Frame rate adaptation history**: timestamps of `FramePacer` FPS changes (60→30→15→30→60) with reasons

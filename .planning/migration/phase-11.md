@@ -2,7 +2,7 @@
 
 **What:** Three independent feature clusters built on the settings row system from Phase 10: theme editing/selection UI, diagnostics module, and onboarding flow. These clusters share no dependencies and can be developed in any order or concurrently.
 
-**Depends on:** Phase 10 (settings row system, overlay scaffold, OverlayNavHost infrastructure)
+**Depends on:** Phase 10 (settings row system, overlay scaffold, OverlayNavHost infrastructure) | **Concurrent with:** Phase 9 (theme UI doesn't need :pack:themes to exist — works with free themes only)
 
 **Composable count:** ~26. **Port volume:** ~2,200 lines from old codebase + ~2,000 lines new.
 

@@ -18,7 +18,7 @@
 | 6. Deployable App + Agentic | Pending | First on-device deployment |
 | 7. Dashboard Shell | Pending | Highest risk phase |
 | 8. Essentials Pack | Pending | Architecture validation gate |
-| 9. Themes, Demo + Chaos | Pending | Depends on Phase 10 for SetupSheet |
+| 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
@@ -26,7 +26,7 @@
 
 ## Decisions
 
-Key decisions accumulated during architecture phase — full table in `DECISIONS.md` (88 entries). Highlights:
+Key decisions accumulated during architecture phase — full table in `DECISIONS.md` (89 entries). Highlights:
 
 - **Per-profile dashboards** over per-widget visibility (sparse layouts, gesture mismatch)
 - **Unbounded canvas** with no-straddle snap and no automatic relocation

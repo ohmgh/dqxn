@@ -235,7 +235,7 @@ fun DashboardGrid(
 ### Grid Properties
 
 - **Grid unit**: 16dp
-- **Canvas**: unbounded — widgets can exist at any grid coordinate. One canvas shared across all profiles and display configurations
+- **Canvas**: unbounded — widgets can exist at any grid coordinate. Each profile owns an independent unbounded canvas — widgets can exist at any grid coordinate
 - **Viewport**: dynamically computed from screen dp dimensions. Acts as a rendering window into the canvas
 - **Orientation-locked**: viewport dimensions are stable within a configuration
 - **Rendering**: filters to viewport-intersecting widgets only. Each profile has its own widget list — no cross-profile filtering needed

@@ -55,6 +55,7 @@ data/     — Proto + Preferences DataStore, .proto schemas
 feature/  — dashboard, settings, diagnostics, onboarding
 pack/     — essentials (+ essentials/snapshots), plus, themes, demo
 app/      — single-activity entry, DI assembly
+Other:    lint-rules, baselineprofile, benchmark (CI/quality, not app runtime)
 ```
 
 ## Module Dependency Rules
@@ -71,6 +72,8 @@ app/      — single-activity entry, DI assembly
 
 **`:sdk:contracts`** — CAN: `:sdk:common` only. Pure Kotlin + coroutines + `compileOnly(compose.runtime)` for `@Composable` and `@Immutable` annotations. No Compose compiler — annotations only, no composable function bodies.
 
+**All modules** (except `:pack:*:snapshots`) → `:sdk:observability` (universal observability dependency).
+
 ### Compose Compiler Scope
 
 - `dqxn.android.compose` (explicit) — UI modules: `:app`, `:feature:*`, `:sdk:ui`, `:core:design`
@@ -84,7 +87,7 @@ app/      — single-activity entry, DI assembly
 ### State decomposition
 - Each coordinator owns its own `StateFlow` slice. No god-object state class.
 - Per-widget data via individual flows — `widgetData(widgetId)`. Clock tick must NOT recompose speedometer.
-- Discrete commands: sealed `DashboardCommand` → `Channel`. Continuous gestures: `MutableStateFlow<DragUpdate>` (latest-value-wins).
+- Discrete commands: sealed `DashboardCommand` → `Channel`. Continuous gestures: `MutableStateFlow<DragUpdate?>` (nullable, initialized to null, latest-value-wins).
 
 ### Canvas model
 - **Unbounded canvas** per profile, viewport is a rendering window. Configuration boundaries (fold x orientation) shown in edit mode. **No-straddle snap**: widgets fully visible or fully invisible per configuration.
@@ -107,6 +110,7 @@ app/      — single-activity entry, DI assembly
 - Drag: `graphicsLayer` offset animation — NOT `movableContentOf`
 - Layer 0: `collectAsState()`. Layer 1: `collectAsStateWithLifecycle()`.
 - Frame pacing: `Window.setFrameRate()` API 34+, emission throttling API 31-33.
+- Entitlements: `Gated` interface on `WidgetRenderer`/`ThemeDefinition`/`DataProvider`. Three tiers: `free`, `plus`, `themes`. Pack developers annotate gated components; shell enforces.
 
 ### Widget binding isolation
 - `SupervisorJob` parent for all binding jobs. One crash must NOT cancel siblings.
@@ -147,7 +151,7 @@ Create `:pack:{packId}:snapshots` sub-module with `id("dqxn.snapshot")`. `@Dashb
 - **IoC data binding**: `WidgetDataBinder` assigns providers by data type, fallback on failure.
 - **Widget error isolation**: Catch boundary + `WidgetCoroutineScope`. Failed → fallback UI, never crash. >3 crashes in 60s → safe mode.
 - **Notifications**: `NotificationCoordinator` (banners+toasts, `@ViewModelScoped`), `AlertSoundManager` (audio/haptic, `@Singleton`), `SystemNotificationBridge` (FGS). Priority levels: CRITICAL/HIGH/NORMAL/LOW.
-- **Thermal**: `ThermalManager` → `RenderConfig`. Glow off at DEGRADED, frame rate reduced.
+- **Thermal**: `ThermalManager` → `RenderConfig`. DEGRADED: glow → RadialGradient approximation, reduced frame rate. CRITICAL: glow disabled.
 - **Edge-to-edge**: Dashboard behind system bars. Overlays respect `WindowInsets.systemBars`.
 
 ## Observability
@@ -156,7 +160,7 @@ Create `:pack:{packId}:snapshots` sub-module with `id("dqxn.snapshot")`. `@Dashb
 
 ## Testing
 
-JUnit5 + MockK + Truth (unit). JUnit4 + `HiltAndroidRule` (Hilt integration). Turbine + `StandardTestDispatcher` (flows — never `UnconfinedTestDispatcher`). Contract tests in `:sdk:contracts` testFixtures. `DashboardTestHarness` DSL for coordinators. Semantics-based UI verification (no screenshot tests). Test tags on all key elements: `widget_{id}`, `dashboard_grid`, `bottom_bar`, `banner_{id}`.
+JUnit5 + MockK + Truth (unit). JUnit4 + `HiltAndroidRule` (Hilt integration). Turbine + `StandardTestDispatcher` (flows — never `UnconfinedTestDispatcher`). Contract tests in `:sdk:contracts` testFixtures. `DashboardTestHarness` DSL for coordinators. Semantics-based UI verification (no screenshot tests). Test tags: `widget_{id}`, `dashboard_grid`, `bottom_bar`, `banner_{id}`, `profile_{id}`, `add_widget_button`, `edit_mode_toggle`, `settings_button`, `toast_{index}`, `widget_status_{id}`.
 
 ## Code Style
 

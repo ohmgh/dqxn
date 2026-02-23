@@ -23,6 +23,9 @@
 - **Export My Data:** JSON export of all user data (layouts, settings, profiles, paired devices). Accessible from Settings → Data & Privacy. Format documented. Implementation: inject all DataStore repositories (`LayoutRepository`, `UserPreferencesRepository`, `ProviderSettingsStore`, `PairedDeviceStore`, `WidgetStyleStore`), serialize each current value to JSON via kotlinx.serialization, write to user-selected file via `ActivityResultContracts.CreateDocument`. No server-side data — everything is local Proto/Preferences DataStore
 - **NF-P3 (PDPA compliance) verification:** Analytics consent flow works end-to-end (consent dialog → opt-in → events fire → opt-out → events stop). Privacy policy URL reachable. "Delete All Data" (F14.4, implemented in Phase 10) verified to clear all stores
 
+### NF-P4: Data Export + Firebase Deletion
+"Export My Data" produces a ZIP of all Proto DataStore contents + user preferences. Firebase Analytics ID reset via `FirebaseAnalytics.resetAnalyticsData()`. Verified as part of the "Delete All Data" flow (delivered in Phase 10) — Phase 13 validates the end-to-end flow including Firebase cleanup.
+
 ## Accessibility audit (NF30, NF32, NF33, NF39, NF40)
 
 - **NF30 (WCAG AA contrast):** Systematic audit of all themes — critical text (speed, time, speed limit) meets 4.5:1 contrast ratio against theme backgrounds. Automated: extract theme colors + measure contrast ratios programmatically for all 24 themes (2 free + 22 premium)
@@ -40,6 +43,9 @@
 
 - **NF-I1:** Run Android lint `HardcodedText` check across all modules — zero violations. Grep for string literals in `@Composable` functions as secondary check
 - **NF-I2:** Widget data formatting uses locale-aware APIs (`NumberFormat`, `DateTimeFormatter`) — verify decimal separators and unit labels respect `Locale.getDefault()` across essentials pack renderers
+
+### NF-D2: Speed Accuracy Disclaimer (Legal Checklist)
+ToS includes speed accuracy disclaimer: GPS-derived speed is approximate, not a certified speedometer. Legal review checklist item — verify wording with counsel before launch.
 
 **Tests:**
 - E2E journey test: full user flow from launch through all major interactions with semantics assertions

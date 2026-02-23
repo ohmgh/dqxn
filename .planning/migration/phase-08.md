@@ -1,5 +1,7 @@
 # Phase 8: Essentials Pack (Architecture Validation Gate)
 
+**Depends on:** Phase 7
+
 **What:** First pack migration. Proves the entire SDK→Pack contract works end-to-end.
 
 ## `:pack:essentials`

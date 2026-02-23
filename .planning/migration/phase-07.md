@@ -1,5 +1,7 @@
 # Phase 7: Dashboard Shell
 
+**Depends on:** Phases 5, 6
+
 **What:** The hardest phase. The 1040-line god-ViewModel and god-state must be decomposed into coordinators. This is structural transformation, not porting. Full agentic debug infrastructure is available on-device — use it.
 
 ## `:feature:dashboard`
@@ -27,7 +29,7 @@
 - DSL surface: `dashboardTest { dispatch(...); assertThat(...) }` with `layoutState()`, `bindingJobs()`, `safeMode()`, `editModeState()`, `widgetPickerAvailable()`, `settingsAccessible()`, `widgetStatuses()`, `ringBufferTail()`
 - Default configuration uses **real coordinator implementations**, not fakes. Fakes available for isolation tests via `dashboardTest(fakeLayout = true) { ... }` but the primary integration path exercises real coordinator-to-coordinator interactions
 - `FakeLayoutRepository`, `FakeWidgetDataBinder` for persistence/binding isolation
-- Uses `TestDataProvider` and `ProviderFault` from `:sdk:contracts:testFixtures` for fault injection in unit tests
+- Uses `TestDataProvider` from `:sdk:contracts` testFixtures and `ProviderFault` from `:sdk:contracts` main source set for fault injection in unit tests
 
 **`HarnessStateOnFailure`** — JUnit5 `TestWatcher`:
 

@@ -8,7 +8,7 @@ DQXN is a modular dashboard platform for Android. Real-time data displayed throu
 
 **Tagline**: "Life is a dash. Make it beautiful."
 
-**Target users**: Drivers who want a customizable, visually rich heads-up display — starting with the Singapore market and expanding globally.
+**Target users**: People who want a customizable, visually rich real-time dashboard — for vehicles, desks, bedsides, home automation, and finance. Starting with the Singapore market and expanding globally.
 
 **Reference devices**: Snapdragon 6-series or equivalent (e.g., Pixel 7a, Samsung Galaxy A54), 6GB RAM, 1080p display. Performance targets validated against this baseline.
 
@@ -273,12 +273,12 @@ Extended visual customization.
 | F10.1 | Motion detection via pack-supplied driving providers (GPS speed, OBD-II, etc.)                | Deferred |
 | F10.2 | While in motion: disable edit mode, widget picker, settings, Theme Studio                     | Deferred |
 | F10.3 | While in motion: allow only tap interactions on interactive widgets (Shortcuts, Media Controller) | Deferred |
-| F10.4 | Minimum touch target size: 76dp for all interactive elements                                  | Must     |
+| F10.4 | Minimum touch target size: 76dp for all interactive elements. General UX — active in Phase 7, Phase 10 | Must     |
 | F10.5 | Speed limit alert with configurable offset (amber at +5, red at +10, user-configurable)       | Deferred |
 | F10.6 | Parked-mode detection: speed = 0 for >5s unlocks full interaction                             | Deferred |
-| F10.7 | Adaptive rendering: reduce frame rate to 30fps when stationary, disable glow effects under thermal pressure | Should   |
+| F10.7 | Adaptive rendering: reduce frame rate under thermal pressure, disable glow effects at critical thermal level. Active in Phase 7 (thermal management) | Should   |
 | F10.8 | Parking location save — GPS fix on app exit, deep-link to Maps for navigation back            | Deferred |
-| F10.9 | Quick theme toggle: theme mode cycle button on floating bar (single tap, no distraction)       | Must     |
+| F10.9 | Quick theme toggle: theme mode cycle button on floating bar (single tap). General UX — active in Phase 7 | Must     |
 
 ### F11: Onboarding
 
@@ -365,7 +365,7 @@ Extended visual customization.
 | NF38 | Crash recovery: >3 crashes in 60s → safe mode (clock widget only, reset banner)                |
 | NF41 | When device storage is critically low (<50MB free), display a persistent but dismissable warning banner |
 | NF42 | Layout saves that fail due to storage must surface a user-visible error: "Unable to save. Free up storage space." |
-| NF43 | Proto DataStore corruption handler required on ALL DataStore instances — corruption falls back to defaults, not crash |
+| NF43 | DataStore corruption handler required on ALL DataStore instances — corruption falls back to defaults, not crash |
 
 ### Security
 
@@ -392,7 +392,7 @@ Extended visual customization.
 |-------|-----------------------------------------------------------------------------------------------|
 | NF-D1 | Speed and speed limit displays are for informational purposes only. Widget Info page must include disclaimer: "Speed and speed limit data are approximate. Always refer to your vehicle speedometer and posted signs." |
 | NF-D2 | Terms of service must explicitly disclaim liability for speed data accuracy |
-| NF-D3 | First-launch onboarding includes a brief, dismissable disclaimer that the app supplements — does not replace — the vehicle dashboard. When used in-vehicle |
+| NF-D3 | First-launch onboarding includes a brief, dismissable disclaimer: speed and navigation data are informational only and do not replace dedicated instruments. Shown once on first launch |
 
 ### Offline
 
@@ -546,7 +546,7 @@ Max 12. Created via Theme Studio (requires Themes Pack entitlement). Editable: n
 
 ### Adding a Widget
 
-1. User taps Edit → edit mode → taps "+" button (disabled while in motion)
+1. User taps Edit → edit mode → taps "+" button (see F10.2, deferred)
 2. Widget picker opens: staggered grid grouped by pack, live previews (with entitlement badges)
 3. User taps a widget → `GridPlacementEngine.findOptimalPosition()` places it
 4. Default data sources auto-assigned
@@ -569,7 +569,7 @@ Three-page pager:
 
 ### Edit Mode
 
-1. Tap Edit button → enter edit mode (long-press only available when parked)
+1. Tap Edit button → enter edit mode; long-press on blank space (see F10.6, deferred)
 2. Widgets show wiggle animation + corner brackets. Configuration boundary lines appear with labels
 3. Tap widget → focus (show overlay toolbar: delete/settings). No translate or scale — follow old codebase
 4. Drag to move (snaps to 2-unit grid + no-straddle boundary snap), corner handles to resize (48dp minimum touch targets)
@@ -598,7 +598,7 @@ Non-interactive section at top of settings. Displays app icon, app name, version
 | Dark Theme             | Navigation                                                                        | Theme selector for dark mode                                     |
 | Illuminance Threshold  | Segmented button group: Dark 50lux / Dim 200lux / Normal 500lux / Bright 1000lux  | Lux threshold for dark mode trigger (visible in ILLUMINANCE_AUTO mode) |
 | Show Status Bar        | Toggle                                                                            | System status bar visibility                                     |
-| HUD Mirror Mode        | Toggle                                                                            | Horizontally flips canvas for windshield projection              |
+| HUD Mirror Mode        | Toggle                                                                            | Horizontally flips canvas for windshield projection (Deferred — F1.19) |
 
 **Behavior**
 

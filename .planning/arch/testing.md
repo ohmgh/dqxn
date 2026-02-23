@@ -455,7 +455,7 @@ class ChaosProviderInterceptor @Inject constructor() : DataProviderInterceptor {
     }
 }
 
-// In :sdk:contracts testFixtures — shared between ChaosEngine and DashboardTestHarness
+// In :sdk:contracts main source set — shared between ChaosEngine (debug runtime) and DashboardTestHarness (test)
 sealed interface ProviderFault {
     data object Kill : ProviderFault
     data class Delay(val delayMs: Long) : ProviderFault
@@ -466,7 +466,7 @@ sealed interface ProviderFault {
 }
 ```
 
-`ProviderFault` lives in `:sdk:contracts:testFixtures` so both `ChaosProviderInterceptor` (E2E) and `TestDataProvider` (unit tests) use the same fault primitives and flow transformations. When an agent reproduces a chaos-discovered bug as a unit test, the fault mechanism is identical — same sealed interface, same flow transformation logic.
+`ProviderFault` lives in `:sdk:contracts` main source set because `ChaosProviderInterceptor` needs it at debug runtime, not just test time. `DashboardTestHarness` also consumes it via testFixtures → main dependency. When an agent reproduces a chaos-discovered bug as a unit test, the fault mechanism is identical — same sealed interface, same flow transformation logic.
 
 `WidgetDataBinder` applies all registered interceptors in order. Production builds have an empty interceptor set (zero overhead). Debug builds register `ChaosProviderInterceptor` via Hilt.
 

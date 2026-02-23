@@ -455,7 +455,7 @@ Overlap is allowed. Z-ordering via `zIndex`. `BringWidgetToFront` on touch sets 
 
 The `Setting` wrapper exists so packs can intermix input rows with requirement cards on the same setup page. It delegates `id`, `label`, `visibleWhen`, `requiredAnyEntitlement`, `hidden`, and `default` to the wrapped definition. `asSetup()` extension converts `SettingDefinition` → `SetupDefinition.Setting`.
 
-### Setting Definition Schema (11 Types)
+### Setting Definition Schema (12 Types)
 
 Every type carries: `key`, `label`, `description?`, `default: T`, `visibleWhen?`, `groupId?`, `hidden`, `requiredAnyEntitlement?`.
 
@@ -470,6 +470,7 @@ Every type carries: `key`, `label`, `description?`, `default: T`, `visibleWhen?`
 | `DateFormatSetting` | DateFormatOption | Row → popup picker | Stored as `.name` string, deserialize before emitting |
 | `AppPickerSetting` | String? | Row → fullscreen grid | `suggestedPackages` sorted first |
 | `SoundPickerSetting` | String? | Row → system `ACTION_RINGTONE_PICKER` | Display via `RingtoneManager.getRingtone().getTitle()` |
+| `UriSetting` | String? | Fallback `SettingLabel(label, description, theme)` | No dedicated row renderer — dispatched to `SettingRowDispatcher` `else` branch |
 | `InstructionSetting` | Unit | Step card (display-only) | `default = Unit`, parallels `SetupDefinition.Instruction` |
 | `InfoSetting` | Unit | Info card (display-only) | `default = Unit`, parallels `SetupDefinition.Info` |
 

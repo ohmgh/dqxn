@@ -1,5 +1,7 @@
 # Phase 5: Core Infrastructure
 
+**Depends on:** Phase 3
+
 **What:** Shell internals that features depend on but packs never touch.
 
 ## `:core:design` (has Compose — applies `dqxn.android.compose`)

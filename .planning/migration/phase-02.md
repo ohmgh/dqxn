@@ -1,5 +1,7 @@
 # Phase 2: SDK Contracts + Common
 
+**Depends on:** Phase 1
+
 **What:** The API surface that every pack and feature module depends on. This is where the biggest architectural transformation lands — old untyped contracts become typed. Phase 2 defines the complete `:sdk:contracts` type surface — all types that live in this module are defined here so downstream phases never modify `:sdk:contracts` (only consume it).
 
 ## `:sdk:common` (Android library with Hilt — not pure Kotlin)

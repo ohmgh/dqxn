@@ -1,5 +1,7 @@
 # Phase 9: Themes, Demo + Chaos
 
+**Depends on:** Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing)
+
 ## `:pack:themes`
 
 - 22 premium theme JSON files (port verbatim)
