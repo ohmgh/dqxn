@@ -23,11 +23,12 @@ class DqxnLoggerTest {
   @Test
   fun `disabled path does not invoke sink`() {
     val sink = CountingSink()
-    val logger = DqxnLoggerImpl(
-      sinks = listOf(sink),
-      minimumLevel = LogLevel.ERROR,
-      sessionId = "test-session",
-    )
+    val logger =
+      DqxnLoggerImpl(
+        sinks = listOf(sink),
+        minimumLevel = LogLevel.ERROR,
+        sessionId = "test-session",
+      )
 
     // DEBUG is below ERROR minimum -- lambda should NOT execute
     logger.debug(tag) { "this should not be called" }
@@ -39,11 +40,12 @@ class DqxnLoggerTest {
   fun `enabled path dispatches to all sinks`() {
     val sink1 = CountingSink()
     val sink2 = CountingSink()
-    val logger = DqxnLoggerImpl(
-      sinks = listOf(sink1, sink2),
-      minimumLevel = LogLevel.DEBUG,
-      sessionId = "test-session",
-    )
+    val logger =
+      DqxnLoggerImpl(
+        sinks = listOf(sink1, sink2),
+        minimumLevel = LogLevel.DEBUG,
+        sessionId = "test-session",
+      )
 
     logger.info(tag) { "hello" }
 
@@ -54,11 +56,12 @@ class DqxnLoggerTest {
   @Test
   fun `log entry contains correct fields`() {
     val sink = CountingSink()
-    val logger = DqxnLoggerImpl(
-      sinks = listOf(sink),
-      minimumLevel = LogLevel.DEBUG,
-      sessionId = "my-session",
-    )
+    val logger =
+      DqxnLoggerImpl(
+        sinks = listOf(sink),
+        minimumLevel = LogLevel.DEBUG,
+        sessionId = "my-session",
+      )
 
     logger.info(tag) { "test message" }
 
@@ -73,11 +76,12 @@ class DqxnLoggerTest {
   @Test
   fun `error with throwable captures throwable`() {
     val sink = CountingSink()
-    val logger = DqxnLoggerImpl(
-      sinks = listOf(sink),
-      minimumLevel = LogLevel.DEBUG,
-      sessionId = "test-session",
-    )
+    val logger =
+      DqxnLoggerImpl(
+        sinks = listOf(sink),
+        minimumLevel = LogLevel.DEBUG,
+        sessionId = "test-session",
+      )
     val exception = RuntimeException("boom")
 
     logger.error(tag, exception) { "error happened" }
@@ -96,11 +100,12 @@ class DqxnLoggerTest {
   @Test
   fun `fields overload passes fields to entry`() {
     val sink = CountingSink()
-    val logger = DqxnLoggerImpl(
-      sinks = listOf(sink),
-      minimumLevel = LogLevel.DEBUG,
-      sessionId = "test-session",
-    )
+    val logger =
+      DqxnLoggerImpl(
+        sinks = listOf(sink),
+        minimumLevel = LogLevel.DEBUG,
+        sessionId = "test-session",
+      )
 
     logger.info(tag, { persistentMapOf("key" to "value") }) { "with fields" }
 

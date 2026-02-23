@@ -3,12 +3,11 @@ package app.dqxn.android.sdk.observability.metrics
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Lock-free primitive ring buffer storing [Long] values without boxing.
- * Uses modular arithmetic for wrap-around.
+ * Lock-free primitive ring buffer storing [Long] values without boxing. Uses modular arithmetic for
+ * wrap-around.
  *
- * Designed for high-frequency metrics (per-widget draw times, frame durations).
- * NOT the same as [app.dqxn.android.sdk.observability.log.RingBufferSink]
- * (this stores primitives, not objects).
+ * Designed for high-frequency metrics (per-widget draw times, frame durations). NOT the same as
+ * [app.dqxn.android.sdk.observability.log.RingBufferSink] (this stores primitives, not objects).
  */
 public class LongArrayRingBuffer(private val capacity: Int) {
 
@@ -46,8 +45,8 @@ public class LongArrayRingBuffer(private val capacity: Int) {
   }
 
   /**
-   * Calculates the given percentile (0.0 to 1.0) of stored values.
-   * Uses nearest-rank method. Returns 0 for empty buffer.
+   * Calculates the given percentile (0.0 to 1.0) of stored values. Uses nearest-rank method.
+   * Returns 0 for empty buffer.
    */
   public fun percentile(p: Double): Long {
     require(p in 0.0..1.0) { "Percentile must be between 0.0 and 1.0, got $p" }

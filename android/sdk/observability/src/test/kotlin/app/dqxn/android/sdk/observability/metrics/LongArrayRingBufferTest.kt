@@ -33,10 +33,10 @@ class LongArrayRingBufferTest {
     // Add values 1..100
     for (i in 1L..100L) buffer.add(i)
 
-    assertThat(buffer.percentile(0.5)).isEqualTo(50L)  // P50 (median)
+    assertThat(buffer.percentile(0.5)).isEqualTo(50L) // P50 (median)
     assertThat(buffer.percentile(0.95)).isEqualTo(95L) // P95
     assertThat(buffer.percentile(0.99)).isEqualTo(99L) // P99
-    assertThat(buffer.percentile(0.0)).isEqualTo(1L)   // min
+    assertThat(buffer.percentile(0.0)).isEqualTo(1L) // min
     assertThat(buffer.percentile(1.0)).isEqualTo(100L) // max
   }
 

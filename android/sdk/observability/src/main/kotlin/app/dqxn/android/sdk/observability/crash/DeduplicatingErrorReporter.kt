@@ -4,8 +4,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Decorator around [ErrorReporter] that deduplicates reports within a cooldown period (NF36).
- * Uses exception class + context as dedup key. Prevents report flooding.
+ * Decorator around [ErrorReporter] that deduplicates reports within a cooldown period (NF36). Uses
+ * exception class + context as dedup key. Prevents report flooding.
  */
 public class DeduplicatingErrorReporter(
   private val delegate: ErrorReporter,

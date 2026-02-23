@@ -15,8 +15,7 @@ public val SlateTheme: DashboardThemeDefinition =
     highlightColor = Color(0xFF4FC3F7),
     widgetBorderColor = Color(0xFF424242),
     backgroundBrush = Brush.verticalGradient(listOf(Color(0xFF1A1A2E), Color(0xFF16213E))),
-    widgetBackgroundBrush =
-      Brush.verticalGradient(listOf(Color(0xFF1E1E32), Color(0xFF1A1A2E))),
+    widgetBackgroundBrush = Brush.verticalGradient(listOf(Color(0xFF1E1E32), Color(0xFF1A1A2E))),
     errorColor = Color(0xFFEF5350),
     warningColor = Color(0xFFFFB74D),
     successColor = Color(0xFF66BB6A),
@@ -34,8 +33,7 @@ public val MinimalistTheme: DashboardThemeDefinition =
     highlightColor = Color(0xFF1976D2),
     widgetBorderColor = Color(0xFFE0E0E0),
     backgroundBrush = Brush.verticalGradient(listOf(Color(0xFFF5F5F5), Color(0xFFEEEEEE))),
-    widgetBackgroundBrush =
-      Brush.verticalGradient(listOf(Color.White, Color(0xFFFAFAFA))),
+    widgetBackgroundBrush = Brush.verticalGradient(listOf(Color.White, Color(0xFFFAFAFA))),
     errorColor = Color(0xFFD32F2F),
     warningColor = Color(0xFFF57C00),
     successColor = Color(0xFF388E3C),

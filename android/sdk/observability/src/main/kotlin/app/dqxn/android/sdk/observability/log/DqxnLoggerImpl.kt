@@ -2,13 +2,12 @@ package app.dqxn.android.sdk.observability.log
 
 import android.os.SystemClock
 import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentMapOf
 
 /**
  * Concrete [DqxnLogger] implementation dispatching to a list of [LogSink]s.
  *
- * [isEnabled] is a simple ordinal comparison -- fast path, no map lookup, no allocation.
- * Each sink dispatch is wrapped in try/catch as defense-in-depth beyond [SafeLogSink].
+ * [isEnabled] is a simple ordinal comparison -- fast path, no map lookup, no allocation. Each sink
+ * dispatch is wrapped in try/catch as defense-in-depth beyond [SafeLogSink].
  */
 public class DqxnLoggerImpl(
   private val sinks: List<LogSink>,

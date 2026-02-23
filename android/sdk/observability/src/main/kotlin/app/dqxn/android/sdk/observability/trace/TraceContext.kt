@@ -4,15 +4,16 @@ import java.util.UUID
 import kotlin.coroutines.CoroutineContext
 
 /**
- * Coroutine context element carrying trace and span IDs for distributed tracing.
- * Attach to a coroutine scope to automatically correlate log entries with traces.
+ * Coroutine context element carrying trace and span IDs for distributed tracing. Attach to a
+ * coroutine scope to automatically correlate log entries with traces.
  */
 public data class TraceContext(
   val traceId: String,
   val spanId: String,
 ) : CoroutineContext.Element {
 
-  override val key: CoroutineContext.Key<TraceContext> get() = Key
+  override val key: CoroutineContext.Key<TraceContext>
+    get() = Key
 
   public companion object Key : CoroutineContext.Key<TraceContext> {
 

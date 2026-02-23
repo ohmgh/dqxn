@@ -6,9 +6,9 @@ import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 
 /**
- * Zero-allocation logger interface. The inline extension functions check [isEnabled]
- * before evaluating the message lambda, so disabled log paths produce no allocations
- * (no lambda capture, no string concatenation, no ImmutableMap creation).
+ * Zero-allocation logger interface. The inline extension functions check [isEnabled] before
+ * evaluating the message lambda, so disabled log paths produce no allocations (no lambda capture,
+ * no string concatenation, no ImmutableMap creation).
  */
 public interface DqxnLogger {
 

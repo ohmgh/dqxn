@@ -31,10 +31,8 @@ class CrashEvidenceWriterTest {
         .isEqualTo("essentials:clock")
       assertThat(prefs.getString(CrashEvidenceWriter.KEY_EXCEPTION, null))
         .contains("RuntimeException")
-      assertThat(prefs.getString(CrashEvidenceWriter.KEY_STACK_TOP5, null))
-        .isNotEmpty()
-      assertThat(prefs.getLong(CrashEvidenceWriter.KEY_TIMESTAMP, 0L))
-        .isGreaterThan(0L)
+      assertThat(prefs.getString(CrashEvidenceWriter.KEY_STACK_TOP5, null)).isNotEmpty()
+      assertThat(prefs.getLong(CrashEvidenceWriter.KEY_TIMESTAMP, 0L)).isGreaterThan(0L)
     } finally {
       Thread.setDefaultUncaughtExceptionHandler(saved)
     }
@@ -44,9 +42,7 @@ class CrashEvidenceWriterTest {
   fun `delegates to original handler`() {
     val delegateCalled = AtomicBoolean(false)
     val saved = Thread.getDefaultUncaughtExceptionHandler()
-    Thread.setDefaultUncaughtExceptionHandler { _, _ ->
-      delegateCalled.set(true)
-    }
+    Thread.setDefaultUncaughtExceptionHandler { _, _ -> delegateCalled.set(true) }
     try {
       val writer = CrashEvidenceWriter(prefs)
       writer.uncaughtException(Thread.currentThread(), RuntimeException("boom"))
@@ -98,9 +94,7 @@ class CrashEvidenceWriterTest {
     val throwingPrefs = ThrowingSharedPreferences()
     val delegateCalled = AtomicBoolean(false)
     val saved = Thread.getDefaultUncaughtExceptionHandler()
-    Thread.setDefaultUncaughtExceptionHandler { _, _ ->
-      delegateCalled.set(true)
-    }
+    Thread.setDefaultUncaughtExceptionHandler { _, _ -> delegateCalled.set(true) }
     try {
       val writer = CrashEvidenceWriter(throwingPrefs)
       // Should NOT throw -- the exception in prefs.commit() is caught
@@ -114,13 +108,12 @@ class CrashEvidenceWriterTest {
   }
 }
 
-/**
- * In-memory SharedPreferences implementation for unit testing without Robolectric.
- */
+/** In-memory SharedPreferences implementation for unit testing without Robolectric. */
 private class FakeSharedPreferences : SharedPreferences {
   private val store = ConcurrentHashMap<String, Any?>()
 
   override fun getAll(): MutableMap<String, *> = store.toMutableMap()
+
   override fun getString(key: String?, defValue: String?): String? =
     store[key] as? String ?: defValue
 
@@ -128,13 +121,15 @@ private class FakeSharedPreferences : SharedPreferences {
     key: String?,
     defValues: MutableSet<String>?,
   ): MutableSet<String>? {
-    @Suppress("UNCHECKED_CAST")
-    return store[key] as? MutableSet<String> ?: defValues
+    @Suppress("UNCHECKED_CAST") return store[key] as? MutableSet<String> ?: defValues
   }
 
   override fun getInt(key: String?, defValue: Int): Int = store[key] as? Int ?: defValue
+
   override fun getLong(key: String?, defValue: Long): Long = store[key] as? Long ?: defValue
+
   override fun getFloat(key: String?, defValue: Float): Float = store[key] as? Float ?: defValue
+
   override fun getBoolean(key: String?, defValue: Boolean): Boolean =
     store[key] as? Boolean ?: defValue
 
@@ -217,23 +212,29 @@ private class FakeEditor(
   }
 }
 
-/**
- * SharedPreferences stub that throws on edit().commit() to test error handling.
- */
+/** SharedPreferences stub that throws on edit().commit() to test error handling. */
 private class ThrowingSharedPreferences : SharedPreferences {
   override fun getAll(): MutableMap<String, *> = mutableMapOf<String, Any>()
+
   override fun getString(key: String?, defValue: String?): String? = defValue
+
   override fun getStringSet(
     key: String?,
     defValues: MutableSet<String>?,
   ): MutableSet<String>? = defValues
 
   override fun getInt(key: String?, defValue: Int): Int = defValue
+
   override fun getLong(key: String?, defValue: Long): Long = defValue
+
   override fun getFloat(key: String?, defValue: Float): Float = defValue
+
   override fun getBoolean(key: String?, defValue: Boolean): Boolean = defValue
+
   override fun contains(key: String?): Boolean = false
+
   override fun edit(): SharedPreferences.Editor = ThrowingEditor()
+
   override fun registerOnSharedPreferenceChangeListener(
     listener: SharedPreferences.OnSharedPreferenceChangeListener?
   ) {}
@@ -245,17 +246,25 @@ private class ThrowingSharedPreferences : SharedPreferences {
 
 private class ThrowingEditor : SharedPreferences.Editor {
   override fun putString(key: String?, value: String?): SharedPreferences.Editor = this
+
   override fun putStringSet(
     key: String?,
     values: MutableSet<String>?,
   ): SharedPreferences.Editor = this
 
   override fun putInt(key: String?, value: Int): SharedPreferences.Editor = this
+
   override fun putLong(key: String?, value: Long): SharedPreferences.Editor = this
+
   override fun putFloat(key: String?, value: Float): SharedPreferences.Editor = this
+
   override fun putBoolean(key: String?, value: Boolean): SharedPreferences.Editor = this
+
   override fun remove(key: String?): SharedPreferences.Editor = this
+
   override fun clear(): SharedPreferences.Editor = this
+
   override fun commit(): Boolean = throw RuntimeException("Prefs failure!")
+
   override fun apply() = throw RuntimeException("Prefs failure!")
 }

@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
@@ -21,8 +20,8 @@ import app.dqxn.android.sdk.contracts.widget.WidgetStyle
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 
 /**
- * Widget rendering container. Applies `graphicsLayer` for isolated RenderNode, border,
- * rim padding, and background style per the widget [style].
+ * Widget rendering container. Applies `graphicsLayer` for isolated RenderNode, border, rim padding,
+ * and background style per the widget [style].
  *
  * Glow rendering (`RenderEffect.createBlurEffect()`) deferred to Phase 7. Error boundary deferred
  * to Phase 7 (`WidgetSlot`).

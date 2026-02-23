@@ -11,9 +11,9 @@ import kotlinx.serialization.json.put
 /**
  * Machine-readable JSON-lines file log sink (F13.7).
  *
- * Writes one JSON object per line to [logDir]/dqxn.jsonl.
- * Rotation: when file exceeds [maxFileSizeBytes] (default 10MB), rotates current -> .1,
- * .1 -> .2, deletes .3+ -- max [maxFiles] backup files.
+ * Writes one JSON object per line to [logDir]/dqxn.jsonl. Rotation: when file exceeds
+ * [maxFileSizeBytes] (default 10MB), rotates current -> .1, .1 -> .2, deletes .3+ -- max [maxFiles]
+ * backup files.
  *
  * Active in debug builds only -- returns early if [isDebugBuild] is false.
  */
@@ -54,9 +54,7 @@ public class JsonLinesLogSink(
         put("stackTrace", entry.throwable.stackTraceToString())
       }
       if (entry.fields.isNotEmpty()) {
-        val fieldsObj = JsonObject(
-          entry.fields.mapValues { (_, v) -> JsonPrimitive(v.toString()) }
-        )
+        val fieldsObj = JsonObject(entry.fields.mapValues { (_, v) -> JsonPrimitive(v.toString()) })
         put("fields", fieldsObj)
       }
     }

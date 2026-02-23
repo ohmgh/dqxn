@@ -40,11 +40,12 @@ class DeduplicatingErrorReporterTest {
   fun `duplicate within cooldown dropped`() {
     val delegate = CountingErrorReporter()
     val currentTime = AtomicInteger(1000)
-    val reporter = DeduplicatingErrorReporter(
-      delegate = delegate,
-      cooldownMillis = 60_000L,
-      clock = { currentTime.get().toLong() },
-    )
+    val reporter =
+      DeduplicatingErrorReporter(
+        delegate = delegate,
+        cooldownMillis = 60_000L,
+        clock = { currentTime.get().toLong() },
+      )
     val error = RuntimeException("boom")
     val context = ErrorContext.System("test")
 
@@ -58,11 +59,12 @@ class DeduplicatingErrorReporterTest {
   fun `duplicate after cooldown passes`() {
     val delegate = CountingErrorReporter()
     var currentTime = 1000L
-    val reporter = DeduplicatingErrorReporter(
-      delegate = delegate,
-      cooldownMillis = 60_000L,
-      clock = { currentTime },
-    )
+    val reporter =
+      DeduplicatingErrorReporter(
+        delegate = delegate,
+        cooldownMillis = 60_000L,
+        clock = { currentTime },
+      )
     val error = RuntimeException("boom")
     val context = ErrorContext.System("test")
 

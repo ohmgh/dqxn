@@ -11,6 +11,7 @@ dependencies {
   implementation(project(":sdk:common"))
   implementation(libs.kotlinx.collections.immutable)
   implementation(libs.compose.material.icons.extended)
+  implementation(libs.hilt.android)
 
   testImplementation(libs.compose.ui.test.junit4)
   debugImplementation(libs.compose.ui.test.manifest)

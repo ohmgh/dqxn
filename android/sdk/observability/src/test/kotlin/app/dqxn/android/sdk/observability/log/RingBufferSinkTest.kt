@@ -1,18 +1,18 @@
 package app.dqxn.android.sdk.observability.log
 
 import com.google.common.truth.Truth.assertThat
-import kotlinx.collections.immutable.persistentMapOf
 import org.junit.jupiter.api.Test
 
 class RingBufferSinkTest {
 
-  private fun makeEntry(id: Int): LogEntry = LogEntry(
-    timestamp = id.toLong(),
-    level = LogLevel.INFO,
-    tag = LogTag("test"),
-    message = "message-$id",
-    sessionId = "session",
-  )
+  private fun makeEntry(id: Int): LogEntry =
+    LogEntry(
+      timestamp = id.toLong(),
+      level = LogLevel.INFO,
+      tag = LogTag("test"),
+      message = "message-$id",
+      sessionId = "session",
+    )
 
   @Test
   fun `stores entries up to capacity`() {

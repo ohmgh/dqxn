@@ -24,8 +24,8 @@ public data class GradientStop(
 )
 
 /**
- * Serializable gradient specification. Lives in `:sdk:ui` (not `:sdk:contracts`) because
- * conversion to Compose [Brush] requires Compose compiler for `Color` and `Size`.
+ * Serializable gradient specification. Lives in `:sdk:ui` (not `:sdk:contracts`) because conversion
+ * to Compose [Brush] requires Compose compiler for `Color` and `Size`.
  */
 @Immutable
 public data class GradientSpec(

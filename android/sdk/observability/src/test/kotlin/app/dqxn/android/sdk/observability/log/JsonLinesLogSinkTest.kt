@@ -2,9 +2,7 @@ package app.dqxn.android.sdk.observability.log
 
 import com.google.common.truth.Truth.assertThat
 import java.io.File
-import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
@@ -12,22 +10,22 @@ import org.junit.jupiter.api.io.TempDir
 
 class JsonLinesLogSinkTest {
 
-  @TempDir
-  lateinit var tempDir: File
+  @TempDir lateinit var tempDir: File
 
   private val json = Json { ignoreUnknownKeys = true }
 
   private fun makeEntry(
     message: String = "test",
     throwable: Throwable? = null,
-  ): LogEntry = LogEntry(
-    timestamp = 1_000_000L,
-    level = LogLevel.INFO,
-    tag = LogTag("test"),
-    message = message,
-    throwable = throwable,
-    sessionId = "session-1",
-  )
+  ): LogEntry =
+    LogEntry(
+      timestamp = 1_000_000L,
+      level = LogLevel.INFO,
+      tag = LogTag("test"),
+      message = message,
+      throwable = throwable,
+      sessionId = "session-1",
+    )
 
   @Test
   fun `writes valid JSON lines`() {
@@ -59,16 +57,15 @@ class JsonLinesLogSinkTest {
   fun `rotates at size limit`() {
     val logDir = File(tempDir, "logs")
     // Use a tiny max size to trigger rotation
-    val sink = JsonLinesLogSink(
-      logDir = logDir,
-      isDebugBuild = true,
-      maxFileSizeBytes = 100L,
-    )
+    val sink =
+      JsonLinesLogSink(
+        logDir = logDir,
+        isDebugBuild = true,
+        maxFileSizeBytes = 100L,
+      )
 
     // Write enough entries to exceed 100 bytes
-    repeat(20) { i ->
-      sink.write(makeEntry("message-$i-padding-to-make-it-longer"))
-    }
+    repeat(20) { i -> sink.write(makeEntry("message-$i-padding-to-make-it-longer")) }
 
     val backupFile = File(logDir, "dqxn.jsonl.1")
     assertThat(backupFile.exists()).isTrue()
@@ -78,17 +75,16 @@ class JsonLinesLogSinkTest {
   fun `max 3 backup files`() {
     val logDir = File(tempDir, "logs")
     // Use a tiny max size to force many rotations
-    val sink = JsonLinesLogSink(
-      logDir = logDir,
-      isDebugBuild = true,
-      maxFileSizeBytes = 50L,
-      maxFiles = 3,
-    )
+    val sink =
+      JsonLinesLogSink(
+        logDir = logDir,
+        isDebugBuild = true,
+        maxFileSizeBytes = 50L,
+        maxFiles = 3,
+      )
 
     // Write many entries to force multiple rotations
-    repeat(100) { i ->
-      sink.write(makeEntry("message-$i-padding-to-make-it-longer-still"))
-    }
+    repeat(100) { i -> sink.write(makeEntry("message-$i-padding-to-make-it-longer-still")) }
 
     // Should have at most: dqxn.jsonl, dqxn.jsonl.1, dqxn.jsonl.2, dqxn.jsonl.3
     val file4 = File(logDir, "dqxn.jsonl.4")

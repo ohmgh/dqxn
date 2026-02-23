@@ -1,8 +1,8 @@
 package app.dqxn.android.sdk.observability.crash
 
 /**
- * Sealed hierarchy describing the context in which an error occurred (F12.1).
- * Used by [ErrorReporter] and [CrashReporter] to enrich error reports.
+ * Sealed hierarchy describing the context in which an error occurred (F12.1). Used by
+ * [ErrorReporter] and [CrashReporter] to enrich error reports.
  */
 public sealed interface ErrorContext {
 

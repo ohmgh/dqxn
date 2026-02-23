@@ -14,15 +14,19 @@ import java.util.concurrent.ConcurrentHashMap
  * Returns `null` for unknown names -- callers provide their own fallback.
  */
 public object IconResolver {
-  private val cache = ConcurrentHashMap<String, ImageVector?>()
+  // Wrapper to allow null values in ConcurrentHashMap (which doesn't support null keys/values).
+  private class CacheEntry(val icon: ImageVector?)
+
+  private val cache = ConcurrentHashMap<String, CacheEntry>()
 
   // Object instances paired with their class for reflection. Using the known singletons directly
   // avoids kotlin-reflect dependency.
-  private val searchTargets: List<Pair<Any, Class<*>>> =
+  private val searchTargets: List<Pair<Any, Class<*>>> by lazy {
     listOf(
       Icons.Default to Icons.Default::class.java,
       Icons.Rounded to Icons.Rounded::class.java,
     )
+  }
 
   /**
    * Resolves [iconName] to an [ImageVector] or `null` if not found.
@@ -30,10 +34,11 @@ public object IconResolver {
    * Accepts camelCase (`arrowBack`) or PascalCase (`ArrowBack`) -- both resolve to the same icon.
    */
   public fun resolve(iconName: String): ImageVector? {
-    return cache.getOrPut(iconName) { findIcon(iconName) }
+    return cache.getOrPut(iconName) { CacheEntry(findIcon(iconName)) }.icon
   }
 
   private fun findIcon(name: String): ImageVector? {
+    if (name.isBlank()) return null
     val pascalName = name.replaceFirstChar { it.uppercaseChar() }
     for ((instance, clazz) in searchTargets) {
       val result = resolveFromObject(instance, clazz, pascalName)

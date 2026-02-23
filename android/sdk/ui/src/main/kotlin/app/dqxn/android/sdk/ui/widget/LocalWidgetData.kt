@@ -10,4 +10,6 @@ import app.dqxn.android.sdk.contracts.widget.WidgetData
  * `LocalWidgetData.current` + `derivedStateOf` to defer snapshot reads to the draw phase.
  */
 public val LocalWidgetData: androidx.compose.runtime.ProvidableCompositionLocal<WidgetData> =
-  compositionLocalOf { error("No WidgetData provided") }
+  compositionLocalOf {
+    error("No WidgetData provided")
+  }

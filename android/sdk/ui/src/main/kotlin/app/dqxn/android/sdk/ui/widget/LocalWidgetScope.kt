@@ -13,4 +13,6 @@ import kotlinx.coroutines.CoroutineScope
  * Static because the scope identity is tied to the widget lifecycle, not recomposition.
  */
 public val LocalWidgetScope: androidx.compose.runtime.ProvidableCompositionLocal<CoroutineScope> =
-  staticCompositionLocalOf { error("No WidgetScope provided") }
+  staticCompositionLocalOf {
+    error("No WidgetScope provided")
+  }

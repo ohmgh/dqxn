@@ -4,9 +4,9 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReferenceArray
 
 /**
- * Lock-free ring buffer storing [LogEntry] objects using [AtomicReferenceArray].
- * NOT the same as [app.dqxn.android.sdk.observability.metrics.LongArrayRingBuffer]
- * (this stores objects, not primitives).
+ * Lock-free ring buffer storing [LogEntry] objects using [AtomicReferenceArray]. NOT the same as
+ * [app.dqxn.android.sdk.observability.metrics.LongArrayRingBuffer] (this stores objects, not
+ * primitives).
  *
  * Thread-safe for concurrent writes. [toList] returns entries ordered oldest-to-newest.
  */

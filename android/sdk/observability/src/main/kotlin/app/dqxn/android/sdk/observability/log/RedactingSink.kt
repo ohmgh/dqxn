@@ -3,8 +3,7 @@ package app.dqxn.android.sdk.observability.log
 import kotlinx.collections.immutable.toImmutableMap
 
 /**
- * Decorator that scrubs sensitive data from log entries before delegating.
- * Redacts:
+ * Decorator that scrubs sensitive data from log entries before delegating. Redacts:
  * - GPS coordinates (latitude/longitude decimal patterns)
  * - BLE MAC addresses (XX:XX:XX:XX:XX:XX pattern)
  */
@@ -12,15 +11,12 @@ public class RedactingSink(private val delegate: LogSink) : LogSink {
 
   override fun write(entry: LogEntry) {
     val redactedMessage = redact(entry.message)
-    val redactedFields = if (entry.fields.isEmpty()) {
-      entry.fields
-    } else {
-      entry.fields
-        .mapValues { (_, v) ->
-          if (v is String) redact(v) else v
-        }
-        .toImmutableMap()
-    }
+    val redactedFields =
+      if (entry.fields.isEmpty()) {
+        entry.fields
+      } else {
+        entry.fields.mapValues { (_, v) -> if (v is String) redact(v) else v }.toImmutableMap()
+      }
     delegate.write(entry.copy(message = redactedMessage, fields = redactedFields))
   }
 
@@ -35,9 +31,7 @@ public class RedactingSink(private val delegate: LogSink) : LogSink {
     const val MAC_REPLACEMENT = "[REDACTED_MAC]"
 
     fun redact(input: String): String {
-      return input
-        .replace(MAC_PATTERN, MAC_REPLACEMENT)
-        .replace(GPS_PATTERN, GPS_REPLACEMENT)
+      return input.replace(MAC_PATTERN, MAC_REPLACEMENT).replace(GPS_PATTERN, GPS_REPLACEMENT)
     }
   }
 }

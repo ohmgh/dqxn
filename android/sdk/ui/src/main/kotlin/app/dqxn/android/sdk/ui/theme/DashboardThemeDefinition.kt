@@ -10,8 +10,8 @@ import app.dqxn.android.sdk.contracts.widget.BackgroundStyle
  * Full runtime theme type with Compose-dependent color/brush fields.
  *
  * 6 core color tokens (from replication-advisory section 5): [primaryTextColor],
- * [secondaryTextColor], [accentColor], [highlightColor], [widgetBorderColor], plus [backgroundBrush]
- * and [widgetBackgroundBrush].
+ * [secondaryTextColor], [accentColor], [highlightColor], [widgetBorderColor], plus
+ * [backgroundBrush] and [widgetBackgroundBrush].
  *
  * 3 semantic tokens: [errorColor], [warningColor], [successColor].
  *

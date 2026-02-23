@@ -4,11 +4,11 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Per-tag rate limiting sink. Drops entries exceeding [rateLimitPerSecond] for their tag.
- * Tags not in the rate limit map pass through unlimited.
+ * Per-tag rate limiting sink. Drops entries exceeding [rateLimitPerSecond] for their tag. Tags not
+ * in the rate limit map pass through unlimited.
  *
- * Uses [ConcurrentHashMap] with [AtomicLong] tracking last-allowed timestamp per tag
- * for lock-free rate enforcement.
+ * Uses [ConcurrentHashMap] with [AtomicLong] tracking last-allowed timestamp per tag for lock-free
+ * rate enforcement.
  */
 public class SamplingLogSink(
   private val delegate: LogSink,
@@ -19,10 +19,12 @@ public class SamplingLogSink(
   private val lastAllowed: ConcurrentHashMap<String, AtomicLong> = ConcurrentHashMap()
 
   override fun write(entry: LogEntry) {
-    val limit = rateLimitPerSecond[entry.tag] ?: run {
-      delegate.write(entry)
-      return
-    }
+    val limit =
+      rateLimitPerSecond[entry.tag]
+        ?: run {
+          delegate.write(entry)
+          return
+        }
 
     if (limit <= 0) return // Explicitly blocked
 

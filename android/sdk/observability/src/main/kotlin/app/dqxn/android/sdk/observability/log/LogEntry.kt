@@ -6,8 +6,8 @@ import kotlinx.collections.immutable.persistentMapOf
 /**
  * Immutable log entry dispatched to [LogSink] instances.
  *
- * [timestamp] uses [android.os.SystemClock.elapsedRealtimeNanos] for monotonic timing.
- * [fields] carries structured key-value context without string formatting.
+ * [timestamp] uses [android.os.SystemClock.elapsedRealtimeNanos] for monotonic timing. [fields]
+ * carries structured key-value context without string formatting.
  */
 public data class LogEntry(
   val timestamp: Long,

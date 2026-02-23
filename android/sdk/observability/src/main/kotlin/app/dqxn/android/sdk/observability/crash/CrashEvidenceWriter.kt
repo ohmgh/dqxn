@@ -4,8 +4,8 @@ import android.content.SharedPreferences
 
 /**
  * [Thread.UncaughtExceptionHandler] that persists crash evidence to [SharedPreferences]
- * synchronously via [SharedPreferences.Editor.commit] (NOT apply) so the data survives
- * the process termination that follows.
+ * synchronously via [SharedPreferences.Editor.commit] (NOT apply) so the data survives the process
+ * termination that follows.
  *
  * Used by safe mode to detect repeated widget crashes on next launch.
  */
@@ -33,8 +33,8 @@ public class CrashEvidenceWriter(
   }
 
   /**
-   * Reads the last crash evidence, returning null if none exists.
-   * Used on launch by safe-mode recovery.
+   * Reads the last crash evidence, returning null if none exists. Used on launch by safe-mode
+   * recovery.
    */
   public fun readLastCrash(): CrashEvidence? {
     val exception = prefs.getString(KEY_EXCEPTION, null) ?: return null
@@ -64,12 +64,9 @@ public class CrashEvidenceWriter(
     internal const val KEY_TIMESTAMP = "last_crash_timestamp"
 
     /** Pattern to extract widget typeId from exception messages. */
-    private val WIDGET_TYPE_ID_PATTERN: Regex =
-      Regex("\\[([a-z][a-z0-9]*:[a-z][a-z0-9-]*)\\]")
+    private val WIDGET_TYPE_ID_PATTERN: Regex = Regex("\\[([a-z][a-z0-9]*:[a-z][a-z0-9-]*)\\]")
 
-    /**
-     * Walk the exception cause chain looking for a widget typeId pattern in messages.
-     */
+    /** Walk the exception cause chain looking for a widget typeId pattern in messages. */
     internal fun extractWidgetTypeId(e: Throwable): String? {
       var current: Throwable? = e
       while (current != null) {
