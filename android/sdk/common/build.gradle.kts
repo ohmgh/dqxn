@@ -5,3 +5,8 @@ plugins {
 }
 
 android { namespace = "app.dqxn.android.sdk.common" }
+
+dependencies {
+  implementation(libs.kotlinx.coroutines.core)
+  implementation(libs.kotlinx.coroutines.android)
+}
