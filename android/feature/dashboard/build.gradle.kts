@@ -33,4 +33,5 @@ dependencies {
   testFixturesImplementation(libs.kotlinx.collections.immutable)
   testFixturesImplementation(libs.mockk)
   testFixturesImplementation(libs.window)
+  testFixturesImplementation(project(":core:thermal"))
 }
