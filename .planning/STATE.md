@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 7 — Dashboard Shell
-- **Current Plan:** 7 of 7 complete
+- **Current Plan:** 13 of 13 complete
 - **Milestone:** V1 Launch
 - **Next action:** Execute Phase 8 Plan 01
-- **Last session:** 2026-02-24T09:10:21.115Z
-- **Stopped at:** Completed 07-07-PLAN.md (Phase 7 complete)
+- **Last session:** 2026-02-24T10:18:43.369Z
+- **Stopped at:** Completed 07-13-PLAN.md
 
 ## Progress
 
@@ -19,7 +19,7 @@
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
-| 7. Dashboard Shell | Complete (7/7 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + 148 tests |
+| 7. Dashboard Shell | Complete (13/13 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests |
 | 8. Essentials Pack | Pending | Architecture validation gate |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
@@ -40,6 +40,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 05]: ComponentCallbacks2 for reactive system dark mode detection in ThemeAutoSwitchEngine -- fires on uiMode changes without Activity restart
 - [Phase 05]: @param:IoDispatcher for Kotlin 2.3 constructor parameter annotation targeting -- avoids KT-73255 future behavior change
 - [Phase 05]: Custom qualifier annotations (@UserPreferences, @ProviderSettings, @WidgetStyles) over @Named strings for type-safe Preferences DataStore disambiguation
+- [Phase 07]: internal var storageChecker over spyk for StorageMonitor testability -- direct property injection works correctly with virtual time advancement
 
 ### Phase 1 Decisions
 
@@ -206,6 +207,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 07-05 | 5min | 2 | 5 |
 | 07-06 | 10min | 2 | 12 |
 | 07-07 | 45min | 2 | 9 |
+| Phase 07 P13 | 9min | 2 tasks | 4 files |
 
 ## Context
 
