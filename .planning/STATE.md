@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 5 — Core Infrastructure
-- **Current Plan:** Not started
+- **Phase:** 6 — Deployable App + Agentic Framework
+- **Current Plan:** 2 of 4 complete
 - **Milestone:** V1 Launch
-- **Next action:** Phase 5 complete. Begin Phase 6 (Deployable App + Agentic Framework)
-- **Last session:** 2026-02-24T03:16:57Z
-- **Stopped at:** Completed 05-04-PLAN.md
+- **Next action:** Continue Phase 6 Plan 03 (Agentic diagnostic handlers)
+- **Last session:** 2026-02-24T03:55:40Z
+- **Stopped at:** Completed 06-02-PLAN.md
 
 ## Progress
 
@@ -18,7 +18,7 @@
 | 3. SDK Observability + Analytics + UI | Complete (3/3 plans) | All plans complete — observability, metrics/health/diagnostics/analytics, SDK UI |
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
-| 6. Deployable App + Agentic | Pending | First on-device deployment |
+| 6. Deployable App + Agentic | In Progress (2/4 plans) | Core agentic types + app shell with DI assembly |
 | 7. Dashboard Shell | Pending | Highest risk phase |
 | 8. Essentials Pack | Pending | Architecture validation gate |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
@@ -131,6 +131,14 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **ConnectionEventStore shares @ProviderSettings DataStore** — dedicated `__connection_events__` key avoids 7th DataStore file anti-pattern
 - **@param:ApplicationContext for PresetLoader** — same KT-73255 pattern as Plan 03
 
+### Phase 6 Decisions
+
+- **compose-ui as testImplementation for core:agentic** -- compileOnly for main sources (no Compose compiler), but testImplementation needed because SemanticsOwner must be loadable for type check in register()
+- **CommandResult.toJson() parses data as raw JSON** -- embeds structured JSON objects in response, falls back to string primitive for non-JSON data
+- **AgenticCommandRouter indexes aliases** -- lazy handlerMap includes both primary names and aliases from CommandHandler.aliases
+- **@ApplicationContext (not @param:ApplicationContext) on @Provides function params** -- @param: target only applies to constructor val/var (KT-73255)
+- **FakeSharedPreferences inline in test** -- JUnit5 compatible, no Robolectric Android runtime dependency for CrashRecovery tests
+
 ## Performance Metrics
 
 | Phase-Plan | Duration | Tasks | Files |
@@ -155,6 +163,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 05-05 | 9min | 2 | 14 |
 | Phase 05 P03 | 9min | 3 tasks | 22 files |
 | Phase 05 P04 | 6min | 3 tasks | 19 files |
+| 06-01 | 6min | 2 | 11 |
 
 ## Context
 
