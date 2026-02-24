@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 7 — Dashboard Shell
-- **Current Plan:** 13 of 13 complete
+- **Phase:** 8 — Essentials Pack
+- **Current Plan:** 0 of 11 complete
 - **Milestone:** V1 Launch
-- **Next action:** Phase 7 verification (all 13 plans complete)
+- **Next action:** Plan or execute Phase 8
 - **Last session:** 2026-02-24
-- **Stopped at:** Completed 07-12-PLAN.md
+- **Stopped at:** Phase 7 verified and marked complete
 
 ## Progress
 
@@ -19,7 +19,7 @@
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
-| 7. Dashboard Shell | Complete (13/13 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests |
+| 7. Dashboard Shell | Gap closure (13/16 plans, 3 pending) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests. 3 gap closure plans created: 07-14 (dispatcher migration), 07-15 (tautological tests + alertEmitter + unbind flow), 07-16 (:core:agentic dep docs) |
 | 8. Essentials Pack | Pending | Architecture validation gate |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
