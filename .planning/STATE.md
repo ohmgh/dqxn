@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 5 — Core Infrastructure
-- **Current Plan:** 3 of 5
+- **Current Plan:** 5 of 5
 - **Milestone:** V1 Launch
-- **Next action:** Execute 05-03-PLAN.md
-- **Last session:** 2026-02-24T02:50:12Z
-- **Stopped at:** Completed 05-02-PLAN.md
+- **Next action:** Verify Phase 5 completion (all 5 plans)
+- **Last session:** 2026-02-24T02:55:19.786Z
+- **Stopped at:** Completed 05-05-PLAN.md
 
 ## Progress
 
@@ -36,6 +36,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Driving mode deferred** post-launch — DQXN is general-purpose, not vehicle-first
 - **Essentials pack** renamed from "free" (packId=`essentials`, entitlement tier stays `free`)
 - **Phase 10 decomposed** from original "Features + Polish" into 4 phases (10-13) for settings, theme UI, CI, and E2E
+- [Phase 05]: Pure-Kotlin hex color parser (parseHexColor) instead of android.graphics.Color.parseColor -- enables unit testing without Robolectric
+- [Phase 05]: ComponentCallbacks2 for reactive system dark mode detection in ThemeAutoSwitchEngine -- fires on uiMode changes without Activity restart
 
 ### Phase 1 Decisions
 
@@ -146,6 +148,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 04-03 | 12min | 2 | 9 |
 | 05-01 | 5min | 2 | 13 |
 | 05-02 | 7min | 2 | 7 |
+| 05-05 | 9min | 2 | 14 |
 
 ## Context
 
