@@ -23,14 +23,14 @@ The `@AgenticCommand` annotation and `CommandHandler` interface must be created 
 | F1.13 | Dashboard-as-shell pattern (canvas persists beneath all overlays) | Blank canvas placeholder in Phase 6 (real dashboard in Phase 7). `Box` with Layer 0 + Layer 1 overlay structure. |
 | F1.23 | Multi-window disabled: `resizeableActivity="false"` | Manifest attribute on `<activity>`. Straightforward. |
 | F13.2 | Agentic framework for ADB-driven automation | `AgenticContentProvider` with `call()` + `query()` paths, `@EntryPoint` for Hilt access, response-file protocol. Architecture fully documented in `arch/build-system.md`. |
-| F13.4 | Demo mode flag (debug builds only) | `BuildConfig.DEMO_MODE_AVAILABLE` -- `true` in debug, `false` in release via `buildConfigField`. |
+| F13.4 | Demo mode flag (debug builds only) | Source set separation: demo code lives in `src/debug/`, absent from release. Same pattern as agentic (NF21). No `BuildConfig` field needed — code physically absent beats runtime flag. Phase 9 implements demo providers in `src/debug/`. |
 | F13.5 | Structured state dumps: ADB-queryable JSON state dumps | `dump-health`, `dump-layout`, `get-metrics`, `list-commands`, `list-diagnostics` handlers against Phase 3/5 observability and data infrastructure. |
 | F13.8 | Structured test output: JUnit XML to predictable paths | Already configured by `AndroidTestConventionPlugin` -- `reports.junitXml.outputLocation` set per task. Phase 6 just documents the tiered pipeline. |
 | F13.9 | Tiered validation pipeline for agentic development | Documentation deliverable: compile check -> fast tests -> full module tests -> dependent tests -> on-device smoke -> full suite. |
 | F13.11 | Semantics tree inspection: ADB-queryable Compose semantics tree | `SemanticsOwnerHolder` singleton in `:core:agentic`, registered by `DashboardLayer` via `RootForTest.semanticsOwner`. `dump-semantics` / `query-semantics` handlers. |
 | NF20 | No hardcoded secrets in source | `NoHardcodedSecrets` lint rule already exists (Phase 1). Phase 6 ensures no secrets in `:app` or `:core:agentic` source. SDK keys via `local.properties` pattern. |
 | NF21 | Agentic receiver restricted to debug builds | `AgenticContentProvider` registered in `src/debug/AndroidManifest.xml` only. All handlers in `src/debug/`. |
-| NF22 | Demo providers gated to debug builds only | `BuildConfig.DEMO_MODE_AVAILABLE` = `false` in release. Demo pack (`pack/demo`) compiled into all builds but gated at runtime by this flag. |
+| NF22 | Demo providers gated to debug builds only | Source set separation + Hilt: demo providers and their Hilt module live in `src/debug/`, physically absent from release APK. Same structural gate as agentic handlers. No runtime flag — code doesn't exist in release. |
 | NF23 | `neverForLocation="true"` on BT scan permission | `<uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>` in main manifest. |
 </phase_requirements>
 
@@ -531,14 +531,14 @@ class CrashRecovery @Inject constructor(
 | F1.13 | Dashboard-as-shell pattern | unit (composition) | `./gradlew :app:testDebugUnitTest --tests "*.MainActivityTest"` | No -- Wave 0 |
 | F1.23 | Multi-window disabled | manifest verification | Lint or manual manifest inspection | No -- Wave 0 |
 | F13.2 | Agentic framework | unit | `./gradlew :core:agentic:testDebugUnitTest --console=plain` | No -- Wave 0 |
-| F13.4 | Demo mode flag | unit | `./gradlew :app:testDebugUnitTest --tests "*.BuildConfigTest"` | No -- Wave 0 |
+| F13.4 | Demo mode flag | build/APK | Source set separation — verified by release APK analysis (no debug-only classes in release) | No -- Wave 0 |
 | F13.5 | Structured state dumps | unit | `./gradlew :app:testDebugUnitTest --tests "*.handlers.*"` | No -- Wave 0 |
 | F13.8 | Structured test output | convention verification | Already configured by AndroidTestConventionPlugin | Existing |
 | F13.9 | Tiered validation pipeline | documentation | N/A (documentation deliverable) | N/A |
 | F13.11 | Semantics tree inspection | unit | `./gradlew :core:agentic:testDebugUnitTest --tests "*.SemanticsOwnerHolderTest"` | No -- Wave 0 |
 | NF20 | No hardcoded secrets | lint | `./gradlew :app:lintDebug --console=plain` | Existing |
 | NF21 | Agentic debug-only | manifest/build verification | Verify AgenticContentProvider only in debug manifest | No -- Wave 0 |
-| NF22 | Demo providers debug-only | unit | `./gradlew :app:testDebugUnitTest --tests "*.BuildConfigTest"` | No -- Wave 0 |
+| NF22 | Demo providers debug-only | build/APK | Source set separation — verified by release APK analysis (no debug-only classes in release) | No -- Wave 0 |
 | NF23 | BT neverForLocation | manifest verification | Lint or manual manifest inspection | No -- Wave 0 |
 
 ### Nyquist Sampling Rate
