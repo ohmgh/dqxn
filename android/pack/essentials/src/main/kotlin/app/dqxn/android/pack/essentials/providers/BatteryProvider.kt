@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import android.os.SystemClock
 import app.dqxn.android.pack.essentials.snapshots.BatterySnapshot
 import app.dqxn.android.sdk.contracts.annotation.DashboardDataProvider
 import app.dqxn.android.sdk.contracts.provider.DataFieldSpec
@@ -105,7 +104,7 @@ constructor(
         level = percentage,
         isCharging = isCharging,
         temperature = temperature,
-        timestamp = SystemClock.elapsedRealtimeNanos(),
+        timestamp = System.nanoTime(),
       )
     }
   }

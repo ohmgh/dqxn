@@ -31,7 +31,7 @@ import kotlin.reflect.KClass
 import kotlinx.collections.immutable.ImmutableMap
 
 @DashboardWidget(typeId = "essentials:speedlimit-rect", displayName = "Speed Limit (Rectangle)")
-internal class SpeedLimitRectRenderer @Inject constructor() : WidgetRenderer {
+public class SpeedLimitRectRenderer @Inject constructor() : WidgetRenderer {
 
   override val typeId: String = "essentials:speedlimit-rect"
   override val displayName: String = "Speed Limit (Rectangle)"

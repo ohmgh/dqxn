@@ -4,7 +4,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.os.SystemClock
 import app.dqxn.android.pack.essentials.snapshots.AmbientLightSnapshot
 import app.dqxn.android.sdk.contracts.annotation.DashboardDataProvider
 import app.dqxn.android.sdk.contracts.provider.DataFieldSpec
@@ -83,7 +82,7 @@ constructor(
                 AmbientLightSnapshot(
                   lux = lux,
                   category = classifyLux(lux),
-                  timestamp = SystemClock.elapsedRealtimeNanos(),
+                  timestamp = System.nanoTime(),
                 )
               )
             }

@@ -3,7 +3,6 @@ package app.dqxn.android.pack.essentials.providers
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
-import app.dqxn.android.sdk.contracts.annotation.DashboardDataProvider
 import app.dqxn.android.sdk.contracts.provider.ActionableProvider
 import app.dqxn.android.sdk.contracts.provider.DataFieldSpec
 import app.dqxn.android.sdk.contracts.provider.DataSchema
@@ -25,11 +24,9 @@ import kotlinx.coroutines.flow.flowOf
  * Action provider for the Shortcuts widget. Implements [ActionableProvider] to handle tap-to-launch
  * actions. Emits a single [UnitSnapshot] -- exists to receive [WidgetAction] events.
  */
-@DashboardDataProvider(
-  localId = "call-action",
-  displayName = "App Launcher",
-  description = "Launch an app from a Shortcuts widget tap",
-)
+// Note: Not annotated with @DashboardDataProvider because KSP processor only checks
+// direct supertypes. CallActionProvider implements ActionableProvider (indirect DataProvider).
+// Manual Hilt binding required instead.
 @Singleton
 class CallActionProvider
 @Inject

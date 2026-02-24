@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.SystemClock
 import app.dqxn.android.pack.essentials.snapshots.TimeSnapshot
 import app.dqxn.android.sdk.contracts.annotation.DashboardDataProvider
 import app.dqxn.android.sdk.contracts.provider.DataFieldSpec
@@ -87,7 +86,7 @@ constructor(
         TimeSnapshot(
           epochMillis = System.currentTimeMillis(),
           zoneId = currentZoneId,
-          timestamp = SystemClock.elapsedRealtimeNanos(),
+          timestamp = System.nanoTime(),
         )
       )
       delay(1000)

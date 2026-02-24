@@ -29,7 +29,7 @@ import kotlin.reflect.KClass
 import kotlinx.collections.immutable.ImmutableMap
 
 @DashboardWidget(typeId = "essentials:speedlimit-circle", displayName = "Speed Limit (Circle)")
-internal class SpeedLimitCircleRenderer @Inject constructor() : WidgetRenderer {
+public class SpeedLimitCircleRenderer @Inject constructor() : WidgetRenderer {
 
   override val typeId: String = "essentials:speedlimit-circle"
   override val displayName: String = "Speed Limit (Circle)"

@@ -4,7 +4,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.os.SystemClock
 import app.dqxn.android.pack.essentials.snapshots.OrientationSnapshot
 import app.dqxn.android.sdk.contracts.annotation.DashboardDataProvider
 import app.dqxn.android.sdk.contracts.provider.DataFieldSpec
@@ -101,7 +100,7 @@ constructor(
                   bearing = bearing,
                   pitch = pitch,
                   roll = roll,
-                  timestamp = SystemClock.elapsedRealtimeNanos(),
+                  timestamp = System.nanoTime(),
                 )
               )
             }
