@@ -19,10 +19,16 @@ dependencies {
   testImplementation(libs.mockk)
   testImplementation(libs.kotlinx.coroutines.test)
 
+  testFixturesImplementation(platform(libs.compose.bom))
+  testFixturesImplementation(libs.compose.runtime)
+  testFixturesImplementation(platform(libs.junit.bom))
+  testFixturesImplementation(libs.junit.jupiter.api)
   testFixturesImplementation(project(":sdk:contracts"))
   testFixturesImplementation(project(":sdk:observability"))
   testFixturesImplementation(project(":data"))
   testFixturesImplementation(libs.kotlinx.coroutines.test)
   testFixturesImplementation(libs.truth)
   testFixturesImplementation(libs.kotlinx.collections.immutable)
+  testFixturesImplementation(libs.mockk)
+  testFixturesImplementation(libs.window)
 }
