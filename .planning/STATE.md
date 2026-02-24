@@ -5,9 +5,9 @@
 - **Phase:** 7 — Dashboard Shell
 - **Current Plan:** 13 of 13 complete
 - **Milestone:** V1 Launch
-- **Next action:** Execute Phase 8 Plan 01
-- **Last session:** 2026-02-24T10:54:07.575Z
-- **Stopped at:** Completed 07-08-PLAN.md
+- **Next action:** Execute 07-10-PLAN.md (or Phase 8 Plan 01 if gap closure complete)
+- **Last session:** 2026-02-24T11:18:42.353Z
+- **Stopped at:** Completed 07-09-PLAN.md (gap closure: reduced motion compliance)
 
 ## Progress
 
@@ -42,6 +42,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 05]: Custom qualifier annotations (@UserPreferences, @ProviderSettings, @WidgetStyles) over @Named strings for type-safe Preferences DataStore disambiguation
 - [Phase 07]: internal var storageChecker over spyk for StorageMonitor testability -- direct property injection works correctly with virtual time advancement
 - [Phase 07]: Mock WidgetDataBinder (not FakeWidgetDataBinder) for harness -- FakeWidgetDataBinder is standalone, not a subclass
+- [Phase 07]: SnapSpec type assertion over durationMillis property -- SnapSpec does not expose durationMillis as public property; type check + delay assertion for verification
 
 ### Phase 1 Decisions
 
@@ -210,6 +211,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 07-07 | 45min | 2 | 9 |
 | Phase 07 P13 | 9min | 2 tasks | 4 files |
 | Phase 07-08 P08 | 45min | 1 tasks | 3 files |
+| Phase 07 P09 | 15min | 2 tasks | 4 files |
 
 ## Context
 
