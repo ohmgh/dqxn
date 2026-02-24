@@ -6,8 +6,8 @@
 - **Current Plan:** 0 of 11 complete
 - **Milestone:** V1 Launch
 - **Next action:** Plan or execute Phase 8
-- **Last session:** 2026-02-24T15:16:02.514Z
-- **Stopped at:** Completed 07-16-PLAN.md
+- **Last session:** 2026-02-24T15:20:28.843Z
+- **Stopped at:** Completed 07-14-PLAN.md
 
 ## Progress
 
@@ -46,6 +46,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 07]: testScheduler.runCurrent() over advanceUntilIdle() for coordinator tests -- staleness watchdog infinite delay loop hangs advanceUntilIdle
 - [Phase 07]: coordinator.destroy() required in every coordinator test -- standalone SupervisorJob not child of test Job; runTest cleanup advanceUntilIdle hangs without explicit cancellation
 - [Phase 07]: :core:agentic added to :feature:dashboard allowed deps with parenthetical justification (debug semantics registration)
+- [Phase 07]: No destroy() needed for coordinators without standalone SupervisorJob -- child Job cancellation sufficient for LayoutCoordinator, NotificationCoordinator, ProfileCoordinator, ConfigurationBoundaryDetector
 
 ### Phase 1 Decisions
 
@@ -220,6 +221,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 07 P11 | 5min | 1 task | 1 file |
 | Phase 07 P12 | 5min | 1 task | 2 files |
 | Phase 07 P16 | 1min | 1 tasks | 1 files |
+| Phase 07 P14 | 4min | 2 tasks | 5 files |
 
 ## Context
 
