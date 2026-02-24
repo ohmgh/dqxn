@@ -1,6 +1,5 @@
 package app.dqxn.android.core.design.theme
 
-import android.graphics.Color as AndroidColor
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import app.dqxn.android.sdk.observability.log.DqxnLogger
@@ -18,12 +17,14 @@ import kotlinx.serialization.json.Json
 /**
  * Parses theme JSON files into [DashboardThemeDefinition] instances.
  *
- * Color strings are parsed via [android.graphics.Color.parseColor] which supports
- * `#RRGGBB` and `#AARRGGBB` hex formats. Malformed JSON or unparseable colors
- * return null (no crash) with a warning logged.
+ * Color strings are parsed from `#RRGGBB` and `#AARRGGBB` hex formats using a pure-Kotlin
+ * implementation (no `android.graphics.Color` dependency, enabling unit testing without
+ * Robolectric). Malformed JSON or unparseable colors return null (no crash) with a warning logged.
  */
 @Singleton
-public class ThemeJsonParser @Inject constructor(private val json: Json, private val logger: DqxnLogger) {
+public class ThemeJsonParser
+@Inject
+constructor(private val json: Json, private val logger: DqxnLogger) {
 
   /** Parses a single theme JSON string. Returns null on parse failure. */
   public fun parse(jsonString: String): DashboardThemeDefinition? =
@@ -57,27 +58,30 @@ public class ThemeJsonParser @Inject constructor(private val json: Json, private
     val bgGradientSpec = schema.backgroundGradient?.toGradientSpec()
     val widgetBgGradientSpec = schema.widgetBackgroundGradient?.toGradientSpec()
 
-    val primaryColor = parseColor(colors.primary)
-    val bgBrush = bgGradientSpec?.toBrush(DEFAULT_SIZE) ?: Brush.verticalGradient(
-      listOf(parseColor(colors.background), parseColor(colors.surface))
-    )
-    val widgetBgBrush = widgetBgGradientSpec?.toBrush(DEFAULT_SIZE) ?: Brush.verticalGradient(
-      listOf(parseColor(colors.surface), parseColor(colors.background))
-    )
+    val bgBrush =
+      bgGradientSpec?.toBrush(DEFAULT_SIZE)
+        ?: Brush.verticalGradient(
+          listOf(parseHexColor(colors.background), parseHexColor(colors.surface))
+        )
+    val widgetBgBrush =
+      widgetBgGradientSpec?.toBrush(DEFAULT_SIZE)
+        ?: Brush.verticalGradient(
+          listOf(parseHexColor(colors.surface), parseHexColor(colors.background))
+        )
 
     return DashboardThemeDefinition(
       themeId = schema.id,
       displayName = schema.name,
       isDark = schema.isDark,
-      primaryTextColor = primaryColor,
-      secondaryTextColor = parseColor(colors.secondary),
-      accentColor = parseColor(colors.accent),
-      widgetBorderColor = parseColor(colors.onSurface),
+      primaryTextColor = parseHexColor(colors.primary),
+      secondaryTextColor = parseHexColor(colors.secondary),
+      accentColor = parseHexColor(colors.accent),
+      widgetBorderColor = parseHexColor(colors.onSurface),
       backgroundBrush = bgBrush,
       widgetBackgroundBrush = widgetBgBrush,
-      errorColor = colors.error?.let { parseColor(it) } ?: Color(0xFFEF5350),
-      warningColor = colors.warning?.let { parseColor(it) } ?: Color(0xFFFFB74D),
-      successColor = colors.success?.let { parseColor(it) } ?: Color(0xFF66BB6A),
+      errorColor = colors.error?.let { parseHexColor(it) } ?: Color(0xFFEF5350),
+      warningColor = colors.warning?.let { parseHexColor(it) } ?: Color(0xFFFFB74D),
+      successColor = colors.success?.let { parseHexColor(it) } ?: Color(0xFF66BB6A),
       backgroundGradientSpec = bgGradientSpec,
       widgetBackgroundGradientSpec = widgetBgGradientSpec,
     )
@@ -89,22 +93,46 @@ public class ThemeJsonParser @Inject constructor(private val json: Json, private
   }
 }
 
-private fun parseColor(hex: String): Color = Color(AndroidColor.parseColor(hex))
+/**
+ * Parses a hex color string (#RRGGBB or #AARRGGBB) to a Compose [Color]. Pure Kotlin
+ * implementation -- no android.graphics dependency, so it works in unit tests.
+ */
+internal fun parseHexColor(hex: String): Color {
+  val stripped = hex.removePrefix("#")
+  val colorLong =
+    when (stripped.length) {
+      6 -> {
+        // #RRGGBB -> add full alpha
+        val rgb = stripped.toLong(16)
+        0xFF000000L or rgb
+      }
+      8 -> {
+        // #AARRGGBB
+        stripped.toLong(16)
+      }
+      else -> throw IllegalArgumentException("Invalid color format: $hex")
+    }
+  return Color(colorLong.toInt())
+}
 
 private fun ThemeGradientSchema.toGradientSpec(): GradientSpec {
-  val gradientType = when (type.uppercase()) {
-    "VERTICAL" -> GradientType.VERTICAL
-    "HORIZONTAL" -> GradientType.HORIZONTAL
-    "LINEAR" -> GradientType.LINEAR
-    "RADIAL" -> GradientType.RADIAL
-    "SWEEP" -> GradientType.SWEEP
-    else -> GradientType.VERTICAL
-  }
-  val gradientStops = stops.map { stop ->
-    GradientStop(
-      color = parseColor(stop.color).value.toLong(),
-      position = stop.position,
-    )
-  }.toImmutableList()
+  val gradientType =
+    when (type.uppercase()) {
+      "VERTICAL" -> GradientType.VERTICAL
+      "HORIZONTAL" -> GradientType.HORIZONTAL
+      "LINEAR" -> GradientType.LINEAR
+      "RADIAL" -> GradientType.RADIAL
+      "SWEEP" -> GradientType.SWEEP
+      else -> GradientType.VERTICAL
+    }
+  val gradientStops =
+    stops
+      .map { stop ->
+        GradientStop(
+          color = parseHexColor(stop.color).value.toLong(),
+          position = stop.position,
+        )
+      }
+      .toImmutableList()
   return GradientSpec(type = gradientType, stops = gradientStops)
 }
