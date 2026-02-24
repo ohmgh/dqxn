@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 3 — SDK Observability + Analytics + UI
-- **Current Plan:** Not started
+- **Phase:** 4 — KSP Codegen
+- **Current Plan:** 1 of 3 complete
 - **Milestone:** V1 Launch
-- **Next action:** Phase 4 (KSP Codegen) or Phase 5 (Core Infrastructure)
-- **Last session:** 2026-02-23T20:13:52Z
-- **Stopped at:** Completed 03-02-PLAN.md (Phase 3 fully complete)
+- **Next action:** Phase 4 Plan 02 (KSP Codegen Tests)
+- **Last session:** 2026-02-24T01:39:41.535Z
+- **Stopped at:** Completed 04-01-PLAN.md
 
 ## Progress
 
@@ -16,7 +16,7 @@
 | 1. Build System Foundation | Complete (4/4 plans) | All plans complete |
 | 2. SDK Contracts + Common | Complete (5/5 plans) | All plans complete — types, unit tests, contract test infrastructure |
 | 3. SDK Observability + Analytics + UI | Complete (3/3 plans) | All plans complete — observability, metrics/health/diagnostics/analytics, SDK UI |
-| 4. KSP Codegen | Pending | Concurrent with Phase 3 |
+| 4. KSP Codegen | In Progress (1/3 plans) | Plan 01 complete — processor implementation |
 | 5. Core Infrastructure | Pending | |
 | 6. Deployable App + Agentic | Pending | First on-device deployment |
 | 7. Dashboard Shell | Pending | Highest risk phase |
@@ -100,6 +100,15 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **EnrichedEvent for PackAnalytics** — anonymous object cannot extend sealed interface; concrete data class subtype instead
 - **WidgetHealthMonitor uses scope dispatcher** — hardcoded Dispatchers.Default prevented backgroundScope in tests
 
+### Phase 4 Decisions
+
+- **Hub-and-spoke KSP processor** — single PluginProcessor delegates to WidgetHandler, DataProviderHandler, SnapshotHandler (coordinated manifest output requires all three)
+- **Single-pass execution** via invoked flag — no multi-round KSP processing needed
+- **DataProvider dataType from snapshot type argument** — resolves @DashboardSnapshot.dataType on DataProvider<T> type arg, empty string fallback for cross-module snapshots
+- **HiltModuleGenerator produces interface** — @Binds on interface (no impl code needed) vs abstract class
+- **Aggregating vs isolating KSP** — ManifestGenerator aggregating=true (all symbols), HiltModuleGenerator aggregating=false (per-class isolation)
+- **stabilityConfigurationFiles (plural, additive)** — generated config adds alongside base config from AndroidComposeConventionPlugin
+
 ## Performance Metrics
 
 | Phase-Plan | Duration | Tasks | Files |
@@ -116,6 +125,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 03-01 | 10min | 3 | 28 |
 | 03-02 | 23min | 2 | 21 |
 | 03-03 | 10min | 2 | 17 |
+| 04-01 | 4min | 2 | 17 |
 
 ## Context
 
