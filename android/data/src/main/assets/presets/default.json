@@ -1,0 +1,10 @@
+{
+  "name": "Default",
+  "description": "Default dashboard layout",
+  "schemaVersion": 1,
+  "widgets": [
+    { "typeId": "essentials:clock", "gridX": 10, "gridY": 3, "widthUnits": 10, "heightUnits": 9 },
+    { "typeId": "essentials:battery", "gridX": 22, "gridY": 3, "widthUnits": 6, "heightUnits": 6 },
+    { "typeId": "essentials:date-simple", "gridX": 10, "gridY": 13, "widthUnits": 10, "heightUnits": 4 }
+  ]
+}
