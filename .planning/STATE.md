@@ -6,8 +6,8 @@
 - **Current Plan:** 2 of 7 complete
 - **Milestone:** V1 Launch
 - **Next action:** Execute Phase 7 Plan 03
-- **Last session:** 2026-02-24T05:19:10.750Z
-- **Stopped at:** Completed 07-02-PLAN.md
+- **Last session:** 2026-02-24T05:33:00Z
+- **Stopped at:** Completed 07-01-PLAN.md (wave 1 complete: 07-01 + 07-02)
 
 ## Progress
 
@@ -150,6 +150,10 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **mockkStatic(VibrationEffect::class)** for DashboardHaptics tests -- VibrationEffect.createPredefined returns null in Android unit test stubs
 - **testFixtures deps: compose-bom/runtime, junit-bom/jupiter-api, mockk, window** -- required by parallel plan 07-01 testFixtures sources for Compose compiler, JUnit5 TestWatcher, mocking
 - **Temporary file staging for parallel wave execution** -- moved 07-01 uncommitted files to /tmp during 07-02 test compilation, restored after
+- **SafeModeManager clock as constructor parameter** -- init block reads clock via checkSafeMode(), must be available before first use (not mutable var)
+- **handleResetLayout captures existing widgets before state update** -- prevents repo/StateFlow race with active flow collection
+- **android.graphics.Rect apply{} workaround** -- AGP returnDefaultValues=true stubs constructors; set public fields directly
+- **runTest(UnconfinedTestDispatcher()) for coordinator tests** -- backgroundScope does not advance with StandardTestDispatcher advanceUntilIdle()
 
 ## Performance Metrics
 
@@ -180,6 +184,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 06-03 | 12min | 3 | 24 |
 | 06-04 | 6min | 2 | 6 |
 | 07-02 | 9min | 2 | 7 |
+| 07-01 | 25min | 2 | 14 |
 | Phase 07 P02 | 9min | 2 tasks | 7 files |
 
 ## Context
