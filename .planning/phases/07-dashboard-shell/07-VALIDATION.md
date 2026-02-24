@@ -66,11 +66,15 @@ created: 2026-02-24
 > Behaviors that genuinely cannot be automated, with justification.
 > These are surfaced during `/gsd:verify-work` UAT.
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| 60fps grid rendering with 12+ widgets | NF1 | Physical device frame profiling | Deploy to device, add 12 widgets, observe frame histogram via `get-metrics` |
-| Foldable viewport behavior | NF46 | Requires foldable device or emulator | Test fold/unfold transitions, verify no-straddle snap |
-| Reduced motion transitions | NF39 | Requires system setting change | Set `animator_duration_scale=0`, verify instant transitions |
+*None — all previously manual items have been automated or deferred to Phase 12 benchmarking.*
+
+### Reclassified Items
+
+| Behavior | Requirement | Original Status | Resolution |
+|----------|-------------|-----------------|------------|
+| Foldable viewport / no-straddle snap | NF46 | Manual | **Automated in Plan 06 Task 2.** Mock `ConfigurationBoundaryDetector` fold states, assert `GridPlacementEngine` snap behavior. No `androidx.window.testing` needed — existing MockK pattern for `WindowInfoTracker` is sufficient. |
+| Reduced motion transitions | NF39 | Manual | **Automated in Plan 07 Task 2.** Inject `ReducedMotionHelper(isReducedMotion=true)` via `DashboardTestHarness`, assert edit wiggle disabled, add/remove transitions instant, profile pager animation skipped. No system setting change needed — DI controls the flag. |
+| 60fps grid rendering with 12+ widgets | NF1 | Manual | **Deferred to Phase 12 (CI Gates + Benchmarking).** Requires `androidx.benchmark.macro` + `FrameTimingMetric` on physical device. Phase 7 provides `graphicsLayer` isolation + viewport culling (structural correctness); Phase 12 provides runtime profiling (performance correctness). |
 
 ---
 
