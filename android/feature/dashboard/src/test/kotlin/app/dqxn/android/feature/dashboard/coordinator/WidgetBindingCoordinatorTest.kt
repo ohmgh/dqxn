@@ -18,15 +18,19 @@ import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
 import app.dqxn.android.sdk.contracts.setup.SetupPageDefinition
 import app.dqxn.android.sdk.contracts.status.WidgetRenderState
 import app.dqxn.android.sdk.contracts.testing.TestWidgetRenderer
+import app.dqxn.android.sdk.contracts.widget.WidgetData
 import app.dqxn.android.sdk.observability.log.NoOpLogger
 import app.dqxn.android.sdk.observability.metrics.MetricsCollector
 import com.google.common.truth.Truth.assertThat
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -119,15 +123,16 @@ class WidgetBindingCoordinatorTest {
     entitlementManager: FakeEntitlementManager = FakeEntitlementManager(),
     safeModeManager: SafeModeManager = SafeModeManager(FakeSharedPreferences(), logger),
     dispatcher: CoroutineDispatcher = StandardTestDispatcher(testScheduler),
+    binder: WidgetDataBinder? = null,
   ): WidgetBindingCoordinator {
-    val binder = WidgetDataBinder(
+    val actualBinder = binder ?: WidgetDataBinder(
       providerRegistry = providerRegistry,
       interceptors = emptySet(),
       thermalMonitor = thermalMonitor,
       logger = logger,
     )
     return WidgetBindingCoordinator(
-      binder = binder,
+      binder = actualBinder,
       widgetRegistry = widgetRegistry,
       safeModeManager = safeModeManager,
       entitlementManager = entitlementManager,
@@ -364,11 +369,153 @@ class WidgetBindingCoordinatorTest {
       initJob.cancel()
     }
 
-  // NOTE: Exponential backoff retry tests were deferred due to kotlinx.coroutines.test
-  // incompatibility with CoroutineExceptionHandler + SupervisorJob + delay-based retry cascades.
-  // The retry logic (handleBindingError with startBinding, not bind) is verified by code review:
-  // - bind() resets errorCounts, startBinding() does not
-  // - handleBindingError increments count and calls startBinding (not bind)
-  // - count > MAX_RETRIES terminates retries
-  // These will be tested via integration tests with the full DashboardViewModel.
+  // -- Exponential backoff retry tests (NF16) ---
+  //
+  // These use a mocked WidgetDataBinder to isolate the coordinator's retry logic from the
+  // binder's merge+scan+flatMapLatest flow pipeline. The real pipeline's internal channelFlow
+  // dispatches interact badly with StandardTestDispatcher + CoroutineExceptionHandler + SupervisorJob,
+  // causing test hangs. Mocking the binder returns a simple flow { throw } that crashes
+  // synchronously, testing ONLY the coordinator's handleBindingError → delay → startBinding cycle.
+
+  /**
+   * Creates a mock [WidgetDataBinder] whose [bind] returns a flow controlled by [flowFactory].
+   * Each call to bind() invokes [flowFactory] to get the flow, allowing per-call behavior.
+   * [minStalenessThresholdMs] returns null to disable the staleness watchdog in retry tests.
+   */
+  private fun createMockBinder(flowFactory: () -> Flow<WidgetData>): WidgetDataBinder {
+    val binder = mockk<WidgetDataBinder>()
+    every { binder.bind(any(), any(), any()) } answers { flowFactory() }
+    every { binder.minStalenessThresholdMs(any()) } returns null
+    return binder
+  }
+
+  @Test
+  fun `exponential backoff retry timing 1s 2s 4s`() = runTest {
+    var callCount = 0
+    val binder = createMockBinder {
+      flow {
+        callCount++
+        if (callCount <= 3) {
+          throw RuntimeException("Crash #$callCount")
+        }
+        emit(WidgetData.Empty.withSlot(TestSnapshot::class, TestSnapshot(timestamp = 1000L)))
+        awaitCancellation()
+      }
+    }
+    val renderer = TestWidgetRenderer(
+      typeId = "essentials:clock",
+      compatibleSnapshots = setOf(TestSnapshot::class),
+    )
+    val widgetRegistry = WidgetRegistryImpl(setOf(renderer), logger)
+    val providerRegistry = DataProviderRegistryImpl(emptySet(), FakeEntitlementManager(), logger)
+    val coordinator = createCoordinator(widgetRegistry, providerRegistry, binder = binder)
+
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+
+    val widget = testWidget(typeId = "essentials:clock")
+    coordinator.bind(widget)
+    testScheduler.runCurrent() // crash #1
+
+    assertThat(callCount).isEqualTo(1)
+
+    // First retry after 1s backoff
+    testScheduler.advanceTimeBy(1001)
+    testScheduler.runCurrent()
+    assertThat(callCount).isEqualTo(2) // crash #2
+
+    // Second retry after 2s backoff
+    testScheduler.advanceTimeBy(2001)
+    testScheduler.runCurrent()
+    assertThat(callCount).isEqualTo(3) // crash #3
+
+    // Third retry after 4s backoff — call #4 succeeds
+    testScheduler.advanceTimeBy(4001)
+    testScheduler.runCurrent()
+    assertThat(callCount).isEqualTo(4)
+
+    coordinator.destroy()
+    initJob.cancel()
+  }
+
+  @Test
+  fun `max 3 retries then ConnectionError status`() = runTest {
+    var callCount = 0
+    val binder = createMockBinder {
+      flow {
+        callCount++
+        throw RuntimeException("Crash #$callCount")
+      }
+    }
+    val renderer = TestWidgetRenderer(
+      typeId = "essentials:clock",
+      compatibleSnapshots = setOf(TestSnapshot::class),
+    )
+    val widgetRegistry = WidgetRegistryImpl(setOf(renderer), logger)
+    val providerRegistry = DataProviderRegistryImpl(emptySet(), FakeEntitlementManager(), logger)
+    val coordinator = createCoordinator(widgetRegistry, providerRegistry, binder = binder)
+
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+
+    val widget = testWidget(typeId = "essentials:clock")
+    coordinator.bind(widget)
+    testScheduler.runCurrent() // crash #1
+
+    testScheduler.advanceTimeBy(1001)
+    testScheduler.runCurrent() // crash #2
+
+    testScheduler.advanceTimeBy(2001)
+    testScheduler.runCurrent() // crash #3
+
+    testScheduler.advanceTimeBy(4001)
+    testScheduler.runCurrent() // crash #4 → count exceeds MAX_RETRIES → ConnectionError
+
+    assertThat(callCount).isEqualTo(4)
+    val status = coordinator.widgetStatus(widget.instanceId).value
+    assertThat(status.overlayState).isInstanceOf(WidgetRenderState.ConnectionError::class.java)
+
+    coordinator.destroy()
+    initJob.cancel()
+  }
+
+  @Test
+  fun `successful emission resets error count`() = runTest {
+    var callCount = 0
+    val binder = createMockBinder {
+      flow {
+        callCount++
+        if (callCount <= 1) {
+          throw RuntimeException("Crash #$callCount")
+        }
+        emit(WidgetData.Empty.withSlot(TestSnapshot::class, TestSnapshot(timestamp = 1000L)))
+        awaitCancellation()
+      }
+    }
+    val renderer = TestWidgetRenderer(
+      typeId = "essentials:clock",
+      compatibleSnapshots = setOf(TestSnapshot::class),
+    )
+    val widgetRegistry = WidgetRegistryImpl(setOf(renderer), logger)
+    val providerRegistry = DataProviderRegistryImpl(emptySet(), FakeEntitlementManager(), logger)
+    val coordinator = createCoordinator(widgetRegistry, providerRegistry, binder = binder)
+
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+
+    val widget = testWidget(typeId = "essentials:clock")
+    coordinator.bind(widget)
+    testScheduler.runCurrent() // crash #1
+
+    // Retry after 1s backoff — call #2 succeeds
+    testScheduler.advanceTimeBy(1001)
+    testScheduler.runCurrent()
+
+    val data = coordinator.widgetData(widget.instanceId).value
+    assertThat(data.hasData()).isTrue()
+    assertThat(coordinator.activeBindings()).containsKey(widget.instanceId)
+
+    coordinator.destroy()
+    initJob.cancel()
+  }
 }
