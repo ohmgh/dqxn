@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option java_package = "app.dqxn.android.data.proto";
+option java_multiple_files = true;
+
+message DashboardStoreProto {
+  int32 schema_version = 1;
+  repeated ProfileCanvasProto profiles = 2;
+  string active_profile_id = 3;
+  bool auto_switch_enabled = 4;
+}
+
+message ProfileCanvasProto {
+  string profile_id = 1;
+  string display_name = 2;
+  int32 sort_order = 3;
+  bool auto_switch_enabled = 4;
+  repeated SavedWidgetProto widgets = 5;
+}
+
+message SavedWidgetProto {
+  string id = 1;
+  string type = 2;
+  int32 grid_x = 3;
+  int32 grid_y = 4;
+  int32 width_units = 5;
+  int32 height_units = 6;
+  string background_style = 7;
+  float opacity = 8;
+  bool show_border = 9;
+  bool has_glow_effect = 10;
+  int32 corner_radius_percent = 11;
+  int32 rim_size_percent = 12;
+  optional string variant = 13;
+  map<string, string> settings = 14;
+  repeated string selected_data_source_ids = 15;
+  int32 z_index = 16;
+}

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_package = "app.dqxn.android.data.proto";
+option java_multiple_files = true;
+
+message CustomThemeStoreProto {
+  repeated CustomThemeProto themes = 1;
+}
+
+message CustomThemeProto {
+  string theme_id = 1;
+  string display_name = 2;
+  bool is_dark = 3;
+  string colors_json = 4;
+  string gradients_json = 5;
+  int64 created_at = 6;
+  int64 modified_at = 7;
+}

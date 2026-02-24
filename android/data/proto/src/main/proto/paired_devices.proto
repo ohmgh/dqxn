@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option java_package = "app.dqxn.android.data.proto";
+option java_multiple_files = true;
+
+message PairedDeviceStoreProto {
+  repeated PairedDeviceMetadataProto devices = 1;
+}
+
+message PairedDeviceMetadataProto {
+  string definition_id = 1;
+  string display_name = 2;
+  string mac_address = 3;
+  int64 last_connected = 4;
+  int32 association_id = 5;
+}
