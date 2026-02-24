@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 8 — Essentials Pack
-- **Current Plan:** 1 of 11
+- **Current Plan:** 3 of 11
 - **Milestone:** V1 Launch
-- **Next action:** Execute Phase 8 Plan 02
-- **Last session:** 2026-02-24T15:48:14Z
-- **Stopped at:** Completed 08-01-PLAN.md
+- **Next action:** Execute Phase 8 Plan 04
+- **Last session:** 2026-02-24T16:22:43.294Z
+- **Stopped at:** Completed 08-06b-PLAN.md
 
 ## Progress
 
@@ -20,7 +20,7 @@
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
-| 8. Essentials Pack | In Progress (1/11 plans) | Snapshot types + lint rule foundation |
+| 8. Essentials Pack | In Progress (3/11 plans) | Snapshot types + lint + greenfield providers |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
@@ -49,6 +49,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 07]: No destroy() needed for coordinators without standalone SupervisorJob -- child Job cancellation sufficient for LayoutCoordinator, NotificationCoordinator, ProfileCoordinator, ConfigurationBoundaryDetector
 - [Phase 07]: mockkStatic(Settings.Global::class) for ReducedMotionHelper tests -- avoids Robolectric while testing real production code
 - [Phase 07]: coordinatorScope stored from initialize() for alertEmitter.fire() launch -- fire() is suspend, showBanner() is not; isInitialized guard for calls before initialize()
+- [Phase 08]: Public visibility required for KSP-annotated pack classes -- KotlinPoet interfaceBuilder prohibits INTERNAL on abstract members in generated Hilt modules
+- [Phase 08]: Timestamp-based accessibility differentiation for action-only widgets -- data.timestamp > 0L distinguishes empty from bound state for contract test #5
 
 ### Phase 1 Decisions
 
@@ -185,6 +187,10 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Import-based lint detection** over UCallExpression for WidgetScopeBypass -- lint test infrastructure with allowCompilationErrors() cannot resolve method PSI for visitMethodCall
 - **Package-based widget detection** (app.dqxn.android.pack.*.widgets.*) over file-path-based -- lint test infra uses temp dirs making file paths unreliable
 - **SnapshotConventionPlugin compileOnly compose.runtime** -- compileOnly in sdk:contracts does not propagate transitively via api()
+- [Phase 08-03]: Moved ProviderSettingsStore interface to :sdk:contracts (typealias in :data) -- packs CANNOT depend on :data per CLAUDE.md module rules; pure interface belongs in :sdk:contracts
+- [Phase 08-03]: AccelerometerProvider TYPE_LINEAR_ACCELERATION first, TYPE_ACCELEROMETER + low-pass filter fallback (alpha=0.8)
+- [Phase 08-03]: GpsSpeedProvider fallback speed from consecutive location deltas when hasSpeed()=false, accuracy=null signals computed vs hardware
+- [Phase 08-03]: Pack classes use default (public) visibility for KSP-generated Hilt module compatibility
 
 ## Performance Metrics
 
@@ -232,6 +238,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 07 P14 | 4min | 2 tasks | 5 files |
 | Phase 07 P15 | 4min | 2 tasks | 5 files |
 | 08-01 | 8min | 2 | 13 |
+| 08-03 | 25min | 2 | 10 |
+| Phase 08 P06b | 28min | 2 tasks | 4 files |
 
 ## Context
 
