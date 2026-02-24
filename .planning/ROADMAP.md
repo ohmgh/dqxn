@@ -226,7 +226,7 @@ Plans:
 9. Content-aware resize preview: `LocalWidgetPreviewUnits` feeds target dimensions during resize gesture
 10. Reduced motion: `animator_duration_scale == 0` disables wiggle, replaces spring with instant transitions
 
-**Plans:** 9 plans (7 original + 2 gap closure)
+**Plans:** 13 plans (7 original + 6 gap closure)
 
 Plans:
 - [x] 07-01-PLAN.md — Foundation types (DashboardCommand, LayoutCoordinator, GridPlacementEngine, SafeModeManager) + DashboardTestHarness testFixtures
@@ -236,8 +236,12 @@ Plans:
 - [x] 07-05-PLAN.md — ProfileCoordinator + NotificationCoordinator + DashboardModule Hilt wiring
 - [x] 07-06-PLAN.md — DashboardGrid + WidgetSlot + DashboardLayer + UI composables (banner hosts, button bar, error fallback)
 - [x] 07-07-PLAN.md — DashboardViewModel + DashboardScreen + OverlayNavHost + ProfilePageTransition + integration tests
-- [ ] 07-08-PLAN.md — Gap closure: Wire WidgetBindingCoordinator into DashboardTestHarness + fix SC#3 assertion
-- [ ] 07-09-PLAN.md — Gap closure: Reduced motion gating for add/remove transitions + profile pager + 3 integration tests
+- [ ] 07-08-PLAN.md — Gap closure (verification): Wire WidgetBindingCoordinator into DashboardTestHarness + fix SC#3 assertion
+- [ ] 07-09-PLAN.md — Gap closure (verification): Reduced motion gating for add/remove transitions + profile pager + 3 integration tests
+- [ ] 07-10-PLAN.md — Gap closure (quality): Migrate WidgetBindingCoordinatorTest + WidgetDataBinderTest off UnconfinedTestDispatcher
+- [ ] 07-11-PLAN.md — Gap closure (quality): Exponential backoff retry timing tests (deferred from 07-04)
+- [ ] 07-12-PLAN.md — Gap closure (quality): F3.11 staleness detection implementation + injectable timeProvider
+- [ ] 07-13-PLAN.md — Gap closure (quality): DataProviderRegistryImpl + StorageMonitor test coverage
 
 **Depends on:** Phases 5, 6
 
