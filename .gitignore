@@ -12,6 +12,6 @@
 local.properties
 
 # GSD planning (ephemeral)
-.planning/phases/
-.planning/research/
-.planning/codebase/
+#.planning/phases/
+#.planning/research/
+#.planning/codebase/
