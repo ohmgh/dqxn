@@ -3,7 +3,7 @@
 ## Current Position
 
 - **Phase:** 8 — Essentials Pack
-- **Current Plan:** 7 of 11
+- **Current Plan:** 8 of 11
 - **Milestone:** V1 Launch
 - **Next action:** Execute Phase 8 remaining plans (02, 05a, 08, 09)
 - **Last session:** 2026-02-25T00:24:00Z
@@ -20,7 +20,7 @@
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
-| 8. Essentials Pack | In Progress (7/11 plans) | Snapshot types + lint + greenfield providers + solar + battery/ambient-light + shortcuts/solar widgets + compass/speedlimit + speedometer/themes |
+| 8. Essentials Pack | In Progress (8/11 plans) | Snapshot types + lint + greenfield providers + solar + battery/ambient-light + shortcuts/solar widgets + compass/speedlimit + speedometer/themes |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
