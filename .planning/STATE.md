@@ -5,9 +5,9 @@
 - **Phase:** 7 — Dashboard Shell
 - **Current Plan:** 13 of 13 complete
 - **Milestone:** V1 Launch
-- **Next action:** Execute 07-11-PLAN.md (or Phase 8 Plan 01 if gap closure complete)
-- **Last session:** 2026-02-24T12:26:47.996Z
-- **Stopped at:** Completed 07-10-PLAN.md
+- **Next action:** Execute 07-12-PLAN.md
+- **Last session:** 2026-02-24
+- **Stopped at:** Completed 07-11-PLAN.md
 
 ## Progress
 
@@ -164,7 +164,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **ConfigurationBoundaryDetector mock needs explicit boundaries stub** -- relaxed MockK returns Object for ImmutableList, causing ClassCastException
 - **bind/startBinding split for error count preservation** -- bind() resets error count (public API), startBinding() preserves it (retry internal); prevents infinite retry loops in handleBindingError
 - **destroy() method on WidgetBindingCoordinator** -- standalone SupervisorJob() needs explicit cancellation on ViewModel.onCleared() to prevent coroutine leaks
-- **Deferred retry-specific unit tests to integration level** -- kotlinx.coroutines.test incompatible with CoroutineExceptionHandler + SupervisorJob + delay-based retry cascades; retry logic verified by code review
+- **Mocked WidgetDataBinder for retry tests** -- real merge+scan+flatMapLatest pipeline's channelFlow dispatch layers hang with StandardTestDispatcher + CEH + SupervisorJob; mock isolates coordinator retry logic
+- **awaitCancellation() over delay(Long.MAX_VALUE) in test flows** -- delay schedules TestCoroutineScheduler event at virtual time MAX_VALUE; runTest cleanup advanceUntilIdle hangs trying to reach it
 - **StateFlow.distinctUntilChanged() removed** -- deprecated in Kotlin coroutines because StateFlow already guarantees structural equality dedup; treated as compile error
 - **Layout save failure via explicit reportLayoutSaveFailure() method** -- LayoutRepository has no save failure flow; explicit method callable from LayoutCoordinator or ViewModel
 - **State-based error boundary for WidgetSlot** -- Compose forbids try-catch around @Composable calls; render errors tracked via WidgetStatusCache and binding coordinator crash reporting, not Compose-level catch
@@ -215,6 +216,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 07-08 P08 | 45min | 1 tasks | 3 files |
 | Phase 07 P09 | 15min | 2 tasks | 4 files |
 | Phase 07 P10 | 62min | 2 tasks | 2 files |
+| Phase 07 P11 | 5min | 1 task | 1 file |
 
 ## Context
 
