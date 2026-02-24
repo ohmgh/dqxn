@@ -26,15 +26,14 @@ public class SafeModeManager
 constructor(
   private val prefs: SharedPreferences,
   private val logger: DqxnLogger,
+  /** Clock source for timestamps. Defaults to [System.currentTimeMillis]. Inject a fake for tests. */
+  public val clock: () -> Long = { System.currentTimeMillis() },
 ) {
 
   private val _safeModeActive: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
   /** Whether safe mode is currently active. Observed by NotificationCoordinator for CRITICAL banner. */
   public val safeModeActive: StateFlow<Boolean> = _safeModeActive.asStateFlow()
-
-  /** Provide a clock source for testing. Defaults to [System.currentTimeMillis]. */
-  public var clock: () -> Long = { System.currentTimeMillis() }
 
   init {
     // Check persisted state on construction

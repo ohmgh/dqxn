@@ -191,17 +191,17 @@ constructor(
 
   /** Reset the layout by reloading from the preset loader. */
   public suspend fun handleResetLayout() {
+    // Capture existing widgets before modifying state so we know what to remove from the repo
+    val existingWidgets = _layoutState.value.widgets.toList()
     val presetWidgets = withContext(ioDispatcher) { presetLoader.loadPreset() }
 
     _layoutState.update { state ->
       state.copy(widgets = presetWidgets.toImmutableList())
     }
 
-    // Persist each preset widget
+    // Persist: remove old widgets, then add preset widgets
     withContext(ioDispatcher) {
-      // Clear existing layout by removing all, then adding preset widgets
-      val currentWidgets = _layoutState.value.widgets
-      for (widget in currentWidgets) {
+      for (widget in existingWidgets) {
         layoutRepository.removeWidget(widget.instanceId)
       }
       for (widget in presetWidgets) {
