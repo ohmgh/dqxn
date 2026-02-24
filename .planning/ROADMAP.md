@@ -269,11 +269,11 @@ Plans:
 6. **Widget-specific rendering tests:** At least one rendering behavior test per widget beyond contract base (e.g., speedometer arc angle, compass needle rotation)
 7. **Greenfield provider tests:** GpsSpeedProvider, BatteryProvider, AccelerometerProvider, SpeedLimitProvider have provider-specific unit tests beyond DataProviderContractTest
 
-**Plans:** 8/11 plans executed
+**Plans:** 9/11 plans executed
 
 Plans:
 - [x] 08-01-PLAN.md — Snapshot types (6 cross-boundary + 2 pack-local) + build config + WidgetScopeBypass lint rule
-- [ ] 08-02-PLAN.md — Simple providers (Time, Orientation, AmbientLight, Battery) + RegionDetector
+- [x] 08-02-PLAN.md — Simple providers (Time, Orientation, AmbientLight, Battery) + RegionDetector
 - [x] 08-03-PLAN.md — Greenfield providers (GpsSpeed, Accelerometer, SpeedLimit, CallAction)
 - [x] 08-04-PLAN.md — Solar subsystem (SolarCalculator, IanaTimezoneCoordinates, 2 solar providers)
 - [x] 08-05a-PLAN.md — Clock/Date widgets (Clock Digital, Clock Analog, 3 Dates)

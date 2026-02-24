@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 8 — Essentials Pack
-- **Current Plan:** 9 of 11
+- **Current Plan:** 10 of 11
 - **Milestone:** V1 Launch
-- **Next action:** Execute Phase 8 remaining plans (02, 08, 09)
-- **Last session:** 2026-02-25T01:00:00Z
-- **Stopped at:** Completed 08-05a-PLAN.md
+- **Next action:** Execute Phase 8 remaining plans (08, 09)
+- **Last session:** 2026-02-25T00:42:53Z
+- **Stopped at:** Completed 08-02-PLAN.md
 
 ## Progress
 
@@ -20,7 +20,7 @@
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
-| 8. Essentials Pack | In Progress (8/11 plans) | Snapshot types + lint + greenfield providers + solar + battery/ambient-light + clock/date widgets + shortcuts/solar widgets + compass/speedlimit + speedometer/themes |
+| 8. Essentials Pack | In Progress (9/11 plans) | Snapshot types + lint + simple providers + greenfield providers + solar + battery/ambient-light + clock/date widgets + shortcuts/solar widgets + compass/speedlimit + speedometer/themes |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
@@ -203,6 +203,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 08-06a]: Public visibility on SpeedLimitCircleRenderer and SpeedLimitRectRenderer -- KSP-generated HiltModule requires public parameter types on @Binds functions
 - [Phase 08-05a]: Shared companion utilities for clock/date renderers -- ClockDigitalRenderer.resolveZone() reused by analog, DateSimpleRenderer.formatDateFromSnapshot() reused by Stack/Grid
 - [Phase 08-05a]: Hand angle pure functions exposed as internal Companion for direct unit testing at cardinal positions
+- [Phase 08-02]: System.nanoTime() over SystemClock.elapsedRealtimeNanos() for DataSnapshot.timestamp -- SystemClock returns 0 in JVM unit tests, breaking contract test assertion #3
+- [Phase 08-02]: Removed @DashboardDataProvider from CallActionProvider -- KSP processor only checks direct supertypes, cannot resolve indirect DataProvider inheritance via ActionableProvider
 
 ## Performance Metrics
 
@@ -256,6 +258,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 08-05b | 27min | 2 | 8 |
 | 08-07 | 35min | 2 | 5 |
 | 08-06a | 24min | 2 | 9 |
+| 08-02 | 15min | 2 | 17 |
 | 08-05a | 35min | 2 | 10 |
 
 ## Context
