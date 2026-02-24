@@ -14,6 +14,7 @@ import com.android.tools.lint.detector.api.Issue
  * 3. ModuleBoundaryViolation -- pack isolation
  * 4. ComposeInNonUiModule -- Compose compiler scope
  * 5. AgenticMainThreadBan -- agentic threading safety
+ * 6. WidgetScopeBypass -- widget coroutine isolation
  */
 class DqxnIssueRegistry : IssueRegistry() {
 
@@ -24,6 +25,7 @@ class DqxnIssueRegistry : IssueRegistry() {
       ModuleBoundaryViolationDetector.ISSUE,
       ComposeInNonUiModuleDetector.ISSUE,
       AgenticMainThreadBanDetector.ISSUE,
+      WidgetScopeBypassDetector.ISSUE,
     )
 
   override val api: Int = CURRENT_API
