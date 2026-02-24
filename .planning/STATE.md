@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 8 — Essentials Pack
-- **Current Plan:** 5 of 11
+- **Current Plan:** 7 of 11
 - **Milestone:** V1 Launch
-- **Next action:** Execute Phase 8 remaining plans (02, 05a, 06a, 07, 08, 09)
-- **Last session:** 2026-02-24T16:25:20.537Z
-- **Stopped at:** Completed 08-05b-PLAN.md
+- **Next action:** Execute Phase 8 remaining plans (02, 05a, 08, 09)
+- **Last session:** 2026-02-25T00:24:00Z
+- **Stopped at:** Completed 08-06a-PLAN.md
 
 ## Progress
 
@@ -20,7 +20,7 @@
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
-| 8. Essentials Pack | In Progress (5/11 plans) | Snapshot types + lint + greenfield providers + solar + battery/ambient-light + shortcuts/solar widgets |
+| 8. Essentials Pack | In Progress (7/11 plans) | Snapshot types + lint + greenfield providers + solar + battery/ambient-light + shortcuts/solar widgets + compass/speedlimit + speedometer/themes |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
@@ -192,6 +192,15 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 08-03]: AccelerometerProvider TYPE_LINEAR_ACCELERATION first, TYPE_ACCELEROMETER + low-pass filter fallback (alpha=0.8)
 - [Phase 08-03]: GpsSpeedProvider fallback speed from consecutive location deltas when hasSpeed()=false, accuracy=null signals computed vs hardware
 - [Phase 08-03]: Pack classes use default (public) visibility for KSP-generated Hilt module compatibility
+- [Phase 08-04]: SolarCalculator API takes (lat, lon, LocalDate, ZoneId) returning SolarResult with epoch millis -- more composable than old ZonedDateTime API
+- [Phase 08-04]: Long.MIN_VALUE sentinel for polar edge cases (no sunrise/sunset) rather than nullable types or exceptions
+- [Phase 08-04]: SolarTimezoneDataProvider recalculates at midnight boundary only -- simpler than sunrise/sunset transition timers
+- [Phase 08-04]: IanaTimezoneCoordinates returns Pair<Double, Double> instead of dedicated data class -- internal utility only
+- [Phase 08-07]: Canvas-drawn warning triangle instead of material-icons-extended dependency -- packs should not pull heavyweight icon libraries (~30MB)
+- [Phase 08-07]: Inline DashboardThemeDefinition construction instead of JSON file loading -- ThemeJsonParser is in :core:design which packs cannot depend on per module rules
+- [Phase 08-07]: Manual EssentialsThemeModule for ThemeProvider @Binds @IntoSet -- KSP codegen only handles @DashboardWidget and @DashboardDataProvider annotations
+- [Phase 08-06a]: Pack-local RegionDetector created for timezone-based speed unit detection -- packs cannot depend on :data or :core; 50+ timezone entries for MPH/KPH and Japan detection
+- [Phase 08-06a]: Public visibility on SpeedLimitCircleRenderer and SpeedLimitRectRenderer -- KSP-generated HiltModule requires public parameter types on @Binds functions
 
 ## Performance Metrics
 
@@ -240,8 +249,11 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 07 P15 | 4min | 2 tasks | 5 files |
 | 08-01 | 8min | 2 | 13 |
 | 08-03 | 25min | 2 | 10 |
+| 08-04 | 30min | 2 | 7 |
 | Phase 08 P06b | 28min | 2 tasks | 4 files |
 | 08-05b | 27min | 2 | 8 |
+| 08-07 | 35min | 2 | 5 |
+| 08-06a | 24min | 2 | 9 |
 
 ## Context
 
