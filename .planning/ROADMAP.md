@@ -194,13 +194,13 @@ Plans:
 7. `ping` command returns `{"status":"ok"}` — E2E startup probe verified
 8. `dump-state` command returns aggregated layout + health + widget statuses (available from Phase 7 when coordinators land)
 
-**Plans:** 4 plans
+**Plans:** 4/4 plans complete
 
 Plans:
-- [ ] 06-01-PLAN.md — `:core:agentic` infrastructure (annotation, handler interface, router, semantics holder)
-- [ ] 06-02-PLAN.md — `:app` shell (Application, Activity, AppModule DI, CrashRecovery, AlertSoundManager, manifest)
-- [ ] 06-03-PLAN.md — AgenticContentProvider transport + 16 diagnostic command handlers
-- [ ] 06-04-PLAN.md — Debug overlays + R8 release validation + validation pipeline doc
+- [x] 06-01-PLAN.md — `:core:agentic` infrastructure (annotation, handler interface, router, semantics holder)
+- [x] 06-02-PLAN.md — `:app` shell (Application, Activity, AppModule DI, CrashRecovery, AlertSoundManager, manifest)
+- [x] 06-03-PLAN.md — AgenticContentProvider transport + 16 diagnostic command handlers
+- [x] 06-04-PLAN.md — Debug overlays + R8 release validation + validation pipeline doc
 
 **Depends on:** Phases 3, 4, 5 (Phase 3 direct: `:app` imports `:sdk:observability`, `:sdk:analytics`, `:sdk:ui`)
 
