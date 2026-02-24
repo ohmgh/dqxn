@@ -94,6 +94,7 @@ public fun DashboardScreen(
         profiles = profileState.profiles,
         activeProfileId = profileState.activeProfileId,
         isEditMode = editState.isEditMode,
+        isReducedMotion = viewModel.reducedMotionHelper.isReducedMotion,
         onSwitchProfile = { profileId ->
           onCommand(DashboardCommand.SwitchProfile(profileId))
         },

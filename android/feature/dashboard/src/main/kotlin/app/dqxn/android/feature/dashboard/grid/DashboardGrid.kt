@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -99,16 +100,24 @@ public fun DashboardGrid(
 
           AnimatedVisibility(
             visible = isVisible,
-            enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
-              scaleIn(
-                initialScale = 0.8f,
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-              ),
-            exit = fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) +
-              scaleOut(
-                targetScale = 0.8f,
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-              ),
+            enter = if (isReducedMotion) {
+              fadeIn(snap()) + scaleIn(initialScale = 0.8f, animationSpec = snap())
+            } else {
+              fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
+                scaleIn(
+                  initialScale = 0.8f,
+                  animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                )
+            },
+            exit = if (isReducedMotion) {
+              fadeOut(snap()) + scaleOut(targetScale = 0.8f, animationSpec = snap())
+            } else {
+              fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) +
+                scaleOut(
+                  targetScale = 0.8f,
+                  animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                )
+            },
           ) {
             // Per-widget graphicsLayer for isolated RenderNode (NF1)
             val widgetDragState = if (dragState?.widgetId == widget.instanceId) dragState else null

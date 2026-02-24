@@ -21,6 +21,8 @@ import kotlinx.collections.immutable.ImmutableList
  * @param profiles All available profiles.
  * @param activeProfileId Currently active profile ID.
  * @param isEditMode Whether edit mode is active (disables swiping).
+ * @param isReducedMotion Whether system reduced motion is active (NF39). When true, profile page
+ *   transitions use instant [scrollToPage] instead of animated [animateScrollToPage].
  * @param onSwitchProfile Callback when user swipes to a different profile.
  * @param content Composable content for each profile, receiving the profile ID.
  */
@@ -29,6 +31,7 @@ public fun ProfilePageTransition(
   profiles: ImmutableList<ProfileInfo>,
   activeProfileId: String,
   isEditMode: Boolean,
+  isReducedMotion: Boolean,
   onSwitchProfile: (String) -> Unit,
   content: @Composable (profileId: String) -> Unit,
 ) {
@@ -46,9 +49,14 @@ public fun ProfilePageTransition(
   )
 
   // Sync pager to external profile changes (e.g., bottom bar tap)
+  // NF39: when reduced motion is active, use instant scrollToPage instead of animated scroll
   LaunchedEffect(activeIndex) {
     if (pagerState.currentPage != activeIndex) {
-      pagerState.animateScrollToPage(activeIndex)
+      if (isReducedMotion) {
+        pagerState.scrollToPage(activeIndex)
+      } else {
+        pagerState.animateScrollToPage(activeIndex)
+      }
     }
   }
 
