@@ -325,4 +325,55 @@ class WidgetDataBinderTest {
     assertThat(items).hasSize(1)
     assertThat(items[0]).isEqualTo(app.dqxn.android.sdk.contracts.widget.WidgetData.Empty)
   }
+
+  @Test
+  fun `thermal throttle reduces emission rate under DEGRADED config`() = runTest {
+    var fakeTime = 0L
+    val speedFlow = MutableSharedFlow<SpeedSnapshot>()
+    val provider = SimpleProvider(
+      dataFlow = speedFlow,
+      sourceId = "test:speed",
+      snapshotType = SpeedSnapshot::class,
+    )
+    val binder = WidgetDataBinder(
+      providerRegistry = SimpleProviderRegistry(setOf(provider)),
+      interceptors = emptySet(),
+      thermalMonitor = thermalMonitor,
+      logger = logger,
+      timeProvider = { fakeTime },
+    )
+
+    // Set DEGRADED thermal level (30fps -> 33ms throttle interval)
+    thermalMonitor.setLevel(ThermalLevel.DEGRADED)
+
+    val widget = testWidget(typeId = "essentials:speed")
+    val renderConfig = thermalMonitor.renderConfig
+    val dataFlow = binder.bind(widget, setOf(SpeedSnapshot::class), renderConfig)
+
+    dataFlow.test {
+      // Scan seed (Empty)
+      val seed = awaitItem()
+      assertThat(seed).isEqualTo(app.dqxn.android.sdk.contracts.widget.WidgetData.Empty)
+
+      // First emission always passes (lastEmitTime starts at 0, fakeTime=0, interval check: 0-0 >= 33 is false)
+      // Actually: lastEmitTime=0, now=0, 0-0=0 >= 33 is false. Let's set fakeTime to something > 33.
+      fakeTime = 100L
+      speedFlow.emit(SpeedSnapshot(timestamp = 100L, speed = 1.0))
+      val first = awaitItem()
+      assertThat(first.snapshot<SpeedSnapshot>()!!.speed).isEqualTo(1.0)
+
+      // Emit at fakeTime=120 (only 20ms later) -> should be throttled
+      fakeTime = 120L
+      speedFlow.emit(SpeedSnapshot(timestamp = 120L, speed = 2.0))
+
+      // Emit at fakeTime=140 (40ms from first emission) -> should pass (100+33=133, 140 >= 133)
+      fakeTime = 140L
+      speedFlow.emit(SpeedSnapshot(timestamp = 140L, speed = 3.0))
+      val second = awaitItem()
+      // speed=2.0 was throttled, speed=3.0 passes
+      assertThat(second.snapshot<SpeedSnapshot>()!!.speed).isEqualTo(3.0)
+
+      cancelAndIgnoreRemainingEvents()
+    }
+  }
 }

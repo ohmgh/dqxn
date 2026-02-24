@@ -124,6 +124,7 @@ class WidgetBindingCoordinatorTest {
     safeModeManager: SafeModeManager = SafeModeManager(FakeSharedPreferences(), logger),
     dispatcher: CoroutineDispatcher = StandardTestDispatcher(testScheduler),
     binder: WidgetDataBinder? = null,
+    timeProvider: (() -> Long)? = null,
   ): WidgetBindingCoordinator {
     val actualBinder = binder ?: WidgetDataBinder(
       providerRegistry = providerRegistry,
@@ -141,6 +142,7 @@ class WidgetBindingCoordinatorTest {
       logger = logger,
       ioDispatcher = dispatcher,
       defaultDispatcher = dispatcher,
+      timeProvider = timeProvider ?: { System.currentTimeMillis() },
     )
   }
 
@@ -514,6 +516,116 @@ class WidgetBindingCoordinatorTest {
     val data = coordinator.widgetData(widget.instanceId).value
     assertThat(data.hasData()).isTrue()
     assertThat(coordinator.activeBindings()).containsKey(widget.instanceId)
+
+    coordinator.destroy()
+    initJob.cancel()
+  }
+
+  // -- Data staleness detection test (F3.11) ---
+
+  @Test
+  fun `data staleness marks widget DataStale when no emission within threshold`() = runTest {
+    var fakeTime = 0L
+    val provider = ContinuousProvider()
+    // Schema with 5s staleness threshold
+    val renderer = TestWidgetRenderer(
+      typeId = "essentials:clock",
+      compatibleSnapshots = setOf(TestSnapshot::class),
+    )
+    val widgetRegistry = WidgetRegistryImpl(setOf(renderer), logger)
+    val providerRegistry =
+      DataProviderRegistryImpl(setOf(provider), FakeEntitlementManager(), logger)
+
+    // The provider has schema.stalenessThresholdMs=3000L by default in ContinuousProvider.
+    // The coordinator calls binder.minStalenessThresholdMs() which returns the provider's threshold.
+    val coordinator = createCoordinator(
+      widgetRegistry,
+      providerRegistry,
+      timeProvider = { fakeTime },
+    )
+
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
+
+    val widget = testWidget(typeId = "essentials:clock")
+    coordinator.bind(widget)
+    testScheduler.runCurrent()
+
+    // Emit data — this records lastEmissionTimestamp via timeProvider
+    fakeTime = 1000L
+    provider.emissionFlow.emit(TestSnapshot(timestamp = 1000L))
+    testScheduler.runCurrent()
+
+    // Data received — status should be Ready (EMPTY)
+    val statusAfterEmission = coordinator.widgetStatus(widget.instanceId).value
+    assertThat(statusAfterEmission.overlayState).isNotInstanceOf(WidgetRenderState.DataStale::class.java)
+
+    // Advance virtual time past the staleness threshold (3000ms from ContinuousProvider schema).
+    // The watchdog delay is 3000ms. After the delay, it checks: timeProvider() - lastTs > 3000.
+    // Set fakeTime to 5000 so 5000 - 1000 = 4000 > 3000.
+    fakeTime = 5000L
+    testScheduler.advanceTimeBy(3001)
+    testScheduler.runCurrent()
+
+    // Status should now be DataStale
+    val statusAfterStale = coordinator.widgetStatus(widget.instanceId).value
+    assertThat(statusAfterStale.overlayState).isEqualTo(WidgetRenderState.DataStale)
+
+    coordinator.destroy()
+    initJob.cancel()
+  }
+
+  @Test
+  fun `staleness watchdog resets when new data arrives before threshold`() = runTest {
+    var fakeTime = 0L
+    val provider = ContinuousProvider()
+    val renderer = TestWidgetRenderer(
+      typeId = "essentials:clock",
+      compatibleSnapshots = setOf(TestSnapshot::class),
+    )
+    val widgetRegistry = WidgetRegistryImpl(setOf(renderer), logger)
+    val providerRegistry =
+      DataProviderRegistryImpl(setOf(provider), FakeEntitlementManager(), logger)
+
+    val coordinator = createCoordinator(
+      widgetRegistry,
+      providerRegistry,
+      timeProvider = { fakeTime },
+    )
+
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
+
+    val widget = testWidget(typeId = "essentials:clock")
+    coordinator.bind(widget)
+    testScheduler.runCurrent()
+
+    // First emission at time=1000
+    fakeTime = 1000L
+    provider.emissionFlow.emit(TestSnapshot(timestamp = 1000L))
+    testScheduler.runCurrent()
+
+    // Advance 2s (still within 3s threshold)
+    fakeTime = 3000L
+    testScheduler.advanceTimeBy(2000)
+    testScheduler.runCurrent()
+
+    // Emit again before staleness — updates lastEmissionTimestamp
+    fakeTime = 3000L
+    provider.emissionFlow.emit(TestSnapshot(timestamp = 3000L))
+    testScheduler.runCurrent()
+
+    // Now advance another 3001ms (total 5001ms from bind, but only 3001ms from last emission)
+    // The watchdog fires at 3000ms intervals. After this advance, it checks:
+    // timeProvider()=3500 - lastTs=3000 = 500 < 3000 → NOT stale
+    fakeTime = 3500L
+    testScheduler.advanceTimeBy(1001)
+    testScheduler.runCurrent()
+
+    val status = coordinator.widgetStatus(widget.instanceId).value
+    assertThat(status.overlayState).isNotInstanceOf(WidgetRenderState.DataStale::class.java)
 
     coordinator.destroy()
     initJob.cancel()
