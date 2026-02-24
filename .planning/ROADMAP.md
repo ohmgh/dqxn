@@ -277,9 +277,9 @@ Plans:
 - [x] 08-03-PLAN.md — Greenfield providers (GpsSpeed, Accelerometer, SpeedLimit, CallAction)
 - [ ] 08-04-PLAN.md — Solar subsystem (SolarCalculator, IanaTimezoneCoordinates, 2 solar providers)
 - [ ] 08-05a-PLAN.md — Clock/Date widgets (Clock Digital, Clock Analog, 3 Dates)
-- [ ] 08-05b-PLAN.md — Info-card widgets (Battery, AmbientLight)
+- [x] 08-05b-PLAN.md — Info-card widgets (Battery, AmbientLight)
 - [ ] 08-06a-PLAN.md — Canvas widgets (Compass, SpeedLimit Circle, SpeedLimit Rect)
-- [ ] 08-06b-PLAN.md — Action + arc widgets (Shortcuts, Solar)
+- [x] 08-06b-PLAN.md — Action + arc widgets (Shortcuts, Solar)
 - [ ] 08-07-PLAN.md — Speedometer (multi-slot) + theme JSON files (Slate, Minimalist)
 - [ ] 08-08-PLAN.md — Integration verification + regression gate
 - [ ] 08-09-PLAN.md — On-device wiring verification + stability soak
