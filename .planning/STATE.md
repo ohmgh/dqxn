@@ -6,7 +6,7 @@
 - **Current Plan:** 5 of 11
 - **Milestone:** V1 Launch
 - **Next action:** Execute Phase 8 remaining plans (02, 05a, 06a, 07, 08, 09)
-- **Last session:** 2026-02-24T16:22:43.294Z
+- **Last session:** 2026-02-24T16:25:20.537Z
 - **Stopped at:** Completed 08-05b-PLAN.md
 
 ## Progress
@@ -51,6 +51,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 07]: coordinatorScope stored from initialize() for alertEmitter.fire() launch -- fire() is suspend, showBanner() is not; isInitialized guard for calls before initialize()
 - [Phase 08]: Public visibility required for KSP-annotated pack classes -- KotlinPoet interfaceBuilder prohibits INTERNAL on abstract members in generated Hilt modules
 - [Phase 08]: Timestamp-based accessibility differentiation for action-only widgets -- data.timestamp > 0L distinguishes empty from bound state for contract test #5
+- [Phase 08]: Canvas-drawn icons (BatteryIcon, LightBulbIcon) for zero additional icon library dependency with data-state-based color tinting
 
 ### Phase 1 Decisions
 
