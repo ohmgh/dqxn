@@ -16,7 +16,7 @@ import kotlinx.serialization.json.put
   description = "Returns JSON array of registered widget typeIds and display names",
   category = "registry",
 )
-class ListWidgetsHandler
+internal class ListWidgetsHandler
 @Inject
 constructor(
   private val widgets: Set<@JvmSuppressWildcards WidgetRenderer>,

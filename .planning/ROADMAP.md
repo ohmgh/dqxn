@@ -6,7 +6,7 @@
 
 **Goal:** Gradle infrastructure that all modules depend on. Nothing compiles without this. Stub `build.gradle.kts` for all modules — `settings.gradle.kts` is stable from Phase 1 onward.
 
-**Requirements:** F13.10 (test categorization — JUnit5 tags + `fastTest`/`composeTest` tasks), NF27 (minSdk 31), NF28 (targetSdk 36), NF35 (build times)
+**Requirements:** F13.10, NF27, NF28, NF35
 
 **Success Criteria:**
 1. `./gradlew tasks --console=plain` succeeds — all convention plugins resolve, all stub modules parse
@@ -39,7 +39,7 @@ Plans:
 
 **Goal:** Complete `:sdk:contracts` type surface and `:sdk:common` utilities. Every type that lives in `:sdk:contracts` is defined here — downstream phases consume but never modify it. Biggest architectural transformation: old untyped `DataSnapshot(Map<String, Any?>)` becomes typed `@DashboardSnapshot` subtypes with `KClass`-keyed `WidgetData`.
 
-**Requirements:** F2.1, F2.2, F2.4 (contracts only — rendering in Phase 3), F2.5, F2.10 (WidgetContext type), F2.11, F2.12 (annotations only — KSP processor in Phase 4), F2.16, F2.19, F2.20, F3.1, F3.2, F3.3, F3.4, F3.5, F3.6, F3.8, F8.1 (entitlement contracts — `EntitlementManager` interface + `Entitlements` constants), F8.3, F9.1–F9.4 (notification type definitions — coordinator implementation in Phase 7)
+**Requirements:** F2.1, F2.2, F2.4, F2.5, F2.10, F2.11, F2.12, F2.16, F2.19, F2.20, F3.1, F3.2, F3.3, F3.4, F3.5, F3.6, F3.8, F8.1, F8.3, F9.1-F9.4
 
 **Key design decisions:**
 - `:sdk:common` is an Android library with Hilt (not pure Kotlin) — `DispatcherModule` requires `@InstallIn(SingletonComponent::class)`
@@ -120,7 +120,7 @@ Plans:
 
 **Goal:** Build-time code generation for pack discovery and agentic command wiring.
 
-**Requirements:** F2.12 (KSP processing), F3.8 (KSP processing)
+**Requirements:** F2.12, F3.8
 
 **Success Criteria:**
 1. `:codegen:plugin` and `:codegen:agentic` compile (both pure JVM via `dqxn.kotlin.jvm`)
@@ -146,7 +146,7 @@ Plans:
 
 **Goal:** Shell internals that features depend on but packs never touch. Proto DataStore schemas, theme engine, thermal management, Firebase implementations.
 
-**Requirements:** F4.1, F4.2, F4.3, F4.4, F4.5, F7.1, F7.2, F7.3, F7.4, F7.5, F7.7 (preset system — `PresetLoader` + JSON presets + fallback layout), F7.8, F7.12, NF12, NF13, NF43
+**Requirements:** F4.1, F4.2, F4.3, F4.4, F4.5, F7.1, F7.2, F7.3, F7.4, F7.5, F7.7, F7.8, F7.12, NF12, NF13, NF43
 
 **Success Criteria:**
 1. `:core:design`, `:core:thermal`, `:data`, `:core:firebase` compile
@@ -182,7 +182,7 @@ Plans:
 
 **Goal:** First deployable APK with agentic debug framework. Every subsequent phase can deploy to device and use `adb shell content call` for autonomous debugging.
 
-**Requirements:** F1.1, F1.13, F1.23, F13.2, F13.4, F13.5, F13.8, F13.9, F13.11, NF20, NF21, NF22, NF23 (BT permission flag in manifest)
+**Requirements:** F1.1, F1.13, F1.23, F13.2, F13.4, F13.5, F13.8, F13.9, F13.11, NF20, NF21, NF22, NF23
 
 **Success Criteria:**
 1. `./gradlew :app:installDebug` succeeds — blank canvas renders without crash
@@ -212,7 +212,7 @@ Plans:
 
 **Goal:** Decompose the god-ViewModel into coordinators. Structural transformation, not porting. Highest-risk phase. Overlay composables deferred to Phase 10 — agentic commands provide mutation paths for validation.
 
-**Requirements:** F1.2-F1.17, F1.20-F1.21, F1.26-F1.30, F2.3-F2.6 (binder, status cache, placement, container — implementations), F2.10-F2.14 (context defaults, sizer, KSP wiring, unknown placeholder, error boundary), F2.16, F2.18-F2.20, F3.7, F3.9-F3.11, F3.14 (coordinator-level status overlay infrastructure), F3.15, F9.1-F9.4, F10.4 (touch targets — 76dp in dashboard context), F10.7 (adaptive rendering — stationary frame rate reduction), F10.9, NF1-NF8, NF15-NF19, NF38, NF39 (reduced motion), NF41, NF42, NF45 (config-aware presets), NF46 (foldable viewport), NF-L1 (lifecycle pause/resume)
+**Requirements:** F1.2-F1.17, F1.20-F1.21, F1.26-F1.30, F2.3-F2.6, F2.10-F2.14, F2.16, F2.18-F2.20, F3.7, F3.9-F3.11, F3.14, F3.15, F9.1-F9.4, F10.4, F10.7, F10.9, NF1-NF8, NF15-NF19, NF38, NF39, NF41, NF42, NF45, NF46, NF-L1
 
 **Success Criteria:**
 1. Six coordinators (Layout, EditMode, Theme, WidgetBinding, Notification, Profile) unit tests pass
@@ -249,7 +249,7 @@ Plans:
 
 **Goal:** First pack migration. Proves entire SDK-to-Pack contract works end-to-end. Cross-boundary snapshot types live in `:pack:essentials:snapshots` sub-module (using `dqxn.snapshot` plugin from Phase 1). **4 greenfield providers** (GpsSpeed, Battery, Accelerometer, SpeedLimit — none have old codebase equivalents: old speed came from OBU/EXTOL, no battery provider existed, no standalone accelerometer or user-configured speed limit provider).
 
-**Requirements:** F5.1-F5.11, NF14 (sensor batching for greenfield providers), NF40 (color-blind safety — speed limit widget uses color + pattern + icon), NF-I2 (locale-aware formatting in renderers), NF-P1 (no GPS track stored — `GpsSpeedProvider` design constraint)
+**Requirements:** F5.1-F5.11, NF14, NF40, NF-I2, NF-P1
 
 **Success Criteria (all four required before Phase 9):**
 1. **Contract tests green:** 13 widgets pass `WidgetRendererContractTest`, 9 typed data providers pass `DataProviderContractTest` (`CallActionProvider` excluded — implements `ActionableProvider`)
@@ -272,7 +272,7 @@ Plans:
 
 **Goal:** Themes pack, demo pack (deterministic stub providers), chaos testing infrastructure. sg-erp2 contingent on EXTOL SDK compatibility.
 
-**Requirements:** F6.1-F6.4, F8.5 (simulate free user — `StubEntitlementManager.simulateRevocation()`/`simulateGrant()`), F13.1
+**Requirements:** F6.1-F6.4, F8.5, F13.1
 
 **Success Criteria:**
 1. All pack widgets pass contract tests; all providers pass contract tests
@@ -291,7 +291,7 @@ Plans:
 
 **Goal:** Schema-driven settings row system, widget/global settings, setup wizard UI, and widget picker. Foundation layer that all other overlay UI depends on. Deliberately sequenced before Phase 9 to unblock sg-erp2's BLE device pairing UI.
 
-**Requirements:** F2.7 (widget picker), F2.8-F2.9 (widget settings), F3.3-F3.5 (setup wizard), F3.14 (setup failure UX), F8.1 (entitlement gating enforcement in UI — contract from Phase 2), F8.7 (widget picker entitlement gating), F8.9 (refund overlay in picker — UI built here, verification requires Phase 9's `simulateRevocation()`), F10.4 (76dp touch targets in overlay context), F12.5 (analytics consent toggle in settings), F14.2 (diagnostics nav in settings), F14.4 (delete all data), NF29 (companion_device_setup manifest feature)
+**Requirements:** F2.7, F2.8-F2.9, F3.3-F3.5, F3.14, F8.1, F8.7, F8.9, F10.4, F12.5, F14.2, F14.4, NF29
 
 **Success Criteria:**
 1. `SettingRowDispatcher` renders all 12 `SettingDefinition` subtypes, value changes propagate to `ProviderSettingsStore`
@@ -313,7 +313,7 @@ Plans:
 
 **Goal:** Three independent feature clusters built on Phase 10's settings row system: theme editing/selection UI, diagnostics module (`:feature:diagnostics`), and onboarding flow (`:feature:onboarding`). Completes all `OverlayNavHost` routes.
 
-**Requirements:** F3.13 (provider health dashboard), F4.6-F4.10, F4.12-F4.13, F7.6 (connection event log in diagnostics), F11.1, F11.2, F11.5-F11.7, F12.2-F12.4 (analytics event call sites + privacy compliance), F12.5 (analytics consent enforcement — events gated on opt-in), F12.6-F12.7, F13.3 (session recording), NF-D1 (speed disclaimer on widget info — already in Phase 10 `WidgetInfoContent`), NF-D3 (first-launch disclaimer in onboarding)
+**Requirements:** F3.13, F4.6-F4.10, F4.12-F4.13, F7.6, F11.1, F11.2, F11.5-F11.7, F12.2-F12.4, F12.5, F12.6-F12.7, F13.3, NF-D1, NF-D3
 
 **Success Criteria:**
 1. All 7 `OverlayNavHost` routes populated — navigate to each, verify content renders, back navigation correct
@@ -337,7 +337,7 @@ Plans:
 
 **Goal:** Performance measurement infrastructure, Compose stability enforcement, CI gate configuration. Starts immediately after Phase 8 — no dependency on overlay UI or additional packs.
 
-**Requirements:** NF9 (baseline profiles), NF10 (macrobenchmarks), NF34 (APK size), NF35 (build times — validation)
+**Requirements:** NF9, NF10, NF34, NF35
 
 **Success Criteria:**
 1. Baseline Profiles generated and included in release build
@@ -359,7 +359,7 @@ Plans:
 
 **Goal:** Full system integration testing, chaos CI gate, performance soak, accessibility audit, privacy features, and app lifecycle features. The convergence point — everything works together.
 
-**Requirements:** NF11 (battery drain), NF24 (offline functionality verification), NF25 (BLE data independence), NF26 (internet-only for purchase/weather), NF30 (WCAG contrast), NF32 (TalkBack), NF33 (font scale), NF37 (background battery), NF-D2 (ToS speed accuracy disclaimer — legal checklist), NF-I1 (string resource audit), NF-L2 (in-app updates), NF-L3 (in-app review), NF-P3 (PDPA verification), NF-P4 (data export + Firebase deletion API), NF-P5 (Export My Data)
+**Requirements:** NF11, NF24, NF25, NF26, NF30, NF32, NF33, NF37, NF-D2, NF-I1, NF-L2, NF-L3, NF-P3, NF-P4, NF-P5
 
 **Success Criteria:**
 1. Full E2E: launch → load → bind → render → edit → add/remove/resize → theme switch → settings with semantics verification at each step

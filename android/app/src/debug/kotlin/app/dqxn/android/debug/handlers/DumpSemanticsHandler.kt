@@ -14,7 +14,7 @@ import kotlinx.serialization.json.Json
   description = "Returns full Compose semantics tree snapshot as JSON",
   category = "ui",
 )
-class DumpSemanticsHandler
+internal class DumpSemanticsHandler
 @Inject
 constructor(
   private val semanticsHolder: SemanticsOwnerHolder,

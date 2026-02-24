@@ -17,7 +17,8 @@ internal class CommandRouterGenerator(
 
   fun generate(commands: List<CommandInfo>) {
     val moduleBuilder =
-      TypeSpec.interfaceBuilder(MODULE_NAME)
+      TypeSpec.classBuilder(MODULE_NAME)
+        .addModifiers(KModifier.INTERNAL, KModifier.ABSTRACT)
         .addAnnotation(DAGGER_MODULE)
         .addAnnotation(
           AnnotationSpec.builder(DAGGER_INSTALL_IN)
@@ -30,7 +31,7 @@ internal class CommandRouterGenerator(
 
       moduleBuilder.addFunction(
         FunSpec.builder("bind${command.className}")
-          .addModifiers(KModifier.ABSTRACT)
+          .addModifiers(KModifier.INTERNAL, KModifier.ABSTRACT)
           .addAnnotation(DAGGER_BINDS)
           .addAnnotation(DAGGER_INTO_SET)
           .addParameter("impl", command.typeName)

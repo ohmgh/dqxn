@@ -15,7 +15,7 @@ import javax.inject.Inject
   description = "Captures a diagnostic snapshot with custom reason, returns file path",
   category = "testing",
 )
-class CaptureSnapshotHandler
+internal class CaptureSnapshotHandler
 @Inject
 constructor(
   private val diagnosticCapture: DiagnosticSnapshotCapture,

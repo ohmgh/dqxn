@@ -47,7 +47,6 @@ dependencies {
 
   // Serialization (used by AgenticContentProvider for JSON param parsing)
   implementation(libs.kotlinx.serialization.json)
-  implementation(libs.kotlinx.collections.immutable)
 
   // KSP: agentic command processor (debug only -- generates AgenticHiltModule)
   add("kspDebug", project(":codegen:agentic"))

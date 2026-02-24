@@ -15,7 +15,7 @@ import javax.inject.Inject
   description = "Returns dashboard layout state with profiles and widget positions",
   category = "diagnostics",
 )
-class DumpLayoutHandler @Inject constructor() : CommandHandler {
+internal class DumpLayoutHandler @Inject constructor() : CommandHandler {
 
   override val name: String = "dump-layout"
   override val description: String =

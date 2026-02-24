@@ -16,7 +16,7 @@ import kotlinx.serialization.json.put
   description = "Returns frame timing histograms and per-widget draw times",
   category = "diagnostics",
 )
-class GetMetricsHandler
+internal class GetMetricsHandler
 @Inject
 constructor(
   private val metricsCollector: MetricsCollector,

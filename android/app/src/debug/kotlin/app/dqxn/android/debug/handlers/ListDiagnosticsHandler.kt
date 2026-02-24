@@ -17,7 +17,7 @@ import kotlinx.serialization.json.put
   description = "Lists diagnostic snapshot files with metadata, optional since-epoch filter",
   category = "diagnostics",
 )
-class ListDiagnosticsHandler
+internal class ListDiagnosticsHandler
 @Inject
 constructor(
   private val diagnosticCapture: DiagnosticSnapshotCapture,

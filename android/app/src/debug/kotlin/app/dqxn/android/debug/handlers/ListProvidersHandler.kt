@@ -16,7 +16,7 @@ import kotlinx.serialization.json.put
   description = "Returns JSON array of registered data provider sourceIds and metadata",
   category = "registry",
 )
-class ListProvidersHandler
+internal class ListProvidersHandler
 @Inject
 constructor(
   private val providers: Set<@JvmSuppressWildcards DataProvider<*>>,

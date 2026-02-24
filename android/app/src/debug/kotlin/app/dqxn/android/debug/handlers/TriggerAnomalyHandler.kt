@@ -14,7 +14,7 @@ import javax.inject.Inject
   description = "Fires a diagnostic snapshot capture with reason 'agentic-trigger'",
   category = "testing",
 )
-class TriggerAnomalyHandler
+internal class TriggerAnomalyHandler
 @Inject
 constructor(
   private val diagnosticCapture: DiagnosticSnapshotCapture,

@@ -16,7 +16,7 @@ import kotlinx.serialization.json.put
   description = "Returns JSON array of registered theme IDs grouped by pack",
   category = "registry",
 )
-class ListThemesHandler
+internal class ListThemesHandler
 @Inject
 constructor(
   private val themes: Set<@JvmSuppressWildcards ThemeProvider>,

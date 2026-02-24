@@ -19,7 +19,7 @@ import kotlinx.serialization.json.put
   description = "Returns filtered semantics nodes matching testTag, text, contentDescription, or action",
   category = "ui",
 )
-class QuerySemanticsHandler
+internal class QuerySemanticsHandler
 @Inject
 constructor(
   private val semanticsHolder: SemanticsOwnerHolder,

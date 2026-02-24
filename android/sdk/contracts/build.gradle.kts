@@ -17,7 +17,7 @@ dependencies {
     libs.compose.runtime
   ) // @Composable, @Immutable annotations only — no Compose compiler
   compileOnly(libs.compose.ui) // Modifier type reference in WidgetRenderer.Render()
-  implementation(libs.kotlinx.collections.immutable)
+  api(libs.kotlinx.collections.immutable)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.kotlinx.serialization.json)
 

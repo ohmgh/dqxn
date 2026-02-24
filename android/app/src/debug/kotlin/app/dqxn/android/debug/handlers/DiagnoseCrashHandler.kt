@@ -15,7 +15,7 @@ import kotlinx.serialization.json.put
   description = "Returns last crash evidence including exception, stack trace, and widget typeId",
   category = "diagnostics",
 )
-class DiagnoseCrashHandler
+internal class DiagnoseCrashHandler
 @Inject
 constructor(
   private val crashEvidenceWriter: CrashEvidenceWriter,

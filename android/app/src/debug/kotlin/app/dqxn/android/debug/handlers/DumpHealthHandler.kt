@@ -16,7 +16,7 @@ import kotlinx.serialization.json.put
   description = "Returns widget health snapshot with status, staleness, and crash info",
   category = "diagnostics",
 )
-class DumpHealthHandler
+internal class DumpHealthHandler
 @Inject
 constructor(
   private val healthMonitor: WidgetHealthMonitor,

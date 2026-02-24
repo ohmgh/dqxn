@@ -16,7 +16,7 @@ import kotlinx.serialization.json.put
   description = "Returns performance metrics snapshot with frame histogram and jank stats",
   category = "diagnostics",
 )
-class DiagnosePerformanceHandler
+internal class DiagnosePerformanceHandler
 @Inject
 constructor(
   private val metricsCollector: MetricsCollector,

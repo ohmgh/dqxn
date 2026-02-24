@@ -12,7 +12,7 @@ import javax.inject.Inject
   description = "E2E startup probe returning status ok with timestamp",
   category = "system",
 )
-class PingHandler @Inject constructor() : CommandHandler {
+internal class PingHandler @Inject constructor() : CommandHandler {
 
   override val name: String = "ping"
   override val description: String = "E2E startup probe returning status ok with timestamp"

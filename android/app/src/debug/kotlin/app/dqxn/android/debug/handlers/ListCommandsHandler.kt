@@ -16,7 +16,7 @@ import kotlinx.serialization.json.put
   description = "Lists all registered agentic commands with name, description, category, and params",
   category = "system",
 )
-class ListCommandsHandler
+internal class ListCommandsHandler
 @Inject
 constructor(
   private val handlersProvider: Provider<Set<@JvmSuppressWildcards CommandHandler>>,
