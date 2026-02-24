@@ -29,7 +29,9 @@ public abstract class FirebaseModule {
 
     @Provides
     @Singleton
-    public fun provideFirebaseCrashlytics(@ApplicationContext context: Context): FirebaseCrashlytics {
+    public fun provideFirebaseCrashlytics(
+      @ApplicationContext context: Context
+    ): FirebaseCrashlytics {
       FirebaseApp.initializeApp(context)
       return FirebaseCrashlytics.getInstance()
     }

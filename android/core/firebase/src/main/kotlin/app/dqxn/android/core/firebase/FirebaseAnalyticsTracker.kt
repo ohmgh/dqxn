@@ -9,8 +9,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * [AnalyticsTracker] implementation delegating to Firebase Analytics. Consent-gated via [setEnabled]
- * -- when disabled, [track] and [setUserProperty] are no-ops.
+ * [AnalyticsTracker] implementation delegating to Firebase Analytics. Consent-gated via
+ * [setEnabled] -- when disabled, [track] and [setUserProperty] are no-ops.
  */
 @Singleton
 public class FirebaseAnalyticsTracker
