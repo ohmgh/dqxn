@@ -6,9 +6,9 @@ import com.google.devtools.ksp.processing.SymbolProcessorProvider
 
 class AgenticProcessorProvider : SymbolProcessorProvider {
 
-    override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor =
-        AgenticProcessor(
-            codeGenerator = environment.codeGenerator,
-            logger = environment.logger,
-        )
+  override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor =
+    AgenticProcessor(
+      codeGenerator = environment.codeGenerator,
+      logger = environment.logger,
+    )
 }
