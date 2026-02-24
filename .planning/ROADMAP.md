@@ -226,6 +226,17 @@ Plans:
 9. Content-aware resize preview: `LocalWidgetPreviewUnits` feeds target dimensions during resize gesture
 10. Reduced motion: `animator_duration_scale == 0` disables wiggle, replaces spring with instant transitions
 
+**Plans:** 7 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Foundation types (DashboardCommand, LayoutCoordinator, GridPlacementEngine, SafeModeManager) + DashboardTestHarness testFixtures
+- [ ] 07-02-PLAN.md — ThemeCoordinator + DashboardHaptics + ReducedMotionHelper
+- [ ] 07-03-PLAN.md — EditModeCoordinator + WidgetGestureHandler + BlankSpaceGestureHandler + gesture types
+- [ ] 07-04-PLAN.md — WidgetBindingCoordinator + WidgetDataBinder + registries + StorageMonitor
+- [ ] 07-05-PLAN.md — ProfileCoordinator + NotificationCoordinator + DashboardModule Hilt wiring
+- [ ] 07-06-PLAN.md — DashboardGrid + WidgetSlot + DashboardLayer + UI composables (banner hosts, button bar, error fallback)
+- [ ] 07-07-PLAN.md — DashboardViewModel + DashboardScreen + OverlayNavHost + ProfilePageTransition + integration tests
+
 **Depends on:** Phases 5, 6
 
 **Replication Advisory:** §1 (widget preview mode), §2 (jankless navigation), §3 (theme preview — coordinator state), §4 (widget-level animations), §6 (drag/snap/resize/gestures). Densest advisory coverage of any phase.
