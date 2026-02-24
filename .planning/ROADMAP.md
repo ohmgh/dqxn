@@ -161,6 +161,15 @@ Plans:
 10. `PresetLoader` region heuristic and fallback layout tests pass
 11. `FramePacer` API branching tests pass (API 34+ vs 31-33 paths)
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Proto DataStore schemas + thermal management module
+- [ ] 05-02-PLAN.md — Firebase isolation module (CrashReporter, AnalyticsTracker, PerformanceTracer)
+- [ ] 05-03-PLAN.md — `:data` infrastructure + LayoutRepository + UserPreferencesRepository
+- [ ] 05-04-PLAN.md — `:data` remaining stores (ProviderSettings, PairedDevice, ConnectionEvent, WidgetStyle) + PresetLoader
+- [ ] 05-05-PLAN.md — `:core:design` tokens, motion, ThemeJsonParser, ThemeAutoSwitchEngine
+
 **Depends on:** Phase 3
 
 **Replication Advisory:** §3 (ThemeAutoSwitchEngine modes), §4 (spring configs + named transitions to core:design), §5 (spacing/typography/radii/emphasis to core:design — fix known inconsistencies).
