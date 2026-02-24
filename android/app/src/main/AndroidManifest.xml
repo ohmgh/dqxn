@@ -14,7 +14,7 @@
     <!-- Network: Firebase, remote data providers -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- BLE is optional -- app works without BLE hardware -->
+    <!-- BLE is optional, app works without BLE hardware -->
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
