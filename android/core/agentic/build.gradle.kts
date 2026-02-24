@@ -15,4 +15,7 @@ dependencies {
 
   compileOnly(platform(libs.compose.bom))
   compileOnly(libs.compose.ui) // SemanticsOwner / SemanticsNode type references
+
+  testImplementation(platform(libs.compose.bom))
+  testImplementation(libs.compose.ui) // SemanticsOwner on test classpath for type checks
 }
