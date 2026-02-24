@@ -21,7 +21,10 @@ class PluginProcessorTest {
 
   private lateinit var lastCompilation: KotlinCompilation
 
-  private fun compile(vararg sources: SourceFile, packId: String = "essentials"): JvmCompilationResult {
+  private fun compile(
+    vararg sources: SourceFile,
+    packId: String = "essentials"
+  ): JvmCompilationResult {
     val compilation =
       KotlinCompilation().apply {
         this.sources =

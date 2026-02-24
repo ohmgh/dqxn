@@ -7,8 +7,8 @@ import androidx.compose.ui.unit.dp
  * Spacing constants for dashboard UI layout. All values follow the Material 3 4dp grid.
  *
  * Ported verbatim from old codebase `DashboardThemeExtensions.kt` — converted from
- * `DashboardThemeDefinition` extension properties to a standalone object so they are
- * accessible from `:core:design` without coupling to `:sdk:ui`.
+ * `DashboardThemeDefinition` extension properties to a standalone object so they are accessible
+ * from `:core:design` without coupling to `:sdk:ui`.
  */
 public object DashboardSpacing {
 

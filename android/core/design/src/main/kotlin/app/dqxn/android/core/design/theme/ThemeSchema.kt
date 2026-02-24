@@ -3,9 +3,8 @@ package app.dqxn.android.core.design.theme
 import kotlinx.serialization.Serializable
 
 /**
- * JSON schema types for theme file parsing. These are intermediate representations
- * deserialized from theme JSON files, then converted to [DashboardThemeDefinition]
- * by [ThemeJsonParser].
+ * JSON schema types for theme file parsing. These are intermediate representations deserialized
+ * from theme JSON files, then converted to [DashboardThemeDefinition] by [ThemeJsonParser].
  */
 
 /** Color tokens in a theme JSON file. */

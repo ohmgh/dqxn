@@ -94,8 +94,8 @@ constructor(private val json: Json, private val logger: DqxnLogger) {
 }
 
 /**
- * Parses a hex color string (#RRGGBB or #AARRGGBB) to a Compose [Color]. Pure Kotlin
- * implementation -- no android.graphics dependency, so it works in unit tests.
+ * Parses a hex color string (#RRGGBB or #AARRGGBB) to a Compose [Color]. Pure Kotlin implementation
+ * -- no android.graphics dependency, so it works in unit tests.
  */
 internal fun parseHexColor(hex: String): Color {
   val stripped = hex.removePrefix("#")

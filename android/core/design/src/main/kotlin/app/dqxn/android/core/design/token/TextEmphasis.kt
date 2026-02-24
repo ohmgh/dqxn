@@ -6,7 +6,8 @@ package app.dqxn.android.core.design.token
  * Ported verbatim from old codebase `DashboardThemeExtensions.kt`.
  *
  * Note: Old codebase has a known inconsistency where `OverlayTitleBar` uses inline `alpha = 0.6f`
- * instead of [Medium] (0.7f). Callers should always use these constants rather than inline literals.
+ * instead of [Medium] (0.7f). Callers should always use these constants rather than inline
+ * literals.
  */
 public object TextEmphasis {
   /** Primary text -- full opacity. */

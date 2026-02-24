@@ -13,8 +13,8 @@ import kotlinx.collections.immutable.toImmutableList
 /**
  * Registry of built-in themes.
  *
- * Provides references to the two free themes (Slate and Minimalist) defined in `:sdk:ui`,
- * and a method to load bundled premium theme JSON files from `assets/themes/`.
+ * Provides references to the two free themes (Slate and Minimalist) defined in `:sdk:ui`, and a
+ * method to load bundled premium theme JSON files from `assets/themes/`.
  *
  * Free themes are always listed first. Premium theme files are populated in Phase 9.
  */
@@ -40,9 +40,9 @@ public class BuiltInThemes @Inject constructor(private val parser: ThemeJsonPars
     }
 
   /**
-   * Loads bundled premium theme JSON files from `assets/themes/` directory.
-   * Returns an empty list if no theme files exist (Phase 9 populates these).
-   * Free themes are NOT included in this list -- use [freeThemes] for those.
+   * Loads bundled premium theme JSON files from `assets/themes/` directory. Returns an empty list
+   * if no theme files exist (Phase 9 populates these). Free themes are NOT included in this list --
+   * use [freeThemes] for those.
    */
   public fun loadBundledThemes(context: Context): ImmutableList<DashboardThemeDefinition> {
     val assetManager = context.assets
@@ -58,7 +58,8 @@ public class BuiltInThemes @Inject constructor(private val parser: ThemeJsonPars
     return themeFiles
       .mapNotNull { fileName ->
         try {
-          val jsonString = assetManager.open("themes/$fileName").bufferedReader().use { it.readText() }
+          val jsonString =
+            assetManager.open("themes/$fileName").bufferedReader().use { it.readText() }
           parser.parse(jsonString)
         } catch (_: Exception) {
           null

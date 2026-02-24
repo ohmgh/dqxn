@@ -58,13 +58,14 @@ public object DashboardTypography {
 
   /** Button and chip labels, status indicators. */
   public val buttonLabel: TextStyle
-    @Composable get() =
+    @Composable
+    get() =
       MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold)
 
   /** Primary action buttons (Next, Done, navigation buttons). */
   public val primaryButtonLabel: TextStyle
-    @Composable get() =
-      MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    @Composable
+    get() = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold)
 
   // Meta
 

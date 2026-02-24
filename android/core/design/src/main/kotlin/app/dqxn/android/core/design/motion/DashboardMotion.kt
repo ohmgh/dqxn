@@ -36,7 +36,10 @@ public object DashboardMotion {
 
   // Internal Spring Specs
 
-  /** Standard spring -- subtle overshoot, moderate speed. Used by sheet, expand, dialog, packBrowser. */
+  /**
+   * Standard spring -- subtle overshoot, moderate speed. Used by sheet, expand, dialog,
+   * packBrowser.
+   */
   private val standardSpring = spring<Float>(dampingRatio = 0.65f, stiffness = 300f)
 
   private val standardSpringInt = spring<IntOffset>(dampingRatio = 0.65f, stiffness = 300f)
@@ -55,8 +58,7 @@ public object DashboardMotion {
     slideInVertically(standardSpringInt) { it } + fadeIn(tween(200))
 
   /** Sheet exit: slide down to bottom + fade out. */
-  public val sheetExit: ExitTransition =
-    slideOutVertically(tween(200)) { it } + fadeOut(tween(150))
+  public val sheetExit: ExitTransition = slideOutVertically(tween(200)) { it } + fadeOut(tween(150))
 
   // Hub Transitions (scale + fade)
   // Used by: ProviderSetup, PermissionRequest, WidgetPicker, TimezoneSelector,
