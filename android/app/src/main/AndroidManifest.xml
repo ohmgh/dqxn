@@ -1,8 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Bluetooth: neverForLocation prevents BLE scans from requiring location (NF23) -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Location: GPS speed, geofence triggers -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Network: Firebase, remote data providers -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- BLE is optional -- app works without BLE hardware -->
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+
+    <!-- Companion device setup for BLE pairing (NF29) -->
+    <uses-feature
+        android:name="android.software.companion_device_setup"
+        android:required="true" />
+
     <application
+        android:name=".DqxnApplication"
         android:allowBackup="false"
-        android:supportsRtl="true" />
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="false"
+            android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
 
 </manifest>
