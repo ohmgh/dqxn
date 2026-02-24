@@ -5,9 +5,9 @@
 - **Phase:** 7 — Dashboard Shell
 - **Current Plan:** 13 of 13 complete
 - **Milestone:** V1 Launch
-- **Next action:** Execute 07-10-PLAN.md (or Phase 8 Plan 01 if gap closure complete)
-- **Last session:** 2026-02-24T11:18:42.353Z
-- **Stopped at:** Completed 07-09-PLAN.md (gap closure: reduced motion compliance)
+- **Next action:** Execute 07-11-PLAN.md (or Phase 8 Plan 01 if gap closure complete)
+- **Last session:** 2026-02-24T12:26:47.996Z
+- **Stopped at:** Completed 07-10-PLAN.md
 
 ## Progress
 
@@ -43,6 +43,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 07]: internal var storageChecker over spyk for StorageMonitor testability -- direct property injection works correctly with virtual time advancement
 - [Phase 07]: Mock WidgetDataBinder (not FakeWidgetDataBinder) for harness -- FakeWidgetDataBinder is standalone, not a subclass
 - [Phase 07]: SnapSpec type assertion over durationMillis property -- SnapSpec does not expose durationMillis as public property; type check + delay assertion for verification
+- [Phase 07]: testScheduler.runCurrent() over advanceUntilIdle() for coordinator tests -- staleness watchdog infinite delay loop hangs advanceUntilIdle
+- [Phase 07]: coordinator.destroy() required in every coordinator test -- standalone SupervisorJob not child of test Job; runTest cleanup advanceUntilIdle hangs without explicit cancellation
 
 ### Phase 1 Decisions
 
@@ -212,6 +214,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 07 P13 | 9min | 2 tasks | 4 files |
 | Phase 07-08 P08 | 45min | 1 tasks | 3 files |
 | Phase 07 P09 | 15min | 2 tasks | 4 files |
+| Phase 07 P10 | 62min | 2 tasks | 2 files |
 
 ## Context
 
