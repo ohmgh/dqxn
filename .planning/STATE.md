@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 7 — Dashboard Shell
-- **Current Plan:** 6 of 7 complete
+- **Current Plan:** 7 of 7 complete
 - **Milestone:** V1 Launch
-- **Next action:** Execute Phase 7 Plan 07
-- **Last session:** 2026-02-24T08:23:22Z
-- **Stopped at:** Completed 07-06-PLAN.md
+- **Next action:** Execute Phase 8 Plan 01
+- **Last session:** 2026-02-24T09:10:21.115Z
+- **Stopped at:** Completed 07-07-PLAN.md (Phase 7 complete)
 
 ## Progress
 
@@ -19,7 +19,7 @@
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
-| 7. Dashboard Shell | In Progress (6/7 plans) | All coordinators + UI composables complete, DashboardGrid + WidgetSlot + layers + bottom bar done |
+| 7. Dashboard Shell | Complete (7/7 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + 148 tests |
 | 8. Essentials Pack | Pending | Architecture validation gate |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
@@ -164,6 +164,11 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Layout save failure via explicit reportLayoutSaveFailure() method** -- LayoutRepository has no save failure flow; explicit method callable from LayoutCoordinator or ViewModel
 - **State-based error boundary for WidgetSlot** -- Compose forbids try-catch around @Composable calls; render errors tracked via WidgetStatusCache and binding coordinator crash reporting, not Compose-level catch
 - **Banner priority tier separation** -- NotificationBannerHost (Layer 0.5) skips CRITICAL, CriticalBannerHost (Layer 1.5) only renders CRITICAL; safe mode banner visible above all overlays
+- **Channel(capacity=64) for DashboardViewModel command routing** -- sequential consumption, try/catch per command, CancellationException rethrown
+- **collectAsState() for all Layer 0 state** -- per CLAUDE.md Layer 0 rule, NOT collectAsStateWithLifecycle
+- **Job-based scope cancellation in DashboardTestHarness** -- child Job of testScope for forever-collecting coordinator flows, close() cancels before runTest exits
+- **Versioned<T> wrapper in FakeLayoutRepository** -- AtomicLong version counter forces MutableStateFlow re-emission on profile switch despite structurally-equal content; combine() approach rejected (broke 11 existing tests via scheduler mismatch)
+- **HorizontalPager userScrollEnabled = !isEditMode** -- profile swipe disabled during edit mode (F1.29), horizontal gestures reserved for widget drag
 
 ## Performance Metrics
 
@@ -200,6 +205,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 07-04 | 25min | 2 | 11 |
 | 07-05 | 5min | 2 | 5 |
 | 07-06 | 10min | 2 | 12 |
+| 07-07 | 45min | 2 | 9 |
 
 ## Context
 
