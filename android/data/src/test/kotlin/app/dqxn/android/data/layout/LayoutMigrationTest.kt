@@ -28,7 +28,8 @@ class LayoutMigrationTest {
 
   @Test
   fun `migrate returns Reset when version gap exceeds MAX_VERSION_GAP`() {
-    val store = storeWithVersion(LayoutMigration.CURRENT_VERSION - LayoutMigration.MAX_VERSION_GAP - 1)
+    val store =
+      storeWithVersion(LayoutMigration.CURRENT_VERSION - LayoutMigration.MAX_VERSION_GAP - 1)
     val result = migration.migrate(store)
     assertThat(result).isEqualTo(LayoutMigration.MigrationResult.Reset)
   }
@@ -49,17 +50,18 @@ class LayoutMigrationTest {
       object : LayoutMigration() {
         override val currentVersion: Int = 3
 
-        override val transformers:
-          Map<Int, (DashboardStoreProto) -> DashboardStoreProto> =
+        override val transformers: Map<Int, (DashboardStoreProto) -> DashboardStoreProto> =
           mapOf(
-            1 to { store ->
-              // v1->v2: set active_profile_id to "migrated-v2"
-              store.toBuilder().setActiveProfileId("migrated-v2").build()
-            },
-            2 to { store ->
-              // v2->v3: set auto_switch_enabled to true
-              store.toBuilder().setAutoSwitchEnabled(true).build()
-            },
+            1 to
+              { store ->
+                // v1->v2: set active_profile_id to "migrated-v2"
+                store.toBuilder().setActiveProfileId("migrated-v2").build()
+              },
+            2 to
+              { store ->
+                // v2->v3: set auto_switch_enabled to true
+                store.toBuilder().setAutoSwitchEnabled(true).build()
+              },
           )
       }
 
@@ -78,8 +80,7 @@ class LayoutMigrationTest {
       object : LayoutMigration() {
         override val currentVersion: Int = 2
 
-        override val transformers:
-          Map<Int, (DashboardStoreProto) -> DashboardStoreProto> =
+        override val transformers: Map<Int, (DashboardStoreProto) -> DashboardStoreProto> =
           mapOf(
             1 to { _ -> error("Simulated migration failure") },
           )
@@ -101,25 +102,23 @@ class LayoutMigrationTest {
       object : LayoutMigration() {
         override val currentVersion: Int = 3
 
-        override val transformers:
-          Map<Int, (DashboardStoreProto) -> DashboardStoreProto> =
+        override val transformers: Map<Int, (DashboardStoreProto) -> DashboardStoreProto> =
           mapOf(
-            1 to { store ->
-              // v1->v2: succeeds, modifies active profile id
-              store.toBuilder().setActiveProfileId("intermediate-v2").build()
-            },
-            2 to { _ ->
-              // v2->v3: fails
-              error("Simulated v2->v3 failure")
-            },
+            1 to
+              { store ->
+                // v1->v2: succeeds, modifies active profile id
+                store.toBuilder().setActiveProfileId("intermediate-v2").build()
+              },
+            2 to
+              { _ ->
+                // v2->v3: fails
+                error("Simulated v2->v3 failure")
+              },
           )
       }
 
     val original =
-      DashboardStoreProto.newBuilder()
-        .setSchemaVersion(1)
-        .setActiveProfileId("original-v1")
-        .build()
+      DashboardStoreProto.newBuilder().setSchemaVersion(1).setActiveProfileId("original-v1").build()
 
     val result = testMigration.migrate(original)
     assertThat(result).isInstanceOf(LayoutMigration.MigrationResult.Failed::class.java)
@@ -138,12 +137,9 @@ class LayoutMigrationTest {
       object : LayoutMigration() {
         override val currentVersion: Int = 4
 
-        override val transformers:
-          Map<Int, (DashboardStoreProto) -> DashboardStoreProto> =
+        override val transformers: Map<Int, (DashboardStoreProto) -> DashboardStoreProto> =
           mapOf(
-            1 to { store ->
-              store.toBuilder().setActiveProfileId("migrated").build()
-            },
+            1 to { store -> store.toBuilder().setActiveProfileId("migrated").build() },
           )
       }
 

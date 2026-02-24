@@ -13,8 +13,7 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 public abstract class RepositoryBindingsModule {
 
-  @Binds
-  public abstract fun bindLayoutRepository(impl: LayoutRepositoryImpl): LayoutRepository
+  @Binds public abstract fun bindLayoutRepository(impl: LayoutRepositoryImpl): LayoutRepository
 
   @Binds
   public abstract fun bindUserPreferencesRepository(

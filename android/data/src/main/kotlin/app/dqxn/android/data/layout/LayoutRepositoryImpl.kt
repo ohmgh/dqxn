@@ -12,7 +12,6 @@ import app.dqxn.android.sdk.observability.log.LogTag
 import app.dqxn.android.sdk.observability.log.error
 import app.dqxn.android.sdk.observability.log.info
 import app.dqxn.android.sdk.observability.log.warn
-import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -166,9 +165,7 @@ constructor(
 
   override suspend fun switchProfile(targetId: String) {
     currentState.update { store ->
-      require(store.profilesList.any { it.profileId == targetId }) {
-        "Profile $targetId not found"
-      }
+      require(store.profilesList.any { it.profileId == targetId }) { "Profile $targetId not found" }
       store.toBuilder().setActiveProfileId(targetId).build()
     }
 
@@ -205,9 +202,7 @@ constructor(
   // ---------------------------------------------------------------------------
 
   override suspend fun addWidget(widget: DashboardWidgetInstance) {
-    mutateActiveProfile { profile ->
-      profile.toBuilder().addWidgets(widget.toProto()).build()
-    }
+    mutateActiveProfile { profile -> profile.toBuilder().addWidgets(widget.toProto()).build() }
     requestSave()
   }
 
@@ -323,13 +318,9 @@ constructor(
         fallback
       }
       is LayoutMigration.MigrationResult.Failed -> {
-        logger.error(TAG) {
-          "Migration failed at v${result.failedAtVersion}, restoring backup"
-        }
+        logger.error(TAG) { "Migration failed at v${result.failedAtVersion}, restoring backup" }
         // Restore the pre-migration store
-        withContext(ioDispatcher) {
-          dashboardDataStore.updateData { result.preBackupStore }
-        }
+        withContext(ioDispatcher) { dashboardDataStore.updateData { result.preBackupStore } }
         result.preBackupStore
       }
     }

@@ -51,9 +51,7 @@ constructor(
     }
 
   override val showStatusBar: Flow<Boolean> =
-    dataStore.data.map { prefs ->
-      prefs[PreferenceKeys.SHOW_STATUS_BAR] ?: DEFAULT_SHOW_STATUS_BAR
-    }
+    dataStore.data.map { prefs -> prefs[PreferenceKeys.SHOW_STATUS_BAR] ?: DEFAULT_SHOW_STATUS_BAR }
 
   override suspend fun setAutoSwitchMode(mode: AutoSwitchMode) {
     dataStore.edit { prefs -> prefs[PreferenceKeys.AUTO_SWITCH_MODE] = mode.name }

@@ -4,12 +4,11 @@ import app.dqxn.android.data.proto.SavedWidgetProto
 import app.dqxn.android.sdk.contracts.widget.BackgroundStyle
 import app.dqxn.android.sdk.contracts.widget.WidgetStyle
 import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
 
 /**
- * Domain representation of a placed widget on the dashboard canvas. Maps to/from
- * [SavedWidgetProto] for DataStore persistence.
+ * Domain representation of a placed widget on the dashboard canvas. Maps to/from [SavedWidgetProto]
+ * for DataStore persistence.
  */
 public data class DashboardWidgetInstance(
   val instanceId: String,

@@ -3,9 +3,9 @@ package app.dqxn.android.data.layout
 import app.dqxn.android.data.proto.DashboardStoreProto
 
 /**
- * Chained schema migration for [DashboardStoreProto]. Applies N->N+1 transformers sequentially.
- * V1 is the initial version -- no actual transformers yet. The infrastructure is ready for
- * Phase 7+ schema changes.
+ * Chained schema migration for [DashboardStoreProto]. Applies N->N+1 transformers sequentially. V1
+ * is the initial version -- no actual transformers yet. The infrastructure is ready for Phase 7+
+ * schema changes.
  */
 public open class LayoutMigration {
 
@@ -42,8 +42,8 @@ public open class LayoutMigration {
 
   /**
    * Migrate [store] from its schema_version to [currentVersion]. Transformers are applied
-   * sequentially (v0->v1, v1->v2, etc.). If any transformer throws, returns [MigrationResult.Failed]
-   * with the original pre-migration store.
+   * sequentially (v0->v1, v1->v2, etc.). If any transformer throws, returns
+   * [MigrationResult.Failed] with the original pre-migration store.
    */
   public fun migrate(store: DashboardStoreProto): MigrationResult {
     val storeVersion = store.schemaVersion

@@ -29,8 +29,8 @@ public interface LayoutRepository {
   public suspend fun createProfile(displayName: String): String
 
   /**
-   * Deep-copy a profile including all widgets. Each widget in the clone gets a new UUID.
-   * Returns the new profile's ID.
+   * Deep-copy a profile including all widgets. Each widget in the clone gets a new UUID. Returns
+   * the new profile's ID.
    */
   public suspend fun cloneProfile(sourceId: String, displayName: String): String
 
@@ -39,6 +39,7 @@ public interface LayoutRepository {
 
   /**
    * Delete a profile.
+   *
    * @throws IllegalStateException if this is the last remaining profile.
    */
   public suspend fun deleteProfile(id: String)
