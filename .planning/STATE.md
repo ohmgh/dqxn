@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 5 — Core Infrastructure
-- **Current Plan:** 2 of 5
+- **Current Plan:** 3 of 5
 - **Milestone:** V1 Launch
-- **Next action:** Execute 05-02-PLAN.md
-- **Last session:** 2026-02-24T02:48:15Z
-- **Stopped at:** Completed 05-01-PLAN.md
+- **Next action:** Execute 05-03-PLAN.md
+- **Last session:** 2026-02-24T02:50:12Z
+- **Stopped at:** Completed 05-02-PLAN.md
 
 ## Progress
 
@@ -17,7 +17,7 @@
 | 2. SDK Contracts + Common | Complete (5/5 plans) | All plans complete — types, unit tests, contract test infrastructure |
 | 3. SDK Observability + Analytics + UI | Complete (3/3 plans) | All plans complete — observability, metrics/health/diagnostics/analytics, SDK UI |
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
-| 5. Core Infrastructure | In Progress (1/5 plans) | Proto schemas + thermal module complete |
+| 5. Core Infrastructure | In Progress (2/5 plans) | Proto schemas + thermal + firebase complete |
 | 6. Deployable App + Agentic | Pending | First on-device deployment |
 | 7. Dashboard Shell | Pending | Highest risk phase |
 | 8. Essentials Pack | Pending | Architecture validation gate |
@@ -121,6 +121,9 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **FakeThermalManager dual-mode** — optional CoroutineScope; null scope gives synchronous updates, provided scope enables flow derivation
 - **Proto suffix on store messages** — DashboardStoreProto not DashboardStore, avoids clashes with domain types in :data
 - **preferredRefreshRate** over Surface.setFrameRate() — simpler cross-API approach via WindowManager.LayoutParams
+- **Constructor-inject Firebase SDK instances** via @Provides instead of static Firebase.* accessors — enables clean mock-based testing without mockkStatic on JDK 25
+- **AtomicBoolean for AnalyticsTracker consent state** — thread-safe toggling without synchronization overhead
+- **No Bundle content assertions in firebase tests** — Android stub Bundle (isReturnDefaultValues=true) does not store values; delegation verified via MockK verify
 
 ## Performance Metrics
 
@@ -142,6 +145,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 04-02 | 6min | 2 | 5 |
 | 04-03 | 12min | 2 | 9 |
 | 05-01 | 5min | 2 | 13 |
+| 05-02 | 7min | 2 | 7 |
 
 ## Context
 
