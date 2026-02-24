@@ -30,8 +30,6 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             )
           }
         }
-
-        buildFeatures { buildConfig = true }
       }
 
       extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
