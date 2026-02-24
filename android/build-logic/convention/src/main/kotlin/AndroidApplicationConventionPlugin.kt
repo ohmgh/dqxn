@@ -20,6 +20,11 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
           testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         }
 
+        @Suppress("UnstableApiUsage")
+        testOptions {
+          unitTests.isReturnDefaultValues = true
+        }
+
         buildTypes {
           release {
             isMinifyEnabled = true

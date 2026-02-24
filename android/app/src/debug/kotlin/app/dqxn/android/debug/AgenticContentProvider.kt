@@ -62,12 +62,16 @@ internal class AgenticContentProvider : ContentProvider() {
   /**
    * Core dispatch logic extracted for testability. Takes explicit dependencies rather than reading
    * from ContentProvider state.
+   *
+   * @param timeoutMs Command execution timeout in milliseconds. Defaults to [TIMEOUT_MS] (8s).
+   *   Tests pass a shorter value to avoid long waits.
    */
   internal fun handleCall(
     method: String,
     arg: String?,
     router: AgenticCommandRouter,
     cacheDir: File,
+    timeoutMs: Long = TIMEOUT_MS,
   ): Bundle {
     val params = parseParams(arg)
     val traceId = "agentic-${SystemClock.elapsedRealtimeNanos()}"
@@ -77,12 +81,12 @@ internal class AgenticContentProvider : ContentProvider() {
       // runBlocking is allowed in debug agentic code per CLAUDE.md
       @Suppress("BlockingMethodInNonBlockingContext")
       runBlocking(Dispatchers.Default) {
-        withTimeout(TIMEOUT_MS) {
+        withTimeout(timeoutMs) {
           router.route(method, commandParams)
         }
       }
     } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
-      """{"status":"error","message":"Command timed out after ${TIMEOUT_MS / 1000}s","code":"TIMEOUT"}"""
+      """{"status":"error","message":"Command timed out after ${timeoutMs / 1000}s","code":"TIMEOUT"}"""
     } catch (e: Exception) {
       """{"status":"error","message":"${e.message?.replace("\"", "\\\"")}","code":"HANDLER_ERROR"}"""
     }
