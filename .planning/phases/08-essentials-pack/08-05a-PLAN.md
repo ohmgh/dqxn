@@ -1,6 +1,6 @@
 ---
 phase: 08-essentials-pack
-plan: 05
+plan: "05a"
 type: execute
 wave: 2
 depends_on: ["08-01"]
@@ -10,22 +10,15 @@ files_modified:
   - android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/date/DateSimpleRenderer.kt
   - android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/date/DateStackRenderer.kt
   - android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/date/DateGridRenderer.kt
-  - android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/battery/BatteryRenderer.kt
-  - android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/ambientlight/AmbientLightRenderer.kt
   - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/ClockDigitalRendererTest.kt
   - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/ClockAnalogRendererTest.kt
   - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/DateSimpleRendererTest.kt
   - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/DateStackRendererTest.kt
   - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/DateGridRendererTest.kt
-  - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/BatteryRendererTest.kt
-  - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/AmbientLightRendererTest.kt
 autonomous: true
 requirements:
   - F5.2
   - F5.3
-  - F5.4
-  - F5.6
-  - F5.10
   - NF-I2
 
 must_haves:
@@ -33,15 +26,13 @@ must_haves:
     - "ClockDigitalRenderer displays time from TimeSnapshot with configurable seconds and 24h format"
     - "ClockAnalogRenderer draws clock hands at correct angles for any given time"
     - "Date renderers format date from TimeSnapshot with locale-aware formatting"
-    - "BatteryRenderer displays level, charging state, and optional temperature"
-    - "AmbientLightRenderer shows lux level with category using InfoCardLayout"
   artifacts:
     - path: "android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/clock/ClockDigitalRenderer.kt"
       provides: "Digital clock widget"
       contains: "@DashboardWidget"
-    - path: "android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/battery/BatteryRenderer.kt"
-      provides: "Greenfield battery widget"
-      contains: "@DashboardWidget"
+    - path: "android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/clock/ClockAnalogRenderer.kt"
+      provides: "Analog clock widget with Canvas rendering"
+      contains: "drawWithCache"
   key_links:
     - from: "android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/clock/ClockDigitalRenderer.kt"
       to: "LocalWidgetData.current"
@@ -54,13 +45,11 @@ must_haves:
 ---
 
 <objective>
-Implement 7 simpler widget renderers: Clock Digital, Clock Analog, 3 Date variants, Battery, and AmbientLight.
+Implement 5 clock and date widget renderers with contract tests.
 
-Purpose: These are the highest-volume widgets — clock and date appear in every default layout. Battery and AmbientLight are info-display widgets using InfoCardLayout. All read from TimeSnapshot or BatterySnapshot/AmbientLightSnapshot via LocalWidgetData.current with derivedStateOf.
+Purpose: Clock and date widgets are the highest-volume widgets — they appear in every default layout. All read from TimeSnapshot via LocalWidgetData.current with derivedStateOf. ClockAnalog uses Canvas drawWithCache for hand rendering.
 
-Output: 7 widget renderers with contract tests + widget-specific rendering behavior tests.
-
-Scope note: 14 files total across 2 tasks (5 renderers in Task 1, 2 renderers + 7 tests in Task 2). All 7 renderers follow the same cookie-cutter pattern (LocalWidgetData + derivedStateOf + contract test extension). Each task stays under 10 files individually. The high plan-level count reflects the number of widgets, not implementation complexity.
+Output: 5 widget renderers (ClockDigital, ClockAnalog, DateSimple, DateStack, DateGrid) with contract tests + widget-specific behavior tests.
 </objective>
 
 <execution_context>
@@ -76,7 +65,6 @@ Scope note: 14 files total across 2 tasks (5 renderers in Task 1, 2 renderers + 
 @android/sdk/contracts/src/testFixtures/kotlin/app/dqxn/android/sdk/contracts/testing/WidgetRendererContractTest.kt
 @android/sdk/contracts/src/main/kotlin/app/dqxn/android/sdk/contracts/widget/WidgetRenderer.kt
 @android/sdk/ui/src/main/kotlin/app/dqxn/android/sdk/ui/widget/LocalWidgetData.kt
-@android/sdk/ui/src/main/kotlin/app/dqxn/android/sdk/ui/layout/InfoCardLayout.kt
 @.planning/oldcodebase/packs.md
 </context>
 
@@ -97,7 +85,7 @@ Scope note: 14 files total across 2 tasks (5 renderers in Task 1, 2 renderers + 
     **Pattern for ALL widgets:**
     - `Render()` reads `LocalWidgetData.current` then `derivedStateOf { widgetData.snapshot<XSnapshot>() }`
     - Handle null snapshot gracefully (no data yet — show placeholder or empty state)
-    - `accessibilityDescription(data: WidgetData): String` returns human-readable value (e.g., "Speed: 65 km/h")
+    - `accessibilityDescription(data: WidgetData): String` returns human-readable value (e.g., "12:30 PM")
     - `settingsSchema: List<SettingDefinition<*>>` declares all configurable properties
     - `getDefaults(context: WidgetContext): WidgetDefaults` returns default width/height in grid units
     - `compatibleSnapshots: Set<KClass<out DataSnapshot>>` declares data types
@@ -144,36 +132,16 @@ Scope note: 14 files total across 2 tasks (5 renderers in Task 1, 2 renderers + 
 </task>
 
 <task type="auto">
-  <name>Task 2: Battery and AmbientLight widgets + all 7 widget contract tests</name>
+  <name>Task 2: Contract tests and widget-specific tests for 5 clock/date widgets</name>
   <files>
-    android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/battery/BatteryRenderer.kt
-    android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/ambientlight/AmbientLightRenderer.kt
     android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/ClockDigitalRendererTest.kt
     android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/ClockAnalogRendererTest.kt
     android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/DateSimpleRendererTest.kt
     android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/DateStackRendererTest.kt
     android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/DateGridRendererTest.kt
-    android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/BatteryRendererTest.kt
-    android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/AmbientLightRendererTest.kt
   </files>
   <action>
-    **BatteryRenderer** — GREENFIELD:
-    - typeId: `essentials:battery`, displayName: "Battery", defaultSize: 6x6
-    - compatibleSnapshots: `setOf(BatterySnapshot::class)`
-    - Settings: `showPercentage` (Boolean, default true), `showTemperature` (Boolean, default false), `chargingIndicator` (Boolean, default true)
-    - Render: uses `InfoCardLayout` from `:sdk:ui`. Shows battery level as large number, charging icon when charging, temperature when enabled.
-    - accessibilityDescription: "Battery: 75%, Charging" or "Battery: 45%"
-
-    **AmbientLightRenderer** — port from old:
-    - typeId: `essentials:ambient-light`, displayName: "Ambient Light", defaultSize: 8x8
-    - compatibleSnapshots: `setOf(AmbientLightSnapshot::class)`
-    - Settings: info card layout options (from `InfoCardSettings`)
-    - Render: uses `InfoCardLayout`. Shows lux value and category label (DARK/DIM/NORMAL/BRIGHT). Light bulb icon via Canvas.
-    - accessibilityDescription: "Ambient Light: 350 lux, Normal"
-
-    **Contract test classes** — ALL 7 extend `WidgetRendererContractTest` (JUnit4, 14 inherited assertions):
-
-    Each test class: override `createRenderer()` returning the renderer, override `createTestWidgetData()` returning `WidgetData.Empty.withSlot(XSnapshot::class, testSnapshot)`.
+    **All 5 test classes extend `WidgetRendererContractTest` (JUnit4, 14 inherited assertions).** Each overrides `createRenderer()` and `createTestWidgetData()` returning `WidgetData.Empty.withSlot(TimeSnapshot::class, testSnapshot)`.
 
     **Widget-specific tests beyond contract (at least 1 per widget):**
 
@@ -196,40 +164,30 @@ Scope note: 14 files total across 2 tasks (5 renderers in Task 1, 2 renderers + 
 
     DateGridRendererTest:
     - accessibilityDescription contains formatted date
-
-    BatteryRendererTest:
-    - accessibilityDescription includes "75%" for 75% battery
-    - accessibilityDescription includes "Charging" when isCharging=true
-    - accessibilityDescription excludes temperature when showTemperature default=false
-
-    AmbientLightRendererTest:
-    - accessibilityDescription includes lux value and category
-    - accessibilityDescription with category "BRIGHT" for 1000 lux
   </action>
   <verify>
-    <automated>cd /Users/ohm/Workspace/dqxn/android && ./gradlew :pack:essentials:testDebugUnitTest --tests "*.Clock*" --tests "*.Date*" --tests "*.Battery*" --tests "*.AmbientLight*" --console=plain 2>&1 | tail -15</automated>
+    <automated>cd /Users/ohm/Workspace/dqxn/android && ./gradlew :pack:essentials:testDebugUnitTest --tests "*.ClockDigital*" --tests "*.ClockAnalog*" --tests "*.DateSimple*" --tests "*.DateStack*" --tests "*.DateGrid*" --console=plain 2>&1 | tail -15</automated>
   </verify>
-  <done>7 widget contract test classes pass 14 inherited assertions each. Clock analog hand angles verified at cardinal positions. Battery accessibility includes level and charging state. AmbientLight accessibility includes lux and category. All widgets use LocalWidgetData + derivedStateOf pattern.</done>
+  <done>5 clock/date widget contract test classes pass 14 inherited assertions each. Clock analog hand angles verified at cardinal positions. All date widgets produce locale-aware accessibility descriptions. All widgets use LocalWidgetData + derivedStateOf pattern.</done>
 </task>
 
 </tasks>
 
 <verification>
-1. `./gradlew :pack:essentials:testDebugUnitTest --console=plain` — all 7 widget tests pass
+1. `./gradlew :pack:essentials:testDebugUnitTest --tests "*.ClockDigital*" --tests "*.ClockAnalog*" --tests "*.DateSimple*" --tests "*.DateStack*" --tests "*.DateGrid*" --console=plain` — all 5 widget tests pass
 2. Each widget has `@DashboardWidget` annotation with correct typeId format
 3. All Render() functions use `LocalWidgetData.current` + `derivedStateOf` (not direct parameter)
 4. Clock analog hand math verified at known positions
-5. NF-I2: locale-aware formatting in date and battery display
+5. NF-I2: locale-aware formatting in date display
 </verification>
 
 <success_criteria>
-- 7 widget renderers pass WidgetRendererContractTest (14 assertions each)
+- 5 widget renderers pass WidgetRendererContractTest (14 assertions each)
 - Clock analog: hand angle tests for 3:00, 12:00, 6:30 pass
-- Battery: accessibility description reflects level and charging state
 - All date widgets: locale-aware formatting via java.time DateTimeFormatter
 - No `rememberCoroutineScope()` in any Render() function (WidgetScopeBypass lint would catch)
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/08-essentials-pack/08-05-SUMMARY.md`
+After completion, create `.planning/phases/08-essentials-pack/08-05a-SUMMARY.md`
 </output>

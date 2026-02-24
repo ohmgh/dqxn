@@ -1,6 +1,6 @@
 ---
 phase: 08-essentials-pack
-plan: 06
+plan: "06a"
 type: execute
 wave: 2
 depends_on: ["08-01"]
@@ -8,20 +8,14 @@ files_modified:
   - android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/compass/CompassRenderer.kt
   - android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/speedlimit/SpeedLimitCircleRenderer.kt
   - android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/speedlimit/SpeedLimitRectRenderer.kt
-  - android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/shortcuts/ShortcutsRenderer.kt
-  - android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/solar/SolarRenderer.kt
   - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/CompassRendererTest.kt
   - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/SpeedLimitCircleRendererTest.kt
   - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/SpeedLimitRectRendererTest.kt
-  - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/ShortcutsRendererTest.kt
-  - android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/SolarRendererTest.kt
 autonomous: true
 requirements:
   - F5.5
   - F5.7
   - F5.8
-  - F5.9
-  - F5.11
   - NF-I2
 
 must_haves:
@@ -29,14 +23,12 @@ must_haves:
     - "CompassRenderer rotates needle to correct bearing from OrientationSnapshot"
     - "SpeedLimitCircleRenderer displays European-style circular sign with region-aware unit"
     - "SpeedLimitRectRenderer displays US-style rectangular sign"
-    - "ShortcutsRenderer displays app icon and handles tap action"
-    - "SolarRenderer displays sunrise/sunset with optional 24h arc visualization"
   artifacts:
     - path: "android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/compass/CompassRenderer.kt"
       provides: "Compass widget with Canvas rotation"
       contains: "@DashboardWidget"
-    - path: "android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/solar/SolarRenderer.kt"
-      provides: "Solar widget with dawn/day/dusk/night arc"
+    - path: "android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/speedlimit/SpeedLimitCircleRenderer.kt"
+      provides: "European-style speed limit sign"
       contains: "@DashboardWidget"
   key_links:
     - from: "android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/compass/CompassRenderer.kt"
@@ -50,11 +42,11 @@ must_haves:
 ---
 
 <objective>
-Implement 5 remaining non-speedometer widget renderers: Compass, SpeedLimit Circle, SpeedLimit Rect, Shortcuts, and Solar.
+Implement Compass and 2 SpeedLimit widget renderers with contract tests.
 
-Purpose: These widgets have higher complexity than time/info widgets — Compass uses Canvas rotation, Solar draws a multi-band arc, SpeedLimit uses RegionDetector for unit display, and Shortcuts handles tap actions. Solar is the most complex Essentials widget (port from 1217-line old widget).
+Purpose: All 3 widgets use Canvas-based rendering. Compass rotates a needle via Canvas `rotate()`. SpeedLimit widgets render road sign shapes (European circle, US rectangle) with RegionDetector for unit-aware display. Thematically related: all are driving-oriented display widgets.
 
-Output: 5 widget renderers with contract tests + widget-specific rendering behavior tests.
+Output: 3 widget renderers (CompassRenderer, SpeedLimitCircleRenderer, SpeedLimitRectRenderer) with contract tests + widget-specific rendering behavior tests.
 </objective>
 
 <execution_context>
@@ -68,23 +60,21 @@ Output: 5 widget renderers with contract tests + widget-specific rendering behav
 @.planning/phases/08-essentials-pack/08-RESEARCH.md
 @.planning/phases/08-essentials-pack/08-01-SUMMARY.md
 @android/sdk/contracts/src/testFixtures/kotlin/app/dqxn/android/sdk/contracts/testing/WidgetRendererContractTest.kt
-@android/sdk/ui/src/main/kotlin/app/dqxn/android/sdk/ui/layout/InfoCardLayout.kt
+@android/sdk/contracts/src/main/kotlin/app/dqxn/android/sdk/contracts/widget/WidgetRenderer.kt
 @.planning/oldcodebase/packs.md
 </context>
 
 <tasks>
 
 <task type="auto">
-  <name>Task 1: Implement Compass, SpeedLimit, Shortcuts, and Solar renderers</name>
+  <name>Task 1: Implement Compass and 2 SpeedLimit renderers</name>
   <files>
     android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/compass/CompassRenderer.kt
     android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/speedlimit/SpeedLimitCircleRenderer.kt
     android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/speedlimit/SpeedLimitRectRenderer.kt
-    android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/shortcuts/ShortcutsRenderer.kt
-    android/pack/essentials/src/main/kotlin/app/dqxn/android/pack/essentials/widgets/solar/SolarRenderer.kt
   </files>
   <action>
-    All widgets follow the same base pattern as Plan 05: `@DashboardWidget`, `@Inject constructor()`, `LocalWidgetData.current` + `derivedStateOf`, `accessibilityDescription()`, settings schema, NF-I2 locale-aware formatting.
+    All widgets follow the standard base pattern: `@DashboardWidget`, `@Inject constructor()`, `LocalWidgetData.current` + `derivedStateOf`, `accessibilityDescription()`, settings schema, NF-I2 locale-aware formatting.
 
     **CompassRenderer** — port from old:
     - typeId: `essentials:compass`, displayName: "Compass", defaultSize: 10x10, aspectRatio: 1f
@@ -93,7 +83,7 @@ Output: 5 widget renderers with contract tests + widget-specific rendering behav
     - Render: Canvas-based with `drawWithCache` for tick marks and cardinal labels (N/S/E/W). Needle rotates via Canvas `rotate()` by `-bearing` degrees (compass rotates opposite to device bearing). Tilt indicators show pitch/roll lines when enabled.
     - Draw objects: remembered `Path` and `Paint` objects — no per-frame allocation
     - accessibilityDescription: "Compass: heading 45 degrees, Northeast"
-    - Cardinal direction from bearing: 0°=N, 45°=NE, 90°=E, 135°=SE, 180°=S, 225°=SW, 270°=W, 315°=NW (use 22.5° buckets)
+    - Cardinal direction from bearing: 0=N, 45=NE, 90=E, 135=SE, 180=S, 225=SW, 270=W, 315=NW (use 22.5 degree buckets)
 
     **SpeedLimitCircleRenderer** — port from old:
     - typeId: `essentials:speedlimit-circle`, displayName: "Speed Limit (Circle)", defaultSize: 8x8, aspectRatio: 1f
@@ -109,44 +99,22 @@ Output: 5 widget renderers with contract tests + widget-specific rendering behav
     - Settings: `borderSizePercent` (IntSetting, default 5), `speedUnit` (EnumSetting: AUTO/KPH/MPH, default AUTO)
     - Render: Canvas rectangle with black border, white fill, "SPEED LIMIT" text above, number below. MUTCD (US DOT) style.
     - accessibilityDescription: "Speed limit: 35 mph"
-
-    **ShortcutsRenderer** — port from old:
-    - typeId: `essentials:shortcuts`, displayName: "Shortcuts", defaultSize: 9x9
-    - compatibleSnapshots: empty set (no data snapshot — action-only widget)
-    - Settings: `packageName` (AppPickerSetting, default null, suggestedPackages: common nav/music apps), `displayName` (StringSetting, default ""), info card layout options
-    - Render: `InfoCardLayout` with app icon loaded from `packageManager.getApplicationIcon(packageName)` via `remember`. Show app label when displayName is empty. Placeholder icon when no app selected.
-    - Widget has `onTap` handling — but the actual launch is done by `CallActionProvider.execute()` which the binder routes to
-    - accessibilityDescription: "Shortcut: Google Maps" or "Shortcut: tap to configure"
-
-    **SolarRenderer** — port from old (most complex widget, ~1217 lines in old):
-    - typeId: `essentials:solar`, displayName: "Solar", defaultSize: 10x8
-    - compatibleSnapshots: `setOf(SolarSnapshot::class)`
-    - Settings: `displayMode` (EnumSetting: NEXT_EVENT/SUNRISE_SUNSET/ARC, default NEXT_EVENT), `showArc` (Boolean, default true when ARC mode), `arcSize` (EnumSetting: SMALL/MEDIUM/LARGE, default MEDIUM), `timezoneId` (TimezoneSetting, default null)
-    - Render modes:
-      - NEXT_EVENT: shows countdown to next sunrise or sunset ("Sunset in 2h 15m")
-      - SUNRISE_SUNSET: shows both times ("Sunrise 6:45 AM / Sunset 7:12 PM")
-      - ARC: full 24h circular arc with dawn/day/dusk/night color bands + sun/moon marker at current position
-    - Arc rendering: Canvas `drawArc` for each band. Sun position = `(currentTime - sunrise) / (sunset - sunrise)` mapped to arc angle. Dawn band: 30 minutes before sunrise. Dusk band: 30 minutes after sunset.
-    - `drawWithCache` for the arc background (recalculates only when sunrise/sunset change, not every frame)
-    - accessibilityDescription: "Solar: sunset at 7:12 PM" or "Solar: sunrise in 45 minutes"
   </action>
   <verify>
     <automated>cd /Users/ohm/Workspace/dqxn/android && ./gradlew :pack:essentials:compileDebugKotlin --console=plain 2>&1 | tail -5</automated>
   </verify>
-  <done>5 widget renderers compile. Compass uses Canvas rotation with drawWithCache. SpeedLimit widgets use RegionDetector for unit display. Shortcuts handles app icon loading. Solar has 3 display modes with 24h arc rendering.</done>
+  <done>Compass and 2 SpeedLimit widgets compile. Compass uses Canvas rotation with drawWithCache. SpeedLimit widgets use RegionDetector for unit display.</done>
 </task>
 
 <task type="auto">
-  <name>Task 2: Contract tests and widget-specific rendering tests for 5 widgets</name>
+  <name>Task 2: Contract tests and widget-specific tests for Compass and SpeedLimit widgets</name>
   <files>
     android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/CompassRendererTest.kt
     android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/SpeedLimitCircleRendererTest.kt
     android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/SpeedLimitRectRendererTest.kt
-    android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/ShortcutsRendererTest.kt
-    android/pack/essentials/src/test/kotlin/app/dqxn/android/pack/essentials/widgets/SolarRendererTest.kt
   </files>
   <action>
-    **All 5 test classes extend `WidgetRendererContractTest` (JUnit4, 14 inherited assertions).** Each overrides `createRenderer()` and `createTestWidgetData()`.
+    **All 3 test classes extend `WidgetRendererContractTest` (JUnit4, 14 inherited assertions).** Each overrides `createRenderer()` and `createTestWidgetData()`.
 
     **CompassRendererTest:**
     - `createTestWidgetData()`: `WidgetData.Empty.withSlot(OrientationSnapshot::class, OrientationSnapshot(bearing = 90f, pitch = 5f, roll = -3f, timestamp = 1L))`
@@ -169,43 +137,29 @@ Output: 5 widget renderers with contract tests + widget-specific rendering behav
     - `createTestWidgetData()`: same as Circle
     - Widget-specific: accessibilityDescription includes "Speed limit"
     - MUTCD style: description mentions mph when RegionDetector returns MPH
-
-    **ShortcutsRendererTest:**
-    - `createTestWidgetData()`: `WidgetData.Empty` (no snapshot for shortcuts)
-    - Widget-specific: accessibilityDescription with no package set says "tap to configure" or similar
-    - compatibleSnapshots is empty set
-    - Settings schema includes AppPickerSetting with key "packageName"
-
-    **SolarRendererTest:**
-    - `createTestWidgetData()`: `withSlot(SolarSnapshot::class, SolarSnapshot(sunriseEpochMillis = ..., sunsetEpochMillis = ..., solarNoonEpochMillis = ..., isDaytime = true, sourceMode = "timezone", timestamp = 1L))`
-    - Widget-specific: `computeSunPosition(currentTime, sunrise, sunset)` returns 0.0 at sunrise, 0.5 at solar noon, 1.0 at sunset
-    - Arc angle mapping: sun position 0.0 → arc start angle, 1.0 → arc end angle
-    - accessibilityDescription includes sunrise/sunset times
   </action>
   <verify>
-    <automated>cd /Users/ohm/Workspace/dqxn/android && ./gradlew :pack:essentials:testDebugUnitTest --tests "*.Compass*" --tests "*.SpeedLimit*" --tests "*.Shortcuts*" --tests "*.Solar*Renderer*" --console=plain 2>&1 | tail -15</automated>
+    <automated>cd /Users/ohm/Workspace/dqxn/android && ./gradlew :pack:essentials:testDebugUnitTest --tests "*.CompassRendererTest" --tests "*.SpeedLimitCircleRendererTest" --tests "*.SpeedLimitRectRendererTest" --console=plain 2>&1 | tail -15</automated>
   </verify>
-  <done>5 widget contract test classes pass 14 inherited assertions each. Compass needle rotation at cardinal bearings verified. SpeedLimit unit conversion kph→mph verified. Solar arc position computation at sunrise/noon/sunset verified. Shortcuts handles no-package state.</done>
+  <done>3 widget contract test classes pass 14 inherited assertions each. Compass cardinal direction at all 4 primary bearings verified. SpeedLimit unit conversion kph→mph verified.</done>
 </task>
 
 </tasks>
 
 <verification>
-1. `./gradlew :pack:essentials:testDebugUnitTest --console=plain` — all widget tests pass
+1. `./gradlew :pack:essentials:testDebugUnitTest --tests "*.CompassRenderer*" --tests "*.SpeedLimitCircle*" --tests "*.SpeedLimitRect*" --console=plain` — all 3 widget tests pass
 2. Compass cardinal direction function returns correct labels for 8+ compass points
 3. SpeedLimit unit conversion uses RegionDetector correctly
-4. Solar arc computation: 0 at sunrise, 0.5 at noon, 1.0 at sunset
-5. Shortcuts handles null package without crash
+4. No `rememberCoroutineScope()` in any Render() function
 </verification>
 
 <success_criteria>
-- 5 widget renderers pass WidgetRendererContractTest (14 assertions each)
+- 3 widget renderers pass WidgetRendererContractTest (14 assertions each)
 - Compass: cardinal direction mapping verified for all 4 primary directions
-- SpeedLimit: kph to mph conversion correct (60 kph ≈ 37 mph)
-- Solar: arc position computation verified at sunrise, noon, sunset
+- SpeedLimit: kph to mph conversion correct (60 kph ~ 37 mph)
 - No `rememberCoroutineScope()` in any Render() function
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/08-essentials-pack/08-06-SUMMARY.md`
+After completion, create `.planning/phases/08-essentials-pack/08-06a-SUMMARY.md`
 </output>
