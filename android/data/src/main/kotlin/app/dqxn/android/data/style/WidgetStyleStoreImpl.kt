@@ -43,7 +43,9 @@ constructor(
 
   override suspend fun setStyle(instanceId: String, style: WidgetStyle) {
     val prefKey = stringPreferencesKey(instanceId)
-    dataStore.edit { prefs -> prefs[prefKey] = json.encodeToString(WidgetStyle.serializer(), style) }
+    dataStore.edit { prefs ->
+      prefs[prefKey] = json.encodeToString(WidgetStyle.serializer(), style)
+    }
   }
 
   override suspend fun removeStyle(instanceId: String) {

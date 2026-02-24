@@ -85,8 +85,7 @@ constructor(
     val TAG = LogTag("PresetLoader")
 
     /** GPS-dependent widget type suffixes per F11.5 -- excluded from first-launch presets. */
-    val GPS_WIDGET_PATTERNS =
-      setOf("speedometer", "compass", "gforce", "altimeter", "solar")
+    val GPS_WIDGET_PATTERNS = setOf("speedometer", "compass", "gforce", "altimeter", "solar")
 
     fun isGpsDependentWidget(typeId: String): Boolean {
       val widgetName = typeId.substringAfter(":")

@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.Flow
  * Persistence store for per-provider settings, namespaced by pack. Key format:
  * `{packId}:{providerId}:{key}` (F7.4).
  *
- * Values are type-safe via [SettingsSerialization] — the store round-trips String, Int, Long, Float,
- * Double, Boolean, and null without loss.
+ * Values are type-safe via [SettingsSerialization] — the store round-trips String, Int, Long,
+ * Float, Double, Boolean, and null without loss.
  */
 public interface ProviderSettingsStore {
 

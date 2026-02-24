@@ -3,8 +3,8 @@ package app.dqxn.android.data.provider
 import kotlinx.serialization.json.Json
 
 /**
- * Type-prefixed serialization for provider settings values. Each value is encoded with a single-char
- * type prefix followed by a colon and the string representation:
+ * Type-prefixed serialization for provider settings values. Each value is encoded with a
+ * single-char type prefix followed by a colon and the string representation:
  * - `s:` String
  * - `i:` Int
  * - `b:` Boolean
@@ -29,7 +29,8 @@ internal object SettingsSerialization {
       is Float -> "f:$value"
       is Double -> "d:$value"
       is Boolean -> "b:$value"
-      else -> "j:${json.encodeToString(kotlinx.serialization.serializer<String>(), value.toString())}"
+      else ->
+        "j:${json.encodeToString(kotlinx.serialization.serializer<String>(), value.toString())}"
     }
 
   fun deserializeValue(serialized: String?): Any? {
