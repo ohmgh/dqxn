@@ -52,7 +52,7 @@ Other:    lint-rules, baselineprofile, benchmark (CI/quality, not app runtime)
 
 **`:pack:{packId}:snapshots`** — CAN: `:sdk:contracts` only. Pure Kotlin, no Compose compiler. `@Immutable` available transitively via `:sdk:contracts` → `compose.runtime`. Only `@DashboardSnapshot` data classes. Uses `dqxn.snapshot` plugin.
 
-**`:feature:dashboard`** — CAN: `:sdk:*`, `:core:design`, `:core:thermal`, `:data`. CANNOT: any `:pack:*`.
+**`:feature:dashboard`** — CAN: `:sdk:*`, `:core:design`, `:core:thermal`, `:core:agentic` (debug semantics registration), `:data`. CANNOT: any `:pack:*`.
 
 **`:core:firebase`** — CAN: `:sdk:observability`, `:sdk:analytics`, `:sdk:common`. Only module with Firebase SDKs. Only `:app` imports it.
 
