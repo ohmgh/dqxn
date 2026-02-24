@@ -43,6 +43,7 @@ constructor(
   private val interceptors: Set<@JvmSuppressWildcards DataProviderInterceptor>,
   private val thermalMonitor: ThermalMonitor,
   private val logger: DqxnLogger,
+  private val timeProvider: () -> Long = { System.currentTimeMillis() },
 ) {
 
   /**
@@ -173,10 +174,25 @@ constructor(
     return current
   }
 
+  /**
+   * Returns the minimum staleness threshold (ms) across all providers bound to the given
+   * snapshot types. Used by [WidgetBindingCoordinator] for per-widget staleness watchdogs.
+   * Returns null if no providers are found for any of the snapshot types.
+   */
+  public fun minStalenessThresholdMs(
+    compatibleSnapshots: Set<KClass<out DataSnapshot>>,
+  ): Long? {
+    val thresholds =
+      compatibleSnapshots.mapNotNull { snapshotType ->
+        resolveProvider(snapshotType)?.schema?.stalenessThresholdMs
+      }
+    return thresholds.minOrNull()
+  }
+
   private fun <T> throttle(upstream: Flow<T>, intervalMs: Long): Flow<T> = flow {
     var lastEmitTime = 0L
     upstream.collect { value ->
-      val now = System.currentTimeMillis()
+      val now = timeProvider()
       if (now - lastEmitTime >= intervalMs) {
         lastEmitTime = now
         emit(value)

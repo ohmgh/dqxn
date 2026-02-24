@@ -58,6 +58,7 @@ constructor(
   private val logger: DqxnLogger,
   @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
   @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+  private val timeProvider: () -> Long = { System.currentTimeMillis() },
 ) {
 
   /** SupervisorJob parent for ALL binding jobs. One crash does NOT cancel siblings (NF19). */
@@ -76,6 +77,12 @@ constructor(
 
   /** Per-widget error counts for retry logic. */
   private val errorCounts: ConcurrentHashMap<String, Int> = ConcurrentHashMap()
+
+  /** Per-widget last successful emission timestamps for staleness detection (F3.11). */
+  private val lastEmissionTimestamps: ConcurrentHashMap<String, Long> = ConcurrentHashMap()
+
+  /** Per-widget staleness watchdog jobs, separate from binding jobs for independent lifecycle. */
+  private val stalenessJobs: ConcurrentHashMap<String, Job> = ConcurrentHashMap()
 
   /** Binding scope: parent scope + SupervisorJob. Set via [initialize]. */
   private lateinit var bindingScope: CoroutineScope
@@ -156,20 +163,56 @@ constructor(
           dataFlow.value = widgetData
           // Successful emission resets error count
           errorCounts[widget.instanceId] = 0
-          // Update status to Ready on successful data
+          // Track last emission time for staleness detection (F3.11)
           if (widgetData.hasData()) {
+            lastEmissionTimestamps[widget.instanceId] = timeProvider()
             statusFlow.value = WidgetStatusCache.EMPTY // Ready state
           }
         }
       }
 
     bindings[widget.instanceId] = job
+
+    // Launch staleness watchdog (F3.11): periodically checks if data has gone stale.
+    // Uses the minimum staleness threshold from bound providers.
+    val stalenessThresholdMs =
+      binder.minStalenessThresholdMs(compatibleSnapshots) ?: DEFAULT_STALENESS_MS
+    stalenessJobs.remove(widget.instanceId)?.cancel()
+    val watchdogJob =
+      bindingScope.launch {
+        while (true) {
+          delay(stalenessThresholdMs)
+          val lastTs = lastEmissionTimestamps[widget.instanceId] ?: continue
+          if (timeProvider() - lastTs > stalenessThresholdMs) {
+            val currentState = statusFlow.value.overlayState
+            // Don't override higher-priority error states
+            if (currentState !is WidgetRenderState.ConnectionError &&
+              currentState !is WidgetRenderState.EntitlementRevoked &&
+              currentState !is WidgetRenderState.SetupRequired
+            ) {
+              statusFlow.value =
+                WidgetStatusCache(
+                  overlayState = WidgetRenderState.DataStale,
+                  issues = persistentListOf(),
+                )
+              logger.warn(TAG) {
+                "Widget ${widget.instanceId} data stale " +
+                  "(${timeProvider() - lastTs}ms > ${stalenessThresholdMs}ms)"
+              }
+            }
+          }
+        }
+      }
+    stalenessJobs[widget.instanceId] = watchdogJob
+
     logger.debug(TAG) { "Binding started for widget ${widget.instanceId} (${widget.typeId})" }
   }
 
   /** Unbind a widget: cancels job and removes from tracking maps. */
   public fun unbind(widgetId: String) {
     unbindInternal(widgetId)
+    stalenessJobs.remove(widgetId)?.cancel()
+    lastEmissionTimestamps.remove(widgetId)
     boundWidgets.remove(widgetId)
     _widgetData.remove(widgetId)
     _widgetStatuses.remove(widgetId)
@@ -218,6 +261,9 @@ constructor(
       logger.debug(TAG) { "Paused binding for $widgetId" }
     }
     bindings.clear()
+    for ((_, job) in stalenessJobs) { job.cancel() }
+    stalenessJobs.clear()
+    lastEmissionTimestamps.clear()
     logger.info(TAG) { "All ${boundWidgets.size} bindings paused" }
   }
 
@@ -248,6 +294,8 @@ constructor(
   public fun destroy() {
     bindingSupervisor.cancel()
     bindings.clear()
+    stalenessJobs.clear()
+    lastEmissionTimestamps.clear()
     boundWidgets.clear()
     logger.info(TAG) { "WidgetBindingCoordinator destroyed" }
   }
@@ -340,5 +388,6 @@ constructor(
     val TAG: LogTag = LogTag("BindingCoord")
     internal const val MAX_RETRIES: Int = 3
     internal const val BACKOFF_BASE_MS: Long = 1000L
+    internal const val DEFAULT_STALENESS_MS: Long = 10_000L
   }
 }
