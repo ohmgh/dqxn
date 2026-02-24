@@ -1,5 +1,8 @@
 package app.dqxn.android.feature.dashboard
 
+import android.content.ContentResolver
+import android.content.Context
+import android.provider.Settings
 import androidx.compose.animation.core.SnapSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.snap
@@ -8,100 +11,104 @@ import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 /**
  * Integration tests for reduced motion compliance (NF39).
  *
- * Verifies that when animator_duration_scale == 0:
- * 1. Edit mode wiggle animation is disabled (0f rotation)
- * 2. Widget add/remove transitions use instant specs (snap() with 0 duration)
- * 3. Profile page transition uses instant scrollToPage
+ * Tests the production [ReducedMotionHelper] with mocked system settings to verify:
+ * 1. Helper correctly detects disabled animations (scale == 0f)
+ * 2. Widget add/remove transitions use instant specs when reduced motion active
+ * 3. Helper correctly detects enabled animations (scale == 1f)
  *
- * These tests verify the parameter selection logic and gate conditions that the production code
- * uses to decide between animated and instant transitions. The actual Compose rendering is not
- * tested here -- that requires Compose UI test infrastructure.
+ * DashboardGrid and ProfilePageTransition consume [ReducedMotionHelper.isReducedMotion] directly.
+ * These tests verify the helper returns the correct value for both states, ensuring the
+ * production gate conditions in those composables evaluate correctly.
  */
 @Tag("fast")
 class ReducedMotionIntegrationTest {
 
-  private val reducedMotionHelper = mockk<ReducedMotionHelper> {
-    every { isReducedMotion } returns true
+  private val contentResolver = mockk<ContentResolver>()
+  private val context = mockk<Context> {
+    every { this@mockk.contentResolver } returns this@ReducedMotionIntegrationTest.contentResolver
+  }
+
+  @BeforeEach
+  fun setup() {
+    mockkStatic(Settings.Global::class)
+  }
+
+  @AfterEach
+  fun tearDown() {
+    unmockkStatic(Settings.Global::class)
   }
 
   @Test
-  fun `reduced motion - edit mode wiggle animation disabled`() {
-    // The production code in DashboardGrid.kt checks:
-    //   if (isEditMode && !isReducedMotion) { <animate> } else { 0f / 1f }
-    // Verify the gate logic: when isReducedMotion is true, wiggle and bracket are static.
-    val isEditMode = true
-    val isReducedMotion = reducedMotionHelper.isReducedMotion
+  fun `reduced motion - ReducedMotionHelper detects disabled animations`() {
+    // Mock ANIMATOR_DURATION_SCALE == 0f (system reduced motion enabled)
+    every {
+      Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    } returns 0f
 
-    // Replicate the gate logic from DashboardGrid
-    val wiggleRotation = if (isEditMode && !isReducedMotion) 0.5f else 0f
-    val bracketScale = if (isEditMode && !isReducedMotion) 1.02f else 1f
+    val helper = ReducedMotionHelper(context)
 
-    assertThat(wiggleRotation).isEqualTo(0f)
-    assertThat(bracketScale).isEqualTo(1f)
-
-    // Also verify the inverse: when reduced motion is false, animations would be active
-    val normalHelper = mockk<ReducedMotionHelper> {
-      every { this@mockk.isReducedMotion } returns false
-    }
-    val normalWiggle = if (isEditMode && !normalHelper.isReducedMotion) 0.5f else 0f
-    val normalBracket = if (isEditMode && !normalHelper.isReducedMotion) 1.02f else 1f
-    assertThat(normalWiggle).isEqualTo(0.5f)
-    assertThat(normalBracket).isEqualTo(1.02f)
+    // Production ReducedMotionHelper must return true when scale == 0f.
+    // DashboardGrid uses: if (isEditMode && !isReducedMotion) { animate } else { 0f }
+    // ProfilePageTransition uses: if (isReducedMotion) scrollToPage() else animateScrollToPage()
+    assertThat(helper.isReducedMotion).isTrue()
   }
 
   @Test
   fun `reduced motion - widget add remove transitions use snap spec`() {
-    // Production code in DashboardGrid.kt uses:
-    //   if (isReducedMotion) { snap() } else { spring(...) }
-    // Verify: when isReducedMotion is true, the snap path is taken.
-    val isReducedMotion = reducedMotionHelper.isReducedMotion
+    // Mock system reduced motion active
+    every {
+      Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    } returns 0f
+
+    val helper = ReducedMotionHelper(context)
+    val isReducedMotion = helper.isReducedMotion
     assertThat(isReducedMotion).isTrue()
 
     // Verify snap() produces a SnapSpec (instant transition, 0 delay)
+    // DashboardGrid line 103: if (isReducedMotion) { fadeIn(snap()) + scaleIn(..., snap()) }
     val snapSpec = snap<Float>()
     assertThat(snapSpec).isInstanceOf(SnapSpec::class.java)
     assertThat(snapSpec.delay).isEqualTo(0)
 
     // Verify the production gate selects snap vs spring based on isReducedMotion
-    val reducedSpec = if (isReducedMotion) snap<Float>() else spring<Float>(stiffness = Spring.StiffnessMediumLow)
+    val reducedSpec =
+      if (isReducedMotion) snap<Float>() else spring<Float>(stiffness = Spring.StiffnessMediumLow)
     assertThat(reducedSpec).isInstanceOf(SnapSpec::class.java)
 
     // Verify the normal path would select spring
-    val normalHelper = mockk<ReducedMotionHelper> {
-      every { this@mockk.isReducedMotion } returns false
-    }
-    val normalSpec = if (normalHelper.isReducedMotion) snap<Float>() else spring<Float>(stiffness = Spring.StiffnessMediumLow)
+    every {
+      Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    } returns 1f
+
+    val normalHelper = ReducedMotionHelper(context)
+    val normalSpec =
+      if (normalHelper.isReducedMotion) snap<Float>()
+      else spring<Float>(stiffness = Spring.StiffnessMediumLow)
     assertThat(normalSpec).isNotInstanceOf(SnapSpec::class.java)
   }
 
   @Test
-  fun `reduced motion - profile page transition is instant when reduced motion active`() {
-    // Production code in ProfilePageTransition.kt uses:
-    //   if (isReducedMotion) pagerState.scrollToPage(idx)
-    //   else pagerState.animateScrollToPage(idx)
-    //
-    // We verify the isReducedMotion flag is correctly read and would select the instant path.
-    // The actual scrollToPage vs animateScrollToPage distinction is a Compose Foundation API
-    // guarantee: scrollToPage is instant, animateScrollToPage animates.
-    assertThat(reducedMotionHelper.isReducedMotion).isTrue()
+  fun `normal motion - ReducedMotionHelper detects enabled animations`() {
+    // Mock ANIMATOR_DURATION_SCALE == 1f (normal animations enabled)
+    every {
+      Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    } returns 1f
 
-    // Verify the gate logic: production code branches on this boolean to select instant scroll.
-    // The parameter was added to ProfilePageTransition in Task 1 -- if it weren't added,
-    // this test file would fail to compile (isReducedMotion not a parameter of ProfilePageTransition).
-    val usesInstantScroll = reducedMotionHelper.isReducedMotion
-    assertThat(usesInstantScroll).isTrue()
+    val helper = ReducedMotionHelper(context)
 
-    // Verify the inverse: normal motion uses animated scroll
-    val normalHelper = mockk<ReducedMotionHelper> {
-      every { this@mockk.isReducedMotion } returns false
-    }
-    val usesAnimatedScroll = !normalHelper.isReducedMotion
-    assertThat(usesAnimatedScroll).isTrue()
+    // Production ReducedMotionHelper must return false when scale == 1f.
+    // This is the two-sided pair of test #1: verifies the helper correctly distinguishes
+    // between reduced and normal motion states.
+    assertThat(helper.isReducedMotion).isFalse()
   }
 }

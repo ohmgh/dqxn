@@ -1,11 +1,15 @@
 package app.dqxn.android.feature.dashboard.binding
 
+import app.dqxn.android.core.thermal.FakeThermalManager
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.EditState
 import app.dqxn.android.feature.dashboard.coordinator.WidgetBindingCoordinator
+import app.dqxn.android.feature.dashboard.safety.SafeModeManager
+import app.dqxn.android.feature.dashboard.test.FakeSharedPreferences
+import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
 import app.dqxn.android.sdk.contracts.status.WidgetRenderState
 import app.dqxn.android.sdk.contracts.status.WidgetStatusCache
@@ -13,13 +17,17 @@ import app.dqxn.android.sdk.contracts.widget.BackgroundStyle
 import app.dqxn.android.sdk.contracts.widget.WidgetData
 import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.contracts.widget.WidgetStyle
+import app.dqxn.android.sdk.observability.log.NoOpLogger
+import app.dqxn.android.sdk.observability.metrics.MetricsCollector
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -92,14 +100,40 @@ class WidgetSlotTest {
   }
 
   @Test
-  fun `widget crash reports DashboardCommand WidgetCrash via crash reporting`() {
-    // F2.14: widget crash is reported via the binding coordinator's crash reporting
-    every { widgetRegistry.findByTypeId("essentials:clock") } returns renderer
-    every { widgetBindingCoordinator.reportCrash(any(), any()) } returns Unit
+  fun `widget crash delegates to SafeModeManager via real WidgetBindingCoordinator`() {
+    // F2.14: widget crash reporting flows through a real WidgetBindingCoordinator to SafeModeManager.
+    // Unlike the original test (which mocked both sides), this uses a REAL coordinator and a REAL
+    // SafeModeManager. If someone removes the safeModeManager.reportCrash() call from the
+    // coordinator's reportCrash(), this test fails.
+    val logger = NoOpLogger
+    val safeModeManager = SafeModeManager(FakeSharedPreferences(), logger)
+    val entitlementManager = mockk<EntitlementManager>(relaxed = true) {
+      every { entitlementChanges } returns MutableStateFlow(setOf("free"))
+    }
+    val testDispatcher = StandardTestDispatcher()
+    val binder = mockk<WidgetDataBinder>(relaxed = true) {
+      every { bind(any(), any(), any()) } returns MutableStateFlow(WidgetData.Empty)
+      every { minStalenessThresholdMs(any()) } returns null
+    }
 
-    // Verify crash reporting path exists
-    widgetBindingCoordinator.reportCrash(testWidget.instanceId, testWidget.typeId)
-    verify { widgetBindingCoordinator.reportCrash("test-widget-1", "essentials:clock") }
+    val realCoordinator = WidgetBindingCoordinator(
+      binder = binder,
+      widgetRegistry = widgetRegistry,
+      safeModeManager = safeModeManager,
+      entitlementManager = entitlementManager,
+      thermalMonitor = FakeThermalManager(),
+      metricsCollector = MetricsCollector(),
+      logger = logger,
+      ioDispatcher = testDispatcher,
+      defaultDispatcher = testDispatcher,
+    )
+
+    // Report 4 crashes — SafeModeManager triggers at threshold=4
+    assertThat(safeModeManager.safeModeActive.value).isFalse()
+    repeat(4) { i ->
+      realCoordinator.reportCrash("widget-$i", "essentials:clock")
+    }
+    assertThat(safeModeManager.safeModeActive.value).isTrue()
   }
 
   @Test

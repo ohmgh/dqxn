@@ -9,6 +9,7 @@ import app.dqxn.android.sdk.contracts.notification.NotificationPriority
 import app.dqxn.android.sdk.observability.log.NoOpLogger
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -280,4 +281,39 @@ class NotificationCoordinatorTest {
 
       initJob.cancel()
     }
+
+  @Test
+  fun `safe mode banner triggers alertEmitter fire with VIBRATE profile`() = runTest {
+    val coordinator = createCoordinator()
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
+
+    safeModeActive.value = true
+    testScheduler.runCurrent()
+
+    // Verify alertEmitter.fire() was called with a VIBRATE alert profile (F9.2).
+    // The previous test only verified the banner data contained AlertMode.VIBRATE — it never
+    // verified the side-effect. This test ensures the production code actually fires the alert.
+    coVerify { alertEmitter.fire(match { it.mode == AlertMode.VIBRATE }) }
+
+    initJob.cancel()
+  }
+
+  @Test
+  fun `banner without alert profile does not fire alertEmitter`() = runTest {
+    val coordinator = createCoordinator()
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
+
+    // Low storage banner has no alert profile
+    storageIsLow.value = true
+    testScheduler.runCurrent()
+
+    // alertEmitter.fire() should NOT be called for banners without an alert profile
+    coVerify(exactly = 0) { alertEmitter.fire(any()) }
+
+    initJob.cancel()
+  }
 }

@@ -61,6 +61,9 @@ constructor(
    */
   public val toasts: Channel<InAppNotification.Toast> = Channel(capacity = Channel.BUFFERED)
 
+  /** Coordinator scope saved from [initialize] for launching async side-effects. */
+  private lateinit var coordinatorScope: CoroutineScope
+
   /** Internal mutable banner map keyed by condition ID. Sorted on every mutation. */
   private val bannerMap: MutableMap<String, InAppNotification.Banner> = mutableMapOf()
 
@@ -71,6 +74,8 @@ constructor(
    * Must be called once from ViewModel init with the ViewModel's coroutine scope.
    */
   public fun initialize(scope: CoroutineScope) {
+    coordinatorScope = scope
+
     // Observe safe mode state (CRITICAL banner)
     // StateFlow already guarantees distinctUntilChanged semantics via structural equality.
     scope.launch {
@@ -143,6 +148,14 @@ constructor(
     synchronized(bannerMap) {
       bannerMap[id] = banner
       refreshBannerState()
+    }
+
+    // Fire alert side-effect (F9.2, F9.3, F9.4) when an alert profile is configured.
+    // alertEmitter.fire() is a suspend function, so we launch on the coordinator scope.
+    if (alertProfile != null && ::coordinatorScope.isInitialized) {
+      coordinatorScope.launch {
+        alertEmitter.fire(alertProfile)
+      }
     }
 
     logger.debug(TAG) { "Banner shown: $id ($priority)" }
