@@ -37,7 +37,7 @@ import kotlinx.collections.immutable.ImmutableMap
   typeId = "essentials:date-simple",
   displayName = "Date (Simple)",
 )
-internal class DateSimpleRenderer @Inject constructor() : WidgetRenderer {
+public class DateSimpleRenderer @Inject constructor() : WidgetRenderer {
 
   override val typeId: String = "essentials:date-simple"
   override val displayName: String = "Date (Simple)"

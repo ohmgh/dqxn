@@ -37,7 +37,7 @@ import kotlinx.collections.immutable.ImmutableMap
   typeId = "essentials:clock-analog",
   displayName = "Clock (Analog)",
 )
-internal class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
+public class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
 
   override val typeId: String = "essentials:clock-analog"
   override val displayName: String = "Clock (Analog)"

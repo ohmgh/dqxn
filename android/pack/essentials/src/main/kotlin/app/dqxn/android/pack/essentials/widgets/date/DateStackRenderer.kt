@@ -38,7 +38,7 @@ import kotlinx.collections.immutable.ImmutableMap
   typeId = "essentials:date-stack",
   displayName = "Date (Stack)",
 )
-internal class DateStackRenderer @Inject constructor() : WidgetRenderer {
+public class DateStackRenderer @Inject constructor() : WidgetRenderer {
 
   override val typeId: String = "essentials:date-stack"
   override val displayName: String = "Date (Stack)"

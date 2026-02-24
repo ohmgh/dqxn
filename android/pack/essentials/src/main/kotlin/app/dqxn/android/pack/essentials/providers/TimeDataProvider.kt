@@ -39,7 +39,7 @@ import kotlinx.coroutines.isActive
   description = "System clock with timezone tracking",
 )
 @Singleton
-internal class TimeDataProvider
+public class TimeDataProvider
 @Inject
 constructor(
   @param:ApplicationContext private val context: Context,

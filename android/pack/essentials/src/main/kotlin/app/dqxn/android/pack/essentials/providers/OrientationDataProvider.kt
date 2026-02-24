@@ -37,7 +37,7 @@ import kotlinx.coroutines.flow.flowOf
   description = "Compass heading, pitch, and roll from rotation vector sensor",
 )
 @Singleton
-internal class OrientationDataProvider
+public class OrientationDataProvider
 @Inject
 constructor(
   private val sensorManager: SensorManager,

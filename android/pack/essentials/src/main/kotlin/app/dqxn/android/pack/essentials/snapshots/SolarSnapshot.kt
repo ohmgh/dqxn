@@ -7,7 +7,7 @@ import app.dqxn.android.sdk.contracts.provider.DataSnapshot
 /** Solar data snapshot. sourceMode: "location" or "timezone". */
 @DashboardSnapshot(dataType = "solar")
 @Immutable
-internal data class SolarSnapshot(
+public data class SolarSnapshot(
   val sunriseEpochMillis: Long,
   val sunsetEpochMillis: Long,
   val solarNoonEpochMillis: Long,

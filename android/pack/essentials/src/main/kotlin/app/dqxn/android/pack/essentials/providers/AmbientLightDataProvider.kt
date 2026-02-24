@@ -36,7 +36,7 @@ import kotlinx.coroutines.flow.flowOf
   description = "Ambient light level with category classification",
 )
 @Singleton
-internal class AmbientLightDataProvider
+public class AmbientLightDataProvider
 @Inject
 constructor(
   private val sensorManager: SensorManager,

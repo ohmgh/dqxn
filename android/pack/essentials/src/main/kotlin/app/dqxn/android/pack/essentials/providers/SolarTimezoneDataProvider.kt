@@ -52,7 +52,7 @@ import kotlinx.coroutines.flow.onStart
   description = "Sunrise and sunset times based on timezone location",
 )
 @Singleton
-internal class SolarTimezoneDataProvider @Inject constructor(
+public class SolarTimezoneDataProvider @Inject constructor(
   @param:ApplicationContext private val context: Context,
 ) : DataProvider<SolarSnapshot> {
 

@@ -38,7 +38,7 @@ import kotlinx.collections.immutable.ImmutableMap
   typeId = "essentials:date-grid",
   displayName = "Date (Grid)",
 )
-internal class DateGridRenderer @Inject constructor() : WidgetRenderer {
+public class DateGridRenderer @Inject constructor() : WidgetRenderer {
 
   override val typeId: String = "essentials:date-grid"
   override val displayName: String = "Date (Grid)"

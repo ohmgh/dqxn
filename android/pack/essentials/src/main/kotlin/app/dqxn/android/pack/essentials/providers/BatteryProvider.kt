@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.flowOf
   description = "Battery level, charging state, and temperature",
 )
 @Singleton
-internal class BatteryProvider
+public class BatteryProvider
 @Inject
 constructor(
   @param:ApplicationContext private val context: Context,

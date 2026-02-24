@@ -47,7 +47,7 @@ import kotlinx.coroutines.flow.map
   description = "Sunrise and sunset times based on GPS location",
 )
 @Singleton
-internal class SolarLocationDataProvider @Inject constructor(
+public class SolarLocationDataProvider @Inject constructor(
   @param:ApplicationContext private val context: Context,
 ) : DataProvider<SolarSnapshot> {
 
