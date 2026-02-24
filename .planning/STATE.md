@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 6 — Deployable App + Agentic Framework
-- **Current Plan:** 3 of 4 complete
+- **Current Plan:** 4 of 4 complete
 - **Milestone:** V1 Launch
-- **Next action:** Continue Phase 6 Plan 04 (ADB CLI wrapper)
-- **Last session:** 2026-02-24T04:12:00Z
-- **Stopped at:** Completed 06-03-PLAN.md
+- **Next action:** Begin Phase 7 (Dashboard Shell)
+- **Last session:** 2026-02-24T04:22:30Z
+- **Stopped at:** Completed 06-04-PLAN.md (Phase 6 complete)
 
 ## Progress
 
@@ -18,7 +18,7 @@
 | 3. SDK Observability + Analytics + UI | Complete (3/3 plans) | All plans complete — observability, metrics/health/diagnostics/analytics, SDK UI |
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
-| 6. Deployable App + Agentic | In Progress (3/4 plans) | Core agentic types + app shell + 15 diagnostic handlers |
+| 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Pending | Highest risk phase |
 | 8. Essentials Pack | Pending | Architecture validation gate |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
@@ -143,6 +143,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Handler classes public (not internal)** -- KSP-generated AgenticHiltModule has public bind functions that cannot expose internal parameter types
 - **isReturnDefaultValues=true on application convention** -- Android stub Bundle doesn't store values; unit tests verify file I/O directly
 - **Configurable timeoutMs on handleCall** -- production 8s, tests 200ms for fast test runs
+- **Exclude protolite-well-known-types from firebase-perf** -- firebase-perf:21.0.4 transitively pulls protolite-well-known-types:18.0.0 which duplicates classes in protobuf-javalite:4.30.2 from :data:proto
 
 ## Performance Metrics
 
@@ -171,6 +172,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 06-01 | 6min | 2 | 11 |
 | 06-02 | 7min | 2 | 12 |
 | 06-03 | 12min | 3 | 24 |
+| 06-04 | 6min | 2 | 6 |
 
 ## Context
 
