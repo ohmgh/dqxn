@@ -12,10 +12,14 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class GpsSpeedProviderTest : DataProviderContractTest() {
 
   private val listenerSlot = slot<LocationListener>()
@@ -42,14 +46,14 @@ class GpsSpeedProviderTest : DataProviderContractTest() {
     val provider = GpsSpeedProvider(locationManager)
     val flow = provider.provideState()
 
-    val job = kotlinx.coroutines.launch {
+    val job = launch {
       val snapshot = flow.first()
       assertThat(snapshot.speedMps).isWithin(0.01f).of(25.5f)
       assertThat(snapshot.accuracy).isWithin(0.01f).of(1.2f)
     }
 
     // Simulate location callback
-    kotlinx.coroutines.test.advanceUntilIdle()
+    advanceUntilIdle()
     if (listenerSlot.isCaptured) {
       val location = createLocation(speed = 25.5f, hasSpeed = true, speedAccuracy = 1.2f)
       listenerSlot.captured.onLocationChanged(location)
@@ -64,14 +68,14 @@ class GpsSpeedProviderTest : DataProviderContractTest() {
     val flow = provider.provideState()
 
     val snapshots = mutableListOf<SpeedSnapshot>()
-    val job = kotlinx.coroutines.launch {
+    val job = launch {
       flow.collect { snap ->
         snapshots.add(snap)
         if (snapshots.size >= 2) return@collect
       }
     }
 
-    kotlinx.coroutines.test.advanceUntilIdle()
+    advanceUntilIdle()
     if (listenerSlot.isCaptured) {
       // First location
       listenerSlot.captured.onLocationChanged(

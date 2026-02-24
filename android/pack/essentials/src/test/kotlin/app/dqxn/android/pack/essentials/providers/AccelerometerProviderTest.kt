@@ -11,10 +11,14 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AccelerometerProviderTest : DataProviderContractTest() {
 
   private val linearSensor = mockk<Sensor>(relaxed = true)
@@ -37,8 +41,8 @@ class AccelerometerProviderTest : DataProviderContractTest() {
   @Test
   fun `prefers LINEAR_ACCELERATION when available`() = runTest {
     val provider = AccelerometerProvider(sensorManager)
-    val job = kotlinx.coroutines.launch { provider.provideState().first() }
-    kotlinx.coroutines.test.advanceUntilIdle()
+    val job = launch { provider.provideState().first() }
+    advanceUntilIdle()
 
     if (listenerSlot.isCaptured) {
       // Simulate sensor event
@@ -69,8 +73,8 @@ class AccelerometerProviderTest : DataProviderContractTest() {
       }
 
     val provider = AccelerometerProvider(fallbackManager)
-    val job = kotlinx.coroutines.launch { provider.provideState().first() }
-    kotlinx.coroutines.test.advanceUntilIdle()
+    val job = launch { provider.provideState().first() }
+    advanceUntilIdle()
 
     if (listenerSlot.isCaptured) {
       simulateSensorEvent(listenerSlot.captured, floatArrayOf(0f, 0f, 9.8f))

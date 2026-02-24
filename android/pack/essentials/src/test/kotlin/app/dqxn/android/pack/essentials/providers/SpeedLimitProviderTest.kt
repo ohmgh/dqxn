@@ -7,11 +7,15 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SpeedLimitProviderTest : DataProviderContractTest() {
 
   private val settingFlow = MutableStateFlow<Any?>(60f)
@@ -54,16 +58,16 @@ class SpeedLimitProviderTest : DataProviderContractTest() {
     val provider = SpeedLimitProvider(settingsStore)
 
     val snapshots = mutableListOf<app.dqxn.android.pack.essentials.snapshots.SpeedLimitSnapshot>()
-    val job = kotlinx.coroutines.launch {
+    val job = launch {
       provider.provideState().collect { snap ->
         snapshots.add(snap)
         if (snapshots.size >= 2) return@collect
       }
     }
 
-    kotlinx.coroutines.test.advanceUntilIdle()
+    advanceUntilIdle()
     settingFlow.value = 100f
-    kotlinx.coroutines.test.advanceUntilIdle()
+    advanceUntilIdle()
 
     job.join()
 
