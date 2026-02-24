@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 8 — Essentials Pack
-- **Current Plan:** Not started
+- **Current Plan:** 1 of 11
 - **Milestone:** V1 Launch
-- **Next action:** Plan or execute Phase 8
-- **Last session:** 2026-02-24T15:27:39.294Z
-- **Stopped at:** Completed 07-15-PLAN.md
+- **Next action:** Execute Phase 8 Plan 02
+- **Last session:** 2026-02-24T15:48:14Z
+- **Stopped at:** Completed 08-01-PLAN.md
 
 ## Progress
 
@@ -20,7 +20,7 @@
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
-| 8. Essentials Pack | Pending | Architecture validation gate |
+| 8. Essentials Pack | In Progress (1/11 plans) | Snapshot types + lint rule foundation |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
@@ -180,6 +180,12 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Versioned<T> wrapper in FakeLayoutRepository** -- AtomicLong version counter forces MutableStateFlow re-emission on profile switch despite structurally-equal content; combine() approach rejected (broke 11 existing tests via scheduler mismatch)
 - **HorizontalPager userScrollEnabled = !isEditMode** -- profile swipe disabled during edit mode (F1.29), horizontal gestures reserved for widget drag
 
+### Phase 8 Decisions
+
+- **Import-based lint detection** over UCallExpression for WidgetScopeBypass -- lint test infrastructure with allowCompilationErrors() cannot resolve method PSI for visitMethodCall
+- **Package-based widget detection** (app.dqxn.android.pack.*.widgets.*) over file-path-based -- lint test infra uses temp dirs making file paths unreliable
+- **SnapshotConventionPlugin compileOnly compose.runtime** -- compileOnly in sdk:contracts does not propagate transitively via api()
+
 ## Performance Metrics
 
 | Phase-Plan | Duration | Tasks | Files |
@@ -225,6 +231,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 07 P16 | 1min | 1 tasks | 1 files |
 | Phase 07 P14 | 4min | 2 tasks | 5 files |
 | Phase 07 P15 | 4min | 2 tasks | 5 files |
+| 08-01 | 8min | 2 | 13 |
 
 ## Context
 
@@ -234,7 +241,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - Build infrastructure established: Gradle 9.3.1, AGP 9.0.1, Kotlin 2.3.10, all convention plugins compiling
 - All 26 module stubs created with correct convention plugins, settings.gradle.kts stable (26 = original 25 + `:data:proto`)
 - Spotless/ktfmt formatting enforced, pre-commit hook with boundary checks active
-- Custom lint rules: 5 detectors with 30 tests enforcing KAPT ban, secrets detection, module boundaries, Compose scope, agentic threading
+- Custom lint rules: 6 detectors with 35 tests enforcing KAPT ban, secrets detection, module boundaries, Compose scope, agentic threading, widget scope bypass
 - TestKit tests: 18 tests validating convention plugin behavior (SDK versions, Compose, Hilt, Pack wiring, tag filtering, version catalog completeness)
 - Toolchain compatibility validated: all 7 areas PASS (Compose, testFixtures, KSP, tag filtering, EXTOL SDK, Proto DataStore via JVM split, clean build).
 - EXTOL SDK: `sg.gov.lta:extol:2.1.0` from `https://extol.mycloudrepo.io/public/repositories/extol-android`
