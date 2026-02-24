@@ -11,7 +11,7 @@ import javax.inject.Inject
  *
  * This class is internal to the shell -- packs never interact with it directly.
  */
-internal class AgenticCommandRouter
+public class AgenticCommandRouter
 @Inject
 constructor(
   private val handlers: Set<@JvmSuppressWildcards CommandHandler>,

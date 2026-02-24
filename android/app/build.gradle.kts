@@ -2,6 +2,7 @@ plugins {
   id("dqxn.android.application")
   id("dqxn.android.hilt")
   id("dqxn.android.test")
+  alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -40,8 +41,15 @@ dependencies {
   implementation(project(":sdk:ui"))
 
   // AndroidX
+  implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.core.splashscreen)
+
+  // Serialization (used by AgenticContentProvider for JSON param parsing)
+  implementation(libs.kotlinx.serialization.json)
+
+  // KSP: agentic command processor (debug only -- generates AgenticHiltModule)
+  add("kspDebug", project(":codegen:agentic"))
 
   // Debug tools
   debugImplementation(libs.leakcanary)
