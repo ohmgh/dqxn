@@ -143,6 +143,7 @@ JUnit5 + MockK + Truth (unit). JUnit4 + `HiltAndroidRule` (Hilt integration). Tu
 - No `var` in data classes. Prefer `sealed interface` over `sealed class`.
 - No `GlobalScope`, no `runBlocking` (except tests/debug agentic). Scopes via Hilt or `viewModelScope`.
 - All user-facing strings in Android string resources.
+- Hilt qualifier annotations on constructor `val` params require `@param:` target (KT-73255, Kotlin 2.3+): `@param:IoDispatcher`, `@param:ApplicationContext`, `@param:Named("x")`.
 
 ## Naming
 
