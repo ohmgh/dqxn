@@ -12,8 +12,9 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
@@ -46,7 +47,7 @@ class ConfigurationBoundaryDetectorTest {
   }
 
   @Test
-  fun `foldable device emits fold boundary from FoldingFeature`() = runTest(UnconfinedTestDispatcher()) {
+  fun `foldable device emits fold boundary from FoldingFeature`() = runTest {
     val foldBounds = android.graphics.Rect().apply { left = 0; top = 480; right = 1080; bottom = 500 }
     val foldingFeature: FoldingFeature = mockk {
       every { bounds } returns foldBounds
@@ -55,8 +56,11 @@ class ConfigurationBoundaryDetectorTest {
       every { displayFeatures } returns listOf(foldingFeature)
     }
 
-    detector.observe(mockActivity, backgroundScope)
+    val observeJob = Job(coroutineContext[Job])
+    detector.observe(mockActivity, this + observeJob)
+    testScheduler.runCurrent()
     windowLayoutInfoFlow.emit(layoutInfo)
+    testScheduler.runCurrent()
 
     val boundaries = detector.boundaries.value
     assertThat(boundaries).hasSize(1)
@@ -65,10 +69,12 @@ class ConfigurationBoundaryDetectorTest {
     assertThat(boundaries.first().rect.top).isEqualTo(480)
     assertThat(boundaries.first().rect.right).isEqualTo(1080)
     assertThat(boundaries.first().rect.bottom).isEqualTo(500)
+
+    observeJob.cancel()
   }
 
   @Test
-  fun `non-foldable device emits alternate orientation boundary`() = runTest(UnconfinedTestDispatcher()) {
+  fun `non-foldable device emits alternate orientation boundary`() = runTest {
     val layoutInfo: WindowLayoutInfo = mockk {
       every { displayFeatures } returns emptyList()
     }
@@ -77,8 +83,11 @@ class ConfigurationBoundaryDetectorTest {
     mockDisplayMetrics.widthPixels = 1920
     mockDisplayMetrics.heightPixels = 1080
 
-    detector.observe(mockActivity, backgroundScope)
+    val observeJob = Job(coroutineContext[Job])
+    detector.observe(mockActivity, this + observeJob)
+    testScheduler.runCurrent()
     windowLayoutInfoFlow.emit(layoutInfo)
+    testScheduler.runCurrent()
 
     val boundaries = detector.boundaries.value
     assertThat(boundaries).hasSize(1)
@@ -86,10 +95,12 @@ class ConfigurationBoundaryDetectorTest {
     // Alternate orientation swaps width/height
     assertThat(boundaries.first().rect.right).isEqualTo(1080)
     assertThat(boundaries.first().rect.bottom).isEqualTo(1920)
+
+    observeJob.cancel()
   }
 
   @Test
-  fun `fixed orientation device emits empty boundaries`() = runTest(UnconfinedTestDispatcher()) {
+  fun `fixed orientation device emits empty boundaries`() = runTest {
     val layoutInfo: WindowLayoutInfo = mockk {
       every { displayFeatures } returns emptyList()
     }
@@ -98,14 +109,19 @@ class ConfigurationBoundaryDetectorTest {
     mockDisplayMetrics.widthPixels = 1920
     mockDisplayMetrics.heightPixels = 1080
 
-    detector.observe(mockActivity, backgroundScope)
+    val observeJob = Job(coroutineContext[Job])
+    detector.observe(mockActivity, this + observeJob)
+    testScheduler.runCurrent()
     windowLayoutInfoFlow.emit(layoutInfo)
+    testScheduler.runCurrent()
 
     assertThat(detector.boundaries.value).isEmpty()
+
+    observeJob.cancel()
   }
 
   @Test
-  fun `boundary updates on configuration change`() = runTest(UnconfinedTestDispatcher()) {
+  fun `boundary updates on configuration change`() = runTest {
     val foldBounds1 = android.graphics.Rect().apply { left = 0; top = 480; right = 1080; bottom = 500 }
     val fold1: FoldingFeature = mockk { every { bounds } returns foldBounds1 }
     val layoutInfo1: WindowLayoutInfo = mockk { every { displayFeatures } returns listOf(fold1) }
@@ -114,12 +130,18 @@ class ConfigurationBoundaryDetectorTest {
     val fold2: FoldingFeature = mockk { every { bounds } returns foldBounds2 }
     val layoutInfo2: WindowLayoutInfo = mockk { every { displayFeatures } returns listOf(fold2) }
 
-    detector.observe(mockActivity, backgroundScope)
+    val observeJob = Job(coroutineContext[Job])
+    detector.observe(mockActivity, this + observeJob)
+    testScheduler.runCurrent()
 
     windowLayoutInfoFlow.emit(layoutInfo1)
+    testScheduler.runCurrent()
     assertThat(detector.boundaries.value.first().rect.top).isEqualTo(480)
 
     windowLayoutInfoFlow.emit(layoutInfo2)
+    testScheduler.runCurrent()
     assertThat(detector.boundaries.value.first().rect.top).isEqualTo(960)
+
+    observeJob.cancel()
   }
 }

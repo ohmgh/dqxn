@@ -13,8 +13,9 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -49,49 +50,67 @@ class NotificationCoordinatorTest {
     )
 
   @Test
-  fun `safe mode active shows CRITICAL banner`() = runTest(UnconfinedTestDispatcher()) {
+  fun `safe mode active shows CRITICAL banner`() = runTest {
     val coordinator = createCoordinator()
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     safeModeActive.value = true
+    testScheduler.runCurrent()
 
     val banners = coordinator.activeBanners.value
     assertThat(banners).hasSize(1)
     assertThat(banners.first().id).isEqualTo("safe_mode")
     assertThat(banners.first().priority).isEqualTo(NotificationPriority.CRITICAL)
     assertThat(banners.first().message).contains("repeated crashes")
+
+    initJob.cancel()
   }
 
   @Test
-  fun `safe mode inactive dismisses banner`() = runTest(UnconfinedTestDispatcher()) {
+  fun `safe mode inactive dismisses banner`() = runTest {
     val coordinator = createCoordinator()
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     safeModeActive.value = true
+    testScheduler.runCurrent()
     assertThat(coordinator.activeBanners.value).hasSize(1)
 
     safeModeActive.value = false
+    testScheduler.runCurrent()
     assertThat(coordinator.activeBanners.value).isEmpty()
+
+    initJob.cancel()
   }
 
   @Test
-  fun `low storage shows HIGH banner`() = runTest(UnconfinedTestDispatcher()) {
+  fun `low storage shows HIGH banner`() = runTest {
     val coordinator = createCoordinator()
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     storageIsLow.value = true
+    testScheduler.runCurrent()
 
     val banners = coordinator.activeBanners.value
     assertThat(banners).hasSize(1)
     assertThat(banners.first().id).isEqualTo("low_storage")
     assertThat(banners.first().priority).isEqualTo(NotificationPriority.HIGH)
     assertThat(banners.first().message).contains("running low")
+
+    initJob.cancel()
   }
 
   @Test
-  fun `layout save failure shows HIGH banner with specific message`() = runTest(UnconfinedTestDispatcher()) {
+  fun `layout save failure shows HIGH banner with specific message`() = runTest {
     val coordinator = createCoordinator()
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     coordinator.reportLayoutSaveFailure()
 
@@ -100,29 +119,39 @@ class NotificationCoordinatorTest {
     assertThat(banners.first().id).isEqualTo("layout_save_failed")
     assertThat(banners.first().priority).isEqualTo(NotificationPriority.HIGH)
     assertThat(banners.first().message).contains("Unable to save layout")
+
+    initJob.cancel()
   }
 
   @Test
-  fun `banner priority ordering CRITICAL before HIGH before NORMAL`() = runTest(UnconfinedTestDispatcher()) {
+  fun `banner priority ordering CRITICAL before HIGH before NORMAL`() = runTest {
     val coordinator = createCoordinator()
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     // Add banners in reverse priority order
     coordinator.emitConnectionStatus("SensorX", connected = false) // NORMAL
     storageIsLow.value = true // HIGH
+    testScheduler.runCurrent()
     safeModeActive.value = true // CRITICAL
+    testScheduler.runCurrent()
 
     val banners = coordinator.activeBanners.value
     assertThat(banners).hasSize(3)
     assertThat(banners[0].priority).isEqualTo(NotificationPriority.CRITICAL)
     assertThat(banners[1].priority).isEqualTo(NotificationPriority.HIGH)
     assertThat(banners[2].priority).isEqualTo(NotificationPriority.NORMAL)
+
+    initJob.cancel()
   }
 
   @Test
-  fun `condition-keyed banners same id updates in-place no duplicate`() = runTest(UnconfinedTestDispatcher()) {
+  fun `condition-keyed banners same id updates in-place no duplicate`() = runTest {
     val coordinator = createCoordinator()
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     // Show the same banner twice — should result in one banner, not two
     coordinator.showBanner(
@@ -141,29 +170,37 @@ class NotificationCoordinatorTest {
     val banners = coordinator.activeBanners.value
     assertThat(banners).hasSize(1)
     assertThat(banners.first().message).isEqualTo("Updated message")
+
+    initJob.cancel()
   }
 
   @Test
   fun `re-derivation on recreation all condition banners re-derived from current singleton state`() =
-    runTest(UnconfinedTestDispatcher()) {
+    runTest {
       // Set safe mode active BEFORE creating coordinator (simulates process death recovery)
       safeModeActive.value = true
       storageIsLow.value = true
 
       val coordinator = createCoordinator()
-      coordinator.initialize(backgroundScope)
+      val initJob = Job(coroutineContext[Job])
+      coordinator.initialize(this + initJob)
+      testScheduler.runCurrent()
 
       // Banners should be present immediately from singleton state, no explicit events needed
       val banners = coordinator.activeBanners.value
       assertThat(banners).hasSize(2)
       assertThat(banners.any { it.id == "safe_mode" }).isTrue()
       assertThat(banners.any { it.id == "low_storage" }).isTrue()
+
+      initJob.cancel()
     }
 
   @Test
-  fun `showToast delivers to channel exactly once`() = runTest(UnconfinedTestDispatcher()) {
+  fun `showToast delivers to channel exactly once`() = runTest {
     val coordinator = createCoordinator()
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     val toast = InAppNotification.Toast(
       id = "test_toast",
@@ -181,13 +218,17 @@ class NotificationCoordinatorTest {
     // Channel should be empty after consuming
     val second = coordinator.toasts.tryReceive()
     assertThat(second.isSuccess).isFalse()
+
+    initJob.cancel()
   }
 
   @Test
   fun `connection status disconnect shows NORMAL banner connect dismisses`() =
-    runTest(UnconfinedTestDispatcher()) {
+    runTest {
       val coordinator = createCoordinator()
-      coordinator.initialize(backgroundScope)
+      val initJob = Job(coroutineContext[Job])
+      coordinator.initialize(this + initJob)
+      testScheduler.runCurrent()
 
       // Disconnect
       coordinator.emitConnectionStatus("OBD2 Scanner", connected = false)
@@ -202,30 +243,41 @@ class NotificationCoordinatorTest {
 
       banners = coordinator.activeBanners.value
       assertThat(banners).isEmpty()
+
+      initJob.cancel()
     }
 
   @Test
-  fun `safe mode banner has VIBRATE alert profile`() = runTest(UnconfinedTestDispatcher()) {
+  fun `safe mode banner has VIBRATE alert profile`() = runTest {
     val coordinator = createCoordinator()
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     safeModeActive.value = true
+    testScheduler.runCurrent()
 
     val banner = coordinator.activeBanners.value.first()
     assertThat(banner.alertProfile).isNotNull()
     assertThat(banner.alertProfile!!.mode).isEqualTo(AlertMode.VIBRATE)
+
+    initJob.cancel()
   }
 
   @Test
   fun `clearLayoutSaveFailure dismisses the save failure banner`() =
-    runTest(UnconfinedTestDispatcher()) {
+    runTest {
       val coordinator = createCoordinator()
-      coordinator.initialize(backgroundScope)
+      val initJob = Job(coroutineContext[Job])
+      coordinator.initialize(this + initJob)
+      testScheduler.runCurrent()
 
       coordinator.reportLayoutSaveFailure()
       assertThat(coordinator.activeBanners.value).hasSize(1)
 
       coordinator.clearLayoutSaveFailure()
       assertThat(coordinator.activeBanners.value).isEmpty()
+
+      initJob.cancel()
     }
 }
