@@ -27,7 +27,7 @@ class AgenticProcessorTest {
         this.sources = agenticStubs().toList() + daggerStubs().toList() + sources.toList()
         workingDir = tempDir
         inheritClassPath = true
-        configureKsp(useKsp2 = true) { symbolProcessorProviders += AgenticProcessorProvider() }
+        configureKsp { symbolProcessorProviders += AgenticProcessorProvider() }
       }
     lastCompilation = compilation
     return compilation.compile()

@@ -31,7 +31,7 @@ splashscreen = "1.0.1"
 hilt-navigation-compose = "1.2.0"
 accompanist = "0.36.0"
 extol = "2.1.0"
-kctfork = "0.8.0"
+kctfork = "0.12.1"
 
 [libraries]
 # Gradle plugin libraries (for build-logic compileOnly consumption)

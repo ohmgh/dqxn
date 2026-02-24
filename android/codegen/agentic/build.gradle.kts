@@ -1,7 +1,5 @@
 plugins { id("dqxn.kotlin.jvm") }
 
-tasks.withType<Test> { useJUnitPlatform() }
-
 dependencies {
   implementation(libs.ksp.api)
   implementation(libs.kotlinpoet)

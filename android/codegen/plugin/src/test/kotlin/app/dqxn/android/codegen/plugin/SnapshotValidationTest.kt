@@ -31,7 +31,7 @@ class SnapshotValidationTest {
             sources.toList()
         workingDir = tempDir
         inheritClassPath = true
-        configureKsp(useKsp2 = true) {
+        configureKsp {
           symbolProcessorProviders += PluginProcessorProvider()
           processorOptions["packId"] = "test"
         }
