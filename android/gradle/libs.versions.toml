@@ -31,6 +31,7 @@ splashscreen = "1.0.1"
 hilt-navigation-compose = "1.2.0"
 accompanist = "0.36.0"
 extol = "2.1.0"
+kctfork = "0.8.0"
 
 [libraries]
 # Gradle plugin libraries (for build-logic compileOnly consumption)
@@ -132,6 +133,8 @@ truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 jqwik = { group = "net.jqwik", name = "jqwik", version.ref = "jqwik" }
+kctfork-core = { group = "dev.zacsweers.kctfork", name = "core", version.ref = "kctfork" }
+kctfork-ksp = { group = "dev.zacsweers.kctfork", name = "ksp", version.ref = "kctfork" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

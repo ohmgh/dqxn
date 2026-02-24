@@ -5,6 +5,7 @@ import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.getByType
+import org.jetbrains.kotlin.compose.compiler.gradle.ComposeCompilerGradlePluginExtension
 
 class PackConventionPlugin : Plugin<Project> {
   override fun apply(target: Project) {
@@ -40,6 +41,16 @@ class PackConventionPlugin : Plugin<Project> {
       // KSP args (convention-based paths, no afterEvaluate)
       extensions.configure<KspExtension> {
         arg("themesDir", "${projectDir}/src/main/resources/themes/")
+        arg("packId", project.name)
+      }
+
+      // Wire KSP-generated stability config into Compose compiler
+      extensions.configure<ComposeCompilerGradlePluginExtension> {
+        stabilityConfigurationFiles.add(
+          layout.buildDirectory.file(
+            "generated/ksp/debugKotlin/resources/compose_stability_config.txt"
+          )
+        )
       }
     }
   }
