@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 4 — KSP Codegen
-- **Current Plan:** 2 of 3 complete (01, 03)
+- **Current Plan:** 3 of 3
 - **Milestone:** V1 Launch
-- **Next action:** Phase 4 Plan 02 (if not already running in parallel)
-- **Last session:** 2026-02-24T01:49:36.055Z
-- **Stopped at:** Completed 04-03-PLAN.md
+- **Next action:** Begin Phase 5 (Core Infrastructure)
+- **Last session:** 2026-02-24T01:57:35Z
+- **Stopped at:** Completed 04-02-PLAN.md (Phase 4 complete)
 
 ## Progress
 
@@ -16,7 +16,7 @@
 | 1. Build System Foundation | Complete (4/4 plans) | All plans complete |
 | 2. SDK Contracts + Common | Complete (5/5 plans) | All plans complete — types, unit tests, contract test infrastructure |
 | 3. SDK Observability + Analytics + UI | Complete (3/3 plans) | All plans complete — observability, metrics/health/diagnostics/analytics, SDK UI |
-| 4. KSP Codegen | In Progress (2/3 plans) | Plans 01, 03 complete — plugin + agentic processors |
+| 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
 | 5. Core Infrastructure | Pending | |
 | 6. Deployable App + Agentic | Pending | First on-device deployment |
 | 7. Dashboard Shell | Pending | Highest risk phase |
@@ -112,6 +112,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **kctfork KSP2 mode required** — kctfork 0.8.0 bundles kotlin-compiler-embeddable 2.2.0; KSP1 mode fails to invoke processor, KSP2 works correctly
 - **JVM module JUnit5 setup** — dqxn.kotlin.jvm convention plugin doesn't configure useJUnitPlatform; added per-module with junit-platform-launcher dependency
 - **Duplicate @AgenticCommand name detection** — compile error on two handlers with same command name
+- **kctfork KSP2 processorOptions** — use `processorOptions` map inside `configureKsp(useKsp2=true)` block, NOT top-level `kspProcessorOptions` extension
+- **ManifestGenerator always runs** — manifest generated even with no annotations (pack always needs manifest descriptor); HiltModule skips correctly
 
 ## Performance Metrics
 
@@ -130,6 +132,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 03-02 | 23min | 2 | 21 |
 | 03-03 | 10min | 2 | 17 |
 | 04-01 | 4min | 2 | 17 |
+| 04-02 | 6min | 2 | 5 |
 | 04-03 | 12min | 2 | 9 |
 
 ## Context
