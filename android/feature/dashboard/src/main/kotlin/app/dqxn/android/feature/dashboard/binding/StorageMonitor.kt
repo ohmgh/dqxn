@@ -24,6 +24,19 @@ constructor(
   @param:ApplicationContext private val context: Context,
 ) {
 
+  /**
+   * Storage check function. Defaults to [StatFs]-based check on the app's data directory.
+   * Tests override this to control storage state without mocking final Android APIs.
+   */
+  internal var storageChecker: () -> Boolean = {
+    try {
+      val stat = StatFs(context.dataDir.absolutePath)
+      stat.availableBytes < LOW_STORAGE_THRESHOLD_BYTES
+    } catch (_: Exception) {
+      false // If we can't check, assume storage is fine
+    }
+  }
+
   private val _isLow: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
   /** Whether device storage is below the 50MB threshold. */
@@ -36,19 +49,11 @@ constructor(
   public fun startMonitoring(scope: CoroutineScope) {
     scope.launch {
       while (true) {
-        _isLow.value = checkStorage()
+        _isLow.value = storageChecker()
         delay(POLL_INTERVAL_MS)
       }
     }
   }
-
-  private fun checkStorage(): Boolean =
-    try {
-      val stat = StatFs(context.dataDir.absolutePath)
-      stat.availableBytes < LOW_STORAGE_THRESHOLD_BYTES
-    } catch (_: Exception) {
-      false // If we can't check, assume storage is fine
-    }
 
   internal companion object {
     internal const val LOW_STORAGE_THRESHOLD_BYTES: Long = 50L * 1024L * 1024L // 50MB
