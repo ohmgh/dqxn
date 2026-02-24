@@ -7,7 +7,7 @@
         <provider
             android:name=".debug.AgenticContentProvider"
             android:authorities="${applicationId}.debug.agentic"
-            android:exported="false" />
+            android:exported="true" />
 
     </application>
 
