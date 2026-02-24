@@ -5,6 +5,9 @@ import app.dqxn.android.sdk.observability.log.RingBufferSink
 import app.dqxn.android.sdk.observability.metrics.MetricsCollector
 import app.dqxn.android.sdk.observability.trace.DqxnTracer
 import com.google.common.truth.Truth.assertThat
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -15,35 +18,23 @@ class DiagnosticSnapshotCaptureTest {
 
   @TempDir lateinit var tempDir: File
 
-  /** Test file writer that never reports storage pressure. */
-  private fun createTestFileWriter(dir: File = tempDir): DiagnosticFileWriter =
-    object : DiagnosticFileWriter(dir, NoOpLogger) {
-      override fun checkStoragePressure(): Boolean = false
+  /** Creates a MockK mock of DiagnosticFileWriter that delegates write() to a real instance. */
+  private fun createMockFileWriter(
+    pressured: Boolean = false,
+    dir: File = tempDir,
+  ): DiagnosticFileWriter {
+    val realWriter = DiagnosticFileWriter(dir, NoOpLogger)
+    val mock = mockk<DiagnosticFileWriter>()
+    every { mock.checkStoragePressure() } returns pressured
+    every { mock.write(any(), any()) } answers {
+      realWriter.write(firstArg(), secondArg())
     }
-
-  /** Test file writer that always reports storage pressure. */
-  private fun createPressuredFileWriter(): DiagnosticFileWriter =
-    object : DiagnosticFileWriter(tempDir, NoOpLogger) {
-      override fun checkStoragePressure(): Boolean = true
-    }
-
-  /** Test file writer that blocks during write (for concurrency testing). */
-  private fun createBlockingFileWriter(
-    startedLatch: CountDownLatch,
-    blockingLatch: CountDownLatch,
-  ): DiagnosticFileWriter =
-    object : DiagnosticFileWriter(tempDir, NoOpLogger) {
-      override fun checkStoragePressure(): Boolean = false
-
-      override fun write(snapshot: DiagnosticSnapshot, pool: String) {
-        startedLatch.countDown()
-        blockingLatch.await()
-        super.write(snapshot, pool)
-      }
-    }
+    every { mock.read(any()) } answers { realWriter.read(firstArg()) }
+    return mock
+  }
 
   private fun createCapture(
-    fileWriter: DiagnosticFileWriter = createTestFileWriter(),
+    fileWriter: DiagnosticFileWriter = createMockFileWriter(),
     metricsCollector: MetricsCollector = MetricsCollector(),
   ): DiagnosticSnapshotCapture {
     return DiagnosticSnapshotCapture(
@@ -74,9 +65,17 @@ class DiagnosticSnapshotCaptureTest {
 
   @Test
   fun `concurrent capture dropped`() {
+    val realWriter = DiagnosticFileWriter(tempDir, NoOpLogger)
     val blockingLatch = CountDownLatch(1)
     val startedLatch = CountDownLatch(1)
-    val blockingWriter = createBlockingFileWriter(startedLatch, blockingLatch)
+
+    val blockingWriter = mockk<DiagnosticFileWriter>()
+    every { blockingWriter.checkStoragePressure() } returns false
+    every { blockingWriter.write(any(), any()) } answers {
+      startedLatch.countDown()
+      blockingLatch.await()
+      realWriter.write(firstArg(), secondArg())
+    }
 
     val capture = createCapture(fileWriter = blockingWriter)
     val executor = Executors.newFixedThreadPool(2)
@@ -143,7 +142,7 @@ class DiagnosticSnapshotCaptureTest {
 
   @Test
   fun `storage pressure skips capture`() {
-    val capture = createCapture(fileWriter = createPressuredFileWriter())
+    val capture = createCapture(fileWriter = createMockFileWriter(pressured = true))
 
     val result = capture.capture(AnomalyTrigger.JankSpike(5))
 

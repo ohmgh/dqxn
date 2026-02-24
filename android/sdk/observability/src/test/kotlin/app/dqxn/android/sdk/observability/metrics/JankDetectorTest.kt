@@ -1,49 +1,29 @@
 package app.dqxn.android.sdk.observability.metrics
 
 import app.dqxn.android.sdk.observability.diagnostic.AnomalyTrigger
-import app.dqxn.android.sdk.observability.diagnostic.DiagnosticFileWriter
-import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshot
 import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotCapture
 import app.dqxn.android.sdk.observability.log.NoOpLogger
-import app.dqxn.android.sdk.observability.log.RingBufferSink
-import app.dqxn.android.sdk.observability.trace.DqxnTracer
 import com.google.common.truth.Truth.assertThat
-import java.io.File
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
 
 class JankDetectorTest {
 
-  @TempDir lateinit var tempDir: File
-
   private val capturedTriggers = mutableListOf<AnomalyTrigger>()
 
-  private val detector: JankDetector by lazy {
-    val fileWriter =
-      object : DiagnosticFileWriter(tempDir, NoOpLogger) {
-        override fun checkStoragePressure(): Boolean = false
+  private val mockCapture: DiagnosticSnapshotCapture =
+    mockk<DiagnosticSnapshotCapture>(relaxed = true).also {
+      val triggerSlot = slot<AnomalyTrigger>()
+      every { it.capture(capture(triggerSlot), any()) } answers {
+        capturedTriggers.add(triggerSlot.captured)
+        null
       }
+    }
 
-    val recordingCapture =
-      object :
-        DiagnosticSnapshotCapture(
-          logger = NoOpLogger,
-          metricsCollector = MetricsCollector(),
-          tracer = DqxnTracer,
-          logRingBuffer = RingBufferSink(10),
-          fileWriter = fileWriter,
-        ) {
-        override fun capture(
-          trigger: AnomalyTrigger,
-          agenticTraceId: String?,
-        ): DiagnosticSnapshot? {
-          capturedTriggers.add(trigger)
-          return null
-        }
-      }
-
-    JankDetector(recordingCapture, NoOpLogger)
-  }
+  private val detector = JankDetector(mockCapture, NoOpLogger)
 
   @Test
   fun `non-janky frame resets counter`() {

@@ -2,56 +2,28 @@ package app.dqxn.android.sdk.observability.health
 
 import android.os.Handler
 import app.dqxn.android.sdk.observability.diagnostic.AnomalyTrigger
-import app.dqxn.android.sdk.observability.diagnostic.DiagnosticFileWriter
-import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshot
 import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotCapture
 import app.dqxn.android.sdk.observability.log.NoOpLogger
-import app.dqxn.android.sdk.observability.log.RingBufferSink
-import app.dqxn.android.sdk.observability.metrics.MetricsCollector
-import app.dqxn.android.sdk.observability.trace.DqxnTracer
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
-import java.io.File
+import io.mockk.slot
 import java.util.concurrent.CopyOnWriteArrayList
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
 
-/**
- * AnrWatchdog tests use a mock Handler to control main-thread scheduling and a test double for
- * DiagnosticSnapshotCapture to record triggers without file I/O.
- */
 class AnrWatchdogTest {
-
-  @TempDir lateinit var tempDir: File
 
   private val capturedTriggers = CopyOnWriteArrayList<AnomalyTrigger>()
 
-  /** Test double that records triggers thread-safely. */
-  private val recordingCapture: DiagnosticSnapshotCapture by lazy {
-    val fileWriter =
-      object : DiagnosticFileWriter(tempDir, NoOpLogger) {
-        override fun checkStoragePressure(): Boolean = false
-      }
-
-    object :
-      DiagnosticSnapshotCapture(
-        logger = NoOpLogger,
-        metricsCollector = MetricsCollector(),
-        tracer = DqxnTracer,
-        logRingBuffer = RingBufferSink(10),
-        fileWriter = fileWriter,
-      ) {
-      override fun capture(
-        trigger: AnomalyTrigger,
-        agenticTraceId: String?,
-      ): DiagnosticSnapshot? {
-        capturedTriggers.add(trigger)
-        return null
+  private val mockCapture: DiagnosticSnapshotCapture =
+    mockk<DiagnosticSnapshotCapture>(relaxed = true).also {
+      val triggerSlot = slot<AnomalyTrigger>()
+      every { it.capture(capture(triggerSlot), any()) } answers {
+        capturedTriggers.add(triggerSlot.captured)
+        null
       }
     }
-  }
 
   private var anrWatchdog: AnrWatchdog? = null
 
@@ -83,7 +55,7 @@ class AnrWatchdogTest {
 
     anrWatchdog =
       AnrWatchdog(
-        diagnosticCapture = recordingCapture,
+        diagnosticCapture = mockCapture,
         logger = NoOpLogger,
         timeoutMs = 50,
         debuggerCheck = { false },
@@ -108,7 +80,7 @@ class AnrWatchdogTest {
 
     anrWatchdog =
       AnrWatchdog(
-        diagnosticCapture = recordingCapture,
+        diagnosticCapture = mockCapture,
         logger = NoOpLogger,
         timeoutMs = 50,
         debuggerCheck = { false },
@@ -129,7 +101,7 @@ class AnrWatchdogTest {
 
     anrWatchdog =
       AnrWatchdog(
-        diagnosticCapture = recordingCapture,
+        diagnosticCapture = mockCapture,
         logger = NoOpLogger,
         timeoutMs = 50,
         debuggerCheck = { true },
@@ -154,7 +126,7 @@ class AnrWatchdogTest {
 
     anrWatchdog =
       AnrWatchdog(
-        diagnosticCapture = recordingCapture,
+        diagnosticCapture = mockCapture,
         logger = NoOpLogger,
         timeoutMs = 50,
         debuggerCheck = { false },
