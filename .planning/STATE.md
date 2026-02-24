@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 7 — Dashboard Shell
-- **Current Plan:** Not started
+- **Current Plan:** 2 of 7 complete
 - **Milestone:** V1 Launch
-- **Next action:** Plan Phase 7 (Dashboard Shell)
-- **Last session:** 2026-02-24T04:30:00Z
-- **Stopped at:** Phase 6 verified (16/16 must-haves), advancing to Phase 7
+- **Next action:** Execute Phase 7 Plan 03
+- **Last session:** 2026-02-24T05:19:10.750Z
+- **Stopped at:** Completed 07-02-PLAN.md
 
 ## Progress
 
@@ -19,7 +19,7 @@
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
-| 7. Dashboard Shell | Pending | Highest risk phase |
+| 7. Dashboard Shell | In Progress (2/7 plans) | ThemeCoordinator, DashboardHaptics, ReducedMotionHelper complete |
 | 8. Essentials Pack | Pending | Architecture validation gate |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
@@ -145,6 +145,12 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **Configurable timeoutMs on handleCall** -- production 8s, tests 200ms for fast test runs
 - **Exclude protolite-well-known-types from firebase-perf** -- firebase-perf:21.0.4 transitively pulls protolite-well-known-types:18.0.0 which duplicates classes in protobuf-javalite:4.30.2 from :data:proto
 
+### Phase 7 Decisions
+
+- **mockkStatic(VibrationEffect::class)** for DashboardHaptics tests -- VibrationEffect.createPredefined returns null in Android unit test stubs
+- **testFixtures deps: compose-bom/runtime, junit-bom/jupiter-api, mockk, window** -- required by parallel plan 07-01 testFixtures sources for Compose compiler, JUnit5 TestWatcher, mocking
+- **Temporary file staging for parallel wave execution** -- moved 07-01 uncommitted files to /tmp during 07-02 test compilation, restored after
+
 ## Performance Metrics
 
 | Phase-Plan | Duration | Tasks | Files |
@@ -173,6 +179,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 06-02 | 7min | 2 | 12 |
 | 06-03 | 12min | 3 | 24 |
 | 06-04 | 6min | 2 | 6 |
+| 07-02 | 9min | 2 | 7 |
+| Phase 07 P02 | 9min | 2 tasks | 7 files |
 
 ## Context
 
