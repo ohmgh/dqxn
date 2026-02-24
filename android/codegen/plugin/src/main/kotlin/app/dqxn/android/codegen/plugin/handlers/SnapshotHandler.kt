@@ -39,12 +39,10 @@ internal class SnapshotHandler(
 
     val annotation =
       classDecl.annotations.firstOrNull {
-        it.annotationType.resolve().declaration.qualifiedName?.asString() ==
-          DASHBOARD_SNAPSHOT_FQN
+        it.annotationType.resolve().declaration.qualifiedName?.asString() == DASHBOARD_SNAPSHOT_FQN
       } ?: return null
 
-    val dataType =
-      annotation.arguments.first { it.name?.asString() == "dataType" }.value as String
+    val dataType = annotation.arguments.first { it.name?.asString() == "dataType" }.value as String
 
     // Check for duplicate dataType within this module
     if (!seenDataTypes.add(dataType)) {
@@ -58,7 +56,10 @@ internal class SnapshotHandler(
 
     val qualifiedName = classDecl.qualifiedName?.asString()
     if (qualifiedName == null) {
-      logger.error("Cannot resolve qualified name for ${classDecl.simpleName.asString()}", classDecl)
+      logger.error(
+        "Cannot resolve qualified name for ${classDecl.simpleName.asString()}",
+        classDecl
+      )
       return null
     }
 
@@ -81,7 +82,6 @@ internal class SnapshotHandler(
   }
 
   private companion object {
-    const val DASHBOARD_SNAPSHOT_FQN =
-      "app.dqxn.android.sdk.contracts.annotation.DashboardSnapshot"
+    const val DASHBOARD_SNAPSHOT_FQN = "app.dqxn.android.sdk.contracts.annotation.DashboardSnapshot"
   }
 }

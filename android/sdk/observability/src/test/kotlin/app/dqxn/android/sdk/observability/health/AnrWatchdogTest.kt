@@ -19,10 +19,11 @@ class AnrWatchdogTest {
   private val mockCapture: DiagnosticSnapshotCapture =
     mockk<DiagnosticSnapshotCapture>(relaxed = true).also {
       val triggerSlot = slot<AnomalyTrigger>()
-      every { it.capture(capture(triggerSlot), any()) } answers {
-        capturedTriggers.add(triggerSlot.captured)
-        null
-      }
+      every { it.capture(capture(triggerSlot), any()) } answers
+        {
+          capturedTriggers.add(triggerSlot.captured)
+          null
+        }
     }
 
   private var anrWatchdog: AnrWatchdog? = null

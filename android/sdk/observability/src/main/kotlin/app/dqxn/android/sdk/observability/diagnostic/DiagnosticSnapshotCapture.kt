@@ -37,10 +37,7 @@ public class DiagnosticSnapshotCapture(
    * Captures a diagnostic snapshot for the given [trigger]. Returns null if a concurrent capture is
    * already in progress or if storage pressure is detected.
    */
-  public fun capture(
-    trigger: AnomalyTrigger,
-    agenticTraceId: String? = null
-  ): DiagnosticSnapshot? {
+  public fun capture(trigger: AnomalyTrigger, agenticTraceId: String? = null): DiagnosticSnapshot? {
     if (!capturing.compareAndSet(false, true)) {
       logger.warn(TAG) { "Concurrent diagnostic capture dropped for trigger: $trigger" }
       return null

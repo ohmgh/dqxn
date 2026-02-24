@@ -94,8 +94,7 @@ internal class DataProviderHandler(
     // Look for @DashboardSnapshot annotation on the type argument
     val snapshotAnnotation =
       typeArgDecl.annotations.firstOrNull {
-        it.annotationType.resolve().declaration.qualifiedName?.asString() ==
-          DASHBOARD_SNAPSHOT_FQN
+        it.annotationType.resolve().declaration.qualifiedName?.asString() == DASHBOARD_SNAPSHOT_FQN
       } ?: return ""
 
     return snapshotAnnotation.arguments.firstOrNull { it.name?.asString() == "dataType" }?.value
@@ -106,7 +105,6 @@ internal class DataProviderHandler(
     const val DASHBOARD_DATA_PROVIDER_FQN =
       "app.dqxn.android.sdk.contracts.annotation.DashboardDataProvider"
     const val DATA_PROVIDER_FQN = "app.dqxn.android.sdk.contracts.provider.DataProvider"
-    const val DASHBOARD_SNAPSHOT_FQN =
-      "app.dqxn.android.sdk.contracts.annotation.DashboardSnapshot"
+    const val DASHBOARD_SNAPSHOT_FQN = "app.dqxn.android.sdk.contracts.annotation.DashboardSnapshot"
   }
 }

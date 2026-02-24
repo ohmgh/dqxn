@@ -51,7 +51,10 @@ internal class WidgetHandler(
 
     val containingFile = classDecl.containingFile
     if (containingFile == null) {
-      logger.error("Cannot resolve containing file for ${classDecl.simpleName.asString()}", classDecl)
+      logger.error(
+        "Cannot resolve containing file for ${classDecl.simpleName.asString()}",
+        classDecl
+      )
       return null
     }
 

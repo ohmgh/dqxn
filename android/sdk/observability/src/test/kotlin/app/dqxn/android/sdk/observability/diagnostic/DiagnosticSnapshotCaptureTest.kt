@@ -7,7 +7,6 @@ import app.dqxn.android.sdk.observability.trace.DqxnTracer
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -26,9 +25,7 @@ class DiagnosticSnapshotCaptureTest {
     val realWriter = DiagnosticFileWriter(dir, NoOpLogger)
     val mock = mockk<DiagnosticFileWriter>()
     every { mock.checkStoragePressure() } returns pressured
-    every { mock.write(any(), any()) } answers {
-      realWriter.write(firstArg(), secondArg())
-    }
+    every { mock.write(any(), any()) } answers { realWriter.write(firstArg(), secondArg()) }
     every { mock.read(any()) } answers { realWriter.read(firstArg()) }
     return mock
   }
@@ -71,11 +68,12 @@ class DiagnosticSnapshotCaptureTest {
 
     val blockingWriter = mockk<DiagnosticFileWriter>()
     every { blockingWriter.checkStoragePressure() } returns false
-    every { blockingWriter.write(any(), any()) } answers {
-      startedLatch.countDown()
-      blockingLatch.await()
-      realWriter.write(firstArg(), secondArg())
-    }
+    every { blockingWriter.write(any(), any()) } answers
+      {
+        startedLatch.countDown()
+        blockingLatch.await()
+        realWriter.write(firstArg(), secondArg())
+      }
 
     val capture = createCapture(fileWriter = blockingWriter)
     val executor = Executors.newFixedThreadPool(2)

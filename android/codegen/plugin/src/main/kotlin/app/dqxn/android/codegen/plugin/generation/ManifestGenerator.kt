@@ -118,7 +118,6 @@ internal class ManifestGenerator(
     val PACK_DATA_PROVIDER_REF =
       ClassName("app.dqxn.android.sdk.contracts.pack", "PackDataProviderRef")
     val PACK_CATEGORY = ClassName("app.dqxn.android.sdk.contracts.pack", "PackCategory")
-    val PERSISTENT_LIST_OF =
-      MemberName("kotlinx.collections.immutable", "persistentListOf")
+    val PERSISTENT_LIST_OF = MemberName("kotlinx.collections.immutable", "persistentListOf")
   }
 }

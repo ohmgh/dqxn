@@ -7,7 +7,6 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import io.mockk.verify
 import org.junit.jupiter.api.Test
 
 class JankDetectorTest {
@@ -17,10 +16,11 @@ class JankDetectorTest {
   private val mockCapture: DiagnosticSnapshotCapture =
     mockk<DiagnosticSnapshotCapture>(relaxed = true).also {
       val triggerSlot = slot<AnomalyTrigger>()
-      every { it.capture(capture(triggerSlot), any()) } answers {
-        capturedTriggers.add(triggerSlot.captured)
-        null
-      }
+      every { it.capture(capture(triggerSlot), any()) } answers
+        {
+          capturedTriggers.add(triggerSlot.captured)
+          null
+        }
     }
 
   private val detector = JankDetector(mockCapture, NoOpLogger)

@@ -4,7 +4,6 @@ import android.content.SharedPreferences
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -23,28 +22,33 @@ class CrashEvidenceWriterTest {
   fun setUp() {
     savedHandler = Thread.getDefaultUncaughtExceptionHandler()
 
-    editor = mockk<SharedPreferences.Editor> {
-      every { putString(any(), any()) } answers {
-        store[firstArg()] = secondArg<String?>()
-        this@mockk
+    editor =
+      mockk<SharedPreferences.Editor> {
+        every { putString(any(), any()) } answers
+          {
+            store[firstArg()] = secondArg<String?>()
+            this@mockk
+          }
+        every { putLong(any(), any()) } answers
+          {
+            store[firstArg()] = secondArg<Long>()
+            this@mockk
+          }
+        every { remove(any()) } answers
+          {
+            store.remove(firstArg<String>())
+            this@mockk
+          }
+        every { commit() } returns true
+        every { apply() } answers {}
       }
-      every { putLong(any(), any()) } answers {
-        store[firstArg()] = secondArg<Long>()
-        this@mockk
-      }
-      every { remove(any()) } answers {
-        store.remove(firstArg<String>())
-        this@mockk
-      }
-      every { commit() } returns true
-      every { apply() } answers {}
-    }
 
-    prefs = mockk<SharedPreferences> {
-      every { edit() } returns editor
-      every { getString(any(), any()) } answers { store[firstArg()] as? String ?: secondArg() }
-      every { getLong(any(), any()) } answers { store[firstArg()] as? Long ?: secondArg() }
-    }
+    prefs =
+      mockk<SharedPreferences> {
+        every { edit() } returns editor
+        every { getString(any(), any()) } answers { store[firstArg()] as? String ?: secondArg() }
+        every { getLong(any(), any()) } answers { store[firstArg()] as? Long ?: secondArg() }
+      }
   }
 
   @AfterEach
@@ -57,7 +61,10 @@ class CrashEvidenceWriterTest {
     Thread.setDefaultUncaughtExceptionHandler { _, _ -> }
     val writer = CrashEvidenceWriter(prefs)
 
-    writer.uncaughtException(Thread.currentThread(), RuntimeException("Widget [essentials:clock] crashed"))
+    writer.uncaughtException(
+      Thread.currentThread(),
+      RuntimeException("Widget [essentials:clock] crashed")
+    )
 
     assertThat(store[CrashEvidenceWriter.KEY_TYPE_ID]).isEqualTo("essentials:clock")
     assertThat(store[CrashEvidenceWriter.KEY_EXCEPTION] as String).contains("RuntimeException")
@@ -87,7 +94,8 @@ class CrashEvidenceWriterTest {
 
   @Test
   fun `extractWidgetTypeId returns null for non-widget exception`() {
-    assertThat(CrashEvidenceWriter.extractWidgetTypeId(IllegalStateException("random error"))).isNull()
+    assertThat(CrashEvidenceWriter.extractWidgetTypeId(IllegalStateException("random error")))
+      .isNull()
   }
 
   @Test
@@ -95,7 +103,10 @@ class CrashEvidenceWriterTest {
     Thread.setDefaultUncaughtExceptionHandler { _, _ -> }
     val writer = CrashEvidenceWriter(prefs)
 
-    writer.uncaughtException(Thread.currentThread(), RuntimeException("Widget [essentials:clock] crashed"))
+    writer.uncaughtException(
+      Thread.currentThread(),
+      RuntimeException("Widget [essentials:clock] crashed")
+    )
     val evidence = writer.readLastCrash()
 
     assertThat(evidence).isNotNull()
@@ -107,14 +118,13 @@ class CrashEvidenceWriterTest {
 
   @Test
   fun `uncaughtException handles prefs failure gracefully`() {
-    val throwingEditor = mockk<SharedPreferences.Editor> {
-      every { putString(any(), any()) } returns this
-      every { putLong(any(), any()) } returns this
-      every { commit() } throws RuntimeException("Prefs failure!")
-    }
-    val throwingPrefs = mockk<SharedPreferences> {
-      every { edit() } returns throwingEditor
-    }
+    val throwingEditor =
+      mockk<SharedPreferences.Editor> {
+        every { putString(any(), any()) } returns this
+        every { putLong(any(), any()) } returns this
+        every { commit() } throws RuntimeException("Prefs failure!")
+      }
+    val throwingPrefs = mockk<SharedPreferences> { every { edit() } returns throwingEditor }
 
     val delegateCalled = AtomicBoolean(false)
     Thread.setDefaultUncaughtExceptionHandler { _, _ -> delegateCalled.set(true) }

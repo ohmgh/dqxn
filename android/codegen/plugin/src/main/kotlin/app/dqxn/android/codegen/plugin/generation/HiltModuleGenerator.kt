@@ -61,8 +61,7 @@ internal class HiltModuleGenerator(
       moduleBuilder.addOriginatingKSFile(provider.originatingFile)
     }
 
-    val fileSpec =
-      FileSpec.builder(packageName, moduleName).addType(moduleBuilder.build()).build()
+    val fileSpec = FileSpec.builder(packageName, moduleName).addType(moduleBuilder.build()).build()
 
     // Per-class isolation for incremental processing
     fileSpec.writeTo(codeGenerator, aggregating = false)
