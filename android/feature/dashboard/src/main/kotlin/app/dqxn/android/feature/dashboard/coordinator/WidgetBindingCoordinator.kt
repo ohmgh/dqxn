@@ -174,36 +174,38 @@ constructor(
     bindings[widget.instanceId] = job
 
     // Launch staleness watchdog (F3.11): periodically checks if data has gone stale.
-    // Uses the minimum staleness threshold from bound providers.
-    val stalenessThresholdMs =
-      binder.minStalenessThresholdMs(compatibleSnapshots) ?: DEFAULT_STALENESS_MS
+    // Only launched when at least one bound provider declares a staleness threshold.
+    // null means "no staleness tracking" — don't fall back to a default.
+    val stalenessThresholdMs = binder.minStalenessThresholdMs(compatibleSnapshots)
     stalenessJobs.remove(widget.instanceId)?.cancel()
-    val watchdogJob =
-      bindingScope.launch {
-        while (true) {
-          delay(stalenessThresholdMs)
-          val lastTs = lastEmissionTimestamps[widget.instanceId] ?: continue
-          if (timeProvider() - lastTs > stalenessThresholdMs) {
-            val currentState = statusFlow.value.overlayState
-            // Don't override higher-priority error states
-            if (currentState !is WidgetRenderState.ConnectionError &&
-              currentState !is WidgetRenderState.EntitlementRevoked &&
-              currentState !is WidgetRenderState.SetupRequired
-            ) {
-              statusFlow.value =
-                WidgetStatusCache(
-                  overlayState = WidgetRenderState.DataStale,
-                  issues = persistentListOf(),
-                )
-              logger.warn(TAG) {
-                "Widget ${widget.instanceId} data stale " +
-                  "(${timeProvider() - lastTs}ms > ${stalenessThresholdMs}ms)"
+    if (stalenessThresholdMs != null) {
+      val watchdogJob =
+        bindingScope.launch {
+          while (true) {
+            delay(stalenessThresholdMs)
+            val lastTs = lastEmissionTimestamps[widget.instanceId] ?: continue
+            if (timeProvider() - lastTs > stalenessThresholdMs) {
+              val currentState = statusFlow.value.overlayState
+              // Don't override higher-priority error states
+              if (currentState !is WidgetRenderState.ConnectionError &&
+                currentState !is WidgetRenderState.EntitlementRevoked &&
+                currentState !is WidgetRenderState.SetupRequired
+              ) {
+                statusFlow.value =
+                  WidgetStatusCache(
+                    overlayState = WidgetRenderState.DataStale,
+                    issues = persistentListOf(),
+                  )
+                logger.warn(TAG) {
+                  "Widget ${widget.instanceId} data stale " +
+                    "(${timeProvider() - lastTs}ms > ${stalenessThresholdMs}ms)"
+                }
               }
             }
           }
         }
-      }
-    stalenessJobs[widget.instanceId] = watchdogJob
+      stalenessJobs[widget.instanceId] = watchdogJob
+    }
 
     logger.debug(TAG) { "Binding started for widget ${widget.instanceId} (${widget.typeId})" }
   }
@@ -388,6 +390,5 @@ constructor(
     val TAG: LogTag = LogTag("BindingCoord")
     internal const val MAX_RETRIES: Int = 3
     internal const val BACKOFF_BASE_MS: Long = 1000L
-    internal const val DEFAULT_STALENESS_MS: Long = 10_000L
   }
 }
