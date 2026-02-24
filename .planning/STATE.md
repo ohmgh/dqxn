@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 8 — Essentials Pack
-- **Current Plan:** 10 of 11
+- **Current Plan:** 11 of 11
 - **Milestone:** V1 Launch
-- **Next action:** Execute Phase 8 remaining plans (08, 09)
-- **Last session:** 2026-02-25T00:42:53Z
-- **Stopped at:** Completed 08-02-PLAN.md
+- **Next action:** Execute Phase 8 plan 09 (on-device wiring + stability soak)
+- **Last session:** 2026-02-25T17:21:41Z
+- **Stopped at:** Completed 08-08-PLAN.md
 
 ## Progress
 
@@ -20,7 +20,7 @@
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
-| 8. Essentials Pack | In Progress (9/11 plans) | Snapshot types + lint + simple providers + greenfield providers + solar + battery/ambient-light + clock/date widgets + shortcuts/solar widgets + compass/speedlimit + speedometer/themes |
+| 8. Essentials Pack | In Progress (10/11 plans) | Snapshot types + lint + simple providers + greenfield providers + solar + battery/ambient-light + clock/date widgets + shortcuts/solar widgets + compass/speedlimit + speedometer/themes + integration verification |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
@@ -205,6 +205,12 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 08-05a]: Hand angle pure functions exposed as internal Companion for direct unit testing at cardinal positions
 - [Phase 08-02]: System.nanoTime() over SystemClock.elapsedRealtimeNanos() for DataSnapshot.timestamp -- SystemClock returns 0 in JVM unit tests, breaking contract test assertion #3
 - [Phase 08-02]: Removed @DashboardDataProvider from CallActionProvider -- KSP processor only checks direct supertypes, cannot resolve indirect DataProvider inheritance via ActionableProvider
+- [Phase 08-08]: System.nanoTime() over SystemClock.elapsedRealtimeNanos() for all provider timestamps -- SystemClock returns 0 in JVM tests
+- [Phase 08-08]: Direct renderer instantiation in PackCompileVerificationTest -- KSP debugUnitTest generates empty manifest that shadows main
+- [Phase 08-08]: DqxnLogger/MetricsCollector in ReleaseModule (not AppModule) -- avoids DuplicateBindings with DebugModule in debug builds
+- [Phase 08-08]: SolarCalculator DST fix: date.atStartOfDay(zoneId) for offset derivation -- ZonedDateTime.now() produces wrong offset for dates in different DST period
+- [Phase 08-08]: Eager mock init with .also{} over lateinit @BeforeEach -- JUnit5 parent @BeforeEach runs before child, causing uninitialized mock access
+- [Phase 08-08]: AddWidgetHandler validates typeId against Set<WidgetRenderer> only -- no command channel bridge outside DashboardViewModel
 
 ## Performance Metrics
 
@@ -260,6 +266,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 08-06a | 24min | 2 | 9 |
 | 08-02 | 15min | 2 | 17 |
 | 08-05a | 35min | 2 | 10 |
+| 08-08 | 40min | 3 | 17 |
 
 ## Context
 
