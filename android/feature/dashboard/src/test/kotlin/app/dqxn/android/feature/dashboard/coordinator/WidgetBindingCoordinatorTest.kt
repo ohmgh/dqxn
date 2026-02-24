@@ -26,17 +26,15 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -120,7 +118,7 @@ class WidgetBindingCoordinatorTest {
     providerRegistry: DataProviderRegistry,
     entitlementManager: FakeEntitlementManager = FakeEntitlementManager(),
     safeModeManager: SafeModeManager = SafeModeManager(FakeSharedPreferences(), logger),
-    dispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(testScheduler),
+    dispatcher: CoroutineDispatcher = StandardTestDispatcher(testScheduler),
   ): WidgetBindingCoordinator {
     val binder = WidgetDataBinder(
       providerRegistry = providerRegistry,
@@ -142,7 +140,7 @@ class WidgetBindingCoordinatorTest {
   }
 
   @Test
-  fun `bind creates job and emits widget data`() = runTest(UnconfinedTestDispatcher()) {
+  fun `bind creates job and emits widget data`() = runTest {
     val provider = ContinuousProvider()
     val renderer = TestWidgetRenderer(
       typeId = "essentials:clock",
@@ -152,21 +150,28 @@ class WidgetBindingCoordinatorTest {
     val providerRegistry = DataProviderRegistryImpl(setOf(provider), FakeEntitlementManager(), logger)
     val coordinator = createCoordinator(widgetRegistry, providerRegistry)
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    val initScope = this + initJob
+    coordinator.initialize(initScope)
+    testScheduler.runCurrent()
 
     val widget = testWidget(typeId = "essentials:clock")
     coordinator.bind(widget)
+    testScheduler.runCurrent()
 
     provider.emissionFlow.emit(TestSnapshot(timestamp = 1000L))
-    advanceUntilIdle()
+    testScheduler.runCurrent()
 
     val data = coordinator.widgetData(widget.instanceId).value
     assertThat(data.hasData()).isTrue()
     assertThat(coordinator.activeBindings()).containsKey(widget.instanceId)
+
+    coordinator.destroy()
+    initJob.cancel()
   }
 
   @Test
-  fun `unbind cancels job and removes data flow`() = runTest(UnconfinedTestDispatcher()) {
+  fun `unbind cancels job and removes data flow`() = runTest {
     val provider = ContinuousProvider()
     val renderer = TestWidgetRenderer(
       typeId = "essentials:clock",
@@ -176,22 +181,28 @@ class WidgetBindingCoordinatorTest {
     val providerRegistry = DataProviderRegistryImpl(setOf(provider), FakeEntitlementManager(), logger)
     val coordinator = createCoordinator(widgetRegistry, providerRegistry)
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    val initScope = this + initJob
+    coordinator.initialize(initScope)
+    testScheduler.runCurrent()
 
     val widget = testWidget(typeId = "essentials:clock")
     coordinator.bind(widget)
-    advanceUntilIdle()
+    testScheduler.runCurrent()
 
     assertThat(coordinator.activeBindings()).containsKey(widget.instanceId)
 
     coordinator.unbind(widget.instanceId)
 
     assertThat(coordinator.activeBindings()).doesNotContainKey(widget.instanceId)
+
+    coordinator.destroy()
+    initJob.cancel()
   }
 
   @Test
   fun `SupervisorJob isolation - one provider crash does not cancel sibling bindings`() =
-    runTest(UnconfinedTestDispatcher()) {
+    runTest {
       val goodProvider = ContinuousProvider(sourceId = "test:good")
       val crashProvider = CrashingProvider(sourceId = "test:crash")
 
@@ -212,23 +223,29 @@ class WidgetBindingCoordinatorTest {
       )
       val coordinator = createCoordinator(widgetRegistry, providerRegistry)
 
-      coordinator.initialize(backgroundScope)
+      val initJob = Job(coroutineContext[Job])
+      val initScope = this + initJob
+      coordinator.initialize(initScope)
+      testScheduler.runCurrent()
 
       val goodWidget = testWidget(typeId = "essentials:clock", instanceId = "good-widget")
       val crashWidget = testWidget(typeId = "essentials:crash", instanceId = "crash-widget")
 
       coordinator.bind(goodWidget)
       coordinator.bind(crashWidget)
-      advanceUntilIdle()
+      testScheduler.runCurrent()
 
       // Good widget should still have an active binding despite crash widget failing
       val goodBinding = coordinator.activeBindings()["good-widget"]
       assertThat(goodBinding).isNotNull()
       assertThat(goodBinding!!.isActive).isTrue()
+
+      coordinator.destroy()
+      initJob.cancel()
     }
 
   @Test
-  fun `widget crash reported to SafeModeManager`() = runTest(UnconfinedTestDispatcher()) {
+  fun `widget crash reported to SafeModeManager`() = runTest {
     val safeModeManager = SafeModeManager(FakeSharedPreferences(), logger)
     val widgetRegistry = WidgetRegistryImpl(emptySet(), logger)
     val providerRegistry = DataProviderRegistryImpl(emptySet(), FakeEntitlementManager(), logger)
@@ -236,7 +253,10 @@ class WidgetBindingCoordinatorTest {
       widgetRegistry, providerRegistry, safeModeManager = safeModeManager,
     )
 
-    coordinator.initialize(this)
+    val initJob = Job(coroutineContext[Job])
+    val initScope = this + initJob
+    coordinator.initialize(initScope)
+    testScheduler.runCurrent()
 
     // Report crashes directly (bypassing binding retry complexity).
     // SafeModeManager triggers at threshold=4 crashes within the window.
@@ -246,12 +266,13 @@ class WidgetBindingCoordinatorTest {
 
     assertThat(safeModeManager.safeModeActive.value).isTrue()
 
+    initJob.cancel()
     coordinator.destroy()
   }
 
   @Test
   fun `pauseAll cancels all bindings, resumeAll rebinds`() =
-    runTest(UnconfinedTestDispatcher()) {
+    runTest {
       val provider = ContinuousProvider()
       val renderer = TestWidgetRenderer(
         typeId = "essentials:clock",
@@ -261,13 +282,16 @@ class WidgetBindingCoordinatorTest {
       val providerRegistry = DataProviderRegistryImpl(setOf(provider), FakeEntitlementManager(), logger)
       val coordinator = createCoordinator(widgetRegistry, providerRegistry)
 
-      coordinator.initialize(backgroundScope)
+      val initJob = Job(coroutineContext[Job])
+      val initScope = this + initJob
+      coordinator.initialize(initScope)
+      testScheduler.runCurrent()
 
       val widget1 = testWidget(typeId = "essentials:clock", instanceId = "w1")
       val widget2 = testWidget(typeId = "essentials:clock", instanceId = "w2")
       coordinator.bind(widget1)
       coordinator.bind(widget2)
-      advanceUntilIdle()
+      testScheduler.runCurrent()
 
       assertThat(coordinator.activeBindings()).hasSize(2)
 
@@ -275,12 +299,15 @@ class WidgetBindingCoordinatorTest {
       assertThat(coordinator.activeBindings()).isEmpty()
 
       coordinator.resumeAll()
-      advanceUntilIdle()
+      testScheduler.runCurrent()
       assertThat(coordinator.activeBindings()).hasSize(2)
+
+      coordinator.destroy()
+      initJob.cancel()
     }
 
   @Test
-  fun `entitlement revocation updates widget status`() = runTest(UnconfinedTestDispatcher()) {
+  fun `entitlement revocation updates widget status`() = runTest {
     val provider = ContinuousProvider()
     val renderer = TestWidgetRenderer(
       typeId = "essentials:premium",
@@ -294,35 +321,47 @@ class WidgetBindingCoordinatorTest {
     val providerRegistry = DataProviderRegistryImpl(setOf(provider), entitlementManager, logger)
     val coordinator = createCoordinator(widgetRegistry, providerRegistry, entitlementManager)
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    val initScope = this + initJob
+    coordinator.initialize(initScope)
+    testScheduler.runCurrent()
 
     val widget = testWidget(typeId = "essentials:premium", instanceId = "premium-widget")
     coordinator.bind(widget)
-    advanceUntilIdle()
+    testScheduler.runCurrent()
 
     // Revoke "plus" entitlement
     entitlementManager.setEntitlements(setOf("free"))
-    advanceUntilIdle()
+    testScheduler.runCurrent()
 
     val status = coordinator.widgetStatus("premium-widget").value
     assertThat(status.overlayState).isInstanceOf(WidgetRenderState.EntitlementRevoked::class.java)
+
+    coordinator.destroy()
+    initJob.cancel()
   }
 
   @Test
   fun `status priority - ProviderMissing when no renderer found`() =
-    runTest(UnconfinedTestDispatcher()) {
+    runTest {
       val widgetRegistry = WidgetRegistryImpl(emptySet(), logger)
       val providerRegistry = DataProviderRegistryImpl(emptySet(), FakeEntitlementManager(), logger)
       val coordinator = createCoordinator(widgetRegistry, providerRegistry)
 
-      coordinator.initialize(backgroundScope)
+      val initJob = Job(coroutineContext[Job])
+      val initScope = this + initJob
+      coordinator.initialize(initScope)
+      testScheduler.runCurrent()
 
       val widget = testWidget(typeId = "essentials:nonexistent", instanceId = "missing-widget")
       coordinator.bind(widget)
-      advanceUntilIdle()
+      testScheduler.runCurrent()
 
       val status = coordinator.widgetStatus("missing-widget").value
       assertThat(status.overlayState).isEqualTo(WidgetRenderState.ProviderMissing)
+
+      coordinator.destroy()
+      initJob.cancel()
     }
 
   // NOTE: Exponential backoff retry tests were deferred due to kotlinx.coroutines.test
