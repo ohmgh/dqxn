@@ -630,4 +630,54 @@ class WidgetBindingCoordinatorTest {
     coordinator.destroy()
     initJob.cancel()
   }
+
+  // -- Unbind cancels provider flow test (Q4: WhileSubscribed equivalent) ---
+
+  @Test
+  fun `unbind cancels provider flow collection`() = runTest {
+    // Provider that tracks whether its flow is still being collected.
+    // This is the behavioral equivalent of WhileSubscribed stopTimeout:
+    // when a widget is unbound, the binding job is cancelled, which cancels the flow
+    // collection, which stops the provider's provideState() flow.
+    var isCollecting = false
+    val binder = createMockBinder {
+      flow {
+        isCollecting = true
+        try {
+          emit(WidgetData.Empty)
+          awaitCancellation()
+        } finally {
+          isCollecting = false
+        }
+      }
+    }
+    val renderer = TestWidgetRenderer(
+      typeId = "essentials:clock",
+      compatibleSnapshots = setOf(TestSnapshot::class),
+    )
+    val widgetRegistry = WidgetRegistryImpl(setOf(renderer), logger)
+    val providerRegistry = DataProviderRegistryImpl(emptySet(), FakeEntitlementManager(), logger)
+    val coordinator = createCoordinator(widgetRegistry, providerRegistry, binder = binder)
+
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+
+    val widget = testWidget(typeId = "essentials:clock")
+    coordinator.bind(widget)
+    testScheduler.runCurrent()
+
+    // Provider flow is actively collected after bind
+    assertThat(isCollecting).isTrue()
+    assertThat(coordinator.activeBindings()).containsKey(widget.instanceId)
+
+    coordinator.unbind(widget.instanceId)
+    testScheduler.runCurrent()
+
+    // Provider flow stops collection after unbind — finally block sets isCollecting = false
+    assertThat(isCollecting).isFalse()
+    assertThat(coordinator.activeBindings()).doesNotContainKey(widget.instanceId)
+
+    coordinator.destroy()
+    initJob.cancel()
+  }
 }
