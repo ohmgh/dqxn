@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 7 — Dashboard Shell
-- **Current Plan:** 2 of 7 complete
+- **Current Plan:** 3 of 7 complete
 - **Milestone:** V1 Launch
-- **Next action:** Execute Phase 7 Plan 03
-- **Last session:** 2026-02-24T05:33:00Z
-- **Stopped at:** Completed 07-01-PLAN.md (wave 1 complete: 07-01 + 07-02)
+- **Next action:** Execute Phase 7 Plan 04
+- **Last session:** 2026-02-24T05:48:30Z
+- **Stopped at:** Completed 07-03-PLAN.md
 
 ## Progress
 
@@ -19,7 +19,7 @@
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
-| 7. Dashboard Shell | In Progress (2/7 plans) | ThemeCoordinator, DashboardHaptics, ReducedMotionHelper complete |
+| 7. Dashboard Shell | In Progress (3/7 plans) | EditModeCoordinator, gesture handlers, drag/resize state complete |
 | 8. Essentials Pack | Pending | Architecture validation gate |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
@@ -154,6 +154,9 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **handleResetLayout captures existing widgets before state update** -- prevents repo/StateFlow race with active flow collection
 - **android.graphics.Rect apply{} workaround** -- AGP returnDefaultValues=true stubs constructors; set public fields directly
 - **runTest(UnconfinedTestDispatcher()) for coordinator tests** -- backgroundScope does not advance with StandardTestDispatcher advanceUntilIdle()
+- **Non-suspend endDrag/endResize with scope.launch** -- AwaitPointerEventScope is restricted suspension; persistence launched async on ViewModel scope
+- **Elapsed-time long-press detection** -- restricted suspension forbids coroutineScope+delay; track System.currentTimeMillis() on each pointer event instead
+- **ConfigurationBoundaryDetector mock needs explicit boundaries stub** -- relaxed MockK returns Object for ImmutableList, causing ClassCastException
 
 ## Performance Metrics
 
@@ -186,6 +189,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 07-02 | 9min | 2 | 7 |
 | 07-01 | 25min | 2 | 14 |
 | Phase 07 P02 | 9min | 2 tasks | 7 files |
+| 07-03 | 10min | 2 | 8 |
 
 ## Context
 
