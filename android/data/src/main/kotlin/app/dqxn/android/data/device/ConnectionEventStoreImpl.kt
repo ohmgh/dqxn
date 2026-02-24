@@ -38,7 +38,7 @@ constructor(
       current.add(event)
       // Enforce rolling window
       while (current.size > ConnectionEventStore.MAX_EVENTS) {
-        current.removeFirst()
+        current.removeAt(0)
       }
       prefs[EVENTS_KEY] = json.encodeToString(listSerializer, current)
     }

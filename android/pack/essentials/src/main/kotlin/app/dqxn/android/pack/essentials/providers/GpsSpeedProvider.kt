@@ -1,6 +1,7 @@
 package app.dqxn.android.pack.essentials.providers
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -92,6 +93,7 @@ constructor(
   override val connectionState: Flow<Boolean> = _connectionState
   override val connectionErrorDescription: Flow<String?> = flowOf(null)
 
+  @SuppressLint("MissingPermission") // Permission declared in setupSchema, enforced at runtime
   override fun provideState(): Flow<SpeedSnapshot> =
     callbackFlow {
         var lastLocationTime: Long = 0L

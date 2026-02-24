@@ -88,5 +88,6 @@ public abstract class AppModule {
       @ApplicationContext context: Context,
     ): SharedPreferences =
       context.getSharedPreferences("dqxn_prefs", Context.MODE_PRIVATE)
+
   }
 }
