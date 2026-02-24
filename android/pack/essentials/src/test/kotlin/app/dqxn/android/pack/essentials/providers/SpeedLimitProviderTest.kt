@@ -8,8 +8,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -59,10 +62,7 @@ class SpeedLimitProviderTest : DataProviderContractTest() {
 
     val snapshots = mutableListOf<app.dqxn.android.pack.essentials.snapshots.SpeedLimitSnapshot>()
     val job = launch {
-      provider.provideState().collect { snap ->
-        snapshots.add(snap)
-        if (snapshots.size >= 2) return@collect
-      }
+      provider.provideState().take(2).toList(snapshots)
     }
 
     advanceUntilIdle()

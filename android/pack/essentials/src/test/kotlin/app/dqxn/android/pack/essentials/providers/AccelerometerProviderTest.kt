@@ -25,13 +25,17 @@ class AccelerometerProviderTest : DataProviderContractTest() {
   private val accelerometerSensor = mockk<Sensor>(relaxed = true)
   private val listenerSlot = slot<SensorEventListener>()
 
-  private val sensorManager =
-    mockk<SensorManager>(relaxed = true) {
-      every { getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) } returns linearSensor
-      every { getDefaultSensor(Sensor.TYPE_ACCELEROMETER) } returns accelerometerSensor
+  private val sensorManager: SensorManager =
+    mockk<SensorManager>(relaxed = true).also { mgr ->
+      every { mgr.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) } returns linearSensor
+      every { mgr.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) } returns accelerometerSensor
       every {
-        registerListener(capture(listenerSlot), any<Sensor>(), any<Int>(), any<Int>())
-      } returns true
+        mgr.registerListener(capture(listenerSlot), any<Sensor>(), any<Int>(), any<Int>())
+      } answers {
+        // Auto-fire a sensor event so contract tests that call provideState().first() succeed.
+        simulateSensorEvent(listenerSlot.captured, floatArrayOf(0.5f, 0.1f, 0.3f))
+        true
+      }
     }
 
   override fun createProvider(): DataProvider<*> = AccelerometerProvider(sensorManager)

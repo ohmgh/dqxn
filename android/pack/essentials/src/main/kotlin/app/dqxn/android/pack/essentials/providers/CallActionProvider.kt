@@ -2,7 +2,6 @@ package app.dqxn.android.pack.essentials.providers
 
 import android.content.Context
 import android.content.Intent
-import android.os.SystemClock
 import app.dqxn.android.sdk.contracts.provider.ActionableProvider
 import app.dqxn.android.sdk.contracts.provider.DataFieldSpec
 import app.dqxn.android.sdk.contracts.provider.DataSchema
@@ -54,7 +53,7 @@ constructor(
     )
 
   override fun provideState(): Flow<UnitSnapshot> =
-    flowOf(UnitSnapshot(timestamp = SystemClock.elapsedRealtimeNanos()))
+    flowOf(UnitSnapshot(timestamp = System.nanoTime()))
 
   override fun onAction(action: WidgetAction) {
     val packageName =

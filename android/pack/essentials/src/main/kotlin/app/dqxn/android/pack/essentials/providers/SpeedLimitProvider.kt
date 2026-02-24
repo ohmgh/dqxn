@@ -1,6 +1,5 @@
 package app.dqxn.android.pack.essentials.providers
 
-import android.os.SystemClock
 import app.dqxn.android.pack.essentials.snapshots.SpeedLimitSnapshot
 import app.dqxn.android.sdk.contracts.annotation.DashboardDataProvider
 import app.dqxn.android.sdk.contracts.provider.DataFieldSpec
@@ -68,7 +67,7 @@ constructor(
       SpeedLimitSnapshot(
         speedLimitKph = (value as? Number)?.toFloat() ?: 0f,
         source = "user",
-        timestamp = SystemClock.elapsedRealtimeNanos(),
+        timestamp = System.nanoTime(),
       )
     }
 

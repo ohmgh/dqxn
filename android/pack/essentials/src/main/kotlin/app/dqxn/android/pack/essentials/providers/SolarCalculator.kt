@@ -33,8 +33,11 @@ internal object SolarCalculator {
     date: LocalDate,
     zoneId: ZoneId,
   ): SolarResult {
-    val now = ZonedDateTime.now(zoneId)
-    val timezoneOffset = now.offset.totalSeconds / 3600.0
+    // Derive timezone offset from the calculation date, not current time.
+    // This avoids DST mismatch when the date being calculated is in a different
+    // DST period than the current moment.
+    val dateZoned = date.atStartOfDay(zoneId)
+    val timezoneOffset = dateZoned.offset.totalSeconds / 3600.0
 
     // Julian Century from J2000.0 epoch
     val jd = toJulianDay(date.year, date.monthValue, date.dayOfMonth)
@@ -141,7 +144,7 @@ internal object SolarCalculator {
     )
 
     // Determine isDaytime from current time relative to sunrise/sunset
-    val nowEpoch = now.toInstant().toEpochMilli()
+    val nowEpoch = ZonedDateTime.now(zoneId).toInstant().toEpochMilli()
     val isDaytime = when {
       polarNoSunrise -> false // polar night -- always dark
       polarNoSunset -> true // midnight sun -- always light

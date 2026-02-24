@@ -19,16 +19,14 @@ import org.junit.jupiter.api.Test
 
 class CallActionProviderTest : DataProviderContractTest() {
 
-  private val mockIntent = mockk<Intent>(relaxed = true)
-  private val packageManager =
-    mockk<PackageManager>(relaxed = true) {
-      every { getLaunchIntentForPackage("com.example.app") } returns mockIntent
-      every { getLaunchIntentForPackage("com.nonexistent.app") } returns null
-    }
-  private val context =
-    mockk<Context>(relaxed = true) {
-      every { getPackageManager() } returns packageManager
-    }
+  private val mockIntent: Intent = mockk<Intent>(relaxed = true)
+  private val packageManager: PackageManager = mockk<PackageManager>(relaxed = true).also { pm ->
+    every { pm.getLaunchIntentForPackage("com.example.app") } returns mockIntent
+    every { pm.getLaunchIntentForPackage("com.nonexistent.app") } returns null
+  }
+  private val context: Context = mockk<Context>(relaxed = true).also { ctx ->
+    every { ctx.packageManager } returns packageManager
+  }
 
   override fun createProvider(): DataProvider<*> = CallActionProvider(context)
 

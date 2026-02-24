@@ -5,7 +5,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Looper
-import android.os.SystemClock
 import app.dqxn.android.pack.essentials.snapshots.SpeedSnapshot
 import app.dqxn.android.sdk.contracts.annotation.DashboardDataProvider
 import app.dqxn.android.sdk.contracts.provider.DataFieldSpec
@@ -144,7 +143,7 @@ constructor(
                 SpeedSnapshot(
                   speedMps = speedMps,
                   accuracy = accuracy,
-                  timestamp = SystemClock.elapsedRealtimeNanos(),
+                  timestamp = System.nanoTime(),
                 )
               )
             }

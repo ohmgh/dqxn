@@ -3,7 +3,6 @@ package app.dqxn.android.pack.essentials.providers
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.SystemClock
 import app.dqxn.android.pack.essentials.snapshots.SpeedSnapshot
 import app.dqxn.android.sdk.contracts.provider.DataProvider
 import app.dqxn.android.sdk.contracts.testing.DataProviderContractTest
@@ -11,9 +10,10 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -23,19 +23,26 @@ import org.junit.jupiter.api.Test
 class GpsSpeedProviderTest : DataProviderContractTest() {
 
   private val listenerSlot = slot<LocationListener>()
-  private val locationManager =
-    mockk<LocationManager>(relaxed = true) {
-      every { isProviderEnabled(LocationManager.GPS_PROVIDER) } returns true
-      every {
-        requestLocationUpdates(
-          any<String>(),
-          any<Long>(),
-          any<Float>(),
-          capture(listenerSlot),
-          any(),
-        )
-      } returns Unit
+
+  // Eagerly initialize the default mock that auto-fires a location on requestLocationUpdates.
+  // This must be initialized before the parent @BeforeEach calls createProvider().
+  private val locationManager: LocationManager = mockk<LocationManager>(relaxed = true).also { mgr ->
+    every { mgr.isProviderEnabled(LocationManager.GPS_PROVIDER) } returns true
+    every {
+      mgr.requestLocationUpdates(
+        any<String>(),
+        any<Long>(),
+        any<Float>(),
+        capture(listenerSlot),
+        any(),
+      )
+    } answers {
+      val listener = listenerSlot.captured
+      listener.onLocationChanged(
+        createLocation(speed = 10.0f, hasSpeed = true, speedAccuracy = 1.0f)
+      )
     }
+  }
 
   override fun createProvider(): DataProvider<*> = GpsSpeedProvider(locationManager)
 
@@ -43,68 +50,65 @@ class GpsSpeedProviderTest : DataProviderContractTest() {
 
   @Test
   fun `emits hardware speed when location hasSpeed`() = runTest {
-    val provider = GpsSpeedProvider(locationManager)
-    val flow = provider.provideState()
-
-    val job = launch {
-      val snapshot = flow.first()
-      assertThat(snapshot.speedMps).isWithin(0.01f).of(25.5f)
-      assertThat(snapshot.accuracy).isWithin(0.01f).of(1.2f)
+    // Use a custom manager that auto-fires with specific values
+    val customSlot = slot<LocationListener>()
+    val customManager = mockk<LocationManager>(relaxed = true)
+    every { customManager.isProviderEnabled(LocationManager.GPS_PROVIDER) } returns true
+    every {
+      customManager.requestLocationUpdates(
+        any<String>(), any<Long>(), any<Float>(), capture(customSlot), any(),
+      )
+    } answers {
+      customSlot.captured.onLocationChanged(
+        createLocation(speed = 25.5f, hasSpeed = true, speedAccuracy = 1.2f)
+      )
     }
 
-    // Simulate location callback
-    advanceUntilIdle()
-    if (listenerSlot.isCaptured) {
-      val location = createLocation(speed = 25.5f, hasSpeed = true, speedAccuracy = 1.2f)
-      listenerSlot.captured.onLocationChanged(location)
-    }
-
-    job.join()
+    val provider = GpsSpeedProvider(customManager)
+    val snapshot = provider.provideState().first()
+    assertThat(snapshot.speedMps).isWithin(0.01f).of(25.5f)
+    assertThat(snapshot.accuracy).isWithin(0.01f).of(1.2f)
   }
 
   @Test
-  fun `computes fallback speed when location hasSpeed is false`() = runTest {
-    val provider = GpsSpeedProvider(locationManager)
-    val flow = provider.provideState()
+  fun `fallback path emits with null accuracy when location hasSpeed is false`() = runTest {
+    // Use a custom manager that auto-fires two no-speed locations for fallback computation.
+    // Note: Location.distanceBetween() is an Android static stub returning 0 in unit tests,
+    // so we verify the fallback codepath is exercised (accuracy=null) rather than the actual
+    // distance computation.
+    val customSlot = slot<LocationListener>()
+    val customManager = mockk<LocationManager>(relaxed = true)
+    every { customManager.isProviderEnabled(LocationManager.GPS_PROVIDER) } returns true
+    every {
+      customManager.requestLocationUpdates(
+        any<String>(), any<Long>(), any<Float>(), capture(customSlot), any(),
+      )
+    } answers {
+      // Only fire the first location synchronously. Second will be sent manually.
+      customSlot.captured.onLocationChanged(
+        createLocation(lat = 51.5074, lon = -0.1278, time = 1000L, hasSpeed = false)
+      )
+    }
 
+    val provider = GpsSpeedProvider(customManager)
     val snapshots = mutableListOf<SpeedSnapshot>()
     val job = launch {
-      flow.collect { snap ->
-        snapshots.add(snap)
-        if (snapshots.size >= 2) return@collect
-      }
+      provider.provideState().take(2).toList(snapshots)
     }
-
     advanceUntilIdle()
-    if (listenerSlot.isCaptured) {
-      // First location
-      listenerSlot.captured.onLocationChanged(
-        createLocation(
-          lat = 51.5074,
-          lon = -0.1278,
-          time = 1000L,
-          hasSpeed = false,
-        )
-      )
-      // Second location 1 second later, ~111m away
-      listenerSlot.captured.onLocationChanged(
-        createLocation(
-          lat = 51.5084,
-          lon = -0.1278,
-          time = 2000L,
-          hasSpeed = false,
-        )
-      )
-    }
 
+    // Second location -- dispatched after first is consumed
+    customSlot.captured.onLocationChanged(
+      createLocation(lat = 51.5084, lon = -0.1278, time = 2000L, hasSpeed = false)
+    )
+    advanceUntilIdle()
     job.join()
 
-    if (snapshots.size >= 2) {
-      // Second snapshot should have computed speed > 0
-      assertThat(snapshots[1].speedMps).isGreaterThan(0f)
-      // Computed speed has null accuracy
-      assertThat(snapshots[1].accuracy).isNull()
-    }
+    assertThat(snapshots).hasSize(2)
+    // Fallback codepath: accuracy is null (computed, not hardware-reported)
+    assertThat(snapshots[1].accuracy).isNull()
+    // Speed is computed from Location.distanceBetween (stub returns 0 in unit tests)
+    assertThat(snapshots[1].speedMps).isAtLeast(0f)
   }
 
   @Test
