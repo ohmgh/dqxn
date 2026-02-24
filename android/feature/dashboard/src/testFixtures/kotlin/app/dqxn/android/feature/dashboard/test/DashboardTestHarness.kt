@@ -1,18 +1,30 @@
 package app.dqxn.android.feature.dashboard.test
 
-import app.dqxn.android.data.layout.DashboardWidgetInstance
+import app.dqxn.android.core.thermal.RenderConfig
+import app.dqxn.android.core.thermal.ThermalLevel
+import app.dqxn.android.core.thermal.ThermalMonitor
 import app.dqxn.android.data.preset.PresetLoader
+import app.dqxn.android.feature.dashboard.binding.WidgetDataBinder
 import app.dqxn.android.feature.dashboard.coordinator.LayoutCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.LayoutState
+import app.dqxn.android.feature.dashboard.coordinator.WidgetBindingCoordinator
 import app.dqxn.android.feature.dashboard.grid.ConfigurationBoundaryDetector
 import app.dqxn.android.feature.dashboard.grid.GridPlacementEngine
 import app.dqxn.android.feature.dashboard.safety.SafeModeManager
+import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
+import app.dqxn.android.sdk.contracts.provider.DataSnapshot
+import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
+import app.dqxn.android.sdk.contracts.widget.WidgetData
+import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.observability.log.NoOpLogger
+import app.dqxn.android.sdk.observability.metrics.MetricsCollector
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -52,10 +64,17 @@ public class DashboardTestScope(
 ) {
   public val layoutCoordinator: LayoutCoordinator get() = harness.layoutCoordinator
   public val safeModeManager: SafeModeManager get() = harness.safeModeManager
+  public val widgetBindingCoordinator: WidgetBindingCoordinator
+    get() = harness.widgetBindingCoordinator
+
   public val fakeLayoutRepository: FakeLayoutRepository get() = harness.fakeLayoutRepository
 
   public fun layoutState(): LayoutState = harness.layoutCoordinator.layoutState.value
   public fun safeMode(): Boolean = harness.safeModeManager.safeModeActive.value
+
+  /** Convenience: returns the active bindings map from the binding coordinator. */
+  public fun activeBindings(): Map<String, Job> =
+    harness.widgetBindingCoordinator.activeBindings()
 }
 
 /**
@@ -103,6 +122,50 @@ public class DashboardTestHarness(
       logger = logger,
     )
 
+  // -- WidgetBindingCoordinator mocked dependencies --
+
+  private val mockWidgetRenderer: WidgetRenderer = mockk {
+    every { compatibleSnapshots } returns setOf(DataSnapshot::class)
+    every { requiredAnyEntitlement } returns null
+  }
+
+  private val mockWidgetRegistry: WidgetRegistry = mockk {
+    every { findByTypeId(any()) } returns mockWidgetRenderer
+    every { getAll() } returns emptySet()
+    every { getTypeIds() } returns emptySet()
+  }
+
+  private val mockBinder: WidgetDataBinder = mockk {
+    every { bind(any(), any(), any()) } returns flow { emit(WidgetData.Empty) }
+    every { minStalenessThresholdMs(any()) } returns null
+  }
+
+  private val mockEntitlementManager: EntitlementManager = mockk {
+    every { entitlementChanges } returns MutableStateFlow(emptySet())
+    every { hasEntitlement(any()) } returns false
+    every { getActiveEntitlements() } returns emptySet()
+  }
+
+  private val mockThermalMonitor: ThermalMonitor = mockk {
+    every { renderConfig } returns MutableStateFlow(RenderConfig.DEFAULT)
+    every { thermalLevel } returns MutableStateFlow(ThermalLevel.NORMAL)
+  }
+
+  private val metricsCollector: MetricsCollector = MetricsCollector()
+
+  public val widgetBindingCoordinator: WidgetBindingCoordinator =
+    WidgetBindingCoordinator(
+      binder = mockBinder,
+      widgetRegistry = mockWidgetRegistry,
+      safeModeManager = safeModeManager,
+      entitlementManager = mockEntitlementManager,
+      thermalMonitor = mockThermalMonitor,
+      metricsCollector = metricsCollector,
+      logger = logger,
+      ioDispatcher = testDispatcher,
+      defaultDispatcher = testDispatcher,
+    )
+
   private var initJob: Job? = null
 
   /**
@@ -117,14 +180,16 @@ public class DashboardTestHarness(
    *   lifecycle.
    */
   public fun initialize(initScope: CoroutineScope? = null) {
-    val scope = if (initScope != null) {
-      initScope
-    } else {
-      val job = Job(testScope.coroutineContext[Job])
-      initJob = job
-      testScope + job
-    }
+    val scope =
+      if (initScope != null) {
+        initScope
+      } else {
+        val job = Job(testScope.coroutineContext[Job])
+        initJob = job
+        testScope + job
+      }
     layoutCoordinator.initialize(scope)
+    widgetBindingCoordinator.initialize(scope)
   }
 
   /**
@@ -132,6 +197,7 @@ public class DashboardTestHarness(
    * [UncompletedCoroutinesError]. Safe to call multiple times.
    */
   public fun close() {
+    widgetBindingCoordinator.destroy()
     initJob?.cancel("Test harness closed")
     initJob = null
   }

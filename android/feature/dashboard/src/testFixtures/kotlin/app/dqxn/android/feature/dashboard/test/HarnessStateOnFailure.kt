@@ -38,6 +38,9 @@ public class HarnessStateOnFailure : TestWatcher {
       }
       appendLine()
       appendLine("Safe Mode: active=$safeMode")
+      appendLine()
+      val bindingCount = h.widgetBindingCoordinator.activeBindings().size
+      appendLine("Active Bindings: $bindingCount")
     }
 
     // Print to stderr so it appears in test failure output

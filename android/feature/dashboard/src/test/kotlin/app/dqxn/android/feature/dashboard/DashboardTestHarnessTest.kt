@@ -85,6 +85,14 @@ class DashboardTestHarnessTest {
     assertThat(layoutState.widgets).hasSize(1)
     assertThat(layoutState.widgets.first().typeId).isEqualTo("essentials:clock")
 
+    // Bind widget (in production, ViewModel.routeCommand does both add + bind)
+    harness.widgetBindingCoordinator.bind(layoutState.widgets.first())
+    advanceUntilIdle()
+
+    // SC#3: Verify WidgetBindingCoordinator created a binding job
+    assertThat(harness.widgetBindingCoordinator.activeBindings())
+      .containsKey(layoutState.widgets.first().instanceId)
+
     harness.close()
   }
 
