@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 4 — KSP Codegen
-- **Current Plan:** Not started
+- **Phase:** 5 — Core Infrastructure
+- **Current Plan:** 2 of 5
 - **Milestone:** V1 Launch
-- **Next action:** Begin Phase 5 (Core Infrastructure)
-- **Last session:** 2026-02-24T01:57:35Z
-- **Stopped at:** Completed 04-02-PLAN.md (Phase 4 complete)
+- **Next action:** Execute 05-02-PLAN.md
+- **Last session:** 2026-02-24T02:48:15Z
+- **Stopped at:** Completed 05-01-PLAN.md
 
 ## Progress
 
@@ -17,7 +17,7 @@
 | 2. SDK Contracts + Common | Complete (5/5 plans) | All plans complete — types, unit tests, contract test infrastructure |
 | 3. SDK Observability + Analytics + UI | Complete (3/3 plans) | All plans complete — observability, metrics/health/diagnostics/analytics, SDK UI |
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
-| 5. Core Infrastructure | Pending | |
+| 5. Core Infrastructure | In Progress (1/5 plans) | Proto schemas + thermal module complete |
 | 6. Deployable App + Agentic | Pending | First on-device deployment |
 | 7. Dashboard Shell | Pending | Highest risk phase |
 | 8. Essentials Pack | Pending | Architecture validation gate |
@@ -115,6 +115,13 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **kctfork KSP2 processorOptions** — use `processorOptions` map inside `configureKsp(useKsp2=true)` block, NOT top-level `kspProcessorOptions` extension
 - **ManifestGenerator always runs** — manifest generated even with no annotations (pack always needs manifest descriptor); HiltModule skips correctly
 
+### Phase 5 Decisions
+
+- **ThermalMonitor interface** over open class — cleaner DI, allows FakeThermalManager without mocking
+- **FakeThermalManager dual-mode** — optional CoroutineScope; null scope gives synchronous updates, provided scope enables flow derivation
+- **Proto suffix on store messages** — DashboardStoreProto not DashboardStore, avoids clashes with domain types in :data
+- **preferredRefreshRate** over Surface.setFrameRate() — simpler cross-API approach via WindowManager.LayoutParams
+
 ## Performance Metrics
 
 | Phase-Plan | Duration | Tasks | Files |
@@ -134,6 +141,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 04-01 | 4min | 2 | 17 |
 | 04-02 | 6min | 2 | 5 |
 | 04-03 | 12min | 2 | 9 |
+| 05-01 | 5min | 2 | 13 |
 
 ## Context
 
