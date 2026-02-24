@@ -11,8 +11,11 @@ import app.dqxn.android.sdk.observability.log.NoOpLogger
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.plus
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -31,33 +34,40 @@ class LayoutCoordinatorTest {
   }
 
   @Test
-  fun `initialize loads widgets from repository`() = runTest(UnconfinedTestDispatcher()) {
+  fun `initialize loads widgets from repository`() = runTest {
     val fakeRepo = FakeLayoutRepository()
-    val coordinator = createCoordinator(fakeRepo)
+    val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
 
     val w1 = testWidget(typeId = "essentials:clock", col = 0, row = 0)
     val w2 = testWidget(typeId = "essentials:battery", col = 4, row = 0)
     val w3 = testWidget(typeId = "essentials:compass", col = 8, row = 0)
     fakeRepo.setWidgets(listOf(w1, w2, w3))
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     val state = coordinator.layoutState.value
     assertThat(state.isLoading).isFalse()
     assertThat(state.widgets).hasSize(3)
     assertThat(state.widgets.map { it.typeId })
       .containsExactly("essentials:clock", "essentials:battery", "essentials:compass")
+
+    initJob.cancel()
   }
 
   @Test
-  fun `handleAddWidget places widget via GridPlacementEngine`() = runTest(UnconfinedTestDispatcher()) {
+  fun `handleAddWidget places widget via GridPlacementEngine`() = runTest {
     val fakeRepo = FakeLayoutRepository()
-    val coordinator = createCoordinator(fakeRepo)
+    val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     val newWidget = testWidget(typeId = "essentials:speed", col = 99, row = 99)
     coordinator.handleAddWidget(newWidget)
+    testScheduler.runCurrent()
 
     val state = coordinator.layoutState.value
     assertThat(state.widgets).hasSize(1)
@@ -65,121 +75,159 @@ class LayoutCoordinatorTest {
     assertThat(placed.typeId).isEqualTo("essentials:speed")
     assertThat(placed.position.col).isAtMost(20)
     assertThat(placed.position.row).isAtMost(12)
+
+    initJob.cancel()
   }
 
   @Test
-  fun `handleRemoveWidget removes from state`() = runTest(UnconfinedTestDispatcher()) {
+  fun `handleRemoveWidget removes from state`() = runTest {
     val fakeRepo = FakeLayoutRepository()
-    val coordinator = createCoordinator(fakeRepo)
+    val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
     val widget = testWidget(instanceId = "remove-me", typeId = "essentials:clock")
     fakeRepo.setWidgets(listOf(widget))
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
     assertThat(coordinator.layoutState.value.widgets).hasSize(1)
 
     coordinator.handleRemoveWidget("remove-me")
+    testScheduler.runCurrent()
 
     assertThat(coordinator.layoutState.value.widgets).isEmpty()
+
+    initJob.cancel()
   }
 
   @Test
-  fun `handleMoveWidget updates position`() = runTest(UnconfinedTestDispatcher()) {
+  fun `handleMoveWidget updates position`() = runTest {
     val fakeRepo = FakeLayoutRepository()
-    val coordinator = createCoordinator(fakeRepo)
+    val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
     val widget = testWidget(instanceId = "movable", col = 0, row = 0)
     fakeRepo.setWidgets(listOf(widget))
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     val newPos = GridPosition(col = 5, row = 3)
     coordinator.handleMoveWidget("movable", newPos)
+    testScheduler.runCurrent()
 
     val moved = coordinator.layoutState.value.widgets.first()
     assertThat(moved.position).isEqualTo(newPos)
+
+    initJob.cancel()
   }
 
   @Test
-  fun `handleResizeWidget updates size and optional position`() = runTest(UnconfinedTestDispatcher()) {
+  fun `handleResizeWidget updates size and optional position`() = runTest {
     val fakeRepo = FakeLayoutRepository()
-    val coordinator = createCoordinator(fakeRepo)
+    val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
     val widget = testWidget(instanceId = "resizable", col = 2, row = 2, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(widget))
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     val newSize = GridSize(widthUnits = 6, heightUnits = 6)
     val newPos = GridPosition(col = 0, row = 0)
     coordinator.handleResizeWidget("resizable", newSize, newPos)
+    testScheduler.runCurrent()
 
     val resized = coordinator.layoutState.value.widgets.first()
     assertThat(resized.size).isEqualTo(newSize)
     assertThat(resized.position).isEqualTo(newPos)
+
+    initJob.cancel()
   }
 
   @Test
-  fun `handleResizeWidget keeps position when null`() = runTest(UnconfinedTestDispatcher()) {
+  fun `handleResizeWidget keeps position when null`() = runTest {
     val fakeRepo = FakeLayoutRepository()
-    val coordinator = createCoordinator(fakeRepo)
+    val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
     val widget = testWidget(instanceId = "br-resize", col = 2, row = 2, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(widget))
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     val newSize = GridSize(widthUnits = 6, heightUnits = 6)
     coordinator.handleResizeWidget("br-resize", newSize, null)
+    testScheduler.runCurrent()
 
     val resized = coordinator.layoutState.value.widgets.first()
     assertThat(resized.size).isEqualTo(newSize)
     assertThat(resized.position).isEqualTo(GridPosition(col = 2, row = 2))
+
+    initJob.cancel()
   }
 
   @Test
-  fun `handleResetLayout reloads from PresetLoader`() = runTest(UnconfinedTestDispatcher()) {
+  fun `handleResetLayout reloads from PresetLoader`() = runTest {
     val fakeRepo = FakeLayoutRepository()
-    val coordinator = createCoordinator(fakeRepo)
+    val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
     val widget = testWidget(instanceId = "old-widget", typeId = "essentials:old")
     fakeRepo.setWidgets(listOf(widget))
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
     assertThat(coordinator.layoutState.value.widgets).hasSize(1)
 
     coordinator.handleResetLayout()
+    testScheduler.runCurrent()
 
     val state = coordinator.layoutState.value
     assertThat(state.widgets).hasSize(2)
     assertThat(state.widgets.map { it.typeId })
       .containsExactly("essentials:clock", "essentials:battery")
+
+    initJob.cancel()
   }
 
   @Test
-  fun `visibleWidgets filters by viewport`() = runTest(UnconfinedTestDispatcher()) {
+  fun `visibleWidgets filters by viewport`() = runTest {
     val fakeRepo = FakeLayoutRepository()
-    val coordinator = createCoordinator(fakeRepo)
+    val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
     val inside = testWidget(instanceId = "inside", col = 0, row = 0, widthUnits = 4, heightUnits = 4)
     val outside = testWidget(instanceId = "outside", col = 100, row = 100, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(inside, outside))
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     val visible = coordinator.visibleWidgets(viewportCols = 20, viewportRows = 12)
     assertThat(visible).hasSize(1)
     assertThat(visible.first().instanceId).isEqualTo("inside")
+
+    initJob.cancel()
   }
 
   @Test
-  fun `viewport culling returns zero for fully off-screen widgets`() = runTest(UnconfinedTestDispatcher()) {
+  fun `viewport culling returns zero for fully off-screen widgets`() = runTest {
     val fakeRepo = FakeLayoutRepository()
-    val coordinator = createCoordinator(fakeRepo)
+    val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
     val farAway = testWidget(instanceId = "far", col = 100, row = 100, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(farAway))
 
-    coordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     val visible = coordinator.visibleWidgets(viewportCols = 20, viewportRows = 12)
     assertThat(visible).isEmpty()
+
+    initJob.cancel()
   }
 
-  private fun createCoordinator(fakeRepo: FakeLayoutRepository): LayoutCoordinator =
+  private fun createCoordinator(
+    fakeRepo: FakeLayoutRepository,
+    ioDispatcher: CoroutineDispatcher = StandardTestDispatcher(),
+  ): LayoutCoordinator =
     LayoutCoordinator(
       layoutRepository = fakeRepo,
       presetLoader = presetLoader,
@@ -188,7 +236,7 @@ class LayoutCoordinatorTest {
         windowInfoTracker = mockk(relaxed = true),
         logger = logger,
       ),
-      ioDispatcher = UnconfinedTestDispatcher(),
+      ioDispatcher = ioDispatcher,
       logger = logger,
     )
 }

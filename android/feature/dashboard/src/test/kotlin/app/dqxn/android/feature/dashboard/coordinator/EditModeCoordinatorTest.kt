@@ -16,9 +16,10 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.plus
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
@@ -49,7 +50,7 @@ class EditModeCoordinatorTest {
       presetLoader = mockk(relaxed = true),
       gridPlacementEngine = gridPlacementEngine,
       configurationBoundaryDetector = boundaryDetector,
-      ioDispatcher = UnconfinedTestDispatcher(),
+      ioDispatcher = StandardTestDispatcher(),
       logger = logger,
     )
     coordinator = EditModeCoordinator(
@@ -133,11 +134,31 @@ class EditModeCoordinatorTest {
   }
 
   @Test
-  fun `endDrag snaps to grid and commits position`() = runTest(UnconfinedTestDispatcher()) {
+  fun `endDrag snaps to grid and commits position`() = runTest {
+    // Recreate LayoutCoordinator with test scheduler-linked dispatcher
+    fakeRepo = FakeLayoutRepository()
+    layoutCoordinator = LayoutCoordinator(
+      layoutRepository = fakeRepo,
+      presetLoader = mockk(relaxed = true),
+      gridPlacementEngine = gridPlacementEngine,
+      configurationBoundaryDetector = boundaryDetector,
+      ioDispatcher = StandardTestDispatcher(testScheduler),
+      logger = logger,
+    )
+    coordinator = EditModeCoordinator(
+      layoutCoordinator = layoutCoordinator,
+      gridPlacementEngine = gridPlacementEngine,
+      haptics = haptics,
+      reducedMotionHelper = reducedMotionHelper,
+      logger = logger,
+    )
+
     // Place a widget in the layout first
     val widget = testWidget(instanceId = "w1", col = 2, row = 2)
     fakeRepo.setWidgets(listOf(widget))
-    layoutCoordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    layoutCoordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
     coordinator.initialize(this)
 
@@ -153,27 +174,52 @@ class EditModeCoordinatorTest {
     verify { haptics.snapToGrid() }
 
     // Verify position was committed to layout coordinator
-    advanceUntilIdle()
+    testScheduler.runCurrent()
     val updatedWidget = layoutCoordinator.layoutState.value.widgets.find { it.instanceId == "w1" }
     assertThat(updatedWidget).isNotNull()
     assertThat(updatedWidget!!.position).isEqualTo(snapped)
+
+    initJob.cancel()
   }
 
   @Test
-  fun `endDrag with no-straddle violation snaps to boundary`() = runTest(UnconfinedTestDispatcher()) {
+  fun `endDrag with no-straddle violation snaps to boundary`() = runTest {
+    // Recreate LayoutCoordinator with test scheduler-linked dispatcher
+    fakeRepo = FakeLayoutRepository()
+    layoutCoordinator = LayoutCoordinator(
+      layoutRepository = fakeRepo,
+      presetLoader = mockk(relaxed = true),
+      gridPlacementEngine = gridPlacementEngine,
+      configurationBoundaryDetector = boundaryDetector,
+      ioDispatcher = StandardTestDispatcher(testScheduler),
+      logger = logger,
+    )
+    coordinator = EditModeCoordinator(
+      layoutCoordinator = layoutCoordinator,
+      gridPlacementEngine = gridPlacementEngine,
+      haptics = haptics,
+      reducedMotionHelper = reducedMotionHelper,
+      logger = logger,
+    )
+
     val widget = testWidget(instanceId = "w1", col = 0, row = 0, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(widget))
-    layoutCoordinator.initialize(backgroundScope)
+    val initJob = Job(coroutineContext[Job])
+    layoutCoordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
     coordinator.initialize(this)
 
     coordinator.startDrag("w1", startCol = 0, startRow = 0)
     coordinator.updateDrag(48f, 48f) // small drag
 
     val snapped = coordinator.endDrag(gridUnitPx = 48f)
+    testScheduler.runCurrent()
 
     // Result should be non-null (even if no straddle correction needed)
     assertThat(snapped).isNotNull()
     assertThat(coordinator.dragState.value).isNull()
+
+    initJob.cancel()
   }
 
   // -- Resize --
