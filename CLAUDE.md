@@ -135,6 +135,8 @@ Path: `pack/{packId}/src/.../pack/{packId}/providers/{Name}Provider.kt`. Sensor/
 
 ## Testing
 
+**Zero manual tests.** Every verification in every plan must be automated. Planners must exhaust all means — mock injection, fake DI, Robolectric, `DashboardTestHarness`, semantics queries, compile-testing, Turbine, property-based tests — before concluding a behavior is untestable. If automation is genuinely impossible (e.g., requires physical device sensor, visual perception), the planner must: (1) explain why each automation approach fails, (2) propose a concrete resolution path (new test infrastructure, deferred to a specific phase, design change to make it testable). `<manual>` tags in plans are treated as defects, not acceptable gaps.
+
 JUnit5 + MockK + Truth (unit). JUnit4 + `HiltAndroidRule` (Hilt integration). Turbine + `StandardTestDispatcher` (flows — never `UnconfinedTestDispatcher`). Contract tests in `:sdk:contracts` testFixtures. `DashboardTestHarness` DSL for coordinators. Semantics-based UI verification (no screenshot tests). Test tags: `widget_{id}`, `dashboard_grid`, `bottom_bar`, `banner_{id}`, `profile_{id}`, `add_widget_button`, `edit_mode_toggle`, `settings_button`, `toast_{index}`, `widget_status_{id}`.
 
 ## Code Style

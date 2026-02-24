@@ -875,10 +875,50 @@ fun `notification banner renders above widgets`() {
 
 ## Test Principles
 
+- **Zero manual tests**: Every verification must be automated. `<manual>` tags in plans are defects. See [Zero Manual Tests Policy](#zero-manual-tests-policy) below.
 - **Deterministic**: `StandardTestDispatcher` everywhere
 - **Clear failures**: `assertWithMessage()` on every assertion
 - **Fast**: < 10s per module for unit tests
 - **Self-contained**: No test depends on device state, network, or file system outside sandbox
+
+## Zero Manual Tests Policy
+
+**Design goal**: Zero manual verifications across all phase plans. Every `<verify>` block must contain an `<automated>` command that produces a pass/fail exit code.
+
+### Automation Hierarchy
+
+Planners must attempt each technique in order before escalating:
+
+1. **JUnit5 unit test** — MockK fakes, `StandardTestDispatcher`, Truth assertions. Covers coordinators, state machines, repositories, domain logic.
+2. **Turbine flow test** — `flow.test {}` for emission sequences, backpressure, timeout behavior.
+3. **`DashboardTestHarness` integration test** — Multi-coordinator interaction, command dispatch, layout mutations.
+4. **Robolectric + Compose UI test** — `ComposeTestRule` with semantics assertions. Covers gesture handlers, composable rendering, accessibility.
+5. **Property-based test (jqwik)** — Exhaustive state transitions, arbitrary input survival, invariant validation.
+6. **Compile-testing (KSP)** — `KotlinCompilation` assertions for annotation processing, error messages, generated output.
+7. **Agentic E2E (Tier 5)** — `AgenticTestClient` via ADB content provider. Covers on-device integration, process death recovery, chaos injection.
+8. **Benchmark (Phase 12)** — `androidx.benchmark.macro` + `FrameTimingMetric`. Performance thresholds on physical device.
+
+### When a Behavior Appears Untestable
+
+If no technique in the hierarchy works, the planner must:
+
+1. **State why each applicable technique fails** — not "requires device" but "Robolectric doesn't shadow `X` API, compose-test doesn't support `Y` gesture, MockK can't intercept `Z` because it's a final platform class."
+2. **Propose a resolution** — exactly one of:
+   - **Design change**: Introduce an injectable abstraction to make the behavior testable (preferred).
+   - **Test infrastructure**: New fake/helper needed, with API sketch and target module.
+   - **Defer to specific phase**: Only when the required infrastructure is planned in that phase (e.g., benchmarking in Phase 12). Must reference the phase and its relevant requirement.
+3. **Never leave a gap undocumented** — the `<verify>` block must contain a `<!-- AUTOMATION GAP -->` comment with the above analysis, not a `<manual>` tag.
+
+### Plan Checker Enforcement
+
+The `gsd-plan-checker` agent rejects plans containing `<manual>` tags. A plan with `<manual>` tags is returned to the planner with a request to apply the automation hierarchy. The only exception is an `<!-- AUTOMATION GAP -->` with a documented resolution path approved by the user.
+
+### Validation Strategy Files
+
+Each phase's `VALIDATION.md` must contain:
+
+- **Manual-Only Verifications**: Should read "None" with a reclassification table showing how previously-manual items were automated (see Phase 7 as the reference implementation).
+- If any items remain, each must have the full resolution analysis from the protocol above.
 
 ## Test Failure Diagnostics
 
