@@ -18,8 +18,8 @@ import com.google.common.truth.Truth.assertThat
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import app.cash.turbine.test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,8 +27,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -110,22 +108,21 @@ class WidgetDataBinderTest {
     val renderConfig = MutableStateFlow(RenderConfig.DEFAULT)
     val dataFlow = binder.bind(widget, setOf(SpeedSnapshot::class), renderConfig)
 
-    val collected = mutableListOf<app.dqxn.android.sdk.contracts.widget.WidgetData>()
-    val job = launch(UnconfinedTestDispatcher()) {
-      dataFlow.collect { collected.add(it) }
+    dataFlow.test {
+      // First emission is Empty from scan seed
+      val seed = awaitItem()
+      assertThat(seed).isEqualTo(app.dqxn.android.sdk.contracts.widget.WidgetData.Empty)
+
+      speedFlow.emit(SpeedSnapshot(timestamp = 1000L, speed = 60.0))
+
+      val latest = awaitItem()
+      assertThat(latest.hasData()).isTrue()
+      val speedData = latest.snapshot<SpeedSnapshot>()
+      assertThat(speedData).isNotNull()
+      assertThat(speedData!!.speed).isEqualTo(60.0)
+
+      cancelAndIgnoreRemainingEvents()
     }
-
-    // First emission is Empty from scan seed
-    speedFlow.emit(SpeedSnapshot(timestamp = 1000L, speed = 60.0))
-
-    assertThat(collected).isNotEmpty()
-    val latest = collected.last()
-    assertThat(latest.hasData()).isTrue()
-    val speedData = latest.snapshot<SpeedSnapshot>()
-    assertThat(speedData).isNotNull()
-    assertThat(speedData!!.speed).isEqualTo(60.0)
-
-    job.cancel()
   }
 
   @Test
@@ -156,20 +153,24 @@ class WidgetDataBinderTest {
       renderConfig,
     )
 
-    val collected = mutableListOf<app.dqxn.android.sdk.contracts.widget.WidgetData>()
-    val job = launch(UnconfinedTestDispatcher()) {
-      dataFlow.collect { collected.add(it) }
+    dataFlow.test {
+      // Scan seed
+      val seed = awaitItem()
+      assertThat(seed).isEqualTo(app.dqxn.android.sdk.contracts.widget.WidgetData.Empty)
+
+      speedFlow.emit(SpeedSnapshot(timestamp = 100L, speed = 80.0))
+      val afterSpeed = awaitItem()
+      assertThat(afterSpeed.snapshot<SpeedSnapshot>()?.speed).isEqualTo(80.0)
+
+      batteryFlow.emit(BatterySnapshot(timestamp = 200L, level = 75))
+      val afterBattery = awaitItem()
+
+      // Should have accumulated both slots
+      assertThat(afterBattery.snapshot<SpeedSnapshot>()?.speed).isEqualTo(80.0)
+      assertThat(afterBattery.snapshot<BatterySnapshot>()?.level).isEqualTo(75)
+
+      cancelAndIgnoreRemainingEvents()
     }
-
-    speedFlow.emit(SpeedSnapshot(timestamp = 100L, speed = 80.0))
-    batteryFlow.emit(BatterySnapshot(timestamp = 200L, level = 75))
-
-    // Should have accumulated both slots
-    val latest = collected.last()
-    assertThat(latest.snapshot<SpeedSnapshot>()?.speed).isEqualTo(80.0)
-    assertThat(latest.snapshot<BatterySnapshot>()?.level).isEqualTo(75)
-
-    job.cancel()
   }
 
   @Test
@@ -201,20 +202,20 @@ class WidgetDataBinderTest {
       renderConfig,
     )
 
-    val collected = mutableListOf<app.dqxn.android.sdk.contracts.widget.WidgetData>()
-    val job = launch(UnconfinedTestDispatcher()) {
-      dataFlow.collect { collected.add(it) }
+    dataFlow.test {
+      // Scan seed
+      awaitItem()
+
+      // Only speed emits; battery is stuck
+      speedFlow.emit(SpeedSnapshot(timestamp = 100L, speed = 120.0))
+      val latest = awaitItem()
+
+      // Speed data should be available even though battery never emitted
+      assertThat(latest.snapshot<SpeedSnapshot>()).isNotNull()
+      assertThat(latest.snapshot<BatterySnapshot>()).isNull()
+
+      cancelAndIgnoreRemainingEvents()
     }
-
-    // Only speed emits; battery is stuck
-    speedFlow.emit(SpeedSnapshot(timestamp = 100L, speed = 120.0))
-
-    // Speed data should be available even though battery never emitted
-    val latest = collected.last()
-    assertThat(latest.snapshot<SpeedSnapshot>()).isNotNull()
-    assertThat(latest.snapshot<BatterySnapshot>()).isNull()
-
-    job.cancel()
   }
 
   @Test
@@ -298,18 +299,18 @@ class WidgetDataBinderTest {
     val renderConfig = MutableStateFlow(RenderConfig.DEFAULT)
     val dataFlow = binder.bind(widget, setOf(SpeedSnapshot::class), renderConfig)
 
-    val collected = mutableListOf<app.dqxn.android.sdk.contracts.widget.WidgetData>()
-    val job = launch(UnconfinedTestDispatcher()) {
-      dataFlow.collect { collected.add(it) }
+    dataFlow.test {
+      // Scan seed
+      awaitItem()
+
+      speedFlow.emit(SpeedSnapshot(timestamp = 100L, speed = 30.0))
+      val latest = awaitItem()
+
+      // Speed should be doubled by interceptor: 30 * 2 = 60
+      assertThat(latest.snapshot<SpeedSnapshot>()!!.speed).isEqualTo(60.0)
+
+      cancelAndIgnoreRemainingEvents()
     }
-
-    speedFlow.emit(SpeedSnapshot(timestamp = 100L, speed = 30.0))
-
-    val latest = collected.last()
-    // Speed should be doubled by interceptor: 30 * 2 = 60
-    assertThat(latest.snapshot<SpeedSnapshot>()!!.speed).isEqualTo(60.0)
-
-    job.cancel()
   }
 
   @Test
