@@ -1,0 +1,327 @@
+package app.dqxn.android.feature.dashboard.binding
+
+import app.dqxn.android.core.thermal.FakeThermalManager
+import app.dqxn.android.core.thermal.RenderConfig
+import app.dqxn.android.core.thermal.ThermalLevel
+import app.dqxn.android.feature.dashboard.test.TestWidgetFactory.testWidget
+import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
+import app.dqxn.android.sdk.contracts.provider.DataProvider
+import app.dqxn.android.sdk.contracts.provider.DataProviderInterceptor
+import app.dqxn.android.sdk.contracts.provider.DataSchema
+import app.dqxn.android.sdk.contracts.provider.DataSnapshot
+import app.dqxn.android.sdk.contracts.provider.DataTypes
+import app.dqxn.android.sdk.contracts.provider.ProviderPriority
+import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
+import app.dqxn.android.sdk.contracts.setup.SetupPageDefinition
+import app.dqxn.android.sdk.observability.log.NoOpLogger
+import com.google.common.truth.Truth.assertThat
+import kotlin.reflect.KClass
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+@Tag("fast")
+class WidgetDataBinderTest {
+
+  private val logger = NoOpLogger
+  private val thermalMonitor = FakeThermalManager()
+
+  // -- Test snapshot types ---
+
+  data class SpeedSnapshot(
+    override val timestamp: Long = System.currentTimeMillis(),
+    val speed: Double = 0.0,
+  ) : DataSnapshot
+
+  data class BatterySnapshot(
+    override val timestamp: Long = System.currentTimeMillis(),
+    val level: Int = 100,
+  ) : DataSnapshot
+
+  // -- Simple test providers ---
+
+  class SimpleProvider<T : DataSnapshot>(
+    private val dataFlow: Flow<T>,
+    override val sourceId: String,
+    override val displayName: String = "Test Provider",
+    override val description: String = "A test provider",
+    override val dataType: String = DataTypes.SPEED,
+    override val priority: ProviderPriority = ProviderPriority.SIMULATED,
+    override val snapshotType: KClass<T>,
+    override val schema: DataSchema = DataSchema(emptyList(), 3000L),
+    override val setupSchema: List<SetupPageDefinition> = emptyList(),
+    override val subscriberTimeout: Duration = 5.seconds,
+    override val firstEmissionTimeout: Duration = 5.seconds,
+    override val requiredAnyEntitlement: Set<String>? = null,
+    override val isAvailable: Boolean = true,
+  ) : DataProvider<T> {
+    override val connectionState: Flow<Boolean> = flowOf(true)
+    override val connectionErrorDescription: Flow<String?> = flowOf(null)
+    override fun provideState(): Flow<T> = dataFlow
+  }
+
+  // -- Fake registries ---
+
+  class SimpleProviderRegistry(private val providers: Set<DataProvider<*>>) : DataProviderRegistry {
+    override fun getAll(): Set<DataProvider<*>> = providers
+    override fun findByDataType(dataType: String): List<DataProvider<*>> =
+      providers.filter { it.dataType == dataType }
+    override fun getFiltered(entitlementCheck: (String) -> Boolean): Set<DataProvider<*>> =
+      providers
+  }
+
+  private fun createBinder(
+    providers: Set<DataProvider<*>> = emptySet(),
+    interceptors: Set<DataProviderInterceptor> = emptySet(),
+  ): WidgetDataBinder {
+    return WidgetDataBinder(
+      providerRegistry = SimpleProviderRegistry(providers),
+      interceptors = interceptors,
+      thermalMonitor = thermalMonitor,
+      logger = logger,
+    )
+  }
+
+  @Test
+  fun `bind with single provider emits WidgetData with correct slot`() = runTest {
+    val speedFlow = MutableSharedFlow<SpeedSnapshot>()
+    val provider = SimpleProvider(
+      dataFlow = speedFlow,
+      sourceId = "test:speed",
+      snapshotType = SpeedSnapshot::class,
+    )
+    val binder = createBinder(setOf(provider))
+
+    val widget = testWidget(typeId = "essentials:speed")
+    val renderConfig = MutableStateFlow(RenderConfig.DEFAULT)
+    val dataFlow = binder.bind(widget, setOf(SpeedSnapshot::class), renderConfig)
+
+    val collected = mutableListOf<app.dqxn.android.sdk.contracts.widget.WidgetData>()
+    val job = launch(UnconfinedTestDispatcher()) {
+      dataFlow.collect { collected.add(it) }
+    }
+
+    // First emission is Empty from scan seed
+    speedFlow.emit(SpeedSnapshot(timestamp = 1000L, speed = 60.0))
+
+    assertThat(collected).isNotEmpty()
+    val latest = collected.last()
+    assertThat(latest.hasData()).isTrue()
+    val speedData = latest.snapshot<SpeedSnapshot>()
+    assertThat(speedData).isNotNull()
+    assertThat(speedData!!.speed).isEqualTo(60.0)
+
+    job.cancel()
+  }
+
+  @Test
+  fun `bind with multiple providers merges via scan`() = runTest {
+    val speedFlow = MutableSharedFlow<SpeedSnapshot>()
+    val batteryFlow = MutableSharedFlow<BatterySnapshot>()
+
+    val speedProvider = SimpleProvider(
+      dataFlow = speedFlow,
+      sourceId = "test:speed",
+      snapshotType = SpeedSnapshot::class,
+      dataType = DataTypes.SPEED,
+    )
+    val batteryProvider = SimpleProvider(
+      dataFlow = batteryFlow,
+      sourceId = "test:battery",
+      snapshotType = BatterySnapshot::class,
+      dataType = DataTypes.BATTERY,
+    )
+
+    val binder = createBinder(setOf(speedProvider, batteryProvider))
+
+    val widget = testWidget(typeId = "essentials:multi")
+    val renderConfig = MutableStateFlow(RenderConfig.DEFAULT)
+    val dataFlow = binder.bind(
+      widget,
+      setOf(SpeedSnapshot::class, BatterySnapshot::class),
+      renderConfig,
+    )
+
+    val collected = mutableListOf<app.dqxn.android.sdk.contracts.widget.WidgetData>()
+    val job = launch(UnconfinedTestDispatcher()) {
+      dataFlow.collect { collected.add(it) }
+    }
+
+    speedFlow.emit(SpeedSnapshot(timestamp = 100L, speed = 80.0))
+    batteryFlow.emit(BatterySnapshot(timestamp = 200L, level = 75))
+
+    // Should have accumulated both slots
+    val latest = collected.last()
+    assertThat(latest.snapshot<SpeedSnapshot>()?.speed).isEqualTo(80.0)
+    assertThat(latest.snapshot<BatterySnapshot>()?.level).isEqualTo(75)
+
+    job.cancel()
+  }
+
+  @Test
+  fun `merge+scan - one stuck provider does not block other slots`() = runTest {
+    val speedFlow = MutableSharedFlow<SpeedSnapshot>()
+    // Battery provider never emits (stalled)
+    val batteryFlow = MutableSharedFlow<BatterySnapshot>()
+
+    val speedProvider = SimpleProvider(
+      dataFlow = speedFlow,
+      sourceId = "test:speed",
+      snapshotType = SpeedSnapshot::class,
+      dataType = DataTypes.SPEED,
+    )
+    val batteryProvider = SimpleProvider(
+      dataFlow = batteryFlow,
+      sourceId = "test:battery-stall",
+      snapshotType = BatterySnapshot::class,
+      dataType = DataTypes.BATTERY,
+    )
+
+    val binder = createBinder(setOf(speedProvider, batteryProvider))
+
+    val widget = testWidget(typeId = "essentials:partial")
+    val renderConfig = MutableStateFlow(RenderConfig.DEFAULT)
+    val dataFlow = binder.bind(
+      widget,
+      setOf(SpeedSnapshot::class, BatterySnapshot::class),
+      renderConfig,
+    )
+
+    val collected = mutableListOf<app.dqxn.android.sdk.contracts.widget.WidgetData>()
+    val job = launch(UnconfinedTestDispatcher()) {
+      dataFlow.collect { collected.add(it) }
+    }
+
+    // Only speed emits; battery is stuck
+    speedFlow.emit(SpeedSnapshot(timestamp = 100L, speed = 120.0))
+
+    // Speed data should be available even though battery never emitted
+    val latest = collected.last()
+    assertThat(latest.snapshot<SpeedSnapshot>()).isNotNull()
+    assertThat(latest.snapshot<BatterySnapshot>()).isNull()
+
+    job.cancel()
+  }
+
+  @Test
+  fun `provider fallback - user-selected unavailable falls back to next priority`() {
+    val hardwareProvider = SimpleProvider(
+      dataFlow = flowOf(SpeedSnapshot(timestamp = 1L, speed = 100.0)),
+      sourceId = "hw:speed",
+      snapshotType = SpeedSnapshot::class,
+      priority = ProviderPriority.HARDWARE,
+    )
+    val simulatedProvider = SimpleProvider(
+      dataFlow = flowOf(SpeedSnapshot(timestamp = 1L, speed = 50.0)),
+      sourceId = "sim:speed",
+      snapshotType = SpeedSnapshot::class,
+      priority = ProviderPriority.SIMULATED,
+    )
+
+    val binder = createBinder(setOf(hardwareProvider, simulatedProvider))
+
+    // User selected a nonexistent provider -> should fallback to HARDWARE first
+    val resolved = binder.resolveProvider(SpeedSnapshot::class, "nonexistent:provider")
+    assertThat(resolved).isNotNull()
+    assertThat(resolved!!.sourceId).isEqualTo("hw:speed")
+  }
+
+  @Test
+  fun `provider resolution priority order`() {
+    val simulated = SimpleProvider(
+      dataFlow = flowOf(SpeedSnapshot()),
+      sourceId = "sim:speed",
+      snapshotType = SpeedSnapshot::class,
+      priority = ProviderPriority.SIMULATED,
+    )
+    val network = SimpleProvider(
+      dataFlow = flowOf(SpeedSnapshot()),
+      sourceId = "net:speed",
+      snapshotType = SpeedSnapshot::class,
+      priority = ProviderPriority.NETWORK,
+    )
+    val deviceSensor = SimpleProvider(
+      dataFlow = flowOf(SpeedSnapshot()),
+      sourceId = "sensor:speed",
+      snapshotType = SpeedSnapshot::class,
+      priority = ProviderPriority.DEVICE_SENSOR,
+    )
+
+    val binder = createBinder(setOf(simulated, network, deviceSensor))
+
+    // Should resolve DEVICE_SENSOR (highest available priority)
+    val resolved = binder.resolveProvider(SpeedSnapshot::class)
+    assertThat(resolved!!.sourceId).isEqualTo("sensor:speed")
+  }
+
+  @Test
+  fun `interceptor chain applied to provider flows`() = runTest {
+    val speedFlow = MutableSharedFlow<SpeedSnapshot>()
+    val provider = SimpleProvider(
+      dataFlow = speedFlow,
+      sourceId = "test:speed",
+      snapshotType = SpeedSnapshot::class,
+    )
+
+    // Interceptor that doubles the speed
+    val doublingInterceptor = object : DataProviderInterceptor {
+      @Suppress("UNCHECKED_CAST")
+      override fun <T : DataSnapshot> intercept(
+        provider: DataProvider<T>,
+        upstream: Flow<T>,
+      ): Flow<T> =
+        upstream.map { snapshot ->
+          if (snapshot is SpeedSnapshot) {
+            snapshot.copy(speed = snapshot.speed * 2) as T
+          } else {
+            snapshot
+          }
+        }
+    }
+
+    val binder = createBinder(setOf(provider), setOf(doublingInterceptor))
+    val widget = testWidget(typeId = "essentials:speed")
+    val renderConfig = MutableStateFlow(RenderConfig.DEFAULT)
+    val dataFlow = binder.bind(widget, setOf(SpeedSnapshot::class), renderConfig)
+
+    val collected = mutableListOf<app.dqxn.android.sdk.contracts.widget.WidgetData>()
+    val job = launch(UnconfinedTestDispatcher()) {
+      dataFlow.collect { collected.add(it) }
+    }
+
+    speedFlow.emit(SpeedSnapshot(timestamp = 100L, speed = 30.0))
+
+    val latest = collected.last()
+    // Speed should be doubled by interceptor: 30 * 2 = 60
+    assertThat(latest.snapshot<SpeedSnapshot>()!!.speed).isEqualTo(60.0)
+
+    job.cancel()
+  }
+
+  @Test
+  fun `empty compatible snapshots emits Empty`() = runTest {
+    val binder = createBinder()
+    val widget = testWidget(typeId = "essentials:empty")
+    val renderConfig = MutableStateFlow(RenderConfig.DEFAULT)
+
+    val result = binder.bind(widget, emptySet(), renderConfig)
+    val items = result.take(1).toList()
+
+    assertThat(items).hasSize(1)
+    assertThat(items[0]).isEqualTo(app.dqxn.android.sdk.contracts.widget.WidgetData.Empty)
+  }
+}

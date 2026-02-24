@@ -104,8 +104,20 @@ constructor(
   /**
    * Bind a widget to its data providers. Cancels any existing binding for this widget, creates
    * a new job under [bindingScope] with [CoroutineExceptionHandler] for crash isolation.
+   *
+   * Resets the error count for a fresh start. For retries after errors, use [startBinding] directly.
    */
   public fun bind(widget: DashboardWidgetInstance) {
+    // Reset error count for fresh (non-retry) binding
+    errorCounts[widget.instanceId] = 0
+    startBinding(widget)
+  }
+
+  /**
+   * Internal binding entry point shared by [bind] and retry logic. Does NOT reset error count
+   * so retries correctly track cumulative failures.
+   */
+  private fun startBinding(widget: DashboardWidgetInstance) {
     // Cancel existing binding if present
     unbindInternal(widget.instanceId)
 
@@ -116,9 +128,6 @@ constructor(
     val dataFlow = _widgetData.getOrPut(widget.instanceId) { MutableStateFlow(WidgetData.Empty) }
     val statusFlow =
       _widgetStatuses.getOrPut(widget.instanceId) { MutableStateFlow(WidgetStatusCache.EMPTY) }
-
-    // Reset error count for fresh binding
-    errorCounts[widget.instanceId] = 0
 
     // Resolve compatible snapshots from the widget registry
     val renderer = widgetRegistry.findByTypeId(widget.typeId)
@@ -232,6 +241,17 @@ constructor(
     logger.warn(TAG) { "Widget crash reported: $widgetId ($typeId)" }
   }
 
+  /**
+   * Cancel the binding supervisor and all child jobs.
+   * Called from ViewModel.onCleared() to prevent leaks.
+   */
+  public fun destroy() {
+    bindingSupervisor.cancel()
+    bindings.clear()
+    boundWidgets.clear()
+    logger.info(TAG) { "WidgetBindingCoordinator destroyed" }
+  }
+
   /** For test introspection: returns the current active binding jobs. */
   public fun activeBindings(): Map<String, Job> = bindings.toMap()
 
@@ -275,11 +295,11 @@ constructor(
         "retrying in ${backoffMs}ms: ${throwable.message}"
     }
 
-    // Schedule retry with backoff
+    // Schedule retry with backoff — uses startBinding to preserve error count
     bindingScope.launch {
       delay(backoffMs)
       if (boundWidgets.containsKey(widgetId)) {
-        bind(widget)
+        startBinding(widget)
       }
     }
   }
