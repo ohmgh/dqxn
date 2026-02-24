@@ -46,7 +46,7 @@ import kotlinx.collections.immutable.ImmutableMap
  * `CallActionProvider` via the binder. No data snapshot required -- this is an action-only widget.
  */
 @DashboardWidget(typeId = "essentials:shortcuts", displayName = "Shortcuts")
-internal class ShortcutsRenderer @Inject constructor() : WidgetRenderer {
+public class ShortcutsRenderer @Inject constructor() : WidgetRenderer {
 
   override val typeId: String = "essentials:shortcuts"
   override val displayName: String = "Shortcuts"
@@ -139,9 +139,13 @@ internal class ShortcutsRenderer @Inject constructor() : WidgetRenderer {
   }
 
   override fun accessibilityDescription(data: WidgetData): String {
-    // Without settings context, provide a generic description.
-    // In real rendering, the WidgetSlot provides settings alongside data.
-    return "Shortcut: tap to configure"
+    // Shortcuts is action-only (no snapshot data). Differentiate empty (unconfigured) vs active
+    // (bound) state via timestamp. When the binder assigns this widget, timestamp > 0.
+    return if (data.timestamp > 0L) {
+      "Shortcut: ready"
+    } else {
+      "Shortcut: tap to configure"
+    }
   }
 
   override fun onTap(widgetId: String, settings: ImmutableMap<String, Any>): Boolean {

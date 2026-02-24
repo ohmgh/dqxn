@@ -39,14 +39,14 @@ import kotlin.reflect.KClass
 import kotlinx.collections.immutable.ImmutableMap
 
 /** Display mode for the Solar widget. */
-internal enum class SolarDisplayMode {
+public enum class SolarDisplayMode {
   NEXT_EVENT,
   SUNRISE_SUNSET,
   ARC,
 }
 
 /** Arc size option. */
-internal enum class ArcSize {
+public enum class ArcSize {
   SMALL,
   MEDIUM,
   LARGE,
@@ -65,7 +65,7 @@ internal enum class ArcSize {
  * sunrise/sunset change, not every frame.
  */
 @DashboardWidget(typeId = "essentials:solar", displayName = "Solar")
-internal class SolarRenderer @Inject constructor() : WidgetRenderer {
+public class SolarRenderer @Inject constructor() : WidgetRenderer {
 
   override val typeId: String = "essentials:solar"
   override val displayName: String = "Solar"
