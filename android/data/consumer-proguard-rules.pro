@@ -1,0 +1,2 @@
+-keep class app.dqxn.android.data.proto.** { *; }
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite { *; }
