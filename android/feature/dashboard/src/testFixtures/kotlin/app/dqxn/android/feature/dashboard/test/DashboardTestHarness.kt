@@ -10,6 +10,10 @@ import app.dqxn.android.feature.dashboard.safety.SafeModeManager
 import app.dqxn.android.sdk.observability.log.NoOpLogger
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -32,8 +36,12 @@ public fun dashboardTest(
   block: suspend DashboardTestScope.() -> Unit,
 ): Unit = runTest {
   val harness = DashboardTestHarness(testScope = this)
-  harness.initialize()
-  DashboardTestScope(harness).block()
+  try {
+    harness.initialize()
+    DashboardTestScope(harness).block()
+  } finally {
+    harness.close()
+  }
 }
 
 /**
@@ -95,8 +103,36 @@ public class DashboardTestHarness(
       logger = logger,
     )
 
-  /** Initialize coordinators. Must be called before accessing state. */
-  public fun initialize() {
-    layoutCoordinator.initialize(testScope)
+  private var initJob: Job? = null
+
+  /**
+   * Initialize coordinators. Must be called before accessing state.
+   *
+   * Creates a child [Job] on the [testScope] so forever-collecting flows share the same
+   * [TestCoroutineScheduler] (avoiding different-scheduler errors) while remaining cancellable
+   * via [close]. Call [close] before [runTest] exits to prevent [UncompletedCoroutinesError].
+   *
+   * @param initScope Optional scope for the coordinator's forever-collecting flows. When omitted,
+   *   creates a child scope of [testScope]. Used by [dashboardTest] DSL which manages its own
+   *   lifecycle.
+   */
+  public fun initialize(initScope: CoroutineScope? = null) {
+    val scope = if (initScope != null) {
+      initScope
+    } else {
+      val job = Job(testScope.coroutineContext[Job])
+      initJob = job
+      testScope + job
+    }
+    layoutCoordinator.initialize(scope)
+  }
+
+  /**
+   * Cancel the forever-collecting coordinator flows. Call before [runTest] exits to prevent
+   * [UncompletedCoroutinesError]. Safe to call multiple times.
+   */
+  public fun close() {
+    initJob?.cancel("Test harness closed")
+    initJob = null
   }
 }
