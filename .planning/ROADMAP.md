@@ -349,12 +349,13 @@ Plans:
 
 **Goal:** Performance measurement infrastructure, Compose stability enforcement, CI gate configuration. Starts immediately after Phase 8 — no dependency on overlay UI or additional packs.
 
-**Requirements:** NF9, NF10, NF34, NF35
+**Requirements:** NF1, NF9, NF10, NF34, NF35
 
 **Success Criteria:**
 1. Baseline Profiles generated and included in release build
 2. `:benchmark` module: P50/P95/P99 frame times measured with 12 widgets
-3. All 9 CI gates configured and enforced
+3. NF1 gate: P95 frame time < 16.67ms with 12 active widgets on target device
+4. All 9 CI gates configured and enforced
 4. Compose stability: 0 unstable classes in app-owned modules
 5. APK size: base < 30MB verified
 6. Mutation kill rate tracking configured (Pitest setup) — **not enforced as gate at V1**, tracked for post-launch enforcement
