@@ -6,11 +6,13 @@ android {
 }
 
 dependencies {
+  implementation(project(":core:agentic"))
   implementation(project(":core:design"))
   implementation(project(":core:thermal"))
   implementation(project(":data"))
   implementation(project(":sdk:analytics"))
 
+  implementation(libs.compose.material.icons.extended)
   implementation(libs.window)
 
   testImplementation(testFixtures(project(":sdk:contracts")))
