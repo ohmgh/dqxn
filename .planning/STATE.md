@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 8 — Essentials Pack
+- **Phase:** 8 — Essentials Pack (COMPLETE)
 - **Current Plan:** 11 of 11
 - **Milestone:** V1 Launch
-- **Next action:** Execute Phase 8 plan 09 (on-device wiring + stability soak)
-- **Last session:** 2026-02-25T17:21:41Z
-- **Stopped at:** Completed 08-08-PLAN.md
+- **Next action:** Begin Phase 9 (Themes, Demo + Chaos)
+- **Last session:** 2026-02-24T17:35:27.900Z
+- **Stopped at:** Completed 08-09-PLAN.md (Phase 8 complete)
 
 ## Progress
 
@@ -20,7 +20,7 @@
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
-| 8. Essentials Pack | In Progress (10/11 plans) | Snapshot types + lint + simple providers + greenfield providers + solar + battery/ambient-light + clock/date widgets + shortcuts/solar widgets + compass/speedlimit + speedometer/themes + integration verification |
+| 8. Essentials Pack | Complete (11/11 plans) | All plans complete -- snapshots, lint, providers, widgets, themes, integration tests, on-device verification |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
@@ -52,6 +52,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 08]: Public visibility required for KSP-annotated pack classes -- KotlinPoet interfaceBuilder prohibits INTERNAL on abstract members in generated Hilt modules
 - [Phase 08]: Timestamp-based accessibility differentiation for action-only widgets -- data.timestamp > 0L distinguishes empty from bound state for contract test #5
 - [Phase 08]: Canvas-drawn icons (BatteryIcon, LightBulbIcon) for zero additional icon library dependency with data-state-based color tinting
+- [Phase 08]: AgenticContentProvider exported=true in debug manifest for ADB content call access -- debug-only, no security concern
 
 ### Phase 1 Decisions
 
@@ -267,6 +268,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 08-02 | 15min | 2 | 17 |
 | 08-05a | 35min | 2 | 10 |
 | 08-08 | 40min | 3 | 17 |
+| Phase 08 P09 | 7min | 2 tasks | 1 files |
 
 ## Context
 
