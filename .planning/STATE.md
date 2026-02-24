@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 6 — Deployable App + Agentic Framework
-- **Current Plan:** 2 of 4 complete
+- **Current Plan:** 3 of 4 complete
 - **Milestone:** V1 Launch
-- **Next action:** Continue Phase 6 Plan 03 (Agentic diagnostic handlers)
-- **Last session:** 2026-02-24T03:58:10.861Z
-- **Stopped at:** Completed 06-02-PLAN.md
+- **Next action:** Continue Phase 6 Plan 04 (ADB CLI wrapper)
+- **Last session:** 2026-02-24T04:12:00Z
+- **Stopped at:** Completed 06-03-PLAN.md
 
 ## Progress
 
@@ -18,7 +18,7 @@
 | 3. SDK Observability + Analytics + UI | Complete (3/3 plans) | All plans complete — observability, metrics/health/diagnostics/analytics, SDK UI |
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
-| 6. Deployable App + Agentic | In Progress (2/4 plans) | Core agentic types + app shell with DI assembly |
+| 6. Deployable App + Agentic | In Progress (3/4 plans) | Core agentic types + app shell + 15 diagnostic handlers |
 | 7. Dashboard Shell | Pending | Highest risk phase |
 | 8. Essentials Pack | Pending | Architecture validation gate |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
@@ -138,6 +138,11 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - **AgenticCommandRouter indexes aliases** -- lazy handlerMap includes both primary names and aliases from CommandHandler.aliases
 - **@ApplicationContext (not @param:ApplicationContext) on @Provides function params** -- @param: target only applies to constructor val/var (KT-73255)
 - **FakeSharedPreferences inline in test** -- JUnit5 compatible, no Robolectric Android runtime dependency for CrashRecovery tests
+- **AgenticCommandRouter public visibility** -- internal was inaccessible from :app debug source set via @EntryPoint; cross-module access requires public
+- **Provider<Set<CommandHandler>> in ListCommandsHandler** -- breaks Dagger circular dependency (handler is itself in the set it injects)
+- **Handler classes public (not internal)** -- KSP-generated AgenticHiltModule has public bind functions that cannot expose internal parameter types
+- **isReturnDefaultValues=true on application convention** -- Android stub Bundle doesn't store values; unit tests verify file I/O directly
+- **Configurable timeoutMs on handleCall** -- production 8s, tests 200ms for fast test runs
 
 ## Performance Metrics
 
@@ -165,6 +170,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 05 P04 | 6min | 3 tasks | 19 files |
 | 06-01 | 6min | 2 | 11 |
 | 06-02 | 7min | 2 | 12 |
+| 06-03 | 12min | 3 | 24 |
 
 ## Context
 
