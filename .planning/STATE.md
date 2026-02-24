@@ -6,8 +6,8 @@
 - **Current Plan:** 0 of 11 complete
 - **Milestone:** V1 Launch
 - **Next action:** Plan or execute Phase 8
-- **Last session:** 2026-02-24
-- **Stopped at:** Phase 7 verified and marked complete
+- **Last session:** 2026-02-24T15:16:02.514Z
+- **Stopped at:** Completed 07-16-PLAN.md
 
 ## Progress
 
@@ -19,7 +19,7 @@
 | 4. KSP Codegen | Complete (3/3 plans) | All plans complete — plugin processor, compile-testing, agentic processor |
 | 5. Core Infrastructure | Complete (5/5 plans) | All plans complete -- proto schemas, thermal, firebase, data repos, stores, presets |
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
-| 7. Dashboard Shell | Gap closure (13/16 plans, 3 pending) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests. 3 gap closure plans created: 07-14 (dispatcher migration), 07-15 (tautological tests + alertEmitter + unbind flow), 07-16 (:core:agentic dep docs) |
+| 7. Dashboard Shell | Gap closure (14/16 plans, 2 pending) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests. 2 gap closure plans pending: 07-14 (dispatcher migration), 07-15 (tautological tests + alertEmitter + unbind flow). 07-16 (:core:agentic dep docs) complete |
 | 8. Essentials Pack | Pending | Architecture validation gate |
 | 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
@@ -45,6 +45,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 07]: SnapSpec type assertion over durationMillis property -- SnapSpec does not expose durationMillis as public property; type check + delay assertion for verification
 - [Phase 07]: testScheduler.runCurrent() over advanceUntilIdle() for coordinator tests -- staleness watchdog infinite delay loop hangs advanceUntilIdle
 - [Phase 07]: coordinator.destroy() required in every coordinator test -- standalone SupervisorJob not child of test Job; runTest cleanup advanceUntilIdle hangs without explicit cancellation
+- [Phase 07]: :core:agentic added to :feature:dashboard allowed deps with parenthetical justification (debug semantics registration)
 
 ### Phase 1 Decisions
 
@@ -218,6 +219,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 07 P10 | 62min | 2 tasks | 2 files |
 | Phase 07 P11 | 5min | 1 task | 1 file |
 | Phase 07 P12 | 5min | 1 task | 2 files |
+| Phase 07 P16 | 1min | 1 tasks | 1 files |
 
 ## Context
 
