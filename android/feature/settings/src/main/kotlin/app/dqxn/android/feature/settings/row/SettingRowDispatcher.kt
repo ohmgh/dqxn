@@ -7,6 +7,7 @@ import app.dqxn.android.core.design.motion.DashboardMotion
 import app.dqxn.android.feature.settings.SettingNavigation
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.entitlement.isAccessible
+import app.dqxn.android.sdk.contracts.settings.DateFormatOption
 import app.dqxn.android.sdk.contracts.settings.SettingDefinition
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 
@@ -20,9 +21,7 @@ import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
  *    flickering on initial empty map load per Pitfall 1).
  * 3. Entitlement check via [EntitlementManager].
  *
- * 12-branch `when` dispatch: first 6 types implemented (Boolean, Enum, Int, Float, String, Info),
- * remaining 6 (Instruction, AppPicker, DateFormat, Timezone, SoundPicker, Uri) fall through to
- * [SettingLabel] as a fallback.
+ * All 12 [SettingDefinition] subtypes dispatch to dedicated row composables.
  */
 @Composable
 public fun SettingRowDispatcher(
@@ -33,6 +32,7 @@ public fun SettingRowDispatcher(
   theme: DashboardThemeDefinition,
   onValueChanged: (String, Any?) -> Unit,
   onNavigate: ((SettingNavigation) -> Unit)? = null,
+  onSoundPickerRequested: ((String) -> Unit)? = null,
   modifier: Modifier = Modifier,
 ) {
   // Layer 1: hard skip
@@ -104,12 +104,56 @@ public fun SettingRowDispatcher(
           modifier = modifier,
         )
 
-      // Not-yet-implemented row types -- fallback to label display
-      else ->
-        SettingLabel(
-          label = definition.label,
-          description = definition.description,
+      is SettingDefinition.InstructionSetting ->
+        InstructionSettingRow(
+          definition = definition,
           theme = theme,
+          onNavigate = onNavigate,
+          modifier = modifier,
+        )
+
+      is SettingDefinition.AppPickerSetting ->
+        AppPickerSettingRow(
+          definition = definition,
+          currentValue = currentValue as? String,
+          theme = theme,
+          onNavigate = onNavigate,
+          modifier = modifier,
+        )
+
+      is SettingDefinition.DateFormatSetting ->
+        DateFormatSettingRow(
+          definition = definition,
+          currentValue = currentValue as? DateFormatOption ?: definition.default,
+          theme = theme,
+          onNavigate = onNavigate,
+          modifier = modifier,
+        )
+
+      is SettingDefinition.TimezoneSetting ->
+        TimezoneSettingRow(
+          definition = definition,
+          currentValue = currentValue as? String,
+          theme = theme,
+          onNavigate = onNavigate,
+          modifier = modifier,
+        )
+
+      is SettingDefinition.SoundPickerSetting ->
+        SoundPickerSettingRow(
+          definition = definition,
+          currentValue = currentValue as? String,
+          theme = theme,
+          onSoundPickerRequested = onSoundPickerRequested ?: {},
+          modifier = modifier,
+        )
+
+      is SettingDefinition.UriSetting ->
+        UriSettingRow(
+          definition = definition,
+          currentValue = currentValue as? String,
+          theme = theme,
+          onNavigate = onNavigate,
           modifier = modifier,
         )
     }
