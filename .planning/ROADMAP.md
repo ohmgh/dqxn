@@ -366,7 +366,7 @@ Plans:
 **Goal:** Fix KSP codegen: ManifestGenerator hardcodes PackCategory.ESSENTIALS for all packs (should derive from pack identity), generated manifest is dead code (never Hilt-injected). Add @DashboardThemeProvider annotation + KSP handler to auto-generate ThemeProvider Hilt bindings (eliminates manual modules). Fix test stub PackCategory enum mismatch.
 **Depends on:** Phase 10
 **Requirements:** NF27
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 10.1-01-PLAN.md — Fix ManifestGenerator hardcoded category + wire manifest into Hilt + @DashboardThemeProvider annotation + KSP handler + delete manual theme modules + fix test stubs
