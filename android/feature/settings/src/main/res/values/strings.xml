@@ -28,6 +28,37 @@
   <string name="widget_picker_entitlement_required">Upgrade required to add this widget</string>
   <string name="widget_picker_revocation_toast">Some features are no longer available. Your layout is preserved.</string>
 
+  <!-- MainSettings sections -->
+  <string name="main_settings_title">Settings</string>
+  <string name="main_settings_section_appearance">Appearance</string>
+  <string name="main_settings_section_behavior">Behavior</string>
+  <string name="main_settings_section_data_privacy">Data &amp; Privacy</string>
+  <string name="main_settings_section_danger_zone">Danger Zone</string>
+
+  <!-- MainSettings rows -->
+  <string name="main_settings_theme_mode">Theme Mode</string>
+  <string name="main_settings_status_bar">Show Status Bar</string>
+  <string name="main_settings_orientation_lock">Orientation Lock</string>
+  <string name="main_settings_keep_screen_on">Keep Screen On</string>
+  <string name="main_settings_dash_packs">Dash Packs</string>
+  <string name="main_settings_analytics_consent">Analytics</string>
+  <string name="main_settings_analytics_description">Help improve DQXN by sharing anonymous usage data</string>
+  <string name="main_settings_diagnostics">Diagnostics</string>
+  <string name="main_settings_delete_all_data">Delete All Data</string>
+  <string name="main_settings_delete_all_description">Remove all settings, layouts, paired devices, and analytics data</string>
+
+  <!-- DeleteAllDataDialog -->
+  <string name="delete_all_dialog_title">Delete All Data</string>
+  <string name="delete_all_dialog_body">This will permanently remove all your settings, dashboard layouts, paired devices, and analytics data. This action cannot be undone.</string>
+  <string name="delete_all_dialog_confirm">Delete Everything</string>
+  <string name="delete_all_dialog_cancel">Cancel</string>
+
+  <!-- AnalyticsConsentDialog -->
+  <string name="analytics_consent_dialog_title">Enable Analytics</string>
+  <string name="analytics_consent_dialog_body">DQXN collects anonymous usage data including:\n\n\u2022 Feature usage frequency\n\u2022 Widget configurations\n\u2022 Crash reports and error logs\n\u2022 Device information (model, OS version)\n\nNo personal information, location data, or driving behavior is collected.\n\nYou can disable analytics at any time from this settings screen. Your data will be deleted upon request.</string>
+  <string name="analytics_consent_dialog_confirm">Enable Analytics</string>
+  <string name="analytics_consent_dialog_cancel">Not Now</string>
+
   <!-- PackBrowserContent -->
   <string name="pack_browser_title">Packs</string>
   <string name="pack_browser_widgets_count">%d widgets</string>
