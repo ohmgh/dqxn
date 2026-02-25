@@ -323,6 +323,9 @@ class WidgetSettingsSheetTest {
 
       override suspend fun clearSettings(packId: String, providerId: String) {}
 
+      override fun getAllProviderSettings(): Flow<Map<String, Map<String, String>>> =
+        flowOf(emptyMap())
+
       override suspend fun clearAll() {}
     }
 

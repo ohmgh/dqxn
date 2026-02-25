@@ -70,6 +70,12 @@ public class FakeLayoutRepository : LayoutRepository {
         ?: persistentListOf()
     }
 
+  override fun getProfileWidgets(profileId: String): Flow<ImmutableList<DashboardWidgetInstance>> =
+    _profiles.map { versioned ->
+      versioned.data.find { it.summary.profileId == profileId }?.widgets?.toImmutableList()
+        ?: persistentListOf()
+    }
+
   override suspend fun createProfile(displayName: String): String {
     val newId = UUID.randomUUID().toString()
     _profiles.update { versioned ->
