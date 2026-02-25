@@ -7,6 +7,7 @@ import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
 import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
+import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.LayoutCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.LayoutState
@@ -112,6 +113,7 @@ class DashboardViewModelTest {
       savedStateHandle = SavedStateHandle(),
       logger = logger,
       errorReporter = errorReporter,
+      commandBus = DashboardCommandBus(),
     )
 
   @Test
@@ -232,6 +234,38 @@ class DashboardViewModelTest {
     // Verify handleSetTheme was called (the slow command was processed)
     coVerify { mocks.themeCoordinator.handleSetTheme("slow-theme") }
     // Logger is NoOpLogger in unit tests so we just verify no crash
+  }
+
+  @Test
+  fun `command dispatched through bus routes to coordinator`() = runTest {
+    val mocks = createMocks()
+    val bus = DashboardCommandBus()
+    val vm = DashboardViewModel(
+      layoutCoordinator = mocks.layoutCoordinator,
+      editModeCoordinator = mocks.editModeCoordinator,
+      themeCoordinator = mocks.themeCoordinator,
+      widgetBindingCoordinator = mocks.widgetBindingCoordinator,
+      notificationCoordinator = mocks.notificationCoordinator,
+      profileCoordinator = mocks.profileCoordinator,
+      widgetRegistry = mocks.widgetRegistry,
+      reducedMotionHelper = mocks.reducedMotionHelper,
+      widgetGestureHandler = mocks.widgetGestureHandler,
+      blankSpaceGestureHandler = mocks.blankSpaceGestureHandler,
+      semanticsOwnerHolder = mocks.semanticsOwnerHolder,
+      userPreferencesRepository = mocks.userPreferencesRepository,
+      savedStateHandle = SavedStateHandle(),
+      logger = logger,
+      errorReporter = errorReporter,
+      commandBus = bus,
+    )
+
+    // Let ViewModel init coroutines start (bus collector, command loop, etc.)
+    advanceUntilIdle()
+
+    bus.dispatch(DashboardCommand.EnterEditMode)
+    advanceUntilIdle()
+
+    verify { mocks.editModeCoordinator.enterEditMode() }
   }
 
   @Test

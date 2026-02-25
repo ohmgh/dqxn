@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
+import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
 import app.dqxn.android.core.agentic.SemanticsOwnerHolder
 import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
@@ -58,6 +59,7 @@ constructor(
   private val savedStateHandle: SavedStateHandle,
   private val logger: DqxnLogger,
   private val errorReporter: ErrorReporter,
+  private val commandBus: DashboardCommandBus,
 ) : ViewModel() {
 
   private val commandChannel = Channel<DashboardCommand>(capacity = 64)
@@ -106,6 +108,13 @@ constructor(
             ),
           )
         }
+      }
+    }
+
+    // Relay external commands from singleton-scoped bus into sequential channel
+    viewModelScope.launch {
+      commandBus.commands.collect { command ->
+        commandChannel.send(command)
       }
     }
 
