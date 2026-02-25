@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 10 — Settings Foundation + Setup UI (3/10 plans)
-- **Current Plan:** Plan 04 of 10
+- **Phase:** 10 — Settings Foundation + Setup UI (4/10 plans)
+- **Current Plan:** Plan 05 of 10
 - **Milestone:** V1 Launch
 - **Next action:** Execute remaining Phase 10 plans
-- **Last session:** 2026-02-25T03:57:26Z
-- **Stopped at:** Completed 10-03-PLAN.md
+- **Last session:** 2026-02-25T04:05:31Z
+- **Stopped at:** Completed 10-04-PLAN.md
 
 ## Progress
 
@@ -22,7 +22,7 @@
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
 | 8. Essentials Pack | Complete (11/11 plans) | All plans complete -- snapshots, lint, providers, widgets, themes, integration tests, on-device verification |
 | 9. Themes, Demo + Chaos | Complete (7/7 plans) | All plans complete -- themes pack, snapshot relocation, demo pack, chaos engine, entitlements, app integration + regression gate + SC3 gap closure |
-| 10. Settings Foundation + Setup UI | In Progress (2/10 plans) | Data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine |
+| 10. Settings Foundation + Setup UI | In Progress (4/10 plans) | Data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
@@ -73,6 +73,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 10]: [Phase 10-03]: Constructor-injectable timing params (retryDelayMs, autoReturnDelayMs, maxAttempts) for deterministic virtual-time testing with StandardTestDispatcher
 - [Phase 10]: [Phase 10-03]: Single verificationJob field tracks both retry and auto-return delayed jobs, cancelled atomically on cancel/reset
 - [Phase 10]: [Phase 10-03]: CDM cancel detection via string contains ('user_rejected', 'canceled') matching Android CDM error patterns
+- [Phase 10]: [Phase 10-04]: EnumSetting dispatched as EnumSetting<Nothing> with @Suppress(UNCHECKED_CAST) for generic type erasure in when branch
+- [Phase 10]: [Phase 10-04]: Pre-existing SetupDefinitionRenderer.kt compilation errors (Plan 10-03 forward references) documented as out-of-scope, not caused by this plan
 
 ### Phase 1 Decisions
 
@@ -303,6 +305,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 10-01 | 4min | 2 | 19 |
 | Phase 10 P03 | 5min | 2 tasks | 3 files |
 | 10-02 | 5min | 2 | 5 |
+| 10-04 | 5min | 2 | 8 |
 
 ## Context
 
