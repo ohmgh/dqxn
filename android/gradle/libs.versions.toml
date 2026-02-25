@@ -37,6 +37,9 @@ profileinstaller = "1.4.1"
 baselineprofile-plugin = "1.4.1"
 uiautomator = "2.3.0"
 kover = "0.9.7"
+# pitest = "1.22.0" -- DEFERRED: incompatible with AGP 9 / Gradle 9.3 Android library modules
+# pitest-plugin = "1.19.0-rc.3" -- info.solidsoft.pitest does not register extension on Android modules
+# pitest-android-plugin = "0.2.25" -- pl.droidsonroids.pitest fails on Gradle 9.3 buildscript mutation
 
 [libraries]
 # Gradle plugin libraries (for build-logic compileOnly consumption)
@@ -157,3 +160,4 @@ spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 android-junit = { id = "de.mannodermaus.android-junit5", version.ref = "mannodermaus-junit" }
 baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile-plugin" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+# pitest = { id = "info.solidsoft.pitest", version.ref = "pitest-plugin" } -- DEFERRED: see versions section
