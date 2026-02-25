@@ -143,4 +143,11 @@ class FirebaseAnalyticsTrackerTest {
 
     verify { firebaseAnalytics.logEvent("theme_changed", any<Bundle>()) }
   }
+
+  @Test
+  fun `resetAnalyticsData delegates to firebase`() {
+    tracker.resetAnalyticsData()
+
+    verify { firebaseAnalytics.resetAnalyticsData() }
+  }
 }
