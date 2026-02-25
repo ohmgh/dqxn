@@ -457,6 +457,17 @@ Plans:
 6. WCAG AA contrast audit passes for all 24 themes
 7. In-app update and review API integration tested with mock managers
 
+**Plans:** 7 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — Google Play In-App Update + Review APIs (NF-L2, NF-L3)
+- [ ] 13-02-PLAN.md — Export My Data + Firebase analytics reset + privacy verification (NF-P3, NF-P4, NF-P5)
+- [ ] 13-03-PLAN.md — WCAG AA contrast audit + TalkBack semantics + font scale (NF30, NF32, NF33)
+- [ ] 13-04-PLAN.md — Full E2E journey test + ToS speed disclaimer (NF-D2)
+- [ ] 13-05-PLAN.md — AgenticTestClient + chaos CI gate + multi-pack validation + offline (NF24, NF25, NF26)
+- [ ] 13-06-PLAN.md — Localization lint gate + locale-aware formatting (NF-I1)
+- [ ] 13-07-PLAN.md — Battery/memory soak + sensor lifecycle verification (NF11, NF37)
+
 **Depends on:** Phases 9, 11, 12
 
 **Details:** [Phase 13 Details](migration/phase-13.md)
