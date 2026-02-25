@@ -338,16 +338,19 @@ Plans:
 5. `WidgetPicker` displays grouped widgets with entitlement badges
 6. Overlay navigation: Phase 10 routes (WidgetPicker, Settings, WidgetSettings, Setup) render and navigate back correctly
 
-**Plans:** 7 plans
+**Plans:** 10 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Data layer extensions (clearAll, analyticsConsent) + semantic colors + :feature:settings build config + OverlayScaffold
-- [ ] 10-02-PLAN.md — SettingRowDispatcher + 12 setting row composables + shared SettingComponents
+- [ ] 10-01-PLAN.md — Data layer extensions (clearAll on 5 stores, analyticsConsent) + SemanticColors
+- [ ] 10-02-PLAN.md — :feature:settings build config + OverlayScaffold/TitleBar + OverlayScaffoldTest + SettingsNavigation
 - [ ] 10-03-PLAN.md — DeviceScanStateMachine (TDD: 5-state BLE scan state machine)
-- [ ] 10-04-PLAN.md — Setup wizard UI: SetupSheet + SetupDefinitionRenderer + SetupEvaluatorImpl + setup cards
-- [ ] 10-05-PLAN.md — WidgetSettingsSheet (3-tab pager) + WidgetPicker (grouped grid with entitlement badges)
-- [ ] 10-06-PLAN.md — MainSettings (4 sections) + analytics consent + Delete All Data
-- [ ] 10-07-PLAN.md — OverlayNavHost route population + DashboardScreen navigation wiring + type-safe routes
+- [ ] 10-04-PLAN.md — SettingRowDispatcher + SettingComponents + first 6 row types (Boolean, Enum, Int, Float, String, Info)
+- [ ] 10-05-PLAN.md — Remaining 6 row types (Instruction, AppPicker, DateFormat, Timezone, SoundPicker, Uri) + SettingRowDispatcherTest
+- [ ] 10-06-PLAN.md — SetupEvaluatorImpl + SetupDefinitionRenderer + 7 setup card composables
+- [ ] 10-07-PLAN.md — SetupSheet paginated flow + SetupNavigationBar + SetupSheetTest
+- [ ] 10-08-PLAN.md — WidgetSettingsSheet (3-tab pager) + WidgetPicker (live previews, entitlement badges, revocation toast)
+- [ ] 10-09-PLAN.md — MainSettings (4 sections) + analytics consent + Delete All Data
+- [ ] 10-10-PLAN.md — OverlayNavHost route population + DashboardScreen navigation wiring + type-safe routes
 
 **Depends on:** Phase 8
 
