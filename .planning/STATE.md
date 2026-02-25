@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 8 — Essentials Pack (COMPLETE)
-- **Current Plan:** Not started
+- **Phase:** 9 — Themes, Demo + Chaos (IN PROGRESS, 1/6 plans)
+- **Current Plan:** 09-02 complete, next 09-03
 - **Milestone:** V1 Launch
-- **Next action:** Begin Phase 9 (Themes, Demo + Chaos) or execute remaining gap closure plans
-- **Last session:** 2026-02-25T00:44:50Z
-- **Stopped at:** Completed 08-11-PLAN.md (DashboardCommandBus + AddWidgetHandler SC3 fix)
+- **Next action:** Continue Phase 9 execution (09-03: remaining 4 demo providers)
+- **Last session:** 2026-02-25T01:57:21.378Z
+- **Stopped at:** Completed 09-02-PLAN.md
 
 ## Progress
 
@@ -21,7 +21,7 @@
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
 | 8. Essentials Pack | Complete (11/11 plans) | All plans complete -- snapshots, lint, providers, widgets, themes, integration tests, on-device verification |
-| 9. Themes, Demo + Chaos | Pending | Depends on Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing) |
+| 9. Themes, Demo + Chaos | In Progress (1/6 plans) | 09-02 complete: snapshot relocation + 4 demo providers |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
@@ -55,6 +55,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 08]: AgenticContentProvider exported=true in debug manifest for ADB content call access -- debug-only, no security concern
 - [Phase 08]: Injectable FusedLocationProviderClient over lazy LocationServices.getFusedLocationProviderClient -- enables mock injection for contract tests without Android runtime
 - [Phase 08]: SolarLocationModule in pack providers package -- pack-local Hilt module for FusedLocationProviderClient @Provides, keeps pack isolation clean
+- [Phase 09]: Same package preserved during snapshot relocation -- no import changes needed in essentials pack consumers
 
 ### Phase 1 Decisions
 
@@ -275,6 +276,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 08 P09 | 7min | 2 tasks | 1 files |
 | 08-11 | 5min | 2 | 6 |
 | Phase 08 P10 | 3min | 2 tasks | 4 files |
+| Phase 09 P02 | 4min | 3 tasks | 11 files |
 
 ## Context
 
