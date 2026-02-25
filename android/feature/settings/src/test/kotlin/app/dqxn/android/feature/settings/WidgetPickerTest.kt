@@ -1,21 +1,30 @@
 package app.dqxn.android.feature.settings
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
+import app.dqxn.android.sdk.contracts.provider.DataSnapshot
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
+import app.dqxn.android.sdk.contracts.settings.SettingDefinition
+import app.dqxn.android.sdk.contracts.widget.WidgetContext
+import app.dqxn.android.sdk.contracts.widget.WidgetData
+import app.dqxn.android.sdk.contracts.widget.WidgetDefaults
 import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
+import app.dqxn.android.sdk.contracts.widget.WidgetStyle
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
+import kotlin.reflect.KClass
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import org.junit.Rule
@@ -219,6 +228,88 @@ class WidgetPickerTest {
     assertThat(toastMessage).isNull()
   }
 
+  // --- Live preview rendering via Render() ---
+
+  @Test
+  fun `widget preview calls Render composable`() {
+    var renderCalled = false
+    val widget =
+      createTestWidget(
+        typeId = "essentials:clock-digital",
+        displayName = "Digital Clock",
+        onRender = { renderCalled = true },
+      )
+    val registry = createWidgetRegistry(widget)
+
+    setContent(registry, freeEntitlementManager)
+    composeTestRule.waitForIdle()
+
+    // Preview tag exists and Render() was invoked
+    composeTestRule
+      .onNodeWithTag("widget_preview_essentials:clock-digital", useUnmergedTree = true)
+      .assertExists()
+    assertThat(renderCalled).isTrue()
+  }
+
+  // --- Hardware icon badge tests ---
+
+  @Test
+  fun `GPS hardware icon shown for speed-compatible widget`() {
+    val speedKClass = mockk<KClass<out DataSnapshot>>()
+    every { speedKClass.simpleName } returns "SpeedSnapshot"
+    val widget =
+      createTestWidget(
+        typeId = "essentials:speedometer",
+        displayName = "Speedometer",
+        compatibleSnapshots = setOf(speedKClass),
+      )
+    val registry = createWidgetRegistry(widget)
+
+    setContent(registry, freeEntitlementManager)
+
+    composeTestRule
+      .onNodeWithTag("widget_hw_essentials:speedometer", useUnmergedTree = true)
+      .assertExists()
+  }
+
+  @Test
+  fun `no hardware icon for time-only widget`() {
+    val timeKClass = mockk<KClass<out DataSnapshot>>()
+    every { timeKClass.simpleName } returns "TimeSnapshot"
+    val widget =
+      createTestWidget(
+        typeId = "essentials:clock-digital",
+        displayName = "Digital Clock",
+        compatibleSnapshots = setOf(timeKClass),
+      )
+    val registry = createWidgetRegistry(widget)
+
+    setContent(registry, freeEntitlementManager)
+
+    composeTestRule
+      .onNodeWithTag("widget_hw_essentials:clock-digital", useUnmergedTree = true)
+      .assertDoesNotExist()
+  }
+
+  @Test
+  fun `GPS icon for solar-compatible widget`() {
+    val solarKClass = mockk<KClass<out DataSnapshot>>()
+    every { solarKClass.simpleName } returns "SolarSnapshot"
+    val widget =
+      createTestWidget(
+        typeId = "essentials:solar",
+        displayName = "Solar",
+        compatibleSnapshots = setOf(solarKClass),
+      )
+    val registry = createWidgetRegistry(widget)
+
+    setContent(registry, freeEntitlementManager)
+
+    composeTestRule
+      .onNodeWithTag("widget_hw_essentials:solar", useUnmergedTree = true)
+      .assertExists()
+  }
+
   // --- Helpers ---
 
   private fun setContent(
@@ -237,23 +328,55 @@ class WidgetPickerTest {
     }
   }
 
+  /**
+   * Concrete [WidgetRenderer] compiled with the Compose compiler in this module's test source.
+   *
+   * MockK relaxed mocks cannot be used because [WidgetRenderer.Render] is `@Composable` but
+   * `:sdk:contracts` is compiled without the Compose compiler -- MockK proxies get the
+   * untransformed method signature, causing [NoSuchMethodError] when called from
+   * Compose-compiled code.
+   */
+  /**
+   * Concrete [WidgetRenderer] compiled with the Compose compiler in this module's test source.
+   *
+   * MockK relaxed mocks cannot be used because [WidgetRenderer.Render] is `@Composable` but
+   * `:sdk:contracts` is compiled without the Compose compiler -- MockK proxies get the
+   * untransformed method signature, causing [NoSuchMethodError] when called from
+   * Compose-compiled code.
+   */
   private fun createTestWidget(
     typeId: String,
     displayName: String,
     requiredEntitlements: Set<String>? = null,
-  ): WidgetRenderer {
-    val renderer = mockk<WidgetRenderer>(relaxed = true)
-    every { renderer.typeId } returns typeId
-    every { renderer.displayName } returns displayName
-    every { renderer.description } returns "A test widget"
-    every { renderer.settingsSchema } returns emptyList()
-    every { renderer.compatibleSnapshots } returns emptySet()
-    every { renderer.requiredAnyEntitlement } returns requiredEntitlements
-    every { renderer.aspectRatio } returns null
-    every { renderer.supportsTap } returns false
-    every { renderer.priority } returns 0
-    return renderer
-  }
+    compatibleSnapshots: Set<KClass<out DataSnapshot>> = emptySet(),
+    onRender: (() -> Unit)? = null,
+  ): WidgetRenderer =
+    object : WidgetRenderer {
+      override val typeId: String = typeId
+      override val displayName: String = displayName
+      override val description: String = "A test widget"
+      override val compatibleSnapshots: Set<KClass<out DataSnapshot>> = compatibleSnapshots
+      override val settingsSchema: List<SettingDefinition<*>> = emptyList()
+      override val aspectRatio: Float? = null
+      override val supportsTap: Boolean = false
+      override val priority: Int = 0
+      override val requiredAnyEntitlement: Set<String>? = requiredEntitlements
+
+      @Composable
+      override fun Render(
+        isEditMode: Boolean,
+        style: WidgetStyle,
+        settings: ImmutableMap<String, Any>,
+        modifier: Modifier,
+      ) {
+        onRender?.invoke()
+      }
+
+      override fun accessibilityDescription(data: WidgetData): String = ""
+      override fun onTap(widgetId: String, settings: ImmutableMap<String, Any>): Boolean = false
+      override fun getDefaults(context: WidgetContext): WidgetDefaults =
+        WidgetDefaults(widthUnits = 2, heightUnits = 2, aspectRatio = null, settings = emptyMap())
+    }
 
   private fun createWidgetRegistry(vararg widgets: WidgetRenderer): WidgetRegistry =
     object : WidgetRegistry {
