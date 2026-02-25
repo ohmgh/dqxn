@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 12 — CI Gates + Benchmarking (5/5 plans) COMPLETE
+- **Phase:** 12 — CI Gates + Benchmarking (6/6 plans) COMPLETE
 - **Current Plan:** All plans complete, next Phase 13
 - **Milestone:** V1 Launch
 - **Next action:** Begin Phase 13 (E2E Integration + Launch Polish)
-- **Last session:** 2026-02-25T10:01:23.128Z
-- **Stopped at:** Completed 12-03-PLAN.md (Phase 12 complete)
+- **Last session:** 2026-02-25T10:38:17.530Z
+- **Stopped at:** Completed 12-06-PLAN.md
 
 ## Progress
 
@@ -25,7 +25,7 @@
 | 10. Settings Foundation + Setup UI | Complete (11/11 plans) | All plans complete -- data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet + WidgetSettingsSheet + WidgetPicker + PackBrowserContent + MainSettings + AnalyticsConsentDialog + DeleteAllDataDialog + MainSettingsViewModel + type-safe overlay routes + OverlayNavHost populated + DashboardScreen wiring + gap closure: WidgetPicker live preview + hardware icons + Compose compiler on :sdk:contracts |
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
 | 11. Theme UI + Diagnostics + Onboarding | Complete (11/11 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 9 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics + ThemeStudioRoute gap closure + toast connection |
-| 12. CI Gates + Benchmarking | Complete (5/5 plans) | All plans complete -- baseline profile infra, CI gate scripts, benchmark test classes, benchmark parser + orchestrator + Kover, pitest (incompatible, documented) |
+| 12. CI Gates + Benchmarking | Complete (6/6 plans) | All plans complete -- baseline profile infra, CI gate scripts, benchmark test classes, benchmark parser + orchestrator + Kover, pitest (incompatible, documented), gap closure (release DI + baselineprofile 1.5.0-alpha03 + benchmark release targeting) |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
 
 ## Decisions
@@ -125,6 +125,9 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 12]: Pitest incompatible with AGP 9 / Gradle 9.3 Android library modules -- info.solidsoft.pitest 1.19.0-rc.3 does not register extension, pl.droidsonroids.pitest 0.2.25 fails on buildscript mutation -- deferred to post-AGP-9-support release
 - [Phase 12]: Baselineprofile Gradle plugin fully deferred -- both producer and app-target sides of 1.4.1 incompatible with AGP 9; library deps (BaselineProfileRule, MacrobenchmarkRule) work independently
 - [Phase 12]: Benchmark matchingFallbacks changed from release to debug -- release Hilt DI incomplete (DiagnosticSnapshotCapture missing binding); debug variant fully wired
+- [Phase 12]: RingBufferSink capacity=128 in release (vs debug 512) -- smaller buffer since NoOpLogger discards most output; still needed for DiagnosticSnapshotCapture
+- [Phase 12]: baselineprofile 1.5.0-alpha03 primary path succeeded -- AGP 9 DSL compatibility confirmed, no fallback to deferred skip needed
+- [Phase 12]: baselineprofile module registers benchmarkRelease/nonMinifiedRelease build types (not debug) when baselineprofile plugin is active
 
 ### Phase 1 Decisions
 
@@ -380,6 +383,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 12 P05 | 12min | 1 tasks | 2 files |
 | Phase 12 P04 | 2min | 2 tasks | 3 files |
 | Phase 12 P03 | 8min | 2 tasks | 6 files |
+| Phase 12 P06 | 6min | 3 tasks | 5 files |
 
 ## Context
 

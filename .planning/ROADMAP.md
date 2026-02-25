@@ -425,7 +425,7 @@ Plans:
 5. APK size: base < 30MB verified
 6. Mutation kill rate tracking configured (Pitest setup) — **not enforced as gate at V1**, tracked for post-launch enforcement
 
-**Plans:** 6 plans (5 complete + 1 gap closure)
+**Plans:** 6/6 plans complete
 
 Plans:
 - [x] 12-01-PLAN.md — Version catalog + baselineprofile/benchmark module build config + app wiring
