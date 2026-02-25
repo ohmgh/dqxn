@@ -361,6 +361,16 @@ Plans:
 
 ---
 
+### Phase 10.1: Fix KSP ManifestGenerator + ThemeProvider Hilt Asymmetry (INSERTED)
+
+**Goal:** Fix KSP codegen: ManifestGenerator hardcodes PackCategory.ESSENTIALS for all packs (should derive from pack identity), generated manifest is dead code (never Hilt-injected). Add @DashboardThemeProvider annotation + KSP handler to auto-generate ThemeProvider Hilt bindings (eliminates manual modules). Fix test stub PackCategory enum mismatch.
+**Depends on:** Phase 10
+**Requirements:** NF27
+**Plans:** 1 plan
+
+Plans:
+- [ ] 10.1-01-PLAN.md — Fix ManifestGenerator hardcoded category + wire manifest into Hilt + @DashboardThemeProvider annotation + KSP handler + delete manual theme modules + fix test stubs
+
 ## Phase 11: Theme UI + Diagnostics + Onboarding
 
 **Goal:** Three independent feature clusters built on Phase 10's settings row system: theme editing/selection UI, diagnostics module (`:feature:diagnostics`), and onboarding flow (`:feature:onboarding`). Completes all `OverlayNavHost` routes.
