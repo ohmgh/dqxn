@@ -269,7 +269,7 @@ Plans:
 6. **Widget-specific rendering tests:** At least one rendering behavior test per widget beyond contract base (e.g., speedometer arc angle, compass needle rotation)
 7. **Greenfield provider tests:** GpsSpeedProvider, BatteryProvider, AccelerometerProvider, SpeedLimitProvider have provider-specific unit tests beyond DataProviderContractTest
 
-**Plans:** 12 plans (10 executed, 1 on-device, 1 gap closure)
+**Plans:** 13 plans (10 executed, 1 on-device, 2 gap closure)
 
 Plans:
 - [x] 08-01-PLAN.md — Snapshot types (6 cross-boundary + 2 pack-local) + build config + WidgetScopeBypass lint rule
@@ -284,6 +284,7 @@ Plans:
 - [x] 08-08-PLAN.md — Integration verification + regression gate
 - [ ] 08-09-PLAN.md — On-device wiring verification + stability soak
 - [ ] 08-10-PLAN.md — Gap closure: Solar provider contract tests (SC1 partial fix)
+- [ ] 08-11-PLAN.md — Gap closure: DashboardCommandBus + AddWidgetHandler canvas placement (SC3 fix)
 
 **Depends on:** Phase 7
 
