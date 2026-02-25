@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 8 — Essentials Pack (COMPLETE)
-- **Current Plan:** 11 of 13 (gap closure)
+- **Current Plan:** 12 of 13 (gap closure)
 - **Milestone:** V1 Launch
-- **Next action:** Execute 08-11-PLAN.md (gap closure)
-- **Last session:** 2026-02-25T00:44:00.042Z
-- **Stopped at:** Completed 08-10-PLAN.md (solar provider contract tests)
+- **Next action:** Begin Phase 9 (Themes, Demo + Chaos) or execute remaining gap closure plans
+- **Last session:** 2026-02-25T00:44:50Z
+- **Stopped at:** Completed 08-11-PLAN.md (DashboardCommandBus + AddWidgetHandler SC3 fix)
 
 ## Progress
 
@@ -214,6 +214,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 08-08]: SolarCalculator DST fix: date.atStartOfDay(zoneId) for offset derivation -- ZonedDateTime.now() produces wrong offset for dates in different DST period
 - [Phase 08-08]: Eager mock init with .also{} over lateinit @BeforeEach -- JUnit5 parent @BeforeEach runs before child, causing uninitialized mock access
 - [Phase 08-08]: AddWidgetHandler validates typeId against Set<WidgetRenderer> only -- no command channel bridge outside DashboardViewModel
+- [Phase 08-11]: Singleton DashboardCommandBus with MutableSharedFlow (capacity 64, DROP_OLDEST) bridges SingletonComponent handlers to ViewModelRetainedComponent DashboardViewModel
+- [Phase 08-11]: advanceUntilIdle() before bus.dispatch() in ViewModel test -- StandardTestDispatcher requires explicit advancement for init coroutines before SharedFlow emission
 
 ## Performance Metrics
 
@@ -271,6 +273,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 08-05a | 35min | 2 | 10 |
 | 08-08 | 40min | 3 | 17 |
 | Phase 08 P09 | 7min | 2 tasks | 1 files |
+| 08-11 | 5min | 2 | 6 |
 | Phase 08 P10 | 3min | 2 tasks | 4 files |
 
 ## Context
