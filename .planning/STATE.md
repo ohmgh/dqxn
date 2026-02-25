@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 13 — E2E Integration + Launch Polish (2/7 plans)
-- **Current Plan:** 13-07-PLAN.md
+- **Phase:** 13 — E2E Integration + Launch Polish (4/7 plans)
+- **Current Plan:** 13-06-PLAN.md
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 13 remaining plans
-- **Last session:** 2026-02-25T11:52:11Z
-- **Stopped at:** Completed 13-06-PLAN.md
+- **Last session:** 2026-02-25T11:58:22.861Z
+- **Stopped at:** Completed 13-02-PLAN.md
 
 ## Progress
 
@@ -26,7 +26,7 @@
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
 | 11. Theme UI + Diagnostics + Onboarding | Complete (11/11 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 9 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics + ThemeStudioRoute gap closure + toast connection |
 | 12. CI Gates + Benchmarking | Complete (6/6 plans) | All plans complete -- baseline profile infra, CI gate scripts, benchmark test classes, benchmark parser + orchestrator + Kover, pitest (incompatible, documented), gap closure (release DI + baselineprofile 1.5.0-alpha03 + benchmark release targeting) |
-| 13. E2E Integration + Launch Polish | In Progress (2/7 plans) | Play In-App Update + Review APIs + HardcodedText lint gate + locale formatting verification |
+| 13. E2E Integration + Launch Polish | In Progress (5/7 plans) | Play In-App Update + Review APIs + HardcodedText lint gate + locale formatting + GDPR data export + consent flow + analytics reset + multi-pack Hilt binding + chaos correlation E2E + offline E2E |
 
 ## Decisions
 
@@ -128,6 +128,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 12]: RingBufferSink capacity=128 in release (vs debug 512) -- smaller buffer since NoOpLogger discards most output; still needed for DiagnosticSnapshotCapture
 - [Phase 12]: baselineprofile 1.5.0-alpha03 primary path succeeded -- AGP 9 DSL compatibility confirmed, no fallback to deferred skip needed
 - [Phase 12]: baselineprofile module registers benchmarkRelease/nonMinifiedRelease build types (not debug) when baselineprofile plugin is active
+- [Phase 13]: [Phase 13-02]: Interface bulk-access methods (getProfileWidgets, getAllStyles, getAllProviderSettings) consumed by DataExporter; kotlinx.serialization added to :feature:settings; deleteAllData order: disable -> clear -> reset
 
 ### Phase 13 Decisions
 
@@ -138,6 +139,9 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 13-06]: hilt-testing catalog alias over hilt-android-testing -- avoids Gradle accessor collision with hilt-android
 - [Phase 13-01]: CrashRecovery.isInSafeMode() as hasCrashedThisSession proxy -- conservative heuristic, suppresses review only when safe mode active (4+ crashes in 60s)
 - [Phase 13-01]: Injectable timeProvider on AppReviewCoordinator constructor -- enables deterministic 90-day cap testing without wall clock dependency
+- [Phase 13-05]: Robolectric + @Config(application = HiltTestApplication::class) for MultiPackHiltTest -- JVM-based Hilt validation without device
+- [Phase 13-05]: AgenticTestClient created in Wave 1 (plan 13-05) so Wave 2 plan 13-04 can reuse it
+- [Phase 13-05]: Condition polling via awaitCondition() over Thread.sleep for deterministic E2E assertions
 
 ### Phase 1 Decisions
 
@@ -396,6 +400,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 12 P06 | 6min | 3 tasks | 5 files |
 | Phase 13 P01 | 28min | 2 tasks | 24 files |
 | Phase 13 P06 | 30min | 2 tasks | 4 files |
+| Phase 13 P02 | 33min | 2 tasks | 10 files |
 
 ## Context
 
