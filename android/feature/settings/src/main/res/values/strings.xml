@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- WidgetSettingsSheet tabs -->
+  <string name="widget_settings_tab_feature">Feature</string>
+  <string name="widget_settings_tab_data_source">Data Source</string>
+  <string name="widget_settings_tab_info">Info</string>
+
+  <!-- FeatureSettingsContent -->
+  <string name="widget_settings_no_settings">No configurable settings</string>
+
+  <!-- DataProviderSettingsContent -->
+  <string name="provider_connected">Connected</string>
+  <string name="provider_disconnected">Disconnected</string>
+  <string name="provider_setup_required">Setup Required</string>
+  <string name="provider_no_providers">No providers available for this data type</string>
+
+  <!-- WidgetInfoContent -->
+  <string name="widget_info_pack">Pack</string>
+  <string name="widget_info_type">Type</string>
+  <string name="widget_info_compatible_data">Compatible Data Types</string>
+  <string name="widget_info_issues">Issues</string>
+  <string name="widget_info_no_issues">No issues</string>
+  <string name="widget_info_speed_disclaimer">Speed readings are estimates derived from GPS or device sensors. Do not rely on this display for legal speed compliance or safety-critical decisions. Always refer to your vehicle\'s calibrated speedometer.</string>
+
+  <!-- WidgetPicker -->
+  <string name="widget_picker_title">Add Widget</string>
+  <string name="widget_picker_locked">Locked</string>
+  <string name="widget_picker_entitlement_required">Upgrade required to add this widget</string>
+  <string name="widget_picker_revocation_toast">Some features are no longer available. Your layout is preserved.</string>
+
+  <!-- PackBrowserContent -->
+  <string name="pack_browser_title">Packs</string>
+  <string name="pack_browser_widgets_count">%d widgets</string>
+  <string name="pack_browser_accessible">Accessible</string>
+  <string name="pack_browser_locked">Locked</string>
+</resources>
