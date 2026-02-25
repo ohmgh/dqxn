@@ -419,7 +419,7 @@ Plans:
 1. Baseline Profiles generated and included in release build
 2. `:benchmark` module: P50/P95/P99 frame times measured with 12 widgets
 3. NF1 gate: P95 frame time < 16.67ms with 12 active widgets on target device
-4. All 9 CI gates configured and enforced
+4. All 8 CI gates configured and enforced (unit tests, lint, compose stability, APK size, coordinator coverage, build time, benchmarks, baseline profile in APK)
 4. Compose stability: 0 unstable classes in app-owned modules
 5. APK size: base < 30MB verified
 6. Mutation kill rate tracking configured (Pitest setup) — **not enforced as gate at V1**, tracked for post-launch enforcement
