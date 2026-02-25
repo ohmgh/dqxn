@@ -186,7 +186,7 @@ Plans:
 
 **Success Criteria:**
 1. `./gradlew :app:installDebug` succeeds — blank canvas renders without crash
-2. `adb shell content call --uri content://app.dqxn.android.debug.agentic --method list-commands` returns handler schema
+2. `adb shell content call --uri content://app.dqxn.android.agentic --method list-commands` returns handler schema
 3. `trigger-anomaly` creates diagnostic snapshot; `diagnose-crash` returns crash evidence
 4. `./gradlew assembleRelease` succeeds — R8-processed APK installs without `ClassNotFoundException`
 5. CI pipeline running `./gradlew assembleDebug test lintDebug`

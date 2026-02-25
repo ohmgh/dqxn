@@ -1,10 +1,6 @@
 package app.dqxn.android.debug
 
 import android.content.Context
-import android.content.SharedPreferences
-import app.dqxn.android.core.agentic.CommandHandler
-import app.dqxn.android.core.agentic.chaos.ChaosProviderInterceptor
-import app.dqxn.android.sdk.contracts.provider.DataProviderInterceptor
 import app.dqxn.android.sdk.observability.crash.CrashEvidenceWriter
 import app.dqxn.android.sdk.observability.diagnostic.DiagnosticFileWriter
 import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotCapture
@@ -15,14 +11,11 @@ import app.dqxn.android.sdk.observability.log.LogLevel
 import app.dqxn.android.sdk.observability.log.RingBufferSink
 import app.dqxn.android.sdk.observability.metrics.MetricsCollector
 import app.dqxn.android.sdk.observability.trace.DqxnTracer
-import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import dagger.multibindings.IntoSet
-import dagger.multibindings.Multibinds
 import java.io.File
 import java.util.UUID
 import javax.inject.Singleton
@@ -31,26 +24,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /**
- * Debug-only Hilt module providing observability type bindings required by agentic diagnostic
- * handlers. These types have no `@Inject` constructors -- they're manually constructed in
- * production app wiring (Phase 7+). This module provides debug-appropriate instances for Phase 6.
+ * Debug-only Hilt module providing observability type bindings with debug-appropriate
+ * configuration: verbose logging, 512-entry ring buffer, CrashEvidenceWriter.
  *
- * Installed only in debug builds because handlers live in `src/debug/`.
+ * Agentic bindings (@Multibinds CommandHandler, ChaosProviderInterceptor) moved to
+ * AgenticModule in `src/agentic/` (shared by debug + benchmark).
  */
 @Module
 @InstallIn(SingletonComponent::class)
-internal abstract class DebugModule {
-
-  @Multibinds
-  abstract fun commandHandlers(): Set<CommandHandler>
-
-  @Binds
-  @IntoSet
-  abstract fun bindChaosInterceptor(
-    interceptor: ChaosProviderInterceptor,
-  ): DataProviderInterceptor
-
-  companion object {
+internal object DebugModule {
 
     @Provides
     @Singleton
@@ -114,5 +96,4 @@ internal abstract class DebugModule {
         logRingBuffer = ringBufferSink,
         fileWriter = fileWriter,
       )
-  }
 }

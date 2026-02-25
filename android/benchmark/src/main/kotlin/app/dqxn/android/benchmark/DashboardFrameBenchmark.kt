@@ -16,7 +16,7 @@ import org.junit.runner.RunWith
  * Steady-state gate: P95 frame time < 16.67ms with 12 active widgets (NF10).
  * Edit mode: measures enter/exit transition + wiggle animation frame timing.
  *
- * Widget population uses the agentic ContentProvider (debug builds only).
+ * Widget population uses the agentic ContentProvider (available in debug + benchmark builds).
  * The `add-widget` handler validates typeId against registered WidgetRenderer set
  * and dispatches DashboardCommand.AddWidget through the command bus.
  *
@@ -87,7 +87,7 @@ public class DashboardFrameBenchmark {
   /**
    * Populates 12 widgets via the agentic ContentProvider's add-widget handler.
    * Uses available essentials widget types, duplicating if fewer than 12 are registered.
-   * Only works on debug builds (AgenticContentProvider is debug-manifest only).
+   * Available in debug and benchmark builds (AgenticContentProvider registered in both).
    */
   private fun MacrobenchmarkScope.populateWidgets() {
     val widgetTypes =
@@ -107,7 +107,7 @@ public class DashboardFrameBenchmark {
       )
     for (typeId in widgetTypes) {
       device.executeShellCommand(
-        "content call --uri content://app.dqxn.android.debug.agentic" +
+        "content call --uri content://app.dqxn.android.agentic" +
           " --method add-widget --extra typeId:s:$typeId"
       )
     }

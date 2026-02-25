@@ -3,7 +3,7 @@
 
     <application>
 
-        <!-- Agentic framework: ADB shell content call transport (NF21) -->
+        <!-- Agentic framework: ADB shell content call transport for benchmark builds -->
         <provider
             android:name="app.dqxn.android.agentic.AgenticContentProvider"
             android:authorities="${applicationId}.agentic"

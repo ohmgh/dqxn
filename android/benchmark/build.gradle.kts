@@ -17,6 +17,7 @@ android {
     create("benchmark") {
       isDebuggable = true
       signingConfig = signingConfigs.getByName("debug")
+      // Library modules only have debug/release — fall back to release for perf-representative deps
       matchingFallbacks += listOf("release")
     }
   }

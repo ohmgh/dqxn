@@ -53,7 +53,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 08]: Public visibility required for KSP-annotated pack classes -- KotlinPoet interfaceBuilder prohibits INTERNAL on abstract members in generated Hilt modules
 - [Phase 08]: Timestamp-based accessibility differentiation for action-only widgets -- data.timestamp > 0L distinguishes empty from bound state for contract test #5
 - [Phase 08]: Canvas-drawn icons (BatteryIcon, LightBulbIcon) for zero additional icon library dependency with data-state-based color tinting
-- [Phase 08]: AgenticContentProvider exported=true in debug manifest for ADB content call access -- debug-only, no security concern
+- [Phase 08]: AgenticContentProvider exported=true in debug+benchmark manifests for ADB content call access -- not in release, no security concern
 - [Phase 08]: Injectable FusedLocationProviderClient over lazy LocationServices.getFusedLocationProviderClient -- enables mock injection for contract tests without Android runtime
 - [Phase 08]: SolarLocationModule in pack providers package -- pack-local Hilt module for FusedLocationProviderClient @Provides, keeps pack isolation clean
 - [Phase 09]: Same package preserved during snapshot relocation -- no import changes needed in essentials pack consumers
@@ -124,7 +124,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 12]: [Phase 12-01]: Upgraded baselineprofile plugin from 1.3.1 to 1.4.1 -- 1.3.1 incompatible with AGP 9 (Module :app is not a supported android module)
 - [Phase 12]: Pitest incompatible with AGP 9 / Gradle 9.3 Android library modules -- info.solidsoft.pitest 1.19.0-rc.3 does not register extension, pl.droidsonroids.pitest 0.2.25 fails on buildscript mutation -- deferred to post-AGP-9-support release
 - [Phase 12]: Baselineprofile Gradle plugin fully deferred -- both producer and app-target sides of 1.4.1 incompatible with AGP 9; library deps (BaselineProfileRule, MacrobenchmarkRule) work independently
-- [Phase 12]: Benchmark matchingFallbacks changed from release to debug -- release Hilt DI incomplete (DiagnosticSnapshotCapture missing binding); debug variant fully wired
+- [Phase 12]: :app now has explicit benchmark build type (initWith release) with src/agentic/ shared source + BenchmarkObservabilityModule; :benchmark module keeps matchingFallbacks for transitive lib deps
 - [Phase 12]: RingBufferSink capacity=128 in release (vs debug 512) -- smaller buffer since NoOpLogger discards most output; still needed for DiagnosticSnapshotCapture
 - [Phase 12]: baselineprofile 1.5.0-alpha03 primary path succeeded -- AGP 9 DSL compatibility confirmed, no fallback to deferred skip needed
 - [Phase 12]: baselineprofile module registers benchmarkRelease/nonMinifiedRelease build types (not debug) when baselineprofile plugin is active

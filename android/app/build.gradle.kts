@@ -14,6 +14,20 @@ android {
     versionCode = 1
     versionName = "0.1.0"
   }
+
+  buildTypes {
+    create("benchmark") {
+      initWith(buildTypes.getByName("release"))
+      signingConfig = signingConfigs.getByName("debug")
+      isDebuggable = true
+      matchingFallbacks += listOf("release")
+    }
+  }
+
+  sourceSets {
+    getByName("debug").kotlin.srcDir("src/agentic/kotlin")
+    getByName("benchmark").kotlin.srcDir("src/agentic/kotlin")
+  }
 }
 
 dependencies {
@@ -33,6 +47,7 @@ dependencies {
   implementation(project(":core:thermal"))
   implementation(project(":core:design"))
   debugImplementation(project(":core:agentic"))
+  add("benchmarkImplementation", project(":core:agentic"))
 
   // Data layer
   implementation(project(":data"))
@@ -51,8 +66,9 @@ dependencies {
   // Serialization (used by AgenticContentProvider for JSON param parsing)
   implementation(libs.kotlinx.serialization.json)
 
-  // KSP: agentic command processor (debug only -- generates AgenticHiltModule)
+  // KSP: agentic command processor (generates AgenticHiltModule for debug + benchmark)
   add("kspDebug", project(":codegen:agentic"))
+  add("kspBenchmark", project(":codegen:agentic"))
 
   // Baseline Profile
   implementation(libs.profileinstaller)

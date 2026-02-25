@@ -87,7 +87,7 @@ class AgenticTestClient(private val device: UiDevice) {
     fun send(command: String, params: Map<String, Any> = emptyMap()): JsonObject {
         val paramsJson = Json.encodeToString(params)
         val output = device.executeShellCommand(
-            "content call --uri content://app.dqxn.android.debug.agentic " +
+            "content call --uri content://app.dqxn.android.agentic " +
             "--method $command --arg '$paramsJson'"
         )
         val filePath = output.substringAfter("filePath=").substringBefore("}")
@@ -238,12 +238,12 @@ class DataExporter @Inject constructor(
 **How to avoid:** Add `resetAnalyticsData()` to the `AnalyticsTracker` interface. Implement in `FirebaseAnalyticsTracker` by calling `firebaseAnalytics.resetAnalyticsData()`. Add no-op to `NoOpAnalyticsTracker`. Call from `MainSettingsViewModel.deleteAllData()`.
 **Warning signs:** `deleteAllData()` clears stores but Firebase analytics ID persists.
 
-### Pitfall 6: E2E Tests Require Debug Build + Agentic ContentProvider
+### Pitfall 6: E2E Tests Require Non-Release Build + Agentic ContentProvider
 
-**What goes wrong:** `AgenticTestClient` sends commands to `content://app.dqxn.android.debug.agentic`, which only exists in debug builds. Running E2E tests against release builds fails with "provider not found."
-**Why it happens:** `AgenticContentProvider` is in `debugImplementation(project(":core:agentic"))` and its manifest entry has `exported="true"` only in debug.
-**How to avoid:** E2E instrumented tests MUST use the debug build variant. Configure `androidTest` to target `debug` variant (which is the default). Document this clearly.
-**Warning signs:** "Unknown URI content://app.dqxn.android.debug.agentic" errors in instrumented tests.
+**What goes wrong:** `AgenticTestClient` sends commands to `content://app.dqxn.android.agentic`, which exists in debug and benchmark builds but not release. Running E2E tests against release builds fails with "provider not found."
+**Why it happens:** `AgenticContentProvider` lives in `src/agentic/` shared source set, compiled into debug and benchmark variants only. Release has no agentic infrastructure.
+**How to avoid:** E2E instrumented tests MUST use debug or benchmark build variant. Debug is the default `androidTest` target.
+**Warning signs:** "Unknown URI content://app.dqxn.android.agentic" errors in instrumented tests.
 
 ### Pitfall 7: In-App Review Frequency Cap State
 
