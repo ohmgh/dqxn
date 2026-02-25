@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test
 class SolarTimezoneDataProviderTest : DataProviderContractTest() {
 
   private val receiverSlot = slot<BroadcastReceiver>()
-  private val mockContext: Context = mockk(relaxed = true).also { ctx ->
+  private val mockContext: Context = mockk<Context>(relaxed = true).also { ctx ->
     every { ctx.registerReceiver(capture(receiverSlot), any<IntentFilter>()) } returns mockk()
   }
 
@@ -58,7 +58,7 @@ class SolarTimezoneDataProviderTest : DataProviderContractTest() {
 
   @Test
   fun `provideState emits timezone sourceMode`() = runTest {
-    val snapshot = createProvider().provideState().first()
+    val snapshot = createProvider().provideState().first() as SolarSnapshot
     assertThat(snapshot.sourceMode).isEqualTo("timezone")
     assertThat(snapshot.timestamp).isGreaterThan(0L)
   }
