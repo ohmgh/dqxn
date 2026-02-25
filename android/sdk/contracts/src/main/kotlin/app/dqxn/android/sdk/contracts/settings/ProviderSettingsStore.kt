@@ -26,6 +26,12 @@ public interface ProviderSettingsStore {
   /** Remove all settings belonging to a single provider. */
   public suspend fun clearSettings(packId: String, providerId: String)
 
+  /**
+   * Observe all provider settings across all packs/providers as a nested map. Outer key is
+   * `{packId}:{providerId}`, inner key is the bare setting key. Used by data export (NF-P5).
+   */
+  public fun getAllProviderSettings(): Flow<Map<String, Map<String, String>>>
+
   /** Remove ALL provider settings across all packs/providers. Used by "Delete All Data" (F14.4). */
   public suspend fun clearAll()
 }

@@ -53,6 +53,22 @@ constructor(
     dataStore.edit { prefs -> prefs.remove(prefKey) }
   }
 
+  override fun getAllStyles(): Flow<Map<String, WidgetStyle>> =
+    dataStore.data.map { prefs ->
+      prefs
+        .asMap()
+        .entries
+        .mapNotNull { (key, value) ->
+          val raw = value as? String ?: return@mapNotNull null
+          try {
+            key.name to json.decodeFromString(WidgetStyle.serializer(), raw)
+          } catch (_: Exception) {
+            null
+          }
+        }
+        .toMap()
+    }
+
   override suspend fun clearAll() {
     dataStore.edit { it.clear() }
   }

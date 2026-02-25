@@ -16,6 +16,10 @@ import app.dqxn.android.sdk.contracts.theme.ThemeProvider
 import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.observability.crash.ErrorReporter
 import app.dqxn.android.sdk.observability.crash.NoOpErrorReporter
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.review.ReviewManager
+import com.google.android.play.core.review.ReviewManagerFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -88,6 +92,18 @@ public abstract class AppModule {
       @ApplicationContext context: Context,
     ): SharedPreferences =
       context.getSharedPreferences("dqxn_prefs", Context.MODE_PRIVATE)
+
+    @Provides
+    @Singleton
+    public fun provideAppUpdateManager(
+      @ApplicationContext context: Context,
+    ): AppUpdateManager = AppUpdateManagerFactory.create(context)
+
+    @Provides
+    @Singleton
+    public fun provideReviewManager(
+      @ApplicationContext context: Context,
+    ): ReviewManager = ReviewManagerFactory.create(context)
 
   }
 }

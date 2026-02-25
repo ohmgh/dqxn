@@ -38,6 +38,10 @@ constructor(
     if (!enabled.get()) return
     firebaseAnalytics.setUserProperty(key, value)
   }
+
+  override fun resetAnalyticsData() {
+    firebaseAnalytics.resetAnalyticsData()
+  }
 }
 
 /** Converts an [AnalyticsEvent.params] map to a Firebase [Bundle]. */

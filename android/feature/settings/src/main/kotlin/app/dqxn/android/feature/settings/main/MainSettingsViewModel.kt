@@ -101,18 +101,19 @@ constructor(
   }
 
   /**
-   * Delete all user data across all stores. Clears all 6 data stores/repositories and disables
-   * analytics. Used by "Delete All Data" (F14.4) for GDPR compliance.
+   * Delete all user data across all stores. Order: disable tracker -> clear stores -> reset
+   * analytics data. Used by "Delete All Data" (F14.4) for GDPR compliance.
    */
   public fun deleteAllData() {
     viewModelScope.launch {
+      analyticsTracker.setEnabled(false)
       userPreferencesRepository.clearAll()
       providerSettingsStore.clearAll()
       layoutRepository.clearAll()
       pairedDeviceStore.clearAll()
       widgetStyleStore.clearAll()
       connectionEventStore.clear()
-      analyticsTracker.setEnabled(false)
+      analyticsTracker.resetAnalyticsData()
     }
   }
 }

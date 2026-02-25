@@ -20,6 +20,10 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
           unitTests.isIncludeAndroidResources = true
           unitTests.isReturnDefaultValues = true
         }
+
+        lint {
+          error.add("HardcodedText")
+        }
       }
 
       extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {

@@ -65,6 +65,23 @@ constructor(
     }
   }
 
+  override fun getAllProviderSettings(): Flow<Map<String, Map<String, String>>> =
+    dataStore.data.map { prefs ->
+      val result = mutableMapOf<String, MutableMap<String, String>>()
+      for ((key, value) in prefs.asMap()) {
+        val keyName = key.name
+        // Key format: {packId}:{providerId}:{settingKey}
+        // Skip internal keys (e.g., __connection_events__)
+        val parts = keyName.split(":", limit = 3)
+        if (parts.size == 3) {
+          val providerKey = "${parts[0]}:${parts[1]}"
+          val settingKey = parts[2]
+          result.getOrPut(providerKey) { mutableMapOf() }[settingKey] = value?.toString() ?: ""
+        }
+      }
+      result
+    }
+
   override suspend fun clearAll() {
     dataStore.edit { it.clear() }
   }

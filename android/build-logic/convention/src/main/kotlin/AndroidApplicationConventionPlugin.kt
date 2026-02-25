@@ -35,6 +35,10 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             )
           }
         }
+
+        lint {
+          error.add("HardcodedText")
+        }
       }
 
       extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {

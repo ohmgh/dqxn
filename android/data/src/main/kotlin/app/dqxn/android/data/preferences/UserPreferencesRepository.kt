@@ -68,6 +68,18 @@ public interface UserPreferencesRepository {
   /** Persist that the user has seen the tip identified by [tipKey]. */
   public suspend fun markTipSeen(tipKey: String)
 
+  /** Number of app sessions completed. Defaults to 0. Used by review prompt gating (NF-L3). */
+  public val sessionCount: Flow<Int>
+
+  /** Increment session count by 1. */
+  public suspend fun incrementSessionCount()
+
+  /** Timestamp (epoch millis) of last review prompt. Defaults to 0L (never prompted). */
+  public val lastReviewPromptTimestamp: Flow<Long>
+
+  /** Persist the timestamp of the last review prompt. */
+  public suspend fun setLastReviewPromptTimestamp(timestamp: Long)
+
   /** Clear all user preferences, resetting to defaults. Used by "Delete All Data" (F14.4). */
   public suspend fun clearAll()
 }

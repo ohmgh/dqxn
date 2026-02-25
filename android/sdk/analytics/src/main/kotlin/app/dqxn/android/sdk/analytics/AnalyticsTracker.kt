@@ -19,6 +19,12 @@ public interface AnalyticsTracker {
 
   /** Sets a user property for analytics segmentation. */
   public fun setUserProperty(key: String, value: String)
+
+  /**
+   * Resets the analytics data and ID. Used by "Delete All Data" (F14.4) for GDPR compliance.
+   * Implementation should reset the Firebase Analytics app instance ID.
+   */
+  public fun resetAnalyticsData()
 }
 
 /** No-op analytics tracker. [isEnabled] always returns false, all methods are no-ops. */
@@ -36,5 +42,9 @@ public object NoOpAnalyticsTracker : AnalyticsTracker {
 
   override fun setUserProperty(key: String, value: String) {
     // Intentionally empty.
+  }
+
+  override fun resetAnalyticsData() {
+    // Intentionally empty -- no-op tracker has no analytics data to reset.
   }
 }

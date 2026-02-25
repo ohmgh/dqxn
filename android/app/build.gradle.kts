@@ -13,6 +13,7 @@ android {
     applicationId = "app.dqxn.android"
     versionCode = 1
     versionName = "0.1.0"
+    testInstrumentationRunner = "app.dqxn.android.e2e.HiltTestRunner"
   }
 
   buildTypes {
@@ -66,6 +67,13 @@ dependencies {
   // Serialization (used by AgenticContentProvider for JSON param parsing)
   implementation(libs.kotlinx.serialization.json)
 
+  // Coroutines Play Services (Task.await() for Play Core APIs)
+  implementation(libs.kotlinx.coroutines.play.services)
+
+  // Google Play In-App Update + Review
+  implementation(libs.play.app.update.ktx)
+  implementation(libs.play.review.ktx)
+
   // KSP: agentic command processor (generates AgenticHiltModule for debug + benchmark)
   add("kspDebug", project(":codegen:agentic"))
   add("kspBenchmark", project(":codegen:agentic"))
@@ -73,6 +81,15 @@ dependencies {
   // Baseline Profile
   implementation(libs.profileinstaller)
   baselineProfile(project(":baselineprofile"))
+
+  // Hilt testing (Robolectric + @HiltAndroidTest)
+  testImplementation(libs.hilt.testing)
+  kspTest(libs.hilt.compiler)
+
+  // AndroidX Test (instrumented tests)
+  androidTestImplementation(libs.hilt.testing)
+  add("kspAndroidTest", libs.hilt.compiler)
+  androidTestImplementation(libs.androidx.test.ext.junit)
 
   // Debug tools
   debugImplementation(libs.leakcanary)

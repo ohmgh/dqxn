@@ -108,6 +108,28 @@ constructor(
     dataStore.edit { prefs -> prefs[PreferenceKeys.HAS_SEEN_DISCLAIMER] = seen }
   }
 
+  override val sessionCount: Flow<Int> =
+    dataStore.data.map { prefs -> prefs[PreferenceKeys.SESSION_COUNT] ?: DEFAULT_SESSION_COUNT }
+
+  override suspend fun incrementSessionCount() {
+    dataStore.edit { prefs ->
+      val current = prefs[PreferenceKeys.SESSION_COUNT] ?: DEFAULT_SESSION_COUNT
+      prefs[PreferenceKeys.SESSION_COUNT] = current + 1
+    }
+  }
+
+  override val lastReviewPromptTimestamp: Flow<Long> =
+    dataStore.data.map { prefs ->
+      prefs[PreferenceKeys.LAST_REVIEW_PROMPT_TIMESTAMP]
+        ?: DEFAULT_LAST_REVIEW_PROMPT_TIMESTAMP
+    }
+
+  override suspend fun setLastReviewPromptTimestamp(timestamp: Long) {
+    dataStore.edit { prefs ->
+      prefs[PreferenceKeys.LAST_REVIEW_PROMPT_TIMESTAMP] = timestamp
+    }
+  }
+
   override fun hasSeenTip(tipKey: String): Flow<Boolean> =
     dataStore.data.map { prefs -> prefs[PreferenceKeys.tipSeenKey(tipKey)] ?: false }
 
@@ -130,5 +152,7 @@ constructor(
     const val DEFAULT_ANALYTICS_CONSENT = false
     const val DEFAULT_HAS_COMPLETED_ONBOARDING = false
     const val DEFAULT_HAS_SEEN_DISCLAIMER = false
+    const val DEFAULT_SESSION_COUNT = 0
+    const val DEFAULT_LAST_REVIEW_PROMPT_TIMESTAMP = 0L
   }
 }

@@ -25,6 +25,9 @@ public interface LayoutRepository {
   /** Widgets in the currently active profile. */
   public fun getActiveProfileWidgets(): Flow<ImmutableList<DashboardWidgetInstance>>
 
+  /** Widgets in a specific profile by ID. Returns empty list if profile not found. */
+  public fun getProfileWidgets(profileId: String): Flow<ImmutableList<DashboardWidgetInstance>>
+
   /** Create a new empty profile. Returns the new profile's ID. */
   public suspend fun createProfile(displayName: String): String
 

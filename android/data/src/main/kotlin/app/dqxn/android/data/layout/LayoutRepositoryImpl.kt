@@ -114,6 +114,13 @@ constructor(
         ?: kotlinx.collections.immutable.persistentListOf()
     }
 
+  override fun getProfileWidgets(profileId: String): Flow<ImmutableList<DashboardWidgetInstance>> =
+    currentState.map { store ->
+      val profile = store.profilesList.find { it.profileId == profileId }
+      profile?.widgetsList?.map { DashboardWidgetInstance.fromProto(it) }?.toImmutableList()
+        ?: kotlinx.collections.immutable.persistentListOf()
+    }
+
   // ---------------------------------------------------------------------------
   // Profile CRUD
   // ---------------------------------------------------------------------------
