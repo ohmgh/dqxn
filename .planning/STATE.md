@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 9 — Themes, Demo + Chaos (IN PROGRESS, 4/6 plans)
-- **Current Plan:** 09-04 complete, next 09-05
+- **Current Plan:** 09-05 complete, next 09-06
 - **Milestone:** V1 Launch
-- **Next action:** Continue Phase 9 execution (09-05: ChaosEngine orchestration)
-- **Last session:** 2026-02-25T02:07:52.147Z
-- **Stopped at:** Completed 09-03-PLAN.md
+- **Next action:** Continue Phase 9 execution (09-06: next plan)
+- **Last session:** 2026-02-25T02:08:05Z
+- **Stopped at:** Completed 09-05-PLAN.md
 
 ## Progress
 
@@ -62,6 +62,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 09]: Added :sdk:contracts dependency to :core:agentic for DataProviderInterceptor/ProviderFault access
 - [Phase 09]: backgroundScope flow collection pattern for virtual-time-dependent tests -- avoids Turbine timeout conflicts with StandardTestDispatcher
 - [Phase 09]: AtomicBoolean time-window gating for Flap fault -- coroutineScope launch toggles passing flag alongside upstream collect
+- [Phase 09]: Delta-computed delays from absolute ScheduledFault.delayMs timestamps -- profile's delayMs is cumulative offset from session start, engine computes inter-fault deltas
 - [Phase 09]: AccelerationSnapshot uses acceleration/lateralAcceleration fields per actual snapshot schema -- plan referenced longitudinalG/lateralG which don't exist
 
 ### Phase 1 Decisions
@@ -286,6 +287,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 09 P02 | 4min | 3 tasks | 11 files |
 | Phase 09 P01 | 7min | 2 tasks | 28 files |
 | Phase 09 P04 | 7min | 2 tasks | 7 files |
+| Phase 09 P05 | 5min | 2 tasks | 9 files |
 | Phase 09 P03 | 4min | 3 tasks | 9 files |
 
 ## Context
