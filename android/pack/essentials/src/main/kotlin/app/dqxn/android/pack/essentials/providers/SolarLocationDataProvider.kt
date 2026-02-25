@@ -16,7 +16,6 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDate
@@ -49,6 +48,7 @@ import kotlinx.coroutines.flow.map
 @Singleton
 public class SolarLocationDataProvider @Inject constructor(
   @param:ApplicationContext private val context: Context,
+  private val fusedClient: FusedLocationProviderClient,
 ) : DataProvider<SolarSnapshot> {
 
   override val sourceId: String = "essentials:solar-location"
@@ -91,10 +91,6 @@ public class SolarLocationDataProvider @Inject constructor(
   override val isAvailable: Boolean = true
   override val connectionState: Flow<Boolean> = flowOf(true)
   override val connectionErrorDescription: Flow<String?> = flowOf(null)
-
-  private val fusedClient: FusedLocationProviderClient by lazy {
-    LocationServices.getFusedLocationProviderClient(context)
-  }
 
   @SuppressLint("MissingPermission")
   override fun provideState(): Flow<SolarSnapshot> = callbackFlow {

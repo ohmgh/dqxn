@@ -5,7 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import app.dqxn.android.pack.essentials.snapshots.SolarSnapshot
+import app.dqxn.android.sdk.contracts.provider.DataProvider
 import app.dqxn.android.sdk.contracts.provider.ProviderPriority
+import app.dqxn.android.sdk.contracts.testing.DataProviderContractTest
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
@@ -14,14 +16,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
-class SolarTimezoneDataProviderTest {
+class SolarTimezoneDataProviderTest : DataProviderContractTest() {
 
   private val receiverSlot = slot<BroadcastReceiver>()
-  private val mockContext: Context = mockk(relaxed = true) {
-    every { registerReceiver(capture(receiverSlot), any<IntentFilter>()) } returns mockk()
+  private val mockContext: Context = mockk(relaxed = true).also { ctx ->
+    every { ctx.registerReceiver(capture(receiverSlot), any<IntentFilter>()) } returns mockk()
   }
 
-  private fun createProvider(): SolarTimezoneDataProvider =
+  override fun createProvider(): DataProvider<*> =
     SolarTimezoneDataProvider(context = mockContext)
 
   @Test
