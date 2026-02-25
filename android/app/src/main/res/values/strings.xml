@@ -3,4 +3,5 @@
   <string name="app_name">DQXN</string>
   <string name="privacy_policy_url">https://dqxn.app/privacy</string>
   <string name="tos_url">https://dqxn.app/terms</string>
+  <string name="tos_speed_disclaimer">Speed data displayed by DQXN is derived from GPS and device sensors and is approximate. DQXN is not a certified speedometer. Do not rely on displayed speed for regulatory compliance or safety-critical decisions. The developer disclaims all liability for the accuracy of speed data.</string>
 </resources>
