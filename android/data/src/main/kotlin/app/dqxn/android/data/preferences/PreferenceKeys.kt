@@ -13,4 +13,5 @@ public object PreferenceKeys {
   public val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
   public val ORIENTATION_LOCK = stringPreferencesKey("orientation_lock")
   public val SHOW_STATUS_BAR = booleanPreferencesKey("show_status_bar")
+  public val ANALYTICS_CONSENT = booleanPreferencesKey("analytics_consent")
 }

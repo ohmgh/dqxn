@@ -29,4 +29,7 @@ public interface PairedDeviceStore {
 
   /** Update the `lastConnected` timestamp for the given MAC address. No-op if not found. */
   public suspend fun updateLastConnected(macAddress: String, timestamp: Long)
+
+  /** Remove all paired device records. Used by "Delete All Data" (F14.4). */
+  public suspend fun clearAll()
 }

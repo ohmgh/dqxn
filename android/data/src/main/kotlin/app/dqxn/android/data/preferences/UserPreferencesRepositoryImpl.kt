@@ -81,6 +81,19 @@ constructor(
     dataStore.edit { prefs -> prefs[PreferenceKeys.SHOW_STATUS_BAR] = visible }
   }
 
+  override val analyticsConsent: Flow<Boolean> =
+    dataStore.data.map { prefs ->
+      prefs[PreferenceKeys.ANALYTICS_CONSENT] ?: DEFAULT_ANALYTICS_CONSENT
+    }
+
+  override suspend fun setAnalyticsConsent(enabled: Boolean) {
+    dataStore.edit { prefs -> prefs[PreferenceKeys.ANALYTICS_CONSENT] = enabled }
+  }
+
+  override suspend fun clearAll() {
+    dataStore.edit { it.clear() }
+  }
+
   private companion object {
     val DEFAULT_AUTO_SWITCH_MODE = AutoSwitchMode.SYSTEM
     const val DEFAULT_LIGHT_THEME = "minimalist"
@@ -89,5 +102,6 @@ constructor(
     const val DEFAULT_KEEP_SCREEN_ON = true
     const val DEFAULT_ORIENTATION_LOCK = "auto"
     const val DEFAULT_SHOW_STATUS_BAR = false
+    const val DEFAULT_ANALYTICS_CONSENT = false
   }
 }

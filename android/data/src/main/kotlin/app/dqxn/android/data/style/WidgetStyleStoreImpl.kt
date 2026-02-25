@@ -52,4 +52,8 @@ constructor(
     val prefKey = stringPreferencesKey(instanceId)
     dataStore.edit { prefs -> prefs.remove(prefKey) }
   }
+
+  override suspend fun clearAll() {
+    dataStore.edit { it.clear() }
+  }
 }

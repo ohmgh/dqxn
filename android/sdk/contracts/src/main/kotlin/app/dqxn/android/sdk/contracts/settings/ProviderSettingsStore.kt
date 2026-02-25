@@ -25,4 +25,7 @@ public interface ProviderSettingsStore {
 
   /** Remove all settings belonging to a single provider. */
   public suspend fun clearSettings(packId: String, providerId: String)
+
+  /** Remove ALL provider settings across all packs/providers. Used by "Delete All Data" (F14.4). */
+  public suspend fun clearAll()
 }

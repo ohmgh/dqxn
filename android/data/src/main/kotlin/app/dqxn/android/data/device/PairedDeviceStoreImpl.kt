@@ -53,6 +53,10 @@ constructor(
     }
   }
 
+  override suspend fun clearAll() {
+    dataStore.updateData { PairedDeviceStoreProto.getDefaultInstance() }
+  }
+
   private companion object {
     fun PairedDeviceMetadataProto.toDomain(): PairedDevice =
       PairedDevice(

@@ -14,4 +14,7 @@ public interface WidgetStyleStore {
 
   /** Remove the style override, reverting to [WidgetStyle.Default]. */
   public suspend fun removeStyle(instanceId: String)
+
+  /** Remove all style overrides. Used by "Delete All Data" (F14.4). */
+  public suspend fun clearAll()
 }

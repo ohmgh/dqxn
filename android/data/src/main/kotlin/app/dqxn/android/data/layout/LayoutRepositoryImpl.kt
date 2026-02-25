@@ -259,6 +259,17 @@ constructor(
   }
 
   // ---------------------------------------------------------------------------
+  // Clear all
+  // ---------------------------------------------------------------------------
+
+  override suspend fun clearAll() {
+    val fallback = FallbackLayout.createFallbackStore()
+    currentState.value = fallback
+    requestSave()
+    logger.info(TAG) { "Cleared all layout data, recreated default profile" }
+  }
+
+  // ---------------------------------------------------------------------------
   // Internal
   // ---------------------------------------------------------------------------
 

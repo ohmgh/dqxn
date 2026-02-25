@@ -65,6 +65,10 @@ constructor(
     }
   }
 
+  override suspend fun clearAll() {
+    dataStore.edit { it.clear() }
+  }
+
   private fun composeKey(packId: String, providerId: String, key: String): String =
     "$packId:$providerId:$key"
 }

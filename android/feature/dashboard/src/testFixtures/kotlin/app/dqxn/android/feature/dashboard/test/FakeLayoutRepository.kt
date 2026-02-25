@@ -210,6 +210,20 @@ public class FakeLayoutRepository : LayoutRepository {
     }
   }
 
+  override suspend fun clearAll() {
+    _profiles.value =
+      Versioned(
+        data = listOf(
+          ProfileData(
+            summary = ProfileSummary(profileId = DEFAULT_PROFILE_ID, displayName = "Main", sortOrder = 0),
+            widgets = emptyList(),
+          )
+        ),
+        version = nextVersion(),
+      )
+    _activeProfileId.value = DEFAULT_PROFILE_ID
+  }
+
   /** Pre-populate widgets in the active profile for test setup. */
   public fun setWidgets(widgets: List<DashboardWidgetInstance>) {
     val activeId = _activeProfileId.value

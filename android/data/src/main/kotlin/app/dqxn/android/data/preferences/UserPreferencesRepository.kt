@@ -43,4 +43,13 @@ public interface UserPreferencesRepository {
   public suspend fun setOrientationLock(lock: String)
 
   public suspend fun setShowStatusBar(visible: Boolean)
+
+  /** Whether the user has opted in to analytics collection. Defaults to `false` (opt-in, F12.5). */
+  public val analyticsConsent: Flow<Boolean>
+
+  /** Update analytics consent preference. */
+  public suspend fun setAnalyticsConsent(enabled: Boolean)
+
+  /** Clear all user preferences, resetting to defaults. Used by "Delete All Data" (F14.4). */
+  public suspend fun clearAll()
 }

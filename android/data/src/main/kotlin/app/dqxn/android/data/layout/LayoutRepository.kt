@@ -58,4 +58,10 @@ public interface LayoutRepository {
 
   /** Update only the size of a widget. */
   public suspend fun updateWidgetSize(instanceId: String, size: GridSize)
+
+  /**
+   * Clear all profiles and widgets, then recreate the default profile. Cannot have zero profiles.
+   * Used by "Delete All Data" (F14.4).
+   */
+  public suspend fun clearAll()
 }
