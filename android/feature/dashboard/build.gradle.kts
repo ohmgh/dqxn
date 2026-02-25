@@ -1,6 +1,7 @@
 plugins {
   id("dqxn.android.feature")
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.kover)
 }
 
 android {
@@ -44,4 +45,16 @@ dependencies {
   testFixturesImplementation(libs.mockk)
   testFixturesImplementation(libs.window)
   testFixturesImplementation(project(":core:thermal"))
+}
+
+kover {
+  reports {
+    verify {
+      rule {
+        bound {
+          minValue = 90
+        }
+      }
+    }
+  }
 }
