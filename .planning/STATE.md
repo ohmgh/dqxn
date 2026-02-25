@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (1/10 plans)
-- **Current Plan:** 02 complete, next 03
+- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (3/10 plans)
+- **Current Plan:** 03 complete, next 04
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 11 plans
-- **Last session:** 2026-02-25T08:09:14.665Z
-- **Stopped at:** Completed 11-01-PLAN.md
+- **Last session:** 2026-02-25T08:09:51.731Z
+- **Stopped at:** Completed 11-03-PLAN.md
 
 ## Progress
 
@@ -101,6 +101,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 10.1]: HiltModuleGenerator changed from aggregating=false to aggregating=true because it references the aggregated manifest object
 - [Phase 10.1]: themes = persistentListOf() at codegen time -- individual theme IDs are runtime data from ThemeProvider.getThemes(), served by Set<ThemeProvider> multibinding not manifest
 - [Phase 11]: log10 scaling with MIN_LUX=1f guard for luxToPosition to avoid log(0) edge case
+- [Phase 11]: hasSeenTip is non-suspend returning Flow<Boolean> -- plan specified suspend but ProgressiveTipManager.shouldShowTip() is non-suspend; suspend fun returning Flow is atypical
+- [Phase 11]: Task 1 data layer changes already committed by plan 11-02 -- no duplicate commit needed for shared UserPreferencesRepository extensions
 
 ### Phase 1 Decisions
 
@@ -342,6 +344,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 10.1 P01 | 6min | 2 tasks | 12 files |
 | Phase 11 P02 | 2min | 2 tasks | 6 files |
 | Phase 11 P01 | 4 | 2 tasks | 4 files |
+| Phase 11 P03 | 4min | 2 tasks | 3 files |
 
 ## Context
 
