@@ -14,4 +14,10 @@ public object PreferenceKeys {
   public val ORIENTATION_LOCK = stringPreferencesKey("orientation_lock")
   public val SHOW_STATUS_BAR = booleanPreferencesKey("show_status_bar")
   public val ANALYTICS_CONSENT = booleanPreferencesKey("analytics_consent")
+  public val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
+  public val HAS_SEEN_DISCLAIMER = booleanPreferencesKey("has_seen_disclaimer")
+
+  /** Returns a dynamic key for per-tip seen state. */
+  public fun tipSeenKey(tipKey: String): androidx.datastore.preferences.core.Preferences.Key<Boolean> =
+    booleanPreferencesKey("tip_seen_$tipKey")
 }

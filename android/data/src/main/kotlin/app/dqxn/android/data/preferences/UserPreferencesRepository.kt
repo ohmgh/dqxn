@@ -50,6 +50,24 @@ public interface UserPreferencesRepository {
   /** Update analytics consent preference. */
   public suspend fun setAnalyticsConsent(enabled: Boolean)
 
+  /** Whether the user has completed onboarding. Defaults to `false`. */
+  public val hasCompletedOnboarding: Flow<Boolean>
+
+  /** Whether the user has seen the disclaimer screen. Defaults to `false`. */
+  public val hasSeenDisclaimer: Flow<Boolean>
+
+  /** Mark onboarding as completed (or reset). */
+  public suspend fun setHasCompletedOnboarding(completed: Boolean)
+
+  /** Mark disclaimer as seen (or reset). */
+  public suspend fun setHasSeenDisclaimer(seen: Boolean)
+
+  /** Whether the user has seen the tip identified by [tipKey]. Defaults to `false`. */
+  public fun hasSeenTip(tipKey: String): Flow<Boolean>
+
+  /** Persist that the user has seen the tip identified by [tipKey]. */
+  public suspend fun markTipSeen(tipKey: String)
+
   /** Clear all user preferences, resetting to defaults. Used by "Delete All Data" (F14.4). */
   public suspend fun clearAll()
 }

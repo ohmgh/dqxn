@@ -90,6 +90,31 @@ constructor(
     dataStore.edit { prefs -> prefs[PreferenceKeys.ANALYTICS_CONSENT] = enabled }
   }
 
+  override val hasCompletedOnboarding: Flow<Boolean> =
+    dataStore.data.map { prefs ->
+      prefs[PreferenceKeys.HAS_COMPLETED_ONBOARDING] ?: DEFAULT_HAS_COMPLETED_ONBOARDING
+    }
+
+  override val hasSeenDisclaimer: Flow<Boolean> =
+    dataStore.data.map { prefs ->
+      prefs[PreferenceKeys.HAS_SEEN_DISCLAIMER] ?: DEFAULT_HAS_SEEN_DISCLAIMER
+    }
+
+  override suspend fun setHasCompletedOnboarding(completed: Boolean) {
+    dataStore.edit { prefs -> prefs[PreferenceKeys.HAS_COMPLETED_ONBOARDING] = completed }
+  }
+
+  override suspend fun setHasSeenDisclaimer(seen: Boolean) {
+    dataStore.edit { prefs -> prefs[PreferenceKeys.HAS_SEEN_DISCLAIMER] = seen }
+  }
+
+  override fun hasSeenTip(tipKey: String): Flow<Boolean> =
+    dataStore.data.map { prefs -> prefs[PreferenceKeys.tipSeenKey(tipKey)] ?: false }
+
+  override suspend fun markTipSeen(tipKey: String) {
+    dataStore.edit { prefs -> prefs[PreferenceKeys.tipSeenKey(tipKey)] = true }
+  }
+
   override suspend fun clearAll() {
     dataStore.edit { it.clear() }
   }
@@ -103,5 +128,7 @@ constructor(
     const val DEFAULT_ORIENTATION_LOCK = "auto"
     const val DEFAULT_SHOW_STATUS_BAR = false
     const val DEFAULT_ANALYTICS_CONSENT = false
+    const val DEFAULT_HAS_COMPLETED_ONBOARDING = false
+    const val DEFAULT_HAS_SEEN_DISCLAIMER = false
   }
 }

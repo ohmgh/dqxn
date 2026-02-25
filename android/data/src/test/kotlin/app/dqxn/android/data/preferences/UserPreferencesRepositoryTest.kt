@@ -282,6 +282,92 @@ class UserPreferencesRepositoryTest {
     }
 
   // ---------------------------------------------------------------------------
+  // Onboarding preferences
+  // ---------------------------------------------------------------------------
+
+  @Test
+  fun `default hasCompletedOnboarding is false`() =
+    testScope.runTest {
+      repo.hasCompletedOnboarding.test {
+        assertThat(awaitItem()).isFalse()
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  @Test
+  fun `setHasCompletedOnboarding persists true`() =
+    testScope.runTest {
+      repo.hasCompletedOnboarding.test {
+        assertThat(awaitItem()).isFalse()
+
+        repo.setHasCompletedOnboarding(true)
+        assertThat(awaitItem()).isTrue()
+
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  @Test
+  fun `default hasSeenDisclaimer is false`() =
+    testScope.runTest {
+      repo.hasSeenDisclaimer.test {
+        assertThat(awaitItem()).isFalse()
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  @Test
+  fun `setHasSeenDisclaimer persists true`() =
+    testScope.runTest {
+      repo.hasSeenDisclaimer.test {
+        assertThat(awaitItem()).isFalse()
+
+        repo.setHasSeenDisclaimer(true)
+        assertThat(awaitItem()).isTrue()
+
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  @Test
+  fun `hasSeenTip defaults to false for unknown key`() =
+    testScope.runTest {
+      repo.hasSeenTip("unknown_tip").test {
+        assertThat(awaitItem()).isFalse()
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  @Test
+  fun `markTipSeen persists true for specific key`() =
+    testScope.runTest {
+      repo.hasSeenTip("edit_mode").test {
+        assertThat(awaitItem()).isFalse()
+
+        repo.markTipSeen("edit_mode")
+        assertThat(awaitItem()).isTrue()
+
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  @Test
+  fun `tip keys are independent`() =
+    testScope.runTest {
+      repo.markTipSeen("tip_a")
+
+      repo.hasSeenTip("tip_a").test {
+        assertThat(awaitItem()).isTrue()
+        cancelAndIgnoreRemainingEvents()
+      }
+
+      repo.hasSeenTip("tip_b").test {
+        assertThat(awaitItem()).isFalse()
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  // ---------------------------------------------------------------------------
   // Round-trip
   // ---------------------------------------------------------------------------
 
