@@ -424,6 +424,14 @@ Plans:
 5. APK size: base < 30MB verified
 6. Mutation kill rate tracking configured (Pitest setup) — **not enforced as gate at V1**, tracked for post-launch enforcement
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — Version catalog + baselineprofile/benchmark module build config + app wiring
+- [ ] 12-02-PLAN.md — CI gate scripts (Compose stability, APK size, build time)
+- [ ] 12-03-PLAN.md — BaselineProfileGenerator + StartupBenchmark + DashboardFrameBenchmark
+- [ ] 12-04-PLAN.md — Benchmark result parser + CI gates orchestrator + Kover coverage config
+
 **Depends on:** Phase 8
 
 **Concurrent with:** Phases 9, 10, 11
