@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (9/10 plans)
-- **Current Plan:** 09 complete, next 10
+- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (10/10 plans) COMPLETE
+- **Current Plan:** 10 complete (all plans done)
 - **Milestone:** V1 Launch
-- **Next action:** Continue Phase 11 plans
-- **Last session:** 2026-02-25T08:46:00Z
-- **Stopped at:** Completed 11-09-PLAN.md
+- **Next action:** Begin Phase 12 (CI Gates + Benchmarking)
+- **Last session:** 2026-02-25T08:53:43Z
+- **Stopped at:** Completed 11-10-PLAN.md
 
 ## Progress
 
@@ -24,7 +24,7 @@
 | 9. Themes, Demo + Chaos | Complete (7/7 plans) | All plans complete -- themes pack, snapshot relocation, demo pack, chaos engine, entitlements, app integration + regression gate + SC3 gap closure |
 | 10. Settings Foundation + Setup UI | Complete (11/11 plans) | All plans complete -- data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet + WidgetSettingsSheet + WidgetPicker + PackBrowserContent + MainSettings + AnalyticsConsentDialog + DeleteAllDataDialog + MainSettingsViewModel + type-safe overlay routes + OverlayNavHost populated + DashboardScreen wiring + gap closure: WidgetPicker live preview + hardware icons + Compose compiler on :sdk:contracts |
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
-| 11. Theme UI + Diagnostics + Onboarding | In Progress (9/10 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 7 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation |
+| 11. Theme UI + Diagnostics + Onboarding | Complete (10/10 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 7 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
 
@@ -118,6 +118,9 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 11]: BuiltInThemes.freeThemes as allThemes for ThemeSelector -- full theme list from pack-provided ThemeProviders is future work; built-in free themes sufficient for integration wiring
 - [Phase 11]: DiagnosticsScreen as entry-point composable in :feature:diagnostics -- hiltViewModel() inside composable for ViewModel injection, stateless diagnostic viewers receive data as params
 - [Phase 11]: LaunchedEffect(Unit) for Settings preview clear -- prevents re-clearing on every recomposition while still executing on first composition
+- [Phase 11]: ThermalMonitor injected directly into SessionLifecycleTracker -- MetricsCollector has no thermal data; peak tracked via ordinal comparison
+- [Phase 11]: Jank% computed inline from MetricsSnapshot frame histogram (buckets 3+4+5 / total * 100) -- same formula as ObservabilityDashboard
+- [Phase 11]: Render failures = CRASHED + STALLED_RENDER; provider errors = STALE_DATA from WidgetHealthMonitor.allStatuses()
 
 ### Phase 1 Decisions
 
@@ -366,6 +369,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 11 P07 | 7min | 2 tasks | 9 files |
 | Phase 11 P06 | 9min | 2 tasks | 10 files |
 | Phase 11 P09 | 10min | 2 tasks | 12 files |
+| Phase 11 P10 | 4min | 2 tasks | 4 files |
 
 ## Context
 
