@@ -385,7 +385,7 @@ Plans:
 5. Onboarding first-run flow: analytics consent → disclaimer → theme selection → edit mode tour
 6. Analytics event call sites: events fire after opt-in, suppressed before consent
 
-**Plans:** 11 plans (10 complete, 1 gap closure pending)
+**Plans:** 11/11 plans complete
 
 Plans:
 - [ ] 11-01-PLAN.md — ColorConversion + LuxMapping TDD (pure math utilities)

@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (10/10 plans) COMPLETE
-- **Current Plan:** 10 complete (all plans done)
+- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (11/11 plans) COMPLETE
+- **Current Plan:** 11 complete (all plans done, including gap closure)
 - **Milestone:** V1 Launch
 - **Next action:** Begin Phase 12 (CI Gates + Benchmarking)
-- **Last session:** 2026-02-25T08:53:43Z
-- **Stopped at:** Completed 11-10-PLAN.md
+- **Last session:** 2026-02-25T09:25:52.624Z
+- **Stopped at:** Completed 11-11-PLAN.md
 
 ## Progress
 
@@ -24,7 +24,7 @@
 | 9. Themes, Demo + Chaos | Complete (7/7 plans) | All plans complete -- themes pack, snapshot relocation, demo pack, chaos engine, entitlements, app integration + regression gate + SC3 gap closure |
 | 10. Settings Foundation + Setup UI | Complete (11/11 plans) | All plans complete -- data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet + WidgetSettingsSheet + WidgetPicker + PackBrowserContent + MainSettings + AnalyticsConsentDialog + DeleteAllDataDialog + MainSettingsViewModel + type-safe overlay routes + OverlayNavHost populated + DashboardScreen wiring + gap closure: WidgetPicker live preview + hardware icons + Compose compiler on :sdk:contracts |
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
-| 11. Theme UI + Diagnostics + Onboarding | Complete (10/10 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 7 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics |
+| 11. Theme UI + Diagnostics + Onboarding | Complete (11/11 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 9 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics + ThemeStudioRoute gap closure + toast connection |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
 
@@ -370,6 +370,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 11 P06 | 9min | 2 tasks | 10 files |
 | Phase 11 P09 | 10min | 2 tasks | 12 files |
 | Phase 11 P10 | 4min | 2 tasks | 4 files |
+| Phase 11 P11 | 3min | 2 tasks | 7 files |
 
 ## Context
 
