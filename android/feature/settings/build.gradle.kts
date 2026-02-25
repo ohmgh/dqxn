@@ -5,6 +5,7 @@ android { namespace = "app.dqxn.android.feature.settings" }
 dependencies {
   implementation(project(":core:design"))
   implementation(project(":data"))
+  implementation(project(":sdk:analytics"))
   implementation(libs.compose.material.icons.extended)
 
   testImplementation(libs.compose.ui.test.junit4)
