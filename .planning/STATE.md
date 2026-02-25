@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 13 — E2E Integration + Launch Polish (1/7 plans)
-- **Current Plan:** 13-02-PLAN.md
+- **Phase:** 13 — E2E Integration + Launch Polish (2/7 plans)
+- **Current Plan:** 13-07-PLAN.md
 - **Milestone:** V1 Launch
-- **Next action:** Execute Plan 13-02 (Export My Data + Privacy Verification)
-- **Last session:** 2026-02-25T11:50:17Z
-- **Stopped at:** Completed 13-01-PLAN.md
+- **Next action:** Continue Phase 13 remaining plans
+- **Last session:** 2026-02-25T11:52:11Z
+- **Stopped at:** Completed 13-06-PLAN.md
 
 ## Progress
 
@@ -26,7 +26,7 @@
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
 | 11. Theme UI + Diagnostics + Onboarding | Complete (11/11 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 9 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics + ThemeStudioRoute gap closure + toast connection |
 | 12. CI Gates + Benchmarking | Complete (6/6 plans) | All plans complete -- baseline profile infra, CI gate scripts, benchmark test classes, benchmark parser + orchestrator + Kover, pitest (incompatible, documented), gap closure (release DI + baselineprofile 1.5.0-alpha03 + benchmark release targeting) |
-| 13. E2E Integration + Launch Polish | In Progress (1/7 plans) | Play In-App Update + Review APIs with 17 unit tests |
+| 13. E2E Integration + Launch Polish | In Progress (2/7 plans) | Play In-App Update + Review APIs + HardcodedText lint gate + locale formatting verification |
 
 ## Decisions
 
@@ -132,6 +132,10 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 ### Phase 13 Decisions
 
 - [Phase 13-01]: MockK-based Play Core testing over FakeAppUpdateManager/FakeReviewManager -- fakes require real Android Context, incompatible with JUnit5 pure JVM tests
+- [Phase 13-06]: Baseline regression gate (14 known violations) over hard-fail for pre-existing hardcoded Text() calls -- prevents regression without blocking on technical debt
+- [Phase 13-06]: Source-parsing approach for locale verification -- renderers don't expose formatting utilities directly
+- [Phase 13-06]: Diagnostics module excluded from hardcoded text scan (debug overlay UI)
+- [Phase 13-06]: hilt-testing catalog alias over hilt-android-testing -- avoids Gradle accessor collision with hilt-android
 - [Phase 13-01]: CrashRecovery.isInSafeMode() as hasCrashedThisSession proxy -- conservative heuristic, suppresses review only when safe mode active (4+ crashes in 60s)
 - [Phase 13-01]: Injectable timeProvider on AppReviewCoordinator constructor -- enables deterministic 90-day cap testing without wall clock dependency
 
@@ -391,6 +395,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 12 P03 | 8min | 2 tasks | 6 files |
 | Phase 12 P06 | 6min | 3 tasks | 5 files |
 | Phase 13 P01 | 28min | 2 tasks | 24 files |
+| Phase 13 P06 | 30min | 2 tasks | 4 files |
 
 ## Context
 
