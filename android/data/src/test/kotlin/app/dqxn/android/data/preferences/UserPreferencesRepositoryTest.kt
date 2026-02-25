@@ -201,6 +201,87 @@ class UserPreferencesRepositoryTest {
     }
 
   // ---------------------------------------------------------------------------
+  // analyticsConsent
+  // ---------------------------------------------------------------------------
+
+  @Test
+  fun `default analyticsConsent is false`() =
+    testScope.runTest {
+      repo.analyticsConsent.test {
+        assertThat(awaitItem()).isFalse()
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  @Test
+  fun `setAnalyticsConsent true updates flow`() =
+    testScope.runTest {
+      repo.analyticsConsent.test {
+        assertThat(awaitItem()).isFalse()
+
+        repo.setAnalyticsConsent(true)
+        assertThat(awaitItem()).isTrue()
+
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  @Test
+  fun `setAnalyticsConsent false after true updates flow`() =
+    testScope.runTest {
+      repo.setAnalyticsConsent(true)
+
+      repo.analyticsConsent.test {
+        assertThat(awaitItem()).isTrue()
+
+        repo.setAnalyticsConsent(false)
+        assertThat(awaitItem()).isFalse()
+
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  // ---------------------------------------------------------------------------
+  // clearAll
+  // ---------------------------------------------------------------------------
+
+  @Test
+  fun `clearAll resets all preferences to defaults`() =
+    testScope.runTest {
+      // Set non-default values
+      repo.setAutoSwitchMode(AutoSwitchMode.SOLAR_AUTO)
+      repo.setLightThemeId("neon")
+      repo.setDarkThemeId("midnight")
+      repo.setKeepScreenOn(false)
+      repo.setAnalyticsConsent(true)
+
+      // Clear
+      repo.clearAll()
+
+      // Verify all reverted to defaults
+      repo.autoSwitchMode.test {
+        assertThat(awaitItem()).isEqualTo(AutoSwitchMode.SYSTEM)
+        cancelAndIgnoreRemainingEvents()
+      }
+      repo.lightThemeId.test {
+        assertThat(awaitItem()).isEqualTo("minimalist")
+        cancelAndIgnoreRemainingEvents()
+      }
+      repo.darkThemeId.test {
+        assertThat(awaitItem()).isEqualTo("slate")
+        cancelAndIgnoreRemainingEvents()
+      }
+      repo.keepScreenOn.test {
+        assertThat(awaitItem()).isTrue()
+        cancelAndIgnoreRemainingEvents()
+      }
+      repo.analyticsConsent.test {
+        assertThat(awaitItem()).isFalse()
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  // ---------------------------------------------------------------------------
   // Round-trip
   // ---------------------------------------------------------------------------
 

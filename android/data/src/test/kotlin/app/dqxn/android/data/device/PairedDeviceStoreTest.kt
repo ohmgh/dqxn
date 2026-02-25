@@ -93,6 +93,25 @@ class PairedDeviceStoreTest {
     }
 
   @Test
+  fun `clearAll removes all paired devices`() =
+    testScope.runTest {
+      store.addDevice(testDevice)
+      store.addDevice(
+        testDevice.copy(
+          macAddress = "11:22:33:44:55:66",
+          displayName = "Second Device",
+        )
+      )
+
+      store.clearAll()
+
+      store.devices.test {
+        assertThat(awaitItem()).isEmpty()
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  @Test
   fun `persistence across store instances`() =
     testScope.runTest {
       store.addDevice(testDevice)

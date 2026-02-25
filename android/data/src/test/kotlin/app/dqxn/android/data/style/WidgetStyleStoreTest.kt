@@ -86,6 +86,24 @@ class WidgetStyleStoreTest {
     }
 
   @Test
+  fun `clearAll removes all style overrides`() =
+    testScope.runTest {
+      store.setStyle("widget-1", customStyle)
+      store.setStyle("widget-2", customStyle)
+
+      store.clearAll()
+
+      store.getStyle("widget-1").test {
+        assertThat(awaitItem()).isEqualTo(WidgetStyle.Default)
+        cancelAndIgnoreRemainingEvents()
+      }
+      store.getStyle("widget-2").test {
+        assertThat(awaitItem()).isEqualTo(WidgetStyle.Default)
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  @Test
   fun `JSON round-trip preserves all WidgetStyle fields`() =
     testScope.runTest {
       store.setStyle("widget-2", customStyle)

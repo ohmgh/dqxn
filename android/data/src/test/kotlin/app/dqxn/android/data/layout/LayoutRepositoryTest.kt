@@ -275,6 +275,48 @@ class LayoutRepositoryTest {
     }
 
   // ---------------------------------------------------------------------------
+  // clearAll
+  // ---------------------------------------------------------------------------
+
+  @Test
+  fun `clearAll removes all profiles and widgets then recreates default profile`() =
+    testScope.runTest {
+      advanceUntilIdle()
+
+      // Add extra profile and widgets
+      val secondId = repo.createProfile("Work")
+      repo.addWidget(createTestWidget("w1"))
+      repo.addWidget(createTestWidget("w2"))
+      advanceUntilIdle()
+
+      // Verify we have 2 profiles
+      repo.profiles.test {
+        assertThat(awaitItem()).hasSize(2)
+        cancelAndIgnoreRemainingEvents()
+      }
+
+      // Clear all
+      repo.clearAll()
+      advanceUntilIdle()
+
+      // Should have exactly 1 profile (the recreated default)
+      repo.profiles.test {
+        val list = awaitItem()
+        assertThat(list).hasSize(1)
+        assertThat(list[0].displayName).isEqualTo("Home")
+        cancelAndIgnoreRemainingEvents()
+      }
+
+      // Active profile widgets should only contain the fallback clock
+      repo.getActiveProfileWidgets().test {
+        val widgets = awaitItem()
+        assertThat(widgets).hasSize(1)
+        assertThat(widgets[0].typeId).isEqualTo("essentials:clock")
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
 

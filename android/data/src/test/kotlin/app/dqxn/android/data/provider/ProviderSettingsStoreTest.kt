@@ -208,6 +208,33 @@ class ProviderSettingsStoreTest {
     }
 
   // ---------------------------------------------------------------------------
+  // clearAll
+  // ---------------------------------------------------------------------------
+
+  @Test
+  fun `clearAll removes all settings across all packs and providers`() =
+    testScope.runTest {
+      store.setSetting("essentials", "gps-speed", "unit", "mph")
+      store.setSetting("essentials", "compass", "style", "modern")
+      store.setSetting("plus", "weather", "location", "auto")
+
+      store.clearAll()
+
+      store.getSetting("essentials", "gps-speed", "unit").test {
+        assertThat(awaitItem()).isNull()
+        cancelAndIgnoreRemainingEvents()
+      }
+      store.getSetting("essentials", "compass", "style").test {
+        assertThat(awaitItem()).isNull()
+        cancelAndIgnoreRemainingEvents()
+      }
+      store.getSetting("plus", "weather", "location").test {
+        assertThat(awaitItem()).isNull()
+        cancelAndIgnoreRemainingEvents()
+      }
+    }
+
+  // ---------------------------------------------------------------------------
   // Legacy fallback
   // ---------------------------------------------------------------------------
 
