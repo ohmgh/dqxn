@@ -28,6 +28,7 @@ import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
 import app.dqxn.android.sdk.observability.crash.ErrorContext
 import app.dqxn.android.sdk.observability.crash.ErrorReporter
 import app.dqxn.android.sdk.observability.log.NoOpLogger
+import app.dqxn.android.sdk.observability.session.SessionEventEmitter
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -56,6 +57,7 @@ class DashboardViewModelTest {
   private val testDispatcher = StandardTestDispatcher()
   private val logger = NoOpLogger
   private val errorReporter: ErrorReporter = mockk(relaxed = true)
+  private val sessionEventEmitter: SessionEventEmitter = mockk(relaxed = true)
 
   @BeforeEach
   fun setUp() {
@@ -134,6 +136,7 @@ class DashboardViewModelTest {
       logger = logger,
       errorReporter = errorReporter,
       commandBus = DashboardCommandBus(),
+      sessionEventEmitter = sessionEventEmitter,
     )
 
   @Test
@@ -282,6 +285,7 @@ class DashboardViewModelTest {
       logger = logger,
       errorReporter = errorReporter,
       commandBus = bus,
+      sessionEventEmitter = sessionEventEmitter,
     )
 
     // Let ViewModel init coroutines start (bus collector, command loop, etc.)

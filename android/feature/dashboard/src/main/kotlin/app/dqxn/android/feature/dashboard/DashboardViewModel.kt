@@ -27,6 +27,9 @@ import app.dqxn.android.sdk.observability.log.DqxnLogger
 import app.dqxn.android.sdk.observability.log.LogTag
 import app.dqxn.android.sdk.observability.log.info
 import app.dqxn.android.sdk.observability.log.warn
+import app.dqxn.android.sdk.observability.session.EventType
+import app.dqxn.android.sdk.observability.session.SessionEvent
+import app.dqxn.android.sdk.observability.session.SessionEventEmitter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
@@ -70,6 +73,7 @@ constructor(
   private val logger: DqxnLogger,
   private val errorReporter: ErrorReporter,
   private val commandBus: DashboardCommandBus,
+  private val sessionEventEmitter: SessionEventEmitter,
 ) : ViewModel() {
 
   private val commandChannel = Channel<DashboardCommand>(capacity = 64)
@@ -152,27 +156,49 @@ constructor(
       is DashboardCommand.AddWidget -> {
         layoutCoordinator.handleAddWidget(command.widget)
         widgetBindingCoordinator.bind(command.widget)
+        recordSessionEvent(EventType.WIDGET_ADD, "widgetId=${command.widget.instanceId}")
       }
       is DashboardCommand.RemoveWidget -> {
         widgetBindingCoordinator.unbind(command.widgetId)
         layoutCoordinator.handleRemoveWidget(command.widgetId)
+        recordSessionEvent(EventType.WIDGET_REMOVE, "widgetId=${command.widgetId}")
       }
-      is DashboardCommand.MoveWidget ->
+      is DashboardCommand.MoveWidget -> {
         layoutCoordinator.handleMoveWidget(command.widgetId, command.newPosition)
-      is DashboardCommand.ResizeWidget ->
+        recordSessionEvent(
+          EventType.MOVE,
+          "widgetId=${command.widgetId}, to=(${command.newPosition.col},${command.newPosition.row})",
+        )
+      }
+      is DashboardCommand.ResizeWidget -> {
         layoutCoordinator.handleResizeWidget(
           command.widgetId,
           command.newSize,
           command.newPosition,
         )
-      is DashboardCommand.FocusWidget ->
+        recordSessionEvent(
+          EventType.RESIZE,
+          "widgetId=${command.widgetId}, newSize=${command.newSize.widthUnits}x${command.newSize.heightUnits}",
+        )
+      }
+      is DashboardCommand.FocusWidget -> {
         editModeCoordinator.focusWidget(command.widgetId)
-      is DashboardCommand.EnterEditMode ->
+        if (command.widgetId != null) {
+          recordSessionEvent(EventType.TAP, "widgetId=${command.widgetId}")
+        }
+      }
+      is DashboardCommand.EnterEditMode -> {
         editModeCoordinator.enterEditMode()
-      is DashboardCommand.ExitEditMode ->
+        recordSessionEvent(EventType.EDIT_MODE_ENTER, "")
+      }
+      is DashboardCommand.ExitEditMode -> {
         editModeCoordinator.exitEditMode()
-      is DashboardCommand.SetTheme ->
+        recordSessionEvent(EventType.EDIT_MODE_EXIT, "")
+      }
+      is DashboardCommand.SetTheme -> {
         themeCoordinator.handleSetTheme(command.themeId)
+        recordSessionEvent(EventType.THEME_CHANGE, "themeId=${command.themeId}")
+      }
       is DashboardCommand.PreviewTheme ->
         themeCoordinator.handlePreviewTheme(command.theme)
       is DashboardCommand.CycleThemeMode ->
@@ -182,6 +208,7 @@ constructor(
       is DashboardCommand.SwitchProfile -> {
         profileCoordinator.handleSwitchProfile(command.profileId)
         savedStateHandle[KEY_ACTIVE_PROFILE_ID] = command.profileId
+        recordSessionEvent(EventType.NAVIGATE, "route=profile/${command.profileId}")
       }
       is DashboardCommand.CreateProfile ->
         profileCoordinator.handleCreateProfile(command.displayName, command.cloneCurrentId)
@@ -192,6 +219,20 @@ constructor(
       is DashboardCommand.ToggleStatusBar ->
         editModeCoordinator.toggleStatusBar()
     }
+  }
+
+  /**
+   * Record a session event via [SessionEventEmitter]. The emitter is a no-op if recording is
+   * disabled, so this call has zero overhead in production when diagnostics recording is off.
+   */
+  private fun recordSessionEvent(type: EventType, details: String) {
+    sessionEventEmitter.record(
+      SessionEvent(
+        timestamp = System.currentTimeMillis(),
+        type = type,
+        details = details,
+      ),
+    )
   }
 
   override fun onCleared() {
