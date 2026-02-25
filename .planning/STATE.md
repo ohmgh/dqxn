@@ -336,6 +336,10 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 
 ## Context
 
+### Roadmap Evolution
+- Phase 10.1 inserted after Phase 10: fix issues 3 and 4 (URGENT)
+
+### General
 - All architecture docs finalized under `.planning/`: ARCHITECTURE.md, REQUIREMENTS.md, DECISIONS.md, ROADMAP.md, MIGRATION.md (split into per-phase files)
 - Old codebase mapped in `.planning/oldcodebase/` (8 docs, ~6000 lines)
 - Replication advisory at `.planning/migration/replication-advisory.md` — 7 hard-to-replicate UX areas cross-referenced in phase files and risk-flags.md
