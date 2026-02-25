@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 9 — Themes, Demo + Chaos (IN PROGRESS, 3/6 plans)
+- **Phase:** 9 — Themes, Demo + Chaos (IN PROGRESS, 4/6 plans)
 - **Current Plan:** 09-04 complete, next 09-05
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 9 execution (09-05: ChaosEngine orchestration)
-- **Last session:** 2026-02-25T02:00:56.598Z
-- **Stopped at:** Completed 09-04-PLAN.md
+- **Last session:** 2026-02-25T02:07:52.147Z
+- **Stopped at:** Completed 09-03-PLAN.md
 
 ## Progress
 
@@ -21,7 +21,7 @@
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
 | 8. Essentials Pack | Complete (11/11 plans) | All plans complete -- snapshots, lint, providers, widgets, themes, integration tests, on-device verification |
-| 9. Themes, Demo + Chaos | In Progress (1/6 plans) | 09-02 complete: snapshot relocation + 4 demo providers |
+| 9. Themes, Demo + Chaos | In Progress (4/6 plans) | 09-01 thru 09-04 complete: themes + demo providers + chaos faults |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
@@ -62,6 +62,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 09]: Added :sdk:contracts dependency to :core:agentic for DataProviderInterceptor/ProviderFault access
 - [Phase 09]: backgroundScope flow collection pattern for virtual-time-dependent tests -- avoids Turbine timeout conflicts with StandardTestDispatcher
 - [Phase 09]: AtomicBoolean time-window gating for Flap fault -- coroutineScope launch toggles passing flag alongside upstream collect
+- [Phase 09]: AccelerationSnapshot uses acceleration/lateralAcceleration fields per actual snapshot schema -- plan referenced longitudinalG/lateralG which don't exist
 
 ### Phase 1 Decisions
 
@@ -285,6 +286,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 09 P02 | 4min | 3 tasks | 11 files |
 | Phase 09 P01 | 7min | 2 tasks | 28 files |
 | Phase 09 P04 | 7min | 2 tasks | 7 files |
+| Phase 09 P03 | 4min | 3 tasks | 9 files |
 
 ## Context
 
