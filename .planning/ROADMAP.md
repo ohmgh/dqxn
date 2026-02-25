@@ -385,7 +385,7 @@ Plans:
 5. Onboarding first-run flow: analytics consent → disclaimer → theme selection → edit mode tour
 6. Analytics event call sites: events fire after opt-in, suppressed before consent
 
-**Plans:** 10/10 plans complete
+**Plans:** 11 plans (10 complete, 1 gap closure pending)
 
 Plans:
 - [ ] 11-01-PLAN.md — ColorConversion + LuxMapping TDD (pure math utilities)
@@ -398,6 +398,7 @@ Plans:
 - [ ] 11-08-PLAN.md — Onboarding flow (AnalyticsConsent, Disclaimer, FirstRunFlow, ProgressiveTip)
 - [ ] 11-09-PLAN.md — OverlayNavHost 7-route wiring + source-varying transitions + DashboardScreen first-run
 - [ ] 11-10-PLAN.md — Analytics event call sites + SessionLifecycleTracker
+- [ ] 11-11-PLAN.md — Gap closure: ThemeStudioRoute wiring + toast infrastructure connection (F4.6, F4.7, F4.12)
 
 **Depends on:** Phase 10
 
