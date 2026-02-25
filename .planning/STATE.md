@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 12 — CI Gates + Benchmarking (3/5 plans)
-- **Current Plan:** 12-01, 12-02, 12-05 complete, next 12-03
+- **Phase:** 12 — CI Gates + Benchmarking (4/5 plans)
+- **Current Plan:** 12-01, 12-02, 12-04, 12-05 complete, next 12-03
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 12 (CI Gates + Benchmarking)
-- **Last session:** 2026-02-25T09:50:11.022Z
-- **Stopped at:** Completed 12-05-PLAN.md
+- **Last session:** 2026-02-25T09:53:41Z
+- **Stopped at:** Completed 12-04-PLAN.md
 
 ## Progress
 
@@ -25,7 +25,7 @@
 | 10. Settings Foundation + Setup UI | Complete (11/11 plans) | All plans complete -- data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet + WidgetSettingsSheet + WidgetPicker + PackBrowserContent + MainSettings + AnalyticsConsentDialog + DeleteAllDataDialog + MainSettingsViewModel + type-safe overlay routes + OverlayNavHost populated + DashboardScreen wiring + gap closure: WidgetPicker live preview + hardware icons + Compose compiler on :sdk:contracts |
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
 | 11. Theme UI + Diagnostics + Onboarding | Complete (11/11 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 9 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics + ThemeStudioRoute gap closure + toast connection |
-| 12. CI Gates + Benchmarking | In Progress (3/5 plans) | 12-01 baseline profile, 12-02 CI gate scripts, 12-05 pitest (incompatible, documented) |
+| 12. CI Gates + Benchmarking | In Progress (4/5 plans) | 12-01 baseline profile, 12-02 CI gate scripts, 12-04 benchmark parser + orchestrator + Kover, 12-05 pitest (incompatible, documented) |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
 
 ## Decisions
@@ -376,6 +376,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 12 P02 | 2min | 2 tasks | 3 files |
 | Phase 12 P01 | 9min | 2 tasks | 5 files |
 | Phase 12 P05 | 12min | 1 tasks | 2 files |
+| Phase 12 P04 | 2min | 2 tasks | 3 files |
 
 ## Context
 
