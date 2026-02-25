@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 9 — Themes, Demo + Chaos (IN PROGRESS, 4/6 plans)
-- **Current Plan:** 09-05 complete, next 09-06
+- **Phase:** 9 — Themes, Demo + Chaos (COMPLETE, 6/6 plans)
+- **Current Plan:** 09-06 complete, phase done
 - **Milestone:** V1 Launch
-- **Next action:** Continue Phase 9 execution (09-06: next plan)
-- **Last session:** 2026-02-25T02:08:05Z
-- **Stopped at:** Completed 09-05-PLAN.md
+- **Next action:** Begin Phase 10 planning (Settings Foundation + Setup UI)
+- **Last session:** 2026-02-25T02:14:47.168Z
+- **Stopped at:** Completed 09-06-PLAN.md
 
 ## Progress
 
@@ -21,7 +21,7 @@
 | 6. Deployable App + Agentic | Complete (4/4 plans) | Core agentic types + app shell + 15 handlers + debug overlays + release validated |
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
 | 8. Essentials Pack | Complete (11/11 plans) | All plans complete -- snapshots, lint, providers, widgets, themes, integration tests, on-device verification |
-| 9. Themes, Demo + Chaos | In Progress (4/6 plans) | 09-01 thru 09-04 complete: themes + demo providers + chaos faults |
+| 9. Themes, Demo + Chaos | Complete (6/6 plans) | All plans complete -- themes pack, snapshot relocation, demo pack, chaos engine, entitlements, app integration + regression gate |
 | 10. Settings Foundation + Setup UI | Pending | Unblocks sg-erp2 pairing |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
@@ -64,6 +64,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 09]: AtomicBoolean time-window gating for Flap fault -- coroutineScope launch toggles passing flag alongside upstream collect
 - [Phase 09]: Delta-computed delays from absolute ScheduledFault.delayMs timestamps -- profile's delayMs is cumulative offset from session start, engine computes inter-fault deltas
 - [Phase 09]: AccelerationSnapshot uses acceleration/lateralAcceleration fields per actual snapshot schema -- plan referenced longitudinalG/lateralG which don't exist
+- [Phase 09]: Empty stub modules (diagnostics, onboarding, settings, plus) excluded from regression gate -- pre-existing failOnNoDiscoveredTests, not caused by Phase 9
 
 ### Phase 1 Decisions
 
@@ -289,6 +290,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 09 P04 | 7min | 2 tasks | 7 files |
 | Phase 09 P05 | 5min | 2 tasks | 9 files |
 | Phase 09 P03 | 4min | 3 tasks | 9 files |
+| Phase 09 P06 | 2min | 2 tasks | 1 files |
 
 ## Context
 
