@@ -8,6 +8,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.navigation.compose.rememberNavController
 import app.dqxn.android.data.device.PairedDeviceStore
+import app.dqxn.android.feature.dashboard.coordinator.ThemeCoordinator
+import app.dqxn.android.feature.dashboard.coordinator.ThemeState
 import app.dqxn.android.feature.settings.main.MainSettingsViewModel
 import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
@@ -20,6 +22,7 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
@@ -78,6 +81,18 @@ class OverlayNavHostTest {
     every { it.keepScreenOn } returns MutableStateFlow(true)
   }
 
+  private val mockThemeCoordinator = mockk<ThemeCoordinator>(relaxed = true).also {
+    every { it.themeState } returns MutableStateFlow(
+      ThemeState(
+        currentTheme = testTheme,
+        darkTheme = testTheme,
+        lightTheme = testTheme,
+        autoSwitchMode = app.dqxn.android.sdk.contracts.theme.AutoSwitchMode.SYSTEM,
+        previewTheme = null,
+      )
+    )
+  }
+
   // --- Empty route renders ---
 
   @Test
@@ -96,6 +111,9 @@ class OverlayNavHostTest {
           setupEvaluator = mockSetupEvaluator,
           pairedDeviceStore = mockPairedDeviceStore,
           mainSettingsViewModel = mockMainSettingsViewModel,
+          themeCoordinator = mockThemeCoordinator,
+          allThemes = persistentListOf(),
+          customThemeCount = 0,
           onCommand = {},
         )
       }
@@ -124,6 +142,9 @@ class OverlayNavHostTest {
           setupEvaluator = mockSetupEvaluator,
           pairedDeviceStore = mockPairedDeviceStore,
           mainSettingsViewModel = mockMainSettingsViewModel,
+          themeCoordinator = mockThemeCoordinator,
+          allThemes = persistentListOf(),
+          customThemeCount = 0,
           onCommand = {},
         )
       }
@@ -157,6 +178,9 @@ class OverlayNavHostTest {
           setupEvaluator = mockSetupEvaluator,
           pairedDeviceStore = mockPairedDeviceStore,
           mainSettingsViewModel = mockMainSettingsViewModel,
+          themeCoordinator = mockThemeCoordinator,
+          allThemes = persistentListOf(),
+          customThemeCount = 0,
           onCommand = {},
         )
       }
@@ -190,6 +214,9 @@ class OverlayNavHostTest {
           setupEvaluator = mockSetupEvaluator,
           pairedDeviceStore = mockPairedDeviceStore,
           mainSettingsViewModel = mockMainSettingsViewModel,
+          themeCoordinator = mockThemeCoordinator,
+          allThemes = persistentListOf(),
+          customThemeCount = 0,
           onCommand = {},
         )
       }
@@ -241,6 +268,9 @@ class OverlayNavHostTest {
           setupEvaluator = mockSetupEvaluator,
           pairedDeviceStore = mockPairedDeviceStore,
           mainSettingsViewModel = mockMainSettingsViewModel,
+          themeCoordinator = mockThemeCoordinator,
+          allThemes = persistentListOf(),
+          customThemeCount = 0,
           onCommand = {},
         )
       }

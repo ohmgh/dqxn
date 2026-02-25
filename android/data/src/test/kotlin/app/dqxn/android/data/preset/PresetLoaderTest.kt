@@ -76,10 +76,29 @@ class PresetLoaderTest {
     val widgets = loader.loadPreset("DEFAULT")
     val typeIds = widgets.map { it.typeId }
     assertThat(typeIds).doesNotContain("essentials:speedometer")
+    assertThat(typeIds).doesNotContain("essentials:speed-limit-circle")
+    assertThat(typeIds).doesNotContain("essentials:speed-limit-rect")
     assertThat(typeIds).doesNotContain("essentials:compass")
     assertThat(typeIds).doesNotContain("essentials:gforce")
     assertThat(typeIds).doesNotContain("essentials:altimeter")
     assertThat(typeIds).doesNotContain("essentials:solar")
+  }
+
+  @Test
+  fun `default preset excludes GPS-dependent widgets F11_5`() {
+    val loader = createPresetLoader(DEFAULT_PRESET_JSON)
+    val widgets = loader.loadPreset("DEFAULT")
+    val typeIds = widgets.map { it.typeId }
+    // F11.5: default preset must ONLY contain non-GPS widgets
+    assertThat(typeIds).doesNotContain("essentials:speedometer")
+    assertThat(typeIds).doesNotContain("essentials:speed-limit-circle")
+    assertThat(typeIds).doesNotContain("essentials:speed-limit-rect")
+    // Verify only non-GPS widgets present
+    assertThat(typeIds).containsExactly(
+      "essentials:clock",
+      "essentials:battery",
+      "essentials:date-simple",
+    )
   }
 
   @Test

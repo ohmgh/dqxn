@@ -96,6 +96,7 @@ class SessionEventEmissionTest {
       entitlementManager = mockk(relaxed = true),
       setupEvaluator = mockk(relaxed = true),
       pairedDeviceStore = mockk(relaxed = true),
+      builtInThemes = mockk(relaxed = true),
       savedStateHandle = SavedStateHandle(),
       logger = logger,
       errorReporter = mockk(relaxed = true),
