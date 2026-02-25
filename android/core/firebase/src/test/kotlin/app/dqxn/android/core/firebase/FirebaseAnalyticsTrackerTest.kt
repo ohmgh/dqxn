@@ -25,8 +25,19 @@ class FirebaseAnalyticsTrackerTest {
   }
 
   @Test
-  fun `isEnabled returns true by default`() {
-    assertThat(tracker.isEnabled()).isTrue()
+  fun `isEnabled returns false by default`() {
+    assertThat(tracker.isEnabled()).isFalse()
+  }
+
+  @Test
+  fun `constructor disables firebase collection`() {
+    verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
+  }
+
+  @Test
+  fun `track is no-op at default state before any setEnabled call`() {
+    tracker.track(AnalyticsEvent.AppLaunch)
+    verify(exactly = 0) { firebaseAnalytics.logEvent(any(), any()) }
   }
 
   @Test
@@ -52,6 +63,7 @@ class FirebaseAnalyticsTrackerTest {
 
   @Test
   fun `track delegates AppLaunch event to firebase`() {
+    tracker.setEnabled(true)
     tracker.track(AnalyticsEvent.AppLaunch)
 
     val nameSlot = slot<String>()
@@ -61,6 +73,7 @@ class FirebaseAnalyticsTrackerTest {
 
   @Test
   fun `track delegates WidgetAdded event with correct name`() {
+    tracker.setEnabled(true)
     val event = AnalyticsEvent.WidgetAdded(typeId = "essentials:clock")
 
     tracker.track(event)
@@ -72,6 +85,7 @@ class FirebaseAnalyticsTrackerTest {
 
   @Test
   fun `track passes non-null bundle for events with params`() {
+    tracker.setEnabled(true)
     val event = AnalyticsEvent.WidgetAdded(typeId = "essentials:clock")
 
     tracker.track(event)
@@ -95,6 +109,7 @@ class FirebaseAnalyticsTrackerTest {
 
   @Test
   fun `setUserProperty delegates to firebase`() {
+    tracker.setEnabled(true)
     tracker.setUserProperty("theme", "dark")
 
     verify { firebaseAnalytics.setUserProperty("theme", "dark") }
@@ -112,6 +127,7 @@ class FirebaseAnalyticsTrackerTest {
 
   @Test
   fun `track delegates SessionEnd event with correct name`() {
+    tracker.setEnabled(true)
     val event =
       AnalyticsEvent.SessionEnd(
         durationMs = 60_000L,
@@ -130,6 +146,7 @@ class FirebaseAnalyticsTrackerTest {
 
   @Test
   fun `track delegates OnboardingComplete data object`() {
+    tracker.setEnabled(true)
     tracker.track(AnalyticsEvent.OnboardingComplete)
 
     verify { firebaseAnalytics.logEvent("onboarding_complete", any()) }
@@ -137,6 +154,7 @@ class FirebaseAnalyticsTrackerTest {
 
   @Test
   fun `track delegates ThemeChanged event`() {
+    tracker.setEnabled(true)
     val event = AnalyticsEvent.ThemeChanged(themeId = "midnight", isDark = true)
 
     tracker.track(event)

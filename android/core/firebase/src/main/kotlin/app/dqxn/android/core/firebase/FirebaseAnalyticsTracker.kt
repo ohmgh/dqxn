@@ -19,7 +19,13 @@ constructor(
   private val firebaseAnalytics: FirebaseAnalytics,
 ) : AnalyticsTracker {
 
-  private val enabled: AtomicBoolean = AtomicBoolean(true)
+  private val enabled: AtomicBoolean = AtomicBoolean(false)
+
+  init {
+    // NF-P3: Disable Firebase collection from construction. No events fire until
+    // explicit setEnabled(true) after consent verification in DqxnApplication.onCreate().
+    firebaseAnalytics.setAnalyticsCollectionEnabled(false)
+  }
 
   override fun isEnabled(): Boolean = enabled.get()
 
