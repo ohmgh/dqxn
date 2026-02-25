@@ -17,7 +17,8 @@ android {
     create("benchmark") {
       isDebuggable = true
       signingConfig = signingConfigs.getByName("debug")
-      matchingFallbacks += listOf("release")
+      // Fallback to debug until release Hilt DI bindings are complete (DiagnosticSnapshotCapture missing in release)
+      matchingFallbacks += listOf("debug")
     }
   }
 }
@@ -25,4 +26,5 @@ android {
 dependencies {
   implementation(libs.benchmark.macro.junit4)
   implementation(libs.uiautomator)
+  implementation(libs.androidx.test.ext.junit)
 }

@@ -3,7 +3,8 @@ plugins {
   id("dqxn.android.hilt")
   id("dqxn.android.test")
   alias(libs.plugins.kotlin.serialization)
-  alias(libs.plugins.baselineprofile)
+  // baselineprofile plugin deferred -- 1.4.1 incompatible with AGP 9 (BaselineProfileAppTargetPlugin)
+  // Profile installation still works via profileinstaller dependency below
 }
 
 android {
@@ -56,7 +57,7 @@ dependencies {
 
   // Baseline Profile
   implementation(libs.profileinstaller)
-  baselineProfile(project(":baselineprofile"))
+  // baselineProfile(project(":baselineprofile")) -- requires baselineprofile plugin (AGP 9 incompatible)
 
   // Debug tools
   debugImplementation(libs.leakcanary)
