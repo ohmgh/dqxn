@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.window.layout.WindowInfoTracker
 import app.dqxn.android.feature.dashboard.binding.DataProviderRegistryImpl
 import app.dqxn.android.feature.dashboard.binding.WidgetRegistryImpl
+import app.dqxn.android.feature.dashboard.coordinator.ProviderStatusBridge
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
+import app.dqxn.android.sdk.observability.health.ProviderStatusProvider
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -33,6 +35,10 @@ public abstract class DashboardModule {
   @Binds
   @Singleton
   internal abstract fun bindDataProviderRegistry(impl: DataProviderRegistryImpl): DataProviderRegistry
+
+  @Binds
+  @Singleton
+  internal abstract fun bindProviderStatusProvider(impl: ProviderStatusBridge): ProviderStatusProvider
 
   public companion object {
 
