@@ -458,7 +458,7 @@ Plans:
 6. WCAG AA contrast audit passes for all 24 themes
 7. In-app update and review API integration tested with mock managers
 
-**Plans:** 7/7 plans complete
+**Plans:** 8 plans (7 complete, 1 gap closure pending)
 
 Plans:
 - [ ] 13-01-PLAN.md — Google Play In-App Update + Review APIs (NF-L2, NF-L3)
@@ -468,6 +468,7 @@ Plans:
 - [ ] 13-05-PLAN.md — AgenticTestClient + chaos CI gate + multi-pack validation + offline (NF24, NF25, NF26)
 - [ ] 13-06-PLAN.md — Localization lint gate + locale-aware formatting (NF-I1)
 - [ ] 13-07-PLAN.md — Battery/memory soak + sensor lifecycle verification (NF11, NF37)
+- [ ] 13-08-PLAN.md — Gap closure: Analytics consent enforcement at startup (NF-P3)
 
 **Depends on:** Phases 9, 11, 12
 
