@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 12 — CI Gates + Benchmarking (2/5 plans)
-- **Current Plan:** 12-01 + 12-02 complete, next 12-03
+- **Phase:** 12 — CI Gates + Benchmarking (3/5 plans)
+- **Current Plan:** 12-01, 12-02, 12-05 complete, next 12-03
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 12 (CI Gates + Benchmarking)
-- **Last session:** 2026-02-25T09:46:37.455Z
-- **Stopped at:** Completed 12-01-PLAN.md
+- **Last session:** 2026-02-25T09:50:11.022Z
+- **Stopped at:** Completed 12-05-PLAN.md
 
 ## Progress
 
@@ -25,7 +25,7 @@
 | 10. Settings Foundation + Setup UI | Complete (11/11 plans) | All plans complete -- data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet + WidgetSettingsSheet + WidgetPicker + PackBrowserContent + MainSettings + AnalyticsConsentDialog + DeleteAllDataDialog + MainSettingsViewModel + type-safe overlay routes + OverlayNavHost populated + DashboardScreen wiring + gap closure: WidgetPicker live preview + hardware icons + Compose compiler on :sdk:contracts |
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
 | 11. Theme UI + Diagnostics + Onboarding | Complete (11/11 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 9 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics + ThemeStudioRoute gap closure + toast connection |
-| 12. CI Gates + Benchmarking | In Progress (1/5 plans) | 12-02 CI gate scripts complete |
+| 12. CI Gates + Benchmarking | In Progress (3/5 plans) | 12-01 baseline profile, 12-02 CI gate scripts, 12-05 pitest (incompatible, documented) |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
 
 ## Decisions
@@ -122,6 +122,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 11]: Jank% computed inline from MetricsSnapshot frame histogram (buckets 3+4+5 / total * 100) -- same formula as ObservabilityDashboard
 - [Phase 11]: Render failures = CRASHED + STALLED_RENDER; provider errors = STALE_DATA from WidgetHealthMonitor.allStatuses()
 - [Phase 12]: [Phase 12-01]: Upgraded baselineprofile plugin from 1.3.1 to 1.4.1 -- 1.3.1 incompatible with AGP 9 (Module :app is not a supported android module)
+- [Phase 12]: Pitest incompatible with AGP 9 / Gradle 9.3 Android library modules -- info.solidsoft.pitest 1.19.0-rc.3 does not register extension, pl.droidsonroids.pitest 0.2.25 fails on buildscript mutation -- deferred to post-AGP-9-support release
 
 ### Phase 1 Decisions
 
@@ -374,6 +375,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 11 P11 | 3min | 2 tasks | 7 files |
 | Phase 12 P02 | 2min | 2 tasks | 3 files |
 | Phase 12 P01 | 9min | 2 tasks | 5 files |
+| Phase 12 P05 | 12min | 1 tasks | 2 files |
 
 ## Context
 
