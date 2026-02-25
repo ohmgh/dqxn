@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (8/10 plans)
-- **Current Plan:** 08 complete, next 09
+- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (9/10 plans)
+- **Current Plan:** 09 complete, next 10
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 11 plans
-- **Last session:** 2026-02-25T08:33:49.786Z
-- **Stopped at:** Completed 11-06-PLAN.md
+- **Last session:** 2026-02-25T08:46:00Z
+- **Stopped at:** Completed 11-09-PLAN.md
 
 ## Progress
 
@@ -24,7 +24,7 @@
 | 9. Themes, Demo + Chaos | Complete (7/7 plans) | All plans complete -- themes pack, snapshot relocation, demo pack, chaos engine, entitlements, app integration + regression gate + SC3 gap closure |
 | 10. Settings Foundation + Setup UI | Complete (11/11 plans) | All plans complete -- data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet + WidgetSettingsSheet + WidgetPicker + PackBrowserContent + MainSettings + AnalyticsConsentDialog + DeleteAllDataDialog + MainSettingsViewModel + type-safe overlay routes + OverlayNavHost populated + DashboardScreen wiring + gap closure: WidgetPicker live preview + hardware icons + Compose compiler on :sdk:contracts |
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
-| 11. Theme UI + Diagnostics + Onboarding | In Progress (8/10 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables (InlineColorPicker, GradientStopRow, ThemeSwatchRow, AutoSwitchModeContent, IlluminanceThresholdControl) |
+| 11. Theme UI + Diagnostics + Onboarding | In Progress (9/10 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 7 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
 
@@ -114,6 +114,10 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 11]: useUnmergedTree=true for nested test tag assertions inside clickable containers -- clickable modifier merges child semantics (same pattern as Phase 10)
 - [Phase 11]: Row+horizontalScroll over LazyRow for ThemeSwatchRow -- LazyRow only materializes visible items, breaking test tag assertions for off-screen swatches
 - [Phase 11]: snapshotFlow(isDirty).drop(1).collectLatest for ThemeStudio auto-save -- skips initial emission, only fires on actual user edits
+- [Phase 11]: onCommand(DashboardCommand.SetTheme/PreviewTheme) over direct ThemeCoordinator method calls -- handleSetTheme is suspend, callback lambdas are non-suspend; command channel routing avoids coroutine scope issues
+- [Phase 11]: BuiltInThemes.freeThemes as allThemes for ThemeSelector -- full theme list from pack-provided ThemeProviders is future work; built-in free themes sufficient for integration wiring
+- [Phase 11]: DiagnosticsScreen as entry-point composable in :feature:diagnostics -- hiltViewModel() inside composable for ViewModel injection, stateless diagnostic viewers receive data as params
+- [Phase 11]: LaunchedEffect(Unit) for Settings preview clear -- prevents re-clearing on every recomposition while still executing on first composition
 
 ### Phase 1 Decisions
 
@@ -361,6 +365,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 11 P05 | 8min | 2 tasks | 4 files |
 | Phase 11 P07 | 7min | 2 tasks | 9 files |
 | Phase 11 P06 | 9min | 2 tasks | 10 files |
+| Phase 11 P09 | 10min | 2 tasks | 12 files |
 
 ## Context
 
