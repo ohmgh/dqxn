@@ -307,15 +307,16 @@ Plans:
 4. Deterministic chaos: same seed → same fault sequence → same diagnostics
 5. Connection state machine exhaustive transition tests pass (`:pack:sg-erp2` if EXTOL compatible)
 
-**Plans:** 6 plans
+**Plans:** 7 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Themes pack: 22 premium JSON themes + pack-local parser + ThemesPackThemeProvider + entitlement gating
-- [ ] 09-02-PLAN.md — Demo pack prerequisites: relocate SolarSnapshot/SpeedLimitSnapshot + first 4 deterministic providers
-- [ ] 09-03-PLAN.md — Demo pack completion: remaining 4 providers + all 8 contract tests + determinism verification
-- [ ] 09-04-PLAN.md — Chaos infrastructure: ChaosProviderInterceptor + profiles + session + StubEntitlementManager extension
-- [ ] 09-05-PLAN.md — ChaosEngine + 3 agentic handlers (chaos-start/stop/inject) + DebugModule wiring
-- [ ] 09-06-PLAN.md — App wiring (:pack:themes + :pack:demo) + regression gate
+- [x] 09-01-PLAN.md — Themes pack: 22 premium JSON themes + pack-local parser + ThemesPackThemeProvider + entitlement gating
+- [x] 09-02-PLAN.md — Demo pack prerequisites: relocate SolarSnapshot/SpeedLimitSnapshot + first 4 deterministic providers
+- [x] 09-03-PLAN.md — Demo pack completion: remaining 4 providers + all 8 contract tests + determinism verification
+- [x] 09-04-PLAN.md — Chaos infrastructure: ChaosProviderInterceptor + profiles + session + StubEntitlementManager extension
+- [x] 09-05-PLAN.md — ChaosEngine + 3 agentic handlers (chaos-start/stop/inject) + DebugModule wiring
+- [x] 09-06-PLAN.md — App wiring (:pack:themes + :pack:demo) + regression gate
+- [ ] 09-07-PLAN.md — Gap closure: SC3 chaos-to-diagnostics correlation integration test
 
 **Depends on:** Phases 8, 10 (SetupSheet UI required for sg-erp2 BLE device pairing)
 
