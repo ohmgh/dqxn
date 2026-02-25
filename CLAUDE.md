@@ -56,14 +56,14 @@ Other:    lint-rules, baselineprofile, benchmark (CI/quality, not app runtime)
 
 **`:core:firebase`** — CAN: `:sdk:observability`, `:sdk:analytics`, `:sdk:common`. Only module with Firebase SDKs. Only `:app` imports it.
 
-**`:sdk:contracts`** — CAN: `:sdk:common` only. Pure Kotlin + coroutines + `compileOnly(compose.runtime)` for annotations. No Compose compiler — no composable function bodies.
+**`:sdk:contracts`** — CAN: `:sdk:common` only. Pure Kotlin + coroutines + Compose compiler (required for `@Composable` interface method bytecode, e.g. `WidgetRenderer.Render()`) + `compileOnly(compose.runtime)`.
 
 **All modules** (except `:pack:*:snapshots`) → `:sdk:observability`.
 
 ### Compose Compiler Scope
 
-WITH: `dqxn.android.compose` → `:app`, `:feature:*`, `:sdk:ui`, `:core:design`. `dqxn.pack` → `:pack:{packId}`. `dqxn.kotlin.jvm` → `:codegen:*`.
-WITHOUT: `:sdk:contracts`, `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:firebase`, `:core:agentic`, `:data`, `:pack:*:snapshots` (`dqxn.snapshot`).
+WITH: `dqxn.android.compose` → `:app`, `:feature:*`, `:sdk:ui`, `:core:design`. `dqxn.pack` → `:pack:{packId}`. `dqxn.kotlin.jvm` → `:codegen:*`. Direct plugin apply → `:sdk:contracts` (for `@Composable` interface methods).
+WITHOUT: `:sdk:common`, `:sdk:observability`, `:sdk:analytics`, `:core:thermal`, `:core:firebase`, `:core:agentic`, `:data`, `:pack:*:snapshots` (`dqxn.snapshot`).
 
 ## Critical Constraints
 
