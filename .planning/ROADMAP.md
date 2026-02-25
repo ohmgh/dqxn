@@ -338,7 +338,7 @@ Plans:
 5. `WidgetPicker` displays grouped widgets with entitlement badges
 6. Overlay navigation: Phase 10 routes (WidgetPicker, Settings, WidgetSettings, Setup) render and navigate back correctly
 
-**Plans:** 7/10 plans executed
+**Plans:** 8/10 plans executed
 
 Plans:
 - [ ] 10-01-PLAN.md — Data layer extensions (clearAll on 5 stores, analyticsConsent) + SemanticColors
@@ -348,7 +348,7 @@ Plans:
 - [ ] 10-05-PLAN.md — Remaining 6 row types (Instruction, AppPicker, DateFormat, Timezone, SoundPicker, Uri) + SettingRowDispatcherTest
 - [ ] 10-06-PLAN.md — SetupEvaluatorImpl + SetupDefinitionRenderer + 7 setup card composables
 - [ ] 10-07-PLAN.md — SetupSheet paginated flow + SetupNavigationBar + SetupSheetTest
-- [ ] 10-08-PLAN.md — WidgetSettingsSheet (3-tab pager) + WidgetPicker (live previews, entitlement badges, revocation toast)
+- [x] 10-08-PLAN.md — WidgetSettingsSheet (3-tab pager) + WidgetPicker (live previews, entitlement badges, revocation toast)
 - [ ] 10-09-PLAN.md — MainSettings (4 sections) + analytics consent + Delete All Data
 - [ ] 10-10-PLAN.md — OverlayNavHost route population + DashboardScreen navigation wiring + type-safe routes
 

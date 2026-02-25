@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 10 — Settings Foundation + Setup UI (7/10 plans)
-- **Current Plan:** Plan 08 of 10
+- **Phase:** 10 — Settings Foundation + Setup UI (8/10 plans)
+- **Current Plan:** Plan 09 of 10
 - **Milestone:** V1 Launch
 - **Next action:** Execute remaining Phase 10 plans
-- **Last session:** 2026-02-25T04:21:00Z
-- **Stopped at:** Completed 10-07-PLAN.md
+- **Last session:** 2026-02-25T04:27:49Z
+- **Stopped at:** Completed 10-08-PLAN.md
 
 ## Progress
 
@@ -22,7 +22,7 @@
 | 7. Dashboard Shell | Complete (16/16 plans) | All coordinators + UI composables + ViewModel + DashboardScreen + profile switching + gap closure tests complete. All quality gaps closed (Q1-Q5). |
 | 8. Essentials Pack | Complete (11/11 plans) | All plans complete -- snapshots, lint, providers, widgets, themes, integration tests, on-device verification |
 | 9. Themes, Demo + Chaos | Complete (7/7 plans) | All plans complete -- themes pack, snapshot relocation, demo pack, chaos engine, entitlements, app integration + regression gate + SC3 gap closure |
-| 10. Settings Foundation + Setup UI | In Progress (7/10 plans) | Data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet paginated wizard |
+| 10. Settings Foundation + Setup UI | In Progress (8/10 plans) | Data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet paginated wizard + WidgetSettingsSheet 3-tab pager + WidgetPicker + PackBrowserContent |
 | 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
@@ -82,6 +82,10 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 10]: [Phase 10-06]: hasRequestedPermissions local state guards false permanent-denial detection before first permission request (Pitfall 2)
 - [Phase 10]: [Phase 10-07]: rememberCoroutineScope for immediate write-through on settings changes -- avoids MainScope/GlobalScope while respecting Compose lifecycle
 - [Phase 10]: [Phase 10-07]: createAndroidComposeRule<ComponentActivity> over createComposeRule for BackHandler dismissal testing -- provides activity.onBackPressedDispatcher access
+- [Phase 10]: [Phase 10-08]: SecondaryTabRow over deprecated TabRow -- Material 3 split primary/secondary tab APIs, secondary is correct for content-switching pager
+- [Phase 10]: [Phase 10-08]: FlowRow grid over LazyVerticalGrid for widget picker -- LazyVerticalGrid inside Column (OverlayScaffold) gets 0 height due to unbounded constraints; FlowRow works in scrollable Column
+- [Phase 10]: [Phase 10-08]: useUnmergedTree=true for test tag assertions inside clickable containers -- clickable modifier merges child semantics
+- [Phase 10]: [Phase 10-08]: onRevocationToast callback over in-composable toast for F8.9 -- parent handles Toast/Snackbar display, composable stays pure
 
 ### Phase 1 Decisions
 
@@ -316,6 +320,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 10-05 P05 | 8min | 2 tasks | 8 files |
 | 10-06 | 8min | 2 | 10 |
 | 10-07 | 7min | 2 | 3 |
+| 10-08 | 14min | 2 | 9 |
 
 ## Context
 
