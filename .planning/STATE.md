@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 10.1 — Fix Issues 3 and 4 (1/1 plans) COMPLETE
-- **Current Plan:** Not started
+- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (1/10 plans)
+- **Current Plan:** 02 complete, next 03
 - **Milestone:** V1 Launch
-- **Next action:** Begin Phase 11 (Theme UI + Diagnostics + Onboarding)
-- **Last session:** 2026-02-25T07:56:36.808Z
-- **Stopped at:** Completed 10.1-01-PLAN.md
+- **Next action:** Continue Phase 11 plans
+- **Last session:** 2026-02-25T08:07:32.971Z
+- **Stopped at:** Completed 11-02-PLAN.md
 
 ## Progress
 
@@ -24,7 +24,7 @@
 | 9. Themes, Demo + Chaos | Complete (7/7 plans) | All plans complete -- themes pack, snapshot relocation, demo pack, chaos engine, entitlements, app integration + regression gate + SC3 gap closure |
 | 10. Settings Foundation + Setup UI | Complete (11/11 plans) | All plans complete -- data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet + WidgetSettingsSheet + WidgetPicker + PackBrowserContent + MainSettings + AnalyticsConsentDialog + DeleteAllDataDialog + MainSettingsViewModel + type-safe overlay routes + OverlayNavHost populated + DashboardScreen wiring + gap closure: WidgetPicker live preview + hardware icons + Compose compiler on :sdk:contracts |
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
-| 11. Theme UI + Diagnostics + Onboarding | Pending | Concurrent with Phase 9 |
+| 11. Theme UI + Diagnostics + Onboarding | In Progress (1/10 plans) | SessionEventEmitter + SessionRecorder ring buffer + Hilt binding |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
 
@@ -339,6 +339,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 10-10 | 9min | 2 | 7 |
 | Phase 10 P11 | 13min | 2 tasks | 4 files |
 | Phase 10.1 P01 | 6min | 2 tasks | 12 files |
+| Phase 11 P02 | 2min | 2 tasks | 6 files |
 
 ## Context
 
