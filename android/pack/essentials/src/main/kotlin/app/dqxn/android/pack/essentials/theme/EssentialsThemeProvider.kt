@@ -2,6 +2,7 @@ package app.dqxn.android.pack.essentials.theme
 
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import app.dqxn.android.sdk.contracts.annotation.DashboardThemeProvider
 import app.dqxn.android.sdk.contracts.theme.ThemeProvider
 import app.dqxn.android.sdk.contracts.theme.ThemeSpec
 import app.dqxn.android.sdk.contracts.widget.BackgroundStyle
@@ -16,6 +17,7 @@ import javax.inject.Singleton
  * multibinding as `Set<ThemeProvider>`. The shell aggregates all providers to build the complete
  * theme catalog available to the user.
  */
+@DashboardThemeProvider
 @Singleton
 public class EssentialsThemeProvider @Inject constructor() : ThemeProvider {
 

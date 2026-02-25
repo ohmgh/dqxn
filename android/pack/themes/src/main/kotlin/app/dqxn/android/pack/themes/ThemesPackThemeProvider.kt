@@ -1,5 +1,6 @@
 package app.dqxn.android.pack.themes
 
+import app.dqxn.android.sdk.contracts.annotation.DashboardThemeProvider
 import app.dqxn.android.sdk.contracts.theme.ThemeProvider
 import app.dqxn.android.sdk.contracts.theme.ThemeSpec
 import javax.inject.Inject
@@ -14,6 +15,7 @@ import javax.inject.Singleton
  * itself needs no separate entitlement check because modes only pick between user-selected
  * light/dark themes, which are already gated at selection time.
  */
+@DashboardThemeProvider
 @Singleton
 public class ThemesPackThemeProvider @Inject constructor() : ThemeProvider {
 

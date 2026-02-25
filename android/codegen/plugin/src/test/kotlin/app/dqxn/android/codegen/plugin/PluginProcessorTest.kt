@@ -307,4 +307,152 @@ class PluginProcessorTest {
     val resources = generatedResourceFiles()
     assertThat(resources).isEmpty()
   }
+
+  // -- Theme provider tests --
+
+  @Test
+  fun `DashboardThemeProvider generates Hilt binding`() {
+    val source =
+      SourceFile.kotlin(
+        "TestThemeProvider.kt",
+        """
+            package test
+
+            import app.dqxn.android.sdk.contracts.annotation.DashboardThemeProvider
+            import app.dqxn.android.sdk.contracts.theme.ThemeProvider
+
+            @DashboardThemeProvider
+            class TestThemeProvider : ThemeProvider {
+                override val packId: String = "essentials"
+            }
+            """
+          .trimIndent(),
+      )
+
+    val result = compile(source)
+
+    assertThat(result.exitCode).isEqualTo(ExitCode.OK)
+
+    val generated = generatedKtFiles()
+    val hiltModule = generated.firstOrNull { it.name == "EssentialsHiltModule.kt" }
+    assertThat(hiltModule).isNotNull()
+
+    val content = hiltModule!!.readText()
+    assertThat(content).contains("@Binds")
+    assertThat(content).contains("@IntoSet")
+    assertThat(content).contains("bindTestThemeProvider")
+    assertThat(content).contains("ThemeProvider")
+    assertThat(content).contains("provideManifest")
+  }
+
+  @Test
+  fun `DashboardThemeProvider on non-ThemeProvider fails`() {
+    val source =
+      SourceFile.kotlin(
+        "BadThemeProvider.kt",
+        """
+            package test
+
+            import app.dqxn.android.sdk.contracts.annotation.DashboardThemeProvider
+
+            @DashboardThemeProvider
+            class BadThemeProvider
+            """
+          .trimIndent(),
+      )
+
+    val result = compile(source)
+
+    assertThat(result.exitCode).isEqualTo(ExitCode.COMPILATION_ERROR)
+    assertThat(result.messages).contains("must implement ThemeProvider")
+  }
+
+  @Test
+  fun `packCategory arg produces correct manifest category`() {
+    val source =
+      SourceFile.kotlin(
+        "PremiumWidget.kt",
+        """
+            package test
+
+            import app.dqxn.android.sdk.contracts.annotation.DashboardWidget
+            import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
+
+            @DashboardWidget(typeId = "themes:custom-gauge", displayName = "Custom Gauge")
+            class CustomGaugeRenderer : WidgetRenderer
+            """
+          .trimIndent(),
+      )
+
+    val result = compile(source, packId = "themes", packCategory = "PREMIUM")
+
+    assertThat(result.exitCode).isEqualTo(ExitCode.OK)
+
+    val generated = generatedKtFiles()
+    val manifest = generated.firstOrNull { it.name == "ThemesGeneratedManifest.kt" }
+    assertThat(manifest).isNotNull()
+
+    val content = manifest!!.readText()
+    assertThat(content).contains("PackCategory.PREMIUM")
+    assertThat(content).doesNotContain("PackCategory.ESSENTIALS")
+  }
+
+  @Test
+  fun `generated manifest is Hilt-injected via Provides IntoSet`() {
+    val source =
+      SourceFile.kotlin(
+        "SimpleWidget.kt",
+        """
+            package test
+
+            import app.dqxn.android.sdk.contracts.annotation.DashboardWidget
+            import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
+
+            @DashboardWidget(typeId = "essentials:simple", displayName = "Simple")
+            class SimpleRenderer : WidgetRenderer
+            """
+          .trimIndent(),
+      )
+
+    val result = compile(source)
+
+    assertThat(result.exitCode).isEqualTo(ExitCode.OK)
+
+    val generated = generatedKtFiles()
+    val hiltModule = generated.first { it.name == "EssentialsHiltModule.kt" }.readText()
+    assertThat(hiltModule).contains("@Provides")
+    assertThat(hiltModule).contains("@IntoSet")
+    assertThat(hiltModule).contains("provideManifest")
+    assertThat(hiltModule).contains("DashboardPackManifest")
+    assertThat(hiltModule).contains("EssentialsGeneratedManifest.manifest")
+  }
+
+  @Test
+  fun `packCategory defaults to ESSENTIALS when missing`() {
+    val source =
+      SourceFile.kotlin(
+        "DefaultCategoryWidget.kt",
+        """
+            package test
+
+            import app.dqxn.android.sdk.contracts.annotation.DashboardWidget
+            import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
+
+            @DashboardWidget(typeId = "essentials:default-cat", displayName = "Default Category")
+            class DefaultCategoryRenderer : WidgetRenderer
+            """
+          .trimIndent(),
+      )
+
+    val result = compile(source, includePackCategory = false)
+
+    assertThat(result.exitCode).isEqualTo(ExitCode.OK)
+
+    val generated = generatedKtFiles()
+    val manifest = generated.firstOrNull { it.name == "EssentialsGeneratedManifest.kt" }
+    assertThat(manifest).isNotNull()
+
+    val content = manifest!!.readText()
+    assertThat(content).contains("PackCategory.ESSENTIALS")
+  }
 }
