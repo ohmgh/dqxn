@@ -51,6 +51,19 @@ public data class SetupRoute(val providerId: String)
 public data object ThemeSelectorRoute
 
 /**
+ * Theme studio overlay -- preview-type transitions (sub-screen of ThemeSelector).
+ *
+ * [themeId] is the ID of the theme being edited. Null means "create new custom theme".
+ * When navigated from clone action, [themeId] is the source theme's ID and ThemeStudio
+ * creates a copy with a new custom ID.
+ *
+ * popEnter from ThemeStudioRoute back to ThemeSelector uses fadeIn(150ms) -- same
+ * pattern as ThemeSelector popEnter to prevent double-slide.
+ */
+@Serializable
+public data class ThemeStudioRoute(val themeId: String? = null)
+
+/**
  * Diagnostics overlay -- hub-type transitions.
  *
  * Aggregates provider health, session recording, diagnostic snapshots, and observability metrics.

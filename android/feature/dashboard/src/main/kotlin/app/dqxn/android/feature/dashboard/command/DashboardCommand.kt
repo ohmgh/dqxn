@@ -98,4 +98,14 @@ public sealed interface DashboardCommand {
   public data object CycleThemeMode : DashboardCommand {
     override val traceId: String? = null
   }
+
+  public data class SaveCustomTheme(
+    val theme: DashboardThemeDefinition,
+    override val traceId: String? = null,
+  ) : DashboardCommand
+
+  public data class DeleteCustomTheme(
+    val themeId: String,
+    override val traceId: String? = null,
+  ) : DashboardCommand
 }

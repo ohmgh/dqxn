@@ -220,6 +220,21 @@ constructor(
         layoutCoordinator.handleResetLayout()
       is DashboardCommand.ToggleStatusBar ->
         editModeCoordinator.toggleStatusBar()
+      is DashboardCommand.SaveCustomTheme -> {
+        // Custom theme persistence -- future (JSON files in internal storage)
+        // For now, preview the saved theme so it's immediately visible
+        themeCoordinator.handlePreviewTheme(command.theme)
+        recordSessionEvent(EventType.THEME_CHANGE, "customTheme=${command.theme.themeId}")
+      }
+      is DashboardCommand.DeleteCustomTheme -> {
+        // Custom theme deletion -- future (remove JSON file)
+        // Clear preview if deleted theme was being previewed
+        val currentPreview = themeCoordinator.themeState.value.previewTheme
+        if (currentPreview?.themeId == command.themeId) {
+          themeCoordinator.handlePreviewTheme(null)
+        }
+        recordSessionEvent(EventType.THEME_CHANGE, "deleteCustom=${command.themeId}")
+      }
     }
   }
 

@@ -18,6 +18,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
+import app.dqxn.android.sdk.contracts.notification.InAppNotification
+import app.dqxn.android.sdk.contracts.notification.NotificationPriority
 import app.dqxn.android.feature.dashboard.layer.CriticalBannerHost
 import app.dqxn.android.feature.dashboard.layer.DashboardLayer
 import app.dqxn.android.feature.dashboard.layer.EmptyRoute
@@ -222,6 +224,17 @@ public fun DashboardScreen(
         allThemes = viewModel.builtInThemes.freeThemes,
         customThemeCount = 0, // Custom theme count tracking -- future
         onCommand = onCommand,
+        onShowToast = { message ->
+          viewModel.notificationCoordinator.showToast(
+            InAppNotification.Toast(
+              id = "theme_toast_${System.currentTimeMillis()}",
+              priority = NotificationPriority.NORMAL,
+              timestamp = System.currentTimeMillis(),
+              message = message,
+              durationMs = 3000L,
+            ),
+          )
+        },
       )
 
       // Layer 1.5: Critical banners (safe mode -- above all overlays)

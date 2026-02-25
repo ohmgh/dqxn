@@ -28,6 +28,7 @@ import app.dqxn.android.feature.settings.main.MainSettingsViewModel
 import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
 import app.dqxn.android.feature.settings.setup.SetupSheet
 import app.dqxn.android.feature.settings.theme.ThemeSelector
+import app.dqxn.android.feature.settings.theme.ThemeStudio
 import app.dqxn.android.feature.settings.widget.WidgetSettingsSheet
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
@@ -39,13 +40,14 @@ import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 /**
  * Layer 1 navigation scaffold for overlay UI.
  *
- * Route table: 8 type-safe routes via `@Serializable` route classes in [OverlayRoutes.kt]:
+ * Route table: 9 type-safe routes via `@Serializable` route classes in [OverlayRoutes.kt]:
  * - [EmptyRoute] -- no overlay (Layer 0 visible)
  * - [WidgetPickerRoute] -- widget selection grid, hub transitions
  * - [SettingsRoute] -- main settings, source-varying transitions
  * - [WidgetSettingsRoute] -- per-widget settings, preview transitions with None exit/popEnter
  * - [SetupRoute] -- provider setup wizard, hub transitions
  * - [ThemeSelectorRoute] -- theme browser, preview transitions, popEnter=fadeIn(150ms)
+ * - [ThemeStudioRoute] -- custom theme editor, preview transitions, popEnter=fadeIn(150ms)
  * - [DiagnosticsRoute] -- diagnostics hub, hub transitions
  * - [OnboardingRoute] -- first-run onboarding, hub transitions
  *
@@ -72,6 +74,7 @@ public fun OverlayNavHost(
   allThemes: ImmutableList<DashboardThemeDefinition>,
   customThemeCount: Int,
   onCommand: (DashboardCommand) -> Unit,
+  onShowToast: (String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   NavHost(
@@ -227,10 +230,24 @@ public fun OverlayNavHost(
     // Theme selector -- preview transitions with CRITICAL popEnter override
     // popEnter uses fadeIn(150ms) NOT previewEnter to prevent double-slide when returning
     // from a theme sub-screen (replication advisory section 4)
+    // exitTransition source-varying: fadeOut to ThemeStudio (sub-screen cross-fade),
+    // previewExit otherwise
     composable<ThemeSelectorRoute>(
       enterTransition = { DashboardMotion.previewEnter },
-      exitTransition = { DashboardMotion.previewExit },
-      popEnterTransition = { fadeIn(tween(150)) },
+      exitTransition = {
+        val target = targetState.destination.route ?: ""
+        when {
+          target.contains(THEME_STUDIO_ROUTE_PATTERN) -> fadeOut(tween(100))
+          else -> DashboardMotion.previewExit
+        }
+      },
+      popEnterTransition = {
+        val source = initialState.destination.route ?: ""
+        when {
+          source.contains(THEME_STUDIO_ROUTE_PATTERN) -> fadeIn(tween(150))
+          else -> fadeIn(tween(150))
+        }
+      },
       popExitTransition = { DashboardMotion.previewExit },
     ) {
       val themeState by themeCoordinator.themeState.collectAsState()
@@ -249,21 +266,53 @@ public fun OverlayNavHost(
         onClearPreview = {
           onCommand(DashboardCommand.PreviewTheme(null))
         },
-        onCloneToCustom = { _ ->
-          // Clone to custom theme -- handled by ThemeStudio in future
+        onCloneToCustom = { sourceTheme ->
+          // Clone: navigate to ThemeStudio. ThemeStudio uses existingTheme param
+          // to create a copy with a new custom ID.
+          onCommand(DashboardCommand.PreviewTheme(sourceTheme))
+          navController.navigate(ThemeStudioRoute(themeId = sourceTheme.themeId))
         },
-        onOpenStudio = { _ ->
-          // Open theme studio -- handled by ThemeStudio route in future
+        onOpenStudio = { existingTheme ->
+          // Edit: navigate to ThemeStudio with the existing custom theme
+          onCommand(DashboardCommand.PreviewTheme(existingTheme))
+          navController.navigate(ThemeStudioRoute(themeId = existingTheme.themeId))
         },
-        onDeleteCustom = { _ ->
-          // Delete custom theme -- handled by ThemeStudio in future
+        onDeleteCustom = { themeId ->
+          // Delete: clear preview first (advisory section 3 delete-while-previewing fix),
+          // then dispatch delete command
+          onCommand(DashboardCommand.PreviewTheme(null))
+          onCommand(DashboardCommand.DeleteCustomTheme(themeId))
         },
-        onShowToast = { _ ->
-          // Toast display -- parent handles
-        },
+        onShowToast = onShowToast,
         onClose = {
           navController.popBackStack()
         },
+      )
+    }
+
+    // Theme studio -- preview transitions (sub-screen of ThemeSelector)
+    // popEnter uses fadeIn(150ms) NOT previewEnter to prevent double-slide
+    composable<ThemeStudioRoute>(
+      enterTransition = { DashboardMotion.previewEnter },
+      exitTransition = { DashboardMotion.previewExit },
+      popEnterTransition = { fadeIn(tween(150)) },
+      popExitTransition = { DashboardMotion.previewExit },
+    ) { backStackEntry ->
+      val route = backStackEntry.toRoute<ThemeStudioRoute>()
+      val existingTheme = allThemes.firstOrNull { it.themeId == route.themeId }
+
+      ThemeStudio(
+        existingTheme = existingTheme,
+        customThemeCount = customThemeCount,
+        onAutoSave = { theme -> onCommand(DashboardCommand.SaveCustomTheme(theme)) },
+        onDelete = { themeId ->
+          // Delete-while-previewing: clear preview BEFORE delete (advisory section 3)
+          onCommand(DashboardCommand.PreviewTheme(null))
+          onCommand(DashboardCommand.DeleteCustomTheme(themeId))
+          navController.popBackStack()
+        },
+        onClearPreview = { onCommand(DashboardCommand.PreviewTheme(null)) },
+        onClose = { navController.popBackStack() },
       )
     }
 
@@ -309,5 +358,6 @@ public fun OverlayNavHost(
  * Navigation Compose serializes `@Serializable` route classes using their qualified name.
  */
 private val THEME_SELECTOR_ROUTE_PATTERN = ThemeSelectorRoute::class.qualifiedName!!
+private val THEME_STUDIO_ROUTE_PATTERN = ThemeStudioRoute::class.qualifiedName!!
 private val DIAGNOSTICS_ROUTE_PATTERN = DiagnosticsRoute::class.qualifiedName!!
 private val ONBOARDING_ROUTE_PATTERN = OnboardingRoute::class.qualifiedName!!
