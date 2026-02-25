@@ -3,7 +3,7 @@
   "name": "Ocean",
   "isDark": true,
   "colors": {
-    "primary": "#CAF0F8",
+    "primary": "#FFFFFF",
     "secondary": "#B3FFFFFF",
     "accent": "#90E0EF",
     "highlight": "#FDA4AF",
@@ -14,7 +14,7 @@
   "backgroundGradient": {
     "type": "VERTICAL",
     "stops": [
-      { "color": "#FF0077B6", "position": 0.0 },
+      { "color": "#FF004C75", "position": 0.0 },
       { "color": "#FF023E8A", "position": 0.5 },
       { "color": "#FF03045E", "position": 1.0 }
     ]

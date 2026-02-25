@@ -3,9 +3,9 @@
   "name": "Peach",
   "isDark": false,
   "colors": {
-    "primary": "#E65100",
-    "secondary": "#F57C00",
-    "accent": "#FF9800",
+    "primary": "#A52A00",
+    "secondary": "#BF360C",
+    "accent": "#A52A00",
     "highlight": "#A78BFA",
     "background": "#FFF3E0",
     "surface": "#FFE0B2",

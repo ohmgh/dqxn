@@ -15,8 +15,8 @@
     "type": "VERTICAL",
     "stops": [
       { "color": "#FF1B4332", "position": 0.0 },
-      { "color": "#FF2D6A4F", "position": 0.5 },
-      { "color": "#FF40916C", "position": 1.0 }
+      { "color": "#FF1A4432", "position": 0.5 },
+      { "color": "#FF193D2E", "position": 1.0 }
     ]
   },
   "widgetBackgroundGradient": {
