@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 9 — Themes, Demo + Chaos (IN PROGRESS, 1/6 plans)
-- **Current Plan:** 09-02 complete, next 09-03
+- **Phase:** 9 — Themes, Demo + Chaos (IN PROGRESS, 3/6 plans)
+- **Current Plan:** 09-04 complete, next 09-05
 - **Milestone:** V1 Launch
-- **Next action:** Continue Phase 9 execution (09-03: remaining 4 demo providers)
-- **Last session:** 2026-02-25T01:57:21.378Z
-- **Stopped at:** Completed 09-02-PLAN.md
+- **Next action:** Continue Phase 9 execution (09-05: ChaosEngine orchestration)
+- **Last session:** 2026-02-25T02:00:56.598Z
+- **Stopped at:** Completed 09-04-PLAN.md
 
 ## Progress
 
@@ -56,6 +56,12 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 08]: Injectable FusedLocationProviderClient over lazy LocationServices.getFusedLocationProviderClient -- enables mock injection for contract tests without Android runtime
 - [Phase 08]: SolarLocationModule in pack providers package -- pack-local Hilt module for FusedLocationProviderClient @Provides, keeps pack isolation clean
 - [Phase 09]: Same package preserved during snapshot relocation -- no import changes needed in essentials pack consumers
+- [Phase 09]: Pack-local ThemeFileParser over inline DashboardThemeDefinition construction -- JSON files as source of truth reduces error surface of manually transcribing 22 themes
+- [Phase 09]: assertWithMessage() over .named() for Truth assertions -- .named() deprecated in current Truth version
+- [Phase 09]: dqxn.pack convention plugin already provides kotlinx.serialization plugin and dependency -- no explicit additions needed in build.gradle.kts
+- [Phase 09]: Added :sdk:contracts dependency to :core:agentic for DataProviderInterceptor/ProviderFault access
+- [Phase 09]: backgroundScope flow collection pattern for virtual-time-dependent tests -- avoids Turbine timeout conflicts with StandardTestDispatcher
+- [Phase 09]: AtomicBoolean time-window gating for Flap fault -- coroutineScope launch toggles passing flag alongside upstream collect
 
 ### Phase 1 Decisions
 
@@ -277,6 +283,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 08-11 | 5min | 2 | 6 |
 | Phase 08 P10 | 3min | 2 tasks | 4 files |
 | Phase 09 P02 | 4min | 3 tasks | 11 files |
+| Phase 09 P01 | 7min | 2 tasks | 28 files |
+| Phase 09 P04 | 7min | 2 tasks | 7 files |
 
 ## Context
 
