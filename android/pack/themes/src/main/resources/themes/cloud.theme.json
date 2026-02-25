@@ -1,0 +1,28 @@
+{
+  "id": "cloud",
+  "name": "Cloud",
+  "isDark": false,
+  "colors": {
+    "primary": "#212121",
+    "secondary": "#9E9E9E",
+    "accent": "#039BE5",
+    "highlight": "#FB7185",
+    "background": "#FFFFFF",
+    "surface": "#F5F5F5",
+    "onSurface": "#BDBDBD"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FFFFFFFF", "position": 0.0 },
+      { "color": "#FFF5F5F5", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#FFFFFFFF", "position": 0.0 },
+      { "color": "#FFF0F0F0", "position": 1.0 }
+    ]
+  }
+}

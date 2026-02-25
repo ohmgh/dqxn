@@ -1,0 +1,28 @@
+{
+  "id": "sage",
+  "name": "Sage",
+  "isDark": false,
+  "colors": {
+    "primary": "#1B5E20",
+    "secondary": "#2E7D32",
+    "accent": "#4CAF50",
+    "highlight": "#FBBF24",
+    "background": "#E8F5E9",
+    "surface": "#C8E6C9",
+    "onSurface": "#66BB6A"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FFE8F5E9", "position": 0.0 },
+      { "color": "#FFC8E6C9", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#CCFFFFFF", "position": 0.0 },
+      { "color": "#99FFFFFF", "position": 1.0 }
+    ]
+  }
+}

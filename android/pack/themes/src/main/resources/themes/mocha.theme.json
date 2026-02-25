@@ -1,0 +1,29 @@
+{
+  "id": "mocha",
+  "name": "Mocha",
+  "isDark": true,
+  "colors": {
+    "primary": "#EFEBE9",
+    "secondary": "#B3D7CCC8",
+    "accent": "#FFAB91",
+    "highlight": "#34D399",
+    "background": "#3E2723",
+    "surface": "#5D4037",
+    "onSurface": "#BCAAA4"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FF3E2723", "position": 0.0 },
+      { "color": "#FF4E342E", "position": 0.5 },
+      { "color": "#FF5D4037", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#30FFFFFF", "position": 0.0 },
+      { "color": "#10FFFFFF", "position": 1.0 }
+    ]
+  }
+}

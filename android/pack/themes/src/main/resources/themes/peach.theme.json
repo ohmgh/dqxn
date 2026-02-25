@@ -1,0 +1,28 @@
+{
+  "id": "peach",
+  "name": "Peach",
+  "isDark": false,
+  "colors": {
+    "primary": "#E65100",
+    "secondary": "#F57C00",
+    "accent": "#FF9800",
+    "highlight": "#A78BFA",
+    "background": "#FFF3E0",
+    "surface": "#FFE0B2",
+    "onSurface": "#FF9800"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FFFFF3E0", "position": 0.0 },
+      { "color": "#FFFFE0B2", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#CCFFFFFF", "position": 0.0 },
+      { "color": "#99FFFFFF", "position": 1.0 }
+    ]
+  }
+}

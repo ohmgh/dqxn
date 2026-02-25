@@ -1,0 +1,28 @@
+{
+  "id": "midnight_purple",
+  "name": "Midnight",
+  "isDark": true,
+  "colors": {
+    "primary": "#E1BEE7",
+    "secondary": "#80FFFFFF",
+    "accent": "#E040FB",
+    "highlight": "#22D3EE",
+    "background": "#2D1B69",
+    "surface": "#11001C",
+    "onSurface": "#9C27B0"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FF2D1B69", "position": 0.0 },
+      { "color": "#FF11001C", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#30FFFFFF", "position": 0.0 },
+      { "color": "#10FFFFFF", "position": 1.0 }
+    ]
+  }
+}

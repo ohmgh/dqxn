@@ -1,0 +1,28 @@
+{
+  "id": "arctic",
+  "name": "Arctic",
+  "isDark": false,
+  "colors": {
+    "primary": "#0D47A1",
+    "secondary": "#1565C0",
+    "accent": "#039BE5",
+    "highlight": "#FB923C",
+    "background": "#E8F4F8",
+    "surface": "#B8D4E3",
+    "onSurface": "#4FC3F7"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FFE8F4F8", "position": 0.0 },
+      { "color": "#FFB8D4E3", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#CCFFFFFF", "position": 0.0 },
+      { "color": "#99FFFFFF", "position": 1.0 }
+    ]
+  }
+}

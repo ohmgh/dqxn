@@ -1,0 +1,28 @@
+{
+  "id": "carbon",
+  "name": "Carbon",
+  "isDark": true,
+  "colors": {
+    "primary": "#EEEEEE",
+    "secondary": "#B3EEEEEE",
+    "accent": "#00ADB5",
+    "highlight": "#F472B6",
+    "background": "#393E46",
+    "surface": "#222831",
+    "onSurface": "#00ADB5"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FF393E46", "position": 0.0 },
+      { "color": "#FF222831", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#25FFFFFF", "position": 0.0 },
+      { "color": "#08FFFFFF", "position": 1.0 }
+    ]
+  }
+}

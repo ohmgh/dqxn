@@ -1,0 +1,29 @@
+{
+  "id": "ocean_breeze",
+  "name": "Ocean",
+  "isDark": true,
+  "colors": {
+    "primary": "#CAF0F8",
+    "secondary": "#B3FFFFFF",
+    "accent": "#90E0EF",
+    "highlight": "#FDA4AF",
+    "background": "#0077B6",
+    "surface": "#03045E",
+    "onSurface": "#48CAE4"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FF0077B6", "position": 0.0 },
+      { "color": "#FF023E8A", "position": 0.5 },
+      { "color": "#FF03045E", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#40FFFFFF", "position": 0.0 },
+      { "color": "#15FFFFFF", "position": 1.0 }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "ember",
+  "name": "Ember",
+  "isDark": true,
+  "colors": {
+    "primary": "#FFCDD2",
+    "secondary": "#B3FFFFFF",
+    "accent": "#FF5252",
+    "highlight": "#38BDF8",
+    "background": "#4A1C1C",
+    "surface": "#2D0A0A",
+    "onSurface": "#E53935"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FF4A1C1C", "position": 0.0 },
+      { "color": "#FF2D0A0A", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#30FF6B6B", "position": 0.0 },
+      { "color": "#10FF6B6B", "position": 1.0 }
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "aurora",
+  "name": "Aurora",
+  "isDark": true,
+  "colors": {
+    "primary": "#00FFD1",
+    "secondary": "#80FFFFFF",
+    "accent": "#7CFF00",
+    "highlight": "#F472B6",
+    "background": "#0F2027",
+    "surface": "#2C5364",
+    "onSurface": "#4ECDC4"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FF0F2027", "position": 0.0 },
+      { "color": "#FF203A43", "position": 0.5 },
+      { "color": "#FF2C5364", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#3000FF88", "position": 0.0 },
+      { "color": "#1000FF88", "position": 1.0 }
+    ]
+  }
+}

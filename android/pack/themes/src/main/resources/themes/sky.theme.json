@@ -1,0 +1,28 @@
+{
+  "id": "sky",
+  "name": "Sky",
+  "isDark": false,
+  "colors": {
+    "primary": "#0D47A1",
+    "secondary": "#1565C0",
+    "accent": "#2196F3",
+    "highlight": "#FB7185",
+    "background": "#E3F2FD",
+    "surface": "#BBDEFB",
+    "onSurface": "#42A5F5"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FFE3F2FD", "position": 0.0 },
+      { "color": "#FFBBDEFB", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#CCFFFFFF", "position": 0.0 },
+      { "color": "#99FFFFFF", "position": 1.0 }
+    ]
+  }
+}

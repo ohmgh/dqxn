@@ -1,0 +1,28 @@
+{
+  "id": "void",
+  "name": "Void",
+  "isDark": true,
+  "colors": {
+    "primary": "#E0E0E0",
+    "secondary": "#99FFFFFF",
+    "accent": "#7C7CFF",
+    "highlight": "#22D3EE",
+    "background": "#1A1A2E",
+    "surface": "#0A0A0F",
+    "onSurface": "#5C5C8A"
+  },
+  "backgroundGradient": {
+    "type": "RADIAL",
+    "stops": [
+      { "color": "#FF1A1A2E", "position": 0.0 },
+      { "color": "#FF0A0A0F", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#20FFFFFF", "position": 0.0 },
+      { "color": "#08FFFFFF", "position": 1.0 }
+    ]
+  }
+}

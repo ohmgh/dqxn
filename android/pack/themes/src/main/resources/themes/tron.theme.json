@@ -1,0 +1,28 @@
+{
+  "id": "tron",
+  "name": "The Grid",
+  "isDark": true,
+  "colors": {
+    "primary": "#EFA61B",
+    "secondary": "#80FFFFFF",
+    "accent": "#7DFDFE",
+    "highlight": "#FF0000",
+    "background": "#1A1A1A",
+    "surface": "#000000",
+    "onSurface": "#EFA61B"
+  },
+  "backgroundGradient": {
+    "type": "RADIAL",
+    "stops": [
+      { "color": "#FF1A1A1A", "position": 0.0 },
+      { "color": "#FF000000", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#1AFFFFFF", "position": 0.0 },
+      { "color": "#05FFFFFF", "position": 1.0 }
+    ]
+  }
+}

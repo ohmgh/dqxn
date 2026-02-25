@@ -1,0 +1,29 @@
+{
+  "id": "forest",
+  "name": "Forest",
+  "isDark": true,
+  "colors": {
+    "primary": "#D8F3DC",
+    "secondary": "#B3FFFFFF",
+    "accent": "#95D5B2",
+    "highlight": "#FBBF24",
+    "background": "#1B4332",
+    "surface": "#40916C",
+    "onSurface": "#74C69D"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FF1B4332", "position": 0.0 },
+      { "color": "#FF2D6A4F", "position": 0.5 },
+      { "color": "#FF40916C", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#35FFFFFF", "position": 0.0 },
+      { "color": "#10FFFFFF", "position": 1.0 }
+    ]
+  }
+}

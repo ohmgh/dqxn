@@ -1,0 +1,28 @@
+{
+  "id": "rose",
+  "name": "Rose",
+  "isDark": false,
+  "colors": {
+    "primary": "#880E4F",
+    "secondary": "#AD1457",
+    "accent": "#E91E63",
+    "highlight": "#38BDF8",
+    "background": "#FCE4EC",
+    "surface": "#F8BBD9",
+    "onSurface": "#EC407A"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FFFCE4EC", "position": 0.0 },
+      { "color": "#FFF8BBD9", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#CCFFFFFF", "position": 0.0 },
+      { "color": "#99FFFFFF", "position": 1.0 }
+    ]
+  }
+}

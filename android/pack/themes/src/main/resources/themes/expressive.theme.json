@@ -1,0 +1,28 @@
+{
+  "id": "expressive",
+  "name": "Expressive",
+  "isDark": false,
+  "colors": {
+    "primary": "#1C1B1F",
+    "secondary": "#49454F",
+    "accent": "#6750A4",
+    "highlight": "#34D399",
+    "background": "#FFD8E4",
+    "surface": "#F3E5F5",
+    "onSurface": "#6750A4"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FFFFD8E4", "position": 0.0 },
+      { "color": "#FFF3E5F5", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#99FFFFFF", "position": 0.0 },
+      { "color": "#66FFFFFF", "position": 1.0 }
+    ]
+  }
+}

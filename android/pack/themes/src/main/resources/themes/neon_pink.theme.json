@@ -1,0 +1,28 @@
+{
+  "id": "neon_pink",
+  "name": "Neon",
+  "isDark": true,
+  "colors": {
+    "primary": "#FF6EC7",
+    "secondary": "#CCFFFFFF",
+    "accent": "#00FFFF",
+    "highlight": "#FFFF00",
+    "background": "#120458",
+    "surface": "#000000",
+    "onSurface": "#FF00FF"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FF120458", "position": 0.0 },
+      { "color": "#FF000000", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#30FF00FF", "position": 0.0 },
+      { "color": "#10FF00FF", "position": 1.0 }
+    ]
+  }
+}

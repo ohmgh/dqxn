@@ -1,0 +1,29 @@
+{
+  "id": "sunset_glow",
+  "name": "Sunset",
+  "isDark": false,
+  "colors": {
+    "primary": "#3E2723",
+    "secondary": "#5D4037",
+    "accent": "#E64A19",
+    "highlight": "#A78BFA",
+    "background": "#FF7B54",
+    "surface": "#FFD56F",
+    "onSurface": "#FF5722"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FFFF7B54", "position": 0.0 },
+      { "color": "#FFFFB26B", "position": 0.5 },
+      { "color": "#FFFFD56F", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#80FFFFFF", "position": 0.0 },
+      { "color": "#40FFFFFF", "position": 1.0 }
+    ]
+  }
+}

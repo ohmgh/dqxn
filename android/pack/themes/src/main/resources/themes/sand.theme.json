@@ -1,0 +1,28 @@
+{
+  "id": "sand",
+  "name": "Sand",
+  "isDark": false,
+  "colors": {
+    "primary": "#5D4037",
+    "secondary": "#795548",
+    "accent": "#FFC107",
+    "highlight": "#A78BFA",
+    "background": "#FFF8E1",
+    "surface": "#FFECB3",
+    "onSurface": "#FFCA28"
+  },
+  "backgroundGradient": {
+    "type": "VERTICAL",
+    "stops": [
+      { "color": "#FFFFF8E1", "position": 0.0 },
+      { "color": "#FFFFECB3", "position": 1.0 }
+    ]
+  },
+  "widgetBackgroundGradient": {
+    "type": "LINEAR",
+    "stops": [
+      { "color": "#CCFFFFFF", "position": 0.0 },
+      { "color": "#99FFFFFF", "position": 1.0 }
+    ]
+  }
+}
