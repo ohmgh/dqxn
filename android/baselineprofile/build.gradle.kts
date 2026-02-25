@@ -1,7 +1,6 @@
 plugins {
   id("com.android.test")
-  // baselineprofile plugin deferred -- 1.4.1 incompatible with AGP 9 (TestExtension type mismatch)
-  // BaselineProfileRule from library dep still works for generating profiles on-device
+  alias(libs.plugins.baselineprofile)
 }
 
 android {
