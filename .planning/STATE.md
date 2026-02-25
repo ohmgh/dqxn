@@ -6,8 +6,8 @@
 - **Current Plan:** 08 complete, next 09
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 11 plans
-- **Last session:** 2026-02-25T08:18:10Z
-- **Stopped at:** Completed 11-08-PLAN.md
+- **Last session:** 2026-02-25T08:20:44.864Z
+- **Stopped at:** Completed 11-04-PLAN.md
 
 ## Progress
 
@@ -105,6 +105,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 11]: Task 1 data layer changes already committed by plan 11-02 -- no duplicate commit needed for shared UserPreferencesRepository extensions
 - [Phase 11]: selectTheme persists via setLightThemeId/setDarkThemeId based on isDark -- no setSelectedThemeId exists; matches ThemeCoordinator slot pattern
 - [Phase 11]: createAndroidComposeRule<ComponentActivity> over createComposeRule for BackHandler dismissal testing -- provides activity.onBackPressedDispatcher access
+- [Phase 11]: ProviderStatusBridge @Singleton over WidgetBindingCoordinator implementing ProviderStatusProvider -- coordinator is ViewModel-scoped, bridge derives status from singleton DataProviderRegistry
+- [Phase 11]: SessionEventEmitter wired in DashboardViewModel.routeCommand() over DashboardGrid composable -- captures all discrete command interactions without composable layer pollution
 
 ### Phase 1 Decisions
 
@@ -348,6 +350,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 11 P01 | 4 | 2 tasks | 4 files |
 | Phase 11 P03 | 4min | 2 tasks | 3 files |
 | Phase 11 P08 | 6min | 2 tasks | 8 files |
+| Phase 11 P04 | 7min | 2 tasks | 6 files |
 
 ## Context
 
