@@ -338,7 +338,7 @@ Plans:
 5. `WidgetPicker` displays grouped widgets with entitlement badges
 6. Overlay navigation: Phase 10 routes (WidgetPicker, Settings, WidgetSettings, Setup) render and navigate back correctly
 
-**Plans:** 10/10 plans complete
+**Plans:** 11 plans (10 complete, 1 gap closure)
 
 Plans:
 - [ ] 10-01-PLAN.md — Data layer extensions (clearAll on 5 stores, analyticsConsent) + SemanticColors
@@ -351,6 +351,7 @@ Plans:
 - [x] 10-08-PLAN.md — WidgetSettingsSheet (3-tab pager) + WidgetPicker (live previews, entitlement badges, revocation toast)
 - [ ] 10-09-PLAN.md — MainSettings (4 sections) + analytics consent + Delete All Data
 - [ ] 10-10-PLAN.md — OverlayNavHost route population + DashboardScreen navigation wiring + type-safe routes
+- [ ] 10-11-PLAN.md — Gap closure: WidgetPicker live preview via Render() + GPS/BLE hardware icon badges (F2.7, F8.7)
 
 **Depends on:** Phase 8
 
