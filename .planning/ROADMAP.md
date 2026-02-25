@@ -338,7 +338,7 @@ Plans:
 5. `WidgetPicker` displays grouped widgets with entitlement badges
 6. Overlay navigation: Phase 10 routes (WidgetPicker, Settings, WidgetSettings, Setup) render and navigate back correctly
 
-**Plans:** 4/10 plans executed
+**Plans:** 6/10 plans executed
 
 Plans:
 - [ ] 10-01-PLAN.md — Data layer extensions (clearAll on 5 stores, analyticsConsent) + SemanticColors
