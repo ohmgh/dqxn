@@ -2,6 +2,7 @@ package app.dqxn.android.feature.dashboard
 
 import androidx.lifecycle.SavedStateHandle
 import app.dqxn.android.core.agentic.SemanticsOwnerHolder
+import app.dqxn.android.data.device.PairedDeviceStore
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
@@ -19,7 +20,11 @@ import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
 import app.dqxn.android.feature.dashboard.grid.BlankSpaceGestureHandler
 import app.dqxn.android.feature.dashboard.grid.WidgetGestureHandler
 import app.dqxn.android.feature.dashboard.test.TestWidgetFactory.testWidget
+import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
+import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
+import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
+import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
 import app.dqxn.android.sdk.observability.crash.ErrorContext
 import app.dqxn.android.sdk.observability.crash.ErrorReporter
 import app.dqxn.android.sdk.observability.log.NoOpLogger
@@ -79,6 +84,11 @@ class DashboardViewModelTest {
     val blankSpaceGestureHandler: BlankSpaceGestureHandler = mockk(relaxed = true)
     val semanticsOwnerHolder: SemanticsOwnerHolder = mockk(relaxed = true)
     val userPreferencesRepository: UserPreferencesRepository = mockk(relaxed = true)
+    val dataProviderRegistry: DataProviderRegistry = mockk(relaxed = true)
+    val providerSettingsStore: ProviderSettingsStore = mockk(relaxed = true)
+    val entitlementManager: EntitlementManager = mockk(relaxed = true)
+    val setupEvaluator: SetupEvaluatorImpl = mockk(relaxed = true)
+    val pairedDeviceStore: PairedDeviceStore = mockk(relaxed = true)
 
     return Mocks(
       layoutCoordinator = layoutCoordinator,
@@ -93,6 +103,11 @@ class DashboardViewModelTest {
       blankSpaceGestureHandler = blankSpaceGestureHandler,
       semanticsOwnerHolder = semanticsOwnerHolder,
       userPreferencesRepository = userPreferencesRepository,
+      dataProviderRegistry = dataProviderRegistry,
+      providerSettingsStore = providerSettingsStore,
+      entitlementManager = entitlementManager,
+      setupEvaluator = setupEvaluator,
+      pairedDeviceStore = pairedDeviceStore,
     )
   }
 
@@ -110,6 +125,11 @@ class DashboardViewModelTest {
       blankSpaceGestureHandler = mocks.blankSpaceGestureHandler,
       semanticsOwnerHolder = mocks.semanticsOwnerHolder,
       userPreferencesRepository = mocks.userPreferencesRepository,
+      dataProviderRegistry = mocks.dataProviderRegistry,
+      providerSettingsStore = mocks.providerSettingsStore,
+      entitlementManager = mocks.entitlementManager,
+      setupEvaluator = mocks.setupEvaluator,
+      pairedDeviceStore = mocks.pairedDeviceStore,
       savedStateHandle = SavedStateHandle(),
       logger = logger,
       errorReporter = errorReporter,
@@ -253,6 +273,11 @@ class DashboardViewModelTest {
       blankSpaceGestureHandler = mocks.blankSpaceGestureHandler,
       semanticsOwnerHolder = mocks.semanticsOwnerHolder,
       userPreferencesRepository = mocks.userPreferencesRepository,
+      dataProviderRegistry = mocks.dataProviderRegistry,
+      providerSettingsStore = mocks.providerSettingsStore,
+      entitlementManager = mocks.entitlementManager,
+      setupEvaluator = mocks.setupEvaluator,
+      pairedDeviceStore = mocks.pairedDeviceStore,
       savedStateHandle = SavedStateHandle(),
       logger = logger,
       errorReporter = errorReporter,
@@ -315,5 +340,10 @@ class DashboardViewModelTest {
     val blankSpaceGestureHandler: BlankSpaceGestureHandler,
     val semanticsOwnerHolder: SemanticsOwnerHolder,
     val userPreferencesRepository: UserPreferencesRepository,
+    val dataProviderRegistry: DataProviderRegistry,
+    val providerSettingsStore: ProviderSettingsStore,
+    val entitlementManager: EntitlementManager,
+    val setupEvaluator: SetupEvaluatorImpl,
+    val pairedDeviceStore: PairedDeviceStore,
   )
 }
