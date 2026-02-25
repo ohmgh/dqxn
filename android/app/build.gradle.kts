@@ -3,6 +3,7 @@ plugins {
   id("dqxn.android.hilt")
   id("dqxn.android.test")
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.baselineprofile)
 }
 
 android {
@@ -52,6 +53,10 @@ dependencies {
 
   // KSP: agentic command processor (debug only -- generates AgenticHiltModule)
   add("kspDebug", project(":codegen:agentic"))
+
+  // Baseline Profile
+  implementation(libs.profileinstaller)
+  baselineProfile(project(":baselineprofile"))
 
   // Debug tools
   debugImplementation(libs.leakcanary)
