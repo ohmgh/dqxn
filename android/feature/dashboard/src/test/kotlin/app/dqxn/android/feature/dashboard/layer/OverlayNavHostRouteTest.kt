@@ -4,12 +4,13 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 /**
- * Integration tests verifying all 7 OverlayNavHost routes have correct definitions and transitions.
+ * Integration tests verifying all 9 OverlayNavHost routes have correct definitions and transitions.
  *
  * These tests validate route configuration at the Kotlin level without requiring a full Compose
  * test rule, covering:
- * - Route uniqueness (all 8 routes have distinct qualified names)
+ * - Route uniqueness (all 9 routes have distinct qualified names)
  * - ThemeSelector popEnter uses fadeIn not previewEnter (replication advisory section 4)
+ * - ThemeStudioRoute carries optional themeId parameter
  * - Diagnostics and Onboarding use hub transitions
  * - Settings source-varying transitions use correct route pattern matching
  * - First-run flow triggers on hasCompletedOnboarding=false
@@ -21,7 +22,7 @@ class OverlayNavHostRouteTest {
   // -----------------------------------------------------------------------
 
   @Test
-  fun `all 8 routes have distinct qualified names`() {
+  fun `all 9 routes have distinct qualified names`() {
     val routeNames = listOf(
       EmptyRoute::class.qualifiedName,
       WidgetPickerRoute::class.qualifiedName,
@@ -29,6 +30,7 @@ class OverlayNavHostRouteTest {
       WidgetSettingsRoute::class.qualifiedName,
       SetupRoute::class.qualifiedName,
       ThemeSelectorRoute::class.qualifiedName,
+      ThemeStudioRoute::class.qualifiedName,
       DiagnosticsRoute::class.qualifiedName,
       OnboardingRoute::class.qualifiedName,
     )
@@ -39,7 +41,7 @@ class OverlayNavHostRouteTest {
     }
 
     // All distinct
-    assertThat(routeNames.toSet()).hasSize(8)
+    assertThat(routeNames.toSet()).hasSize(9)
   }
 
   @Test
@@ -52,6 +54,7 @@ class OverlayNavHostRouteTest {
       WidgetSettingsRoute::class,
       SetupRoute::class,
       ThemeSelectorRoute::class,
+      ThemeStudioRoute::class,
       DiagnosticsRoute::class,
       OnboardingRoute::class,
     )
@@ -113,15 +116,16 @@ class OverlayNavHostRouteTest {
   }
 
   @Test
-  fun `preview-type routes are Settings, WidgetSettings, ThemeSelector`() {
+  fun `preview-type routes are Settings, WidgetSettings, ThemeSelector, ThemeStudio`() {
     // Preview-type routes use DashboardMotion.previewEnter/previewExit (with variations)
     val previewRoutes = listOf(
       SettingsRoute::class.qualifiedName,
       WidgetSettingsRoute::class.qualifiedName,
       ThemeSelectorRoute::class.qualifiedName,
+      ThemeStudioRoute::class.qualifiedName,
     )
 
-    assertThat(previewRoutes).hasSize(3)
+    assertThat(previewRoutes).hasSize(4)
     previewRoutes.forEach { name -> assertThat(name).isNotNull() }
   }
 
@@ -139,6 +143,25 @@ class OverlayNavHostRouteTest {
   fun `SetupRoute carries providerId parameter`() {
     val route = SetupRoute(providerId = "essentials:gps-speed")
     assertThat(route.providerId).isEqualTo("essentials:gps-speed")
+  }
+
+  @Test
+  fun `ThemeStudioRoute carries optional themeId parameter`() {
+    val editRoute = ThemeStudioRoute(themeId = "custom_123")
+    assertThat(editRoute.themeId).isEqualTo("custom_123")
+
+    val newRoute = ThemeStudioRoute()
+    assertThat(newRoute.themeId).isNull()
+  }
+
+  @Test
+  fun `theme_studio route pattern is distinguishable from theme_selector`() {
+    val studioPattern = ThemeStudioRoute::class.qualifiedName!!
+    val selectorPattern = ThemeSelectorRoute::class.qualifiedName!!
+
+    assertThat(studioPattern).isNotEqualTo(selectorPattern)
+    assertThat(studioPattern).contains("ThemeStudioRoute")
+    assertThat(selectorPattern).contains("ThemeSelectorRoute")
   }
 
   @Test

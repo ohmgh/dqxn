@@ -115,6 +115,7 @@ class OverlayNavHostTest {
           allThemes = persistentListOf(),
           customThemeCount = 0,
           onCommand = {},
+          onShowToast = {},
         )
       }
     }
@@ -146,6 +147,7 @@ class OverlayNavHostTest {
           allThemes = persistentListOf(),
           customThemeCount = 0,
           onCommand = {},
+          onShowToast = {},
         )
       }
     }
@@ -182,6 +184,7 @@ class OverlayNavHostTest {
           allThemes = persistentListOf(),
           customThemeCount = 0,
           onCommand = {},
+          onShowToast = {},
         )
       }
     }
@@ -218,6 +221,7 @@ class OverlayNavHostTest {
           allThemes = persistentListOf(),
           customThemeCount = 0,
           onCommand = {},
+          onShowToast = {},
         )
       }
     }
@@ -272,6 +276,7 @@ class OverlayNavHostTest {
           allThemes = persistentListOf(),
           customThemeCount = 0,
           onCommand = {},
+          onShowToast = {},
         )
       }
     }
