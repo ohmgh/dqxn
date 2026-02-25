@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 12 — CI Gates + Benchmarking (6/6 plans) COMPLETE
-- **Current Plan:** Not started
+- **Phase:** 13 — E2E Integration + Launch Polish (1/7 plans)
+- **Current Plan:** 13-02-PLAN.md
 - **Milestone:** V1 Launch
-- **Next action:** Begin Phase 13 (E2E Integration + Launch Polish)
-- **Last session:** 2026-02-25T10:38:17.530Z
-- **Stopped at:** Completed 12-06-PLAN.md
+- **Next action:** Execute Plan 13-02 (Export My Data + Privacy Verification)
+- **Last session:** 2026-02-25T11:50:17Z
+- **Stopped at:** Completed 13-01-PLAN.md
 
 ## Progress
 
@@ -26,7 +26,7 @@
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
 | 11. Theme UI + Diagnostics + Onboarding | Complete (11/11 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 9 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics + ThemeStudioRoute gap closure + toast connection |
 | 12. CI Gates + Benchmarking | Complete (6/6 plans) | All plans complete -- baseline profile infra, CI gate scripts, benchmark test classes, benchmark parser + orchestrator + Kover, pitest (incompatible, documented), gap closure (release DI + baselineprofile 1.5.0-alpha03 + benchmark release targeting) |
-| 13. E2E Integration + Launch Polish | Pending | Convergence point |
+| 13. E2E Integration + Launch Polish | In Progress (1/7 plans) | Play In-App Update + Review APIs with 17 unit tests |
 
 ## Decisions
 
@@ -128,6 +128,12 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 12]: RingBufferSink capacity=128 in release (vs debug 512) -- smaller buffer since NoOpLogger discards most output; still needed for DiagnosticSnapshotCapture
 - [Phase 12]: baselineprofile 1.5.0-alpha03 primary path succeeded -- AGP 9 DSL compatibility confirmed, no fallback to deferred skip needed
 - [Phase 12]: baselineprofile module registers benchmarkRelease/nonMinifiedRelease build types (not debug) when baselineprofile plugin is active
+
+### Phase 13 Decisions
+
+- [Phase 13-01]: MockK-based Play Core testing over FakeAppUpdateManager/FakeReviewManager -- fakes require real Android Context, incompatible with JUnit5 pure JVM tests
+- [Phase 13-01]: CrashRecovery.isInSafeMode() as hasCrashedThisSession proxy -- conservative heuristic, suppresses review only when safe mode active (4+ crashes in 60s)
+- [Phase 13-01]: Injectable timeProvider on AppReviewCoordinator constructor -- enables deterministic 90-day cap testing without wall clock dependency
 
 ### Phase 1 Decisions
 
@@ -384,6 +390,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 12 P04 | 2min | 2 tasks | 3 files |
 | Phase 12 P03 | 8min | 2 tasks | 6 files |
 | Phase 12 P06 | 6min | 3 tasks | 5 files |
+| Phase 13 P01 | 28min | 2 tasks | 24 files |
 
 ## Context
 
