@@ -42,6 +42,16 @@ class PackConventionPlugin : Plugin<Project> {
       extensions.configure<KspExtension> {
         arg("themesDir", "${projectDir}/src/main/resources/themes/")
         arg("packId", project.name)
+
+        // Pack category derived from packId for ManifestGenerator
+        val packCategory = when (project.name) {
+          "essentials" -> "ESSENTIALS"
+          "plus" -> "PREMIUM"
+          "themes" -> "PREMIUM"
+          "demo" -> "DEBUG"
+          else -> "ESSENTIALS" // safe default
+        }
+        arg("packCategory", packCategory)
       }
 
       // Wire KSP-generated stability config into Compose compiler

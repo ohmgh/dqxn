@@ -1,6 +1,7 @@
 package app.dqxn.android.codegen.plugin.generation
 
 import app.dqxn.android.codegen.plugin.model.ProviderInfo
+import app.dqxn.android.codegen.plugin.model.ThemeProviderInfo
 import app.dqxn.android.codegen.plugin.model.WidgetInfo
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.squareup.kotlinpoet.AnnotationSpec
@@ -18,9 +19,14 @@ internal class HiltModuleGenerator(
   private val codeGenerator: CodeGenerator,
 ) {
 
-  fun generate(packId: String, widgets: List<WidgetInfo>, providers: List<ProviderInfo>) {
-    if (widgets.isEmpty() && providers.isEmpty()) return
-
+  fun generate(
+    packId: String,
+    widgets: List<WidgetInfo>,
+    providers: List<ProviderInfo>,
+    themeProviders: List<ThemeProviderInfo>,
+    manifestClassName: ClassName,
+  ) {
+    // Always generate the Hilt module -- the manifest @Provides is always needed.
     val moduleName = "${packId.replaceFirstChar { it.uppercase() }}HiltModule"
     val packageName = "app.dqxn.android.pack.$packId.generated"
 
@@ -61,19 +67,51 @@ internal class HiltModuleGenerator(
       moduleBuilder.addOriginatingKSFile(provider.originatingFile)
     }
 
+    // Add @Binds @IntoSet for each theme provider
+    for (themeProvider in themeProviders) {
+      moduleBuilder.addFunction(
+        FunSpec.builder("bind${themeProvider.className}")
+          .addModifiers(KModifier.ABSTRACT)
+          .addAnnotation(DAGGER_BINDS)
+          .addAnnotation(DAGGER_INTO_SET)
+          .addParameter("impl", themeProvider.typeName)
+          .returns(THEME_PROVIDER)
+          .build()
+      )
+      moduleBuilder.addOriginatingKSFile(themeProvider.originatingFile)
+    }
+
+    // Companion object with @Provides @IntoSet for DashboardPackManifest
+    val companionBuilder = TypeSpec.companionObjectBuilder()
+    companionBuilder.addFunction(
+      FunSpec.builder("provideManifest")
+        .addAnnotation(DAGGER_PROVIDES)
+        .addAnnotation(DAGGER_INTO_SET)
+        .addAnnotation(AnnotationSpec.builder(JVM_STATIC).build())
+        .returns(DASHBOARD_PACK_MANIFEST)
+        .addStatement("return %T.manifest", manifestClassName)
+        .build()
+    )
+    moduleBuilder.addType(companionBuilder.build())
+
     val fileSpec = FileSpec.builder(packageName, moduleName).addType(moduleBuilder.build()).build()
 
-    // Per-class isolation for incremental processing
-    fileSpec.writeTo(codeGenerator, aggregating = false)
+    // Aggregating because the module references the aggregated manifest object
+    fileSpec.writeTo(codeGenerator, aggregating = true)
   }
 
   private companion object {
     val DAGGER_MODULE = ClassName("dagger", "Module")
     val DAGGER_BINDS = ClassName("dagger", "Binds")
+    val DAGGER_PROVIDES = ClassName("dagger", "Provides")
     val DAGGER_INTO_SET = ClassName("dagger.multibindings", "IntoSet")
     val DAGGER_INSTALL_IN = ClassName("dagger.hilt", "InstallIn")
     val DAGGER_SINGLETON_COMPONENT = ClassName("dagger.hilt.components", "SingletonComponent")
     val WIDGET_RENDERER = ClassName("app.dqxn.android.sdk.contracts.widget", "WidgetRenderer")
     val DATA_PROVIDER = ClassName("app.dqxn.android.sdk.contracts.provider", "DataProvider")
+    val THEME_PROVIDER = ClassName("app.dqxn.android.sdk.contracts.theme", "ThemeProvider")
+    val DASHBOARD_PACK_MANIFEST =
+      ClassName("app.dqxn.android.sdk.contracts.pack", "DashboardPackManifest")
+    val JVM_STATIC = ClassName("kotlin.jvm", "JvmStatic")
   }
 }

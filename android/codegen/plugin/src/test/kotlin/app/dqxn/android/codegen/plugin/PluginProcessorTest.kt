@@ -23,7 +23,9 @@ class PluginProcessorTest {
 
   private fun compile(
     vararg sources: SourceFile,
-    packId: String = "essentials"
+    packId: String = "essentials",
+    packCategory: String = "ESSENTIALS",
+    includePackCategory: Boolean = true,
   ): JvmCompilationResult {
     val compilation =
       KotlinCompilation().apply {
@@ -37,6 +39,9 @@ class PluginProcessorTest {
         configureKsp {
           symbolProcessorProviders += PluginProcessorProvider()
           processorOptions["packId"] = packId
+          if (includePackCategory) {
+            processorOptions["packCategory"] = packCategory
+          }
         }
       }
     lastCompilation = compilation
@@ -90,6 +95,9 @@ class PluginProcessorTest {
     assertThat(content).contains("@IntoSet")
     assertThat(content).contains("bindSpeedometerRenderer")
     assertThat(content).contains("WidgetRenderer")
+    // Manifest @Provides is always present
+    assertThat(content).contains("provideManifest")
+    assertThat(content).contains("DashboardPackManifest")
   }
 
   @Test
@@ -203,6 +211,7 @@ class PluginProcessorTest {
     assertThat(content).contains("""typeId = "essentials:speedometer"""")
     assertThat(content).contains("""displayName = "Speedometer"""")
     assertThat(content).contains("""sourceId = "essentials:gps-speed"""")
+    assertThat(content).contains("PackCategory.ESSENTIALS")
   }
 
   @Test
@@ -250,12 +259,13 @@ class PluginProcessorTest {
 
     val generated = generatedKtFiles()
 
-    // Hilt module should have 4 @Binds methods (2 widgets + 2 providers)
+    // Hilt module should have 4 @Binds methods (2 widgets + 2 providers) + provideManifest
     val hiltModule = generated.first { it.name == "EssentialsHiltModule.kt" }.readText()
     assertThat(hiltModule).contains("bindSpeedometerRenderer")
     assertThat(hiltModule).contains("bindClockRenderer")
     assertThat(hiltModule).contains("bindGpsSpeedProvider")
     assertThat(hiltModule).contains("bindBatteryProvider")
+    assertThat(hiltModule).contains("provideManifest")
 
     // Manifest should have all refs
     val manifest = generated.first { it.name == "EssentialsGeneratedManifest.kt" }.readText()
@@ -266,7 +276,7 @@ class PluginProcessorTest {
   }
 
   @Test
-  fun `module with no annotations produces only manifest`() {
+  fun `module with no annotations produces manifest and Hilt module`() {
     val source =
       SourceFile.kotlin(
         "PlainClass.kt",
@@ -282,11 +292,16 @@ class PluginProcessorTest {
 
     assertThat(result.exitCode).isEqualTo(ExitCode.OK)
 
-    // ManifestGenerator always runs (pack always needs a manifest), but HiltModule
-    // should NOT be generated when there are no widgets or providers.
+    // ManifestGenerator always runs (pack always needs a manifest).
+    // HiltModule is also always generated (contains manifest @Provides).
     val generated = generatedKtFiles()
-    assertThat(generated.map { it.name }).doesNotContain("EssentialsHiltModule.kt")
     assertThat(generated.firstOrNull { it.name == "EssentialsGeneratedManifest.kt" }).isNotNull()
+    assertThat(generated.firstOrNull { it.name == "EssentialsHiltModule.kt" }).isNotNull()
+
+    // HiltModule should have provideManifest but no @Binds methods
+    val hiltContent = generated.first { it.name == "EssentialsHiltModule.kt" }.readText()
+    assertThat(hiltContent).contains("provideManifest")
+    assertThat(hiltContent).doesNotContain("@Binds")
 
     // No stability config since there are no snapshots
     val resources = generatedResourceFiles()

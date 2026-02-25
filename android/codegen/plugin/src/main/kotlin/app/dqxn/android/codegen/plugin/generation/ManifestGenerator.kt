@@ -1,6 +1,7 @@
 package app.dqxn.android.codegen.plugin.generation
 
 import app.dqxn.android.codegen.plugin.model.ProviderInfo
+import app.dqxn.android.codegen.plugin.model.ThemeProviderInfo
 import app.dqxn.android.codegen.plugin.model.WidgetInfo
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.squareup.kotlinpoet.ClassName
@@ -16,7 +17,13 @@ internal class ManifestGenerator(
   private val codeGenerator: CodeGenerator,
 ) {
 
-  fun generate(packId: String, widgets: List<WidgetInfo>, providers: List<ProviderInfo>) {
+  fun generate(
+    packId: String,
+    packCategory: String,
+    widgets: List<WidgetInfo>,
+    providers: List<ProviderInfo>,
+    themeProviders: List<ThemeProviderInfo>,
+  ) {
     val objectName = "${packId.replaceFirstChar { it.uppercase() }}GeneratedManifest"
     val packageName = "app.dqxn.android.pack.$packId.generated"
 
@@ -29,9 +36,12 @@ internal class ManifestGenerator(
     for (provider in providers) {
       manifestBuilder.addOriginatingKSFile(provider.originatingFile)
     }
+    for (themeProvider in themeProviders) {
+      manifestBuilder.addOriginatingKSFile(themeProvider.originatingFile)
+    }
 
     // Build the manifest property
-    val manifestInitializer = buildManifestInitializer(packId, widgets, providers)
+    val manifestInitializer = buildManifestInitializer(packId, packCategory, widgets, providers)
     manifestBuilder.addProperty(
       PropertySpec.builder("manifest", DASHBOARD_PACK_MANIFEST)
         .initializer(manifestInitializer)
@@ -47,6 +57,7 @@ internal class ManifestGenerator(
 
   private fun buildManifestInitializer(
     packId: String,
+    packCategory: String,
     widgets: List<WidgetInfo>,
     providers: List<ProviderInfo>,
   ): CodeBlock {
@@ -80,7 +91,9 @@ internal class ManifestGenerator(
       builder.addStatement("),")
     }
 
-    // Themes (always empty -- generated manifest doesn't handle themes)
+    // Themes -- individual theme IDs are runtime data from ThemeProvider.getThemes().
+    // The manifest themes field stays empty at codegen time; runtime theme catalog is
+    // served by Set<ThemeProvider> Hilt multibinding, not the manifest.
     builder.addStatement("themes = %M(),", PERSISTENT_LIST_OF)
 
     // Data providers
@@ -103,7 +116,7 @@ internal class ManifestGenerator(
       builder.addStatement("),")
     }
 
-    builder.addStatement("category = %T.ESSENTIALS,", PACK_CATEGORY)
+    builder.addStatement("category = %T.%L,", PACK_CATEGORY, packCategory)
     builder.addStatement("entitlementId = null,")
     builder.unindent()
     builder.add(")")

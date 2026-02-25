@@ -59,6 +59,17 @@ internal fun contractStubs(): Array<SourceFile> =
         .trimIndent(),
     ),
     SourceFile.kotlin(
+      "DashboardThemeProvider.kt",
+      """
+        package app.dqxn.android.sdk.contracts.annotation
+
+        @Retention(AnnotationRetention.SOURCE)
+        @Target(AnnotationTarget.CLASS)
+        annotation class DashboardThemeProvider
+        """
+        .trimIndent(),
+    ),
+    SourceFile.kotlin(
       "Immutable.kt",
       """
         package androidx.compose.runtime
@@ -138,6 +149,17 @@ internal fun contractStubs(): Array<SourceFile> =
         """
         .trimIndent(),
     ),
+    SourceFile.kotlin(
+      "ThemeProvider.kt",
+      """
+        package app.dqxn.android.sdk.contracts.theme
+
+        interface ThemeProvider {
+            val packId: String
+        }
+        """
+        .trimIndent(),
+    ),
   )
 
 /**
@@ -165,6 +187,17 @@ internal fun daggerStubs(): Array<SourceFile> =
         @Retention(AnnotationRetention.RUNTIME)
         @Target(AnnotationTarget.FUNCTION)
         annotation class Binds
+        """
+        .trimIndent(),
+    ),
+    SourceFile.kotlin(
+      "DaggerProvides.kt",
+      """
+        package dagger
+
+        @Retention(AnnotationRetention.RUNTIME)
+        @Target(AnnotationTarget.FUNCTION)
+        annotation class Provides
         """
         .trimIndent(),
     ),
@@ -227,7 +260,7 @@ internal fun manifestStubs(): Array<SourceFile> =
             val description: String,
             val version: Int,
             val widgets: List<PackWidgetRef>,
-            val themes: List<Any>,
+            val themes: List<PackThemeRef>,
             val dataProviders: List<PackDataProviderRef>,
             val category: PackCategory,
             val entitlementId: String?,
@@ -242,6 +275,18 @@ internal fun manifestStubs(): Array<SourceFile> =
 
         data class PackWidgetRef(
             val typeId: String,
+            val displayName: String,
+        )
+        """
+        .trimIndent(),
+    ),
+    SourceFile.kotlin(
+      "PackThemeRef.kt",
+      """
+        package app.dqxn.android.sdk.contracts.pack
+
+        data class PackThemeRef(
+            val themeId: String,
             val displayName: String,
         )
         """
@@ -267,9 +312,9 @@ internal fun manifestStubs(): Array<SourceFile> =
 
         enum class PackCategory {
             ESSENTIALS,
-            PLUS,
-            THEMES,
-            DEMO,
+            PREMIUM,
+            REGIONAL,
+            DEBUG,
         }
         """
         .trimIndent(),
