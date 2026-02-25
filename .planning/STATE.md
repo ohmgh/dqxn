@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (3/10 plans)
-- **Current Plan:** 03 complete, next 04
+- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (4/10 plans)
+- **Current Plan:** 08 complete, next 09
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 11 plans
-- **Last session:** 2026-02-25T08:09:51.731Z
-- **Stopped at:** Completed 11-03-PLAN.md
+- **Last session:** 2026-02-25T08:18:10Z
+- **Stopped at:** Completed 11-08-PLAN.md
 
 ## Progress
 
@@ -24,7 +24,7 @@
 | 9. Themes, Demo + Chaos | Complete (7/7 plans) | All plans complete -- themes pack, snapshot relocation, demo pack, chaos engine, entitlements, app integration + regression gate + SC3 gap closure |
 | 10. Settings Foundation + Setup UI | Complete (11/11 plans) | All plans complete -- data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet + WidgetSettingsSheet + WidgetPicker + PackBrowserContent + MainSettings + AnalyticsConsentDialog + DeleteAllDataDialog + MainSettingsViewModel + type-safe overlay routes + OverlayNavHost populated + DashboardScreen wiring + gap closure: WidgetPicker live preview + hardware icons + Compose compiler on :sdk:contracts |
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
-| 11. Theme UI + Diagnostics + Onboarding | In Progress (1/10 plans) | SessionEventEmitter + SessionRecorder ring buffer + Hilt binding |
+| 11. Theme UI + Diagnostics + Onboarding | In Progress (4/10 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
 
@@ -103,6 +103,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 11]: log10 scaling with MIN_LUX=1f guard for luxToPosition to avoid log(0) edge case
 - [Phase 11]: hasSeenTip is non-suspend returning Flow<Boolean> -- plan specified suspend but ProgressiveTipManager.shouldShowTip() is non-suspend; suspend fun returning Flow is atypical
 - [Phase 11]: Task 1 data layer changes already committed by plan 11-02 -- no duplicate commit needed for shared UserPreferencesRepository extensions
+- [Phase 11]: selectTheme persists via setLightThemeId/setDarkThemeId based on isDark -- no setSelectedThemeId exists; matches ThemeCoordinator slot pattern
+- [Phase 11]: createAndroidComposeRule<ComponentActivity> over createComposeRule for BackHandler dismissal testing -- provides activity.onBackPressedDispatcher access
 
 ### Phase 1 Decisions
 
@@ -345,6 +347,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 11 P02 | 2min | 2 tasks | 6 files |
 | Phase 11 P01 | 4 | 2 tasks | 4 files |
 | Phase 11 P03 | 4min | 2 tasks | 3 files |
+| Phase 11 P08 | 6min | 2 tasks | 8 files |
 
 ## Context
 
