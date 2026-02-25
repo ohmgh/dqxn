@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
 import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
 import app.dqxn.android.core.agentic.SemanticsOwnerHolder
+import app.dqxn.android.data.device.PairedDeviceStore
 import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.LayoutCoordinator
@@ -16,7 +17,11 @@ import app.dqxn.android.feature.dashboard.coordinator.WidgetBindingCoordinator
 import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
 import app.dqxn.android.feature.dashboard.grid.BlankSpaceGestureHandler
 import app.dqxn.android.feature.dashboard.grid.WidgetGestureHandler
+import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
+import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
+import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
+import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
 import app.dqxn.android.sdk.observability.crash.ErrorReporter
 import app.dqxn.android.sdk.observability.log.DqxnLogger
 import app.dqxn.android.sdk.observability.log.LogTag
@@ -56,6 +61,11 @@ constructor(
   val blankSpaceGestureHandler: BlankSpaceGestureHandler,
   val semanticsOwnerHolder: SemanticsOwnerHolder,
   val userPreferencesRepository: UserPreferencesRepository,
+  val dataProviderRegistry: DataProviderRegistry,
+  val providerSettingsStore: ProviderSettingsStore,
+  val entitlementManager: EntitlementManager,
+  val setupEvaluator: SetupEvaluatorImpl,
+  val pairedDeviceStore: PairedDeviceStore,
   private val savedStateHandle: SavedStateHandle,
   private val logger: DqxnLogger,
   private val errorReporter: ErrorReporter,

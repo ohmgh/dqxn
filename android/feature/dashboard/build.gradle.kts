@@ -1,4 +1,7 @@
-plugins { id("dqxn.android.feature") }
+plugins {
+  id("dqxn.android.feature")
+  alias(libs.plugins.kotlin.serialization)
+}
 
 android {
   namespace = "app.dqxn.android.feature.dashboard"
@@ -10,16 +13,21 @@ dependencies {
   implementation(project(":core:design"))
   implementation(project(":core:thermal"))
   implementation(project(":data"))
+  implementation(project(":feature:settings"))
   implementation(project(":sdk:analytics"))
 
   implementation(libs.compose.material.icons.extended)
+  implementation(libs.kotlinx.serialization.json)
   implementation(libs.window)
 
   testImplementation(testFixtures(project(":sdk:contracts")))
+  testImplementation(libs.compose.ui.test.junit4)
   testImplementation(libs.turbine)
   testImplementation(libs.truth)
   testImplementation(libs.mockk)
   testImplementation(libs.kotlinx.coroutines.test)
+
+  debugImplementation(libs.compose.ui.test.manifest)
 
   testFixturesImplementation(platform(libs.compose.bom))
   testFixturesImplementation(libs.compose.runtime)
