@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 13 — E2E Integration + Launch Polish (6/7 plans)
-- **Current Plan:** 13-07-PLAN.md
+- **Phase:** 13 — E2E Integration + Launch Polish (7/7 plans)
+- **Current Plan:** Phase 13 complete
 - **Milestone:** V1 Launch
-- **Next action:** Continue Phase 13 remaining plans
-- **Last session:** 2026-02-25T12:07:45.620Z
-- **Stopped at:** Completed 13-03-PLAN.md
+- **Next action:** All 13 phases complete
+- **Last session:** 2026-02-25T12:14:10.305Z
+- **Stopped at:** Completed 13-07-PLAN.md (Phase 13 complete, all phases done)
 
 ## Progress
 
@@ -26,7 +26,7 @@
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
 | 11. Theme UI + Diagnostics + Onboarding | Complete (11/11 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 9 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics + ThemeStudioRoute gap closure + toast connection |
 | 12. CI Gates + Benchmarking | Complete (6/6 plans) | All plans complete -- baseline profile infra, CI gate scripts, benchmark test classes, benchmark parser + orchestrator + Kover, pitest (incompatible, documented), gap closure (release DI + baselineprofile 1.5.0-alpha03 + benchmark release targeting) |
-| 13. E2E Integration + Launch Polish | In Progress (6/7 plans) | Play In-App Update + Review APIs + HardcodedText lint gate + locale formatting + GDPR data export + consent flow + analytics reset + multi-pack Hilt binding + chaos correlation E2E + offline E2E + WCAG AA contrast audit + TalkBack semantics + font scale tests |
+| 13. E2E Integration + Launch Polish | Complete (7/7 plans) | All plans complete -- Play In-App Update + Review APIs + HardcodedText lint gate + locale formatting + GDPR data export + consent flow + analytics reset + multi-pack Hilt binding + chaos correlation E2E + offline E2E + WCAG AA contrast audit + TalkBack semantics + font scale tests + battery soak + sensor lifecycle |
 
 ## Decisions
 
@@ -131,6 +131,10 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 13]: [Phase 13-02]: Interface bulk-access methods (getProfileWidgets, getAllStyles, getAllProviderSettings) consumed by DataExporter; kotlinx.serialization added to :feature:settings; deleteAllData order: disable -> clear -> reset
 - [Phase 13]: [Phase 13-03]: 13 theme JSON files fixed for WCAG AA compliance -- darkened accents on light themes, adjusted gradient stops on dark themes
 - [Phase 13]: [Phase 13-03]: LocalDensity fontScale override for font scale testing -- isolates fontScale from base density at Robolectric default
+- [Phase 13]: All 8 callbackFlow providers verified (not just 5 from plan) -- actual file names use DataProvider suffix
+- [Phase 13]: UiAutomator added as androidTestImplementation for UiDevice.pressHome() and executeShellCommand()
+- [Phase 13]: [Phase 13-04]: Adapted plan steps to available agentic commands -- no toggle-edit-mode, remove-widget, or dump-state commands exist; used query-semantics for settings, list-themes for theme state
+- [Phase 13]: [Phase 13-04]: query-semantics over UiDevice for settings button -- avoids uiautomator dependency, consistent with agentic-first E2E architecture
 
 ### Phase 13 Decisions
 
@@ -405,6 +409,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 13 P02 | 33min | 2 tasks | 10 files |
 | Phase 13 P05 | 34min | 2 tasks | 7 files |
 | Phase 13 P03 | 44min | 2 tasks | 17 files |
+| Phase 13 P07 | 3min | 2 tasks | 4 files |
+| Phase 13 P04 | 4min | 2 tasks | 3 files |
 
 ## Context
 
