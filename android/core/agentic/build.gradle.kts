@@ -8,6 +8,7 @@ plugins {
 android { namespace = "app.dqxn.android.core.agentic" }
 
 dependencies {
+  implementation(project(":sdk:contracts"))
   implementation(project(":sdk:observability"))
   implementation(project(":sdk:common"))
   implementation(libs.kotlinx.serialization.json)
