@@ -3,11 +3,11 @@
 ## Current Position
 
 - **Phase:** 8 — Essentials Pack (COMPLETE)
-- **Current Plan:** 11 of 11
+- **Current Plan:** 11 of 13 (gap closure)
 - **Milestone:** V1 Launch
-- **Next action:** Begin Phase 9 (Themes, Demo + Chaos)
-- **Last session:** 2026-02-24T17:35:27.900Z
-- **Stopped at:** Completed 08-09-PLAN.md (Phase 8 complete)
+- **Next action:** Execute 08-11-PLAN.md (gap closure)
+- **Last session:** 2026-02-25T00:44:00.042Z
+- **Stopped at:** Completed 08-10-PLAN.md (solar provider contract tests)
 
 ## Progress
 
@@ -53,6 +53,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 08]: Timestamp-based accessibility differentiation for action-only widgets -- data.timestamp > 0L distinguishes empty from bound state for contract test #5
 - [Phase 08]: Canvas-drawn icons (BatteryIcon, LightBulbIcon) for zero additional icon library dependency with data-state-based color tinting
 - [Phase 08]: AgenticContentProvider exported=true in debug manifest for ADB content call access -- debug-only, no security concern
+- [Phase 08]: Injectable FusedLocationProviderClient over lazy LocationServices.getFusedLocationProviderClient -- enables mock injection for contract tests without Android runtime
+- [Phase 08]: SolarLocationModule in pack providers package -- pack-local Hilt module for FusedLocationProviderClient @Provides, keeps pack isolation clean
 
 ### Phase 1 Decisions
 
@@ -269,6 +271,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | 08-05a | 35min | 2 | 10 |
 | 08-08 | 40min | 3 | 17 |
 | Phase 08 P09 | 7min | 2 tasks | 1 files |
+| Phase 08 P10 | 3min | 2 tasks | 4 files |
 
 ## Context
 
