@@ -32,6 +32,11 @@ hilt-navigation-compose = "1.2.0"
 accompanist = "0.36.0"
 extol = "2.1.0"
 kctfork = "0.12.1"
+benchmark = "1.4.1"
+profileinstaller = "1.4.1"
+baselineprofile-plugin = "1.3.1"
+uiautomator = "2.3.0"
+kover = "0.9.7"
 
 [libraries]
 # Gradle plugin libraries (for build-logic compileOnly consumption)
@@ -135,6 +140,9 @@ robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "
 jqwik = { group = "net.jqwik", name = "jqwik", version.ref = "jqwik" }
 kctfork-core = { group = "dev.zacsweers.kctfork", name = "core", version.ref = "kctfork" }
 kctfork-ksp = { group = "dev.zacsweers.kctfork", name = "ksp", version.ref = "kctfork" }
+benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
+profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
+uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -147,3 +155,5 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 android-junit = { id = "de.mannodermaus.android-junit5", version.ref = "mannodermaus-junit" }
+baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile-plugin" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
