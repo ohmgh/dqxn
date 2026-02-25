@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- AnalyticsConsentStep -->
+  <string name="consent_title">Help Improve DQXN</string>
+  <string name="consent_body">DQXN collects anonymous usage data to improve app quality:\n\n\u2022 Anonymous usage patterns\n\u2022 Crash reports\n\u2022 Performance metrics\n\nNo personal information is collected. You can change this at any time in Settings \u2192 Data &amp; Privacy.</string>
+  <string name="consent_enable">Enable Analytics</string>
+  <string name="consent_skip">Skip</string>
+
+  <!-- FirstLaunchDisclaimer -->
+  <string name="disclaimer_text">Speed, navigation, and speed limit data are for informational purposes only and do not replace dedicated vehicle instruments. Always refer to your vehicle speedometer and posted signs.</string>
+  <string name="disclaimer_dismiss">Got it</string>
+
+  <!-- FirstRunFlow -->
+  <string name="onboarding_theme_title">Choose a Theme</string>
+  <string name="onboarding_theme_continue">Continue</string>
+  <string name="onboarding_tour_title">Getting Started</string>
+  <string name="onboarding_tour_edit">Tap Edit to customize your dashboard</string>
+  <string name="onboarding_tour_move">Long-press to move widgets</string>
+  <string name="onboarding_tour_resize">Use corners to resize</string>
+  <string name="onboarding_tour_done">Done</string>
+
+  <!-- ProgressiveTip -->
+  <string name="tip_dismiss">Got it</string>
+</resources>
