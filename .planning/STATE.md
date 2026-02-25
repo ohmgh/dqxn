@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (6/10 plans)
-- **Current Plan:** 08 complete, next 09
+- **Phase:** 11 — Theme UI + Diagnostics + Onboarding (7/10 plans)
+- **Current Plan:** 07 complete, next 08
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 11 plans
-- **Last session:** 2026-02-25T08:21:14.238Z
-- **Stopped at:** Completed 11-05-PLAN.md
+- **Last session:** 2026-02-25T08:30:32Z
+- **Stopped at:** Completed 11-07-PLAN.md
 
 ## Progress
 
@@ -24,7 +24,7 @@
 | 9. Themes, Demo + Chaos | Complete (7/7 plans) | All plans complete -- themes pack, snapshot relocation, demo pack, chaos engine, entitlements, app integration + regression gate + SC3 gap closure |
 | 10. Settings Foundation + Setup UI | Complete (11/11 plans) | All plans complete -- data layer clearAll + analyticsConsent + SemanticColors + DeviceScanStateMachine + OverlayScaffold + SettingRowDispatcher + all 12 row types + SetupEvaluator + 7 setup cards + SetupSheet + WidgetSettingsSheet + WidgetPicker + PackBrowserContent + MainSettings + AnalyticsConsentDialog + DeleteAllDataDialog + MainSettingsViewModel + type-safe overlay routes + OverlayNavHost populated + DashboardScreen wiring + gap closure: WidgetPicker live preview + hardware icons + Compose compiler on :sdk:contracts |
 | 10.1. Fix Issues 3 and 4 | Complete (1/1 plans) | KSP codegen fixes -- per-pack PackCategory from convention plugin, manifest Hilt injection via @Provides @IntoSet, @DashboardThemeProvider annotation + auto-generated bindings, manual theme modules deleted |
-| 11. Theme UI + Diagnostics + Onboarding | In Progress (6/10 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip |
+| 11. Theme UI + Diagnostics + Onboarding | In Progress (7/10 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests |
 | 12. CI Gates + Benchmarking | Pending | Concurrent with Phases 9-11 |
 | 13. E2E Integration + Launch Polish | Pending | Convergence point |
 
@@ -110,6 +110,8 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 11]: combinedClickable with onDoubleClick delays single-click by double-click detection window -- tests must advanceTimeBy(500) after click for callback to fire
 - [Phase 11]: Brush excluded from isDirty comparison -- Brush does not override equals meaningfully; color+isDark changes sufficient
 - [Phase 11]: Snapshot.withMutableSnapshot for derivedStateOf testing in JUnit5 -- enables state reads without Compose UI test rule
+- [Phase 11]: Unicode U+26A0 warning sign over material-icons-extended Icons.Filled.Warning -- avoids ~30MB icon library dependency for single staleness indicator
+- [Phase 11]: useUnmergedTree=true for nested test tag assertions inside clickable containers -- clickable modifier merges child semantics (same pattern as Phase 10)
 
 ### Phase 1 Decisions
 
@@ -355,6 +357,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 11 P08 | 6min | 2 tasks | 8 files |
 | Phase 11 P04 | 7min | 2 tasks | 6 files |
 | Phase 11 P05 | 8min | 2 tasks | 4 files |
+| Phase 11 P07 | 7min | 2 tasks | 9 files |
 
 ## Context
 
