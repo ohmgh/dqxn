@@ -2,12 +2,12 @@
 
 ## Current Position
 
-- **Phase:** 12 — CI Gates + Benchmarking (1/5 plans)
-- **Current Plan:** 12-02 complete, next 12-03
+- **Phase:** 12 — CI Gates + Benchmarking (2/5 plans)
+- **Current Plan:** 12-01 + 12-02 complete, next 12-03
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 12 (CI Gates + Benchmarking)
-- **Last session:** 2026-02-25T09:38:43.584Z
-- **Stopped at:** Completed 12-02-PLAN.md
+- **Last session:** 2026-02-25T09:46:37.455Z
+- **Stopped at:** Completed 12-01-PLAN.md
 
 ## Progress
 
@@ -121,6 +121,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 11]: ThermalMonitor injected directly into SessionLifecycleTracker -- MetricsCollector has no thermal data; peak tracked via ordinal comparison
 - [Phase 11]: Jank% computed inline from MetricsSnapshot frame histogram (buckets 3+4+5 / total * 100) -- same formula as ObservabilityDashboard
 - [Phase 11]: Render failures = CRASHED + STALLED_RENDER; provider errors = STALE_DATA from WidgetHealthMonitor.allStatuses()
+- [Phase 12]: [Phase 12-01]: Upgraded baselineprofile plugin from 1.3.1 to 1.4.1 -- 1.3.1 incompatible with AGP 9 (Module :app is not a supported android module)
 
 ### Phase 1 Decisions
 
@@ -372,6 +373,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 11 P10 | 4min | 2 tasks | 4 files |
 | Phase 11 P11 | 3min | 2 tasks | 7 files |
 | Phase 12 P02 | 2min | 2 tasks | 3 files |
+| Phase 12 P01 | 9min | 2 tasks | 5 files |
 
 ## Context
 
