@@ -17,8 +17,7 @@ android {
     create("benchmark") {
       isDebuggable = true
       signingConfig = signingConfigs.getByName("debug")
-      // Fallback to debug until release Hilt DI bindings are complete (DiagnosticSnapshotCapture missing in release)
-      matchingFallbacks += listOf("debug")
+      matchingFallbacks += listOf("release")
     }
   }
 }
