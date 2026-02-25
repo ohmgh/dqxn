@@ -1,7 +1,12 @@
 package app.dqxn.android.debug.handlers
 
+import app.cash.turbine.test
 import app.dqxn.android.core.agentic.CommandParams
 import app.dqxn.android.core.agentic.CommandResult
+import app.dqxn.android.data.layout.GridPosition
+import app.dqxn.android.data.layout.GridSize
+import app.dqxn.android.feature.dashboard.command.DashboardCommand
+import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
 import app.dqxn.android.sdk.contracts.provider.DataSnapshot
 import app.dqxn.android.sdk.contracts.settings.SettingDefinition
 import app.dqxn.android.sdk.contracts.widget.WidgetContext
@@ -27,7 +32,8 @@ class AddWidgetHandlerTest {
     StubRenderer(typeId = "essentials:speedometer", displayName = "Speedometer"),
   )
 
-  private val handler = AddWidgetHandler(fakeWidgets)
+  private val commandBus = DashboardCommandBus()
+  private val handler = AddWidgetHandler(fakeWidgets, commandBus)
 
   @Test
   fun `handler name is add-widget`() {
@@ -96,6 +102,51 @@ class AddWidgetHandlerTest {
   fun `paramsSchema documents typeId parameter`() {
     val schema = handler.paramsSchema()
     assertThat(schema).containsKey("typeId")
+  }
+
+  @Test
+  fun `successful add dispatches AddWidget command to bus`() = runTest {
+    commandBus.commands.test {
+      handler.execute(
+        CommandParams(raw = mapOf("typeId" to "essentials:clock"), traceId = "trace-1"),
+        "cmd-1",
+      )
+
+      val command = awaitItem()
+      assertThat(command).isInstanceOf(DashboardCommand.AddWidget::class.java)
+      val addWidget = command as DashboardCommand.AddWidget
+      assertThat(addWidget.widget.typeId).isEqualTo("essentials:clock")
+      assertThat(addWidget.widget.instanceId).startsWith("widget-")
+      assertThat(addWidget.widget.position).isEqualTo(GridPosition(col = 0, row = 0))
+      assertThat(addWidget.widget.size).isEqualTo(GridSize(widthUnits = 4, heightUnits = 4))
+      assertThat(addWidget.widget.style).isEqualTo(WidgetStyle.Default)
+      assertThat(addWidget.traceId).isEqualTo("cmd-1")
+      cancelAndIgnoreRemainingEvents()
+    }
+  }
+
+  @Test
+  fun `unknown typeId does not dispatch to bus`() = runTest {
+    commandBus.commands.test {
+      handler.execute(
+        CommandParams(raw = mapOf("typeId" to "nonexistent:widget"), traceId = "trace-1"),
+        "cmd-1",
+      )
+      expectNoEvents()
+      cancelAndIgnoreRemainingEvents()
+    }
+  }
+
+  @Test
+  fun `missing typeId does not dispatch to bus`() = runTest {
+    commandBus.commands.test {
+      handler.execute(
+        CommandParams(raw = emptyMap(), traceId = "trace-1"),
+        "cmd-1",
+      )
+      expectNoEvents()
+      cancelAndIgnoreRemainingEvents()
+    }
   }
 }
 

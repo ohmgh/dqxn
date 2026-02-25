@@ -5,9 +5,17 @@ import app.dqxn.android.core.agentic.CommandHandler
 import app.dqxn.android.core.agentic.CommandParams
 import app.dqxn.android.core.agentic.CommandResult
 import app.dqxn.android.core.agentic.getString
+import app.dqxn.android.data.layout.DashboardWidgetInstance
+import app.dqxn.android.data.layout.GridPosition
+import app.dqxn.android.data.layout.GridSize
+import app.dqxn.android.feature.dashboard.command.DashboardCommand
+import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
+import app.dqxn.android.sdk.contracts.widget.WidgetContext
 import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
+import app.dqxn.android.sdk.contracts.widget.WidgetStyle
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -29,6 +37,7 @@ internal class AddWidgetHandler
 @Inject
 constructor(
   private val widgets: Set<@JvmSuppressWildcards WidgetRenderer>,
+  private val commandBus: DashboardCommandBus,
 ) : CommandHandler {
 
   override val name: String = "add-widget"
@@ -51,6 +60,24 @@ constructor(
       )
 
     val widgetId = "widget-${UUID.randomUUID()}"
+
+    // Construct widget instance with renderer defaults
+    val defaults = renderer.getDefaults(WidgetContext.DEFAULT)
+    val instance = DashboardWidgetInstance(
+      instanceId = widgetId,
+      typeId = renderer.typeId,
+      position = GridPosition(col = 0, row = 0),
+      size = GridSize(widthUnits = defaults.widthUnits, heightUnits = defaults.heightUnits),
+      style = WidgetStyle.Default,
+      settings = persistentMapOf(),
+      dataSourceBindings = persistentMapOf(),
+      zIndex = 0,
+    )
+
+    // Dispatch to dashboard via singleton command bus
+    commandBus.dispatch(
+      DashboardCommand.AddWidget(widget = instance, traceId = commandId),
+    )
 
     val json = buildJsonObject {
       put("status", "ok")
