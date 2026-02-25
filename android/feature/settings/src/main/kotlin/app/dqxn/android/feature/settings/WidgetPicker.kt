@@ -12,16 +12,20 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +34,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -41,12 +47,54 @@ import app.dqxn.android.feature.settings.overlay.OverlayScaffold
 import app.dqxn.android.feature.settings.overlay.OverlayType
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.entitlement.isAccessible
+import app.dqxn.android.sdk.contracts.provider.DataSnapshot
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
+import app.dqxn.android.sdk.contracts.widget.WidgetData
 import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
+import app.dqxn.android.sdk.contracts.widget.WidgetStyle
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
+import app.dqxn.android.sdk.ui.widget.LocalWidgetData
+import kotlin.reflect.KClass
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
+
+/**
+ * Hardware requirement derived from [WidgetSpec.compatibleSnapshots][app.dqxn.android.sdk.contracts.widget.WidgetSpec.compatibleSnapshots]
+ * class names. Used to render small GPS/BLE icon badges in the widget picker.
+ */
+private enum class HardwareRequirement {
+  GPS,
+  BLUETOOTH,
+  NONE,
+}
+
+/**
+ * Derive hardware requirement from snapshot class names.
+ *
+ * Mapping:
+ * - SpeedSnapshot / SolarSnapshot (not timezone) -> GPS
+ * - BleSnapshot / BluetoothSnapshot -> BLUETOOTH
+ * - Everything else (Time, Battery, AmbientLight, Acceleration, Orientation) -> NONE
+ */
+private fun deriveHardwareRequirement(
+  compatibleSnapshots: Set<KClass<out DataSnapshot>>,
+): HardwareRequirement {
+  val names = compatibleSnapshots.mapNotNull { it.simpleName }
+  return when {
+    names.any { name ->
+      name.contains("Speed", ignoreCase = true) ||
+        (name.contains("Solar", ignoreCase = true) &&
+          !name.contains("Timezone", ignoreCase = true))
+    } -> HardwareRequirement.GPS
+    names.any { name ->
+      name.contains("Ble", ignoreCase = true) ||
+        name.contains("Bluetooth", ignoreCase = true)
+    } -> HardwareRequirement.BLUETOOTH
+    else -> HardwareRequirement.NONE
+  }
+}
 
 /**
  * Widget selection grid with **live previews** (F2.7).
@@ -188,7 +236,28 @@ private fun WidgetPickerCard(
           .testTag("widget_preview_${widget.typeId}"),
       contentAlignment = Alignment.Center,
     ) {
-      // Lock icon overlay for gated widgets
+      // Live widget preview via Render() with demo data
+      CompositionLocalProvider(LocalWidgetData provides WidgetData.Empty) {
+        Box(
+          modifier =
+            Modifier.fillMaxSize()
+              .clipToBounds()
+              .graphicsLayer {
+                scaleX = 0.5f
+                scaleY = 0.5f
+              },
+          contentAlignment = Alignment.Center,
+        ) {
+          widget.Render(
+            isEditMode = false,
+            style = WidgetStyle.Default,
+            settings = persistentMapOf(),
+            modifier = Modifier.fillMaxSize(),
+          )
+        }
+      }
+
+      // Lock icon overlay for gated widgets (centered, on top of preview)
       if (!isAccessible) {
         Icon(
           imageVector = Icons.Filled.Lock,
@@ -196,6 +265,39 @@ private fun WidgetPickerCard(
           tint = theme.secondaryTextColor.copy(alpha = DashboardThemeDefinition.EMPHASIS_MEDIUM),
           modifier = Modifier.testTag("widget_lock_${widget.typeId}"),
         )
+      }
+
+      // Hardware requirement icon badge (bottom-end corner)
+      val hwReq =
+        remember(widget.compatibleSnapshots) {
+          deriveHardwareRequirement(widget.compatibleSnapshots)
+        }
+      when (hwReq) {
+        HardwareRequirement.GPS,
+        HardwareRequirement.BLUETOOTH -> {
+          Icon(
+            imageVector =
+              when (hwReq) {
+                HardwareRequirement.GPS -> Icons.Filled.LocationOn
+                HardwareRequirement.BLUETOOTH -> Icons.Filled.Bluetooth
+                HardwareRequirement.NONE -> return@Box // unreachable
+              },
+            contentDescription =
+              when (hwReq) {
+                HardwareRequirement.GPS -> stringResource(R.string.widget_picker_requires_gps)
+                HardwareRequirement.BLUETOOTH ->
+                  stringResource(R.string.widget_picker_requires_bluetooth)
+                HardwareRequirement.NONE -> null // unreachable
+              },
+            tint = theme.secondaryTextColor.copy(alpha = 0.8f),
+            modifier =
+              Modifier.align(Alignment.BottomEnd)
+                .padding(4.dp)
+                .size(16.dp)
+                .testTag("widget_hw_${widget.typeId}"),
+          )
+        }
+        HardwareRequirement.NONE -> { /* no badge */ }
       }
     }
 

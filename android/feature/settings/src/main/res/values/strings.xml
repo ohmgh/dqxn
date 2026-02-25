@@ -27,6 +27,8 @@
   <string name="widget_picker_locked">Locked</string>
   <string name="widget_picker_entitlement_required">Upgrade required to add this widget</string>
   <string name="widget_picker_revocation_toast">Some features are no longer available. Your layout is preserved.</string>
+  <string name="widget_picker_requires_gps">Requires GPS</string>
+  <string name="widget_picker_requires_bluetooth">Requires Bluetooth</string>
 
   <!-- MainSettings sections -->
   <string name="main_settings_title">Settings</string>
