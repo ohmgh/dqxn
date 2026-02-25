@@ -90,6 +90,9 @@ dependencies {
   androidTestImplementation(libs.hilt.testing)
   add("kspAndroidTest", libs.hilt.compiler)
   androidTestImplementation(libs.androidx.test.ext.junit)
+  androidTestImplementation(libs.androidx.test.runner)
+  androidTestImplementation(libs.truth)
+  androidTestImplementation(libs.kotlinx.serialization.json)
 
   // Debug tools
   debugImplementation(libs.leakcanary)
