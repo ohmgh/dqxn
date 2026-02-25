@@ -24,6 +24,8 @@ dependencies {
 
   // Pack modules
   implementation(project(":pack:essentials"))
+  implementation(project(":pack:themes"))
+  implementation(project(":pack:demo"))
 
   // Core modules
   implementation(project(":core:firebase"))
