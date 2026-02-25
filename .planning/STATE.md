@@ -6,8 +6,8 @@
 - **Current Plan:** 02 complete, next 03
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 11 plans
-- **Last session:** 2026-02-25T08:07:32.971Z
-- **Stopped at:** Completed 11-02-PLAN.md
+- **Last session:** 2026-02-25T08:09:14.665Z
+- **Stopped at:** Completed 11-01-PLAN.md
 
 ## Progress
 
@@ -100,6 +100,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 10.1]: HiltModuleGenerator always runs (even with no widgets/providers/themes) because manifest @Provides is always needed
 - [Phase 10.1]: HiltModuleGenerator changed from aggregating=false to aggregating=true because it references the aggregated manifest object
 - [Phase 10.1]: themes = persistentListOf() at codegen time -- individual theme IDs are runtime data from ThemeProvider.getThemes(), served by Set<ThemeProvider> multibinding not manifest
+- [Phase 11]: log10 scaling with MIN_LUX=1f guard for luxToPosition to avoid log(0) edge case
 
 ### Phase 1 Decisions
 
@@ -340,6 +341,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 10 P11 | 13min | 2 tasks | 4 files |
 | Phase 10.1 P01 | 6min | 2 tasks | 12 files |
 | Phase 11 P02 | 2min | 2 tasks | 6 files |
+| Phase 11 P01 | 4 | 2 tasks | 4 files |
 
 ## Context
 
