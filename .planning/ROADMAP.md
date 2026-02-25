@@ -374,6 +374,20 @@ Plans:
 5. Onboarding first-run flow: analytics consent → disclaimer → theme selection → edit mode tour
 6. Analytics event call sites: events fire after opt-in, suppressed before consent
 
+**Plans:** 10 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — ColorConversion + LuxMapping TDD (pure math utilities)
+- [ ] 11-02-PLAN.md — `:feature:diagnostics` build config + SessionRecorder
+- [ ] 11-03-PLAN.md — `:feature:onboarding` build config + UserPreferences extensions + ProgressiveTipManager
+- [ ] 11-04-PLAN.md — ProviderStatusProvider implementation in `:feature:dashboard`
+- [ ] 11-05-PLAN.md — ThemeSelector + ThemeStudioStateHolder (ordering, preview lifecycle, isDirty)
+- [ ] 11-06-PLAN.md — Theme composable suite (InlineColorPicker, GradientStopRow, ThemeStudio, AutoSwitchMode, IlluminanceThreshold)
+- [ ] 11-07-PLAN.md — Diagnostics UI (ProviderHealthDashboard, ProviderDetail, SnapshotViewer, SessionViewer, ObservabilityDashboard)
+- [ ] 11-08-PLAN.md — Onboarding flow (AnalyticsConsent, Disclaimer, FirstRunFlow, ProgressiveTip)
+- [ ] 11-09-PLAN.md — OverlayNavHost 7-route wiring + source-varying transitions + DashboardScreen first-run
+- [ ] 11-10-PLAN.md — Analytics event call sites + SessionLifecycleTracker
+
 **Depends on:** Phase 10
 
 **Concurrent with:** Phase 9 (theme UI doesn't need `:pack:themes` to exist — works with free themes only)
