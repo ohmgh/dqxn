@@ -22,6 +22,7 @@ import app.dqxn.android.feature.dashboard.layer.CriticalBannerHost
 import app.dqxn.android.feature.dashboard.layer.DashboardLayer
 import app.dqxn.android.feature.dashboard.layer.EmptyRoute
 import app.dqxn.android.feature.dashboard.layer.NotificationBannerHost
+import app.dqxn.android.feature.dashboard.layer.OnboardingRoute
 import app.dqxn.android.feature.dashboard.layer.OverlayNavHost
 import app.dqxn.android.feature.dashboard.layer.SettingsRoute
 import app.dqxn.android.feature.dashboard.layer.WidgetPickerRoute
@@ -29,6 +30,7 @@ import app.dqxn.android.feature.dashboard.layer.WidgetSettingsRoute
 import app.dqxn.android.feature.dashboard.profile.ProfilePageTransition
 import app.dqxn.android.feature.dashboard.ui.AUTO_HIDE_DELAY_MS
 import app.dqxn.android.feature.dashboard.ui.DashboardButtonBar
+import app.dqxn.android.feature.onboarding.OnboardingViewModel
 import app.dqxn.android.feature.settings.main.MainSettingsViewModel
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import kotlinx.coroutines.delay
@@ -40,11 +42,14 @@ import kotlinx.coroutines.delay
  * 0. DashboardLayer (grid + widgets, always present, dashboard-as-shell F1.13)
  * 0.5 NotificationBannerHost (non-critical banners)
  * 0.8 DashboardButtonBar (auto-hiding bottom bar, floats over canvas)
- * 1. OverlayNavHost (settings, widget picker, widget settings, setup)
+ * 1. OverlayNavHost (settings, widget picker, widget settings, setup, themes, diagnostics, onboarding)
  * 1.5 CriticalBannerHost (safe mode banner, above all overlays)
  *
  * State collection: all StateFlows collected via `collectAsState()` (Layer 0 per CLAUDE.md).
  * Overlay pause (F1.14): when an overlay route is active, widget bindings are paused.
+ *
+ * **First-run check**: If [OnboardingViewModel.hasCompletedOnboarding] is false, navigates to
+ * [OnboardingRoute] exactly once via [LaunchedEffect].
  *
  * **editingWidgetId**: Derived from back-stack scan for [WidgetSettingsRoute]. Scanning
  * `currentBackStack.value` (not just currentEntry) preserves the widget ID when Setup is pushed
@@ -54,6 +59,7 @@ import kotlinx.coroutines.delay
 public fun DashboardScreen(
   viewModel: DashboardViewModel = hiltViewModel(),
   mainSettingsViewModel: MainSettingsViewModel = hiltViewModel(),
+  onboardingViewModel: OnboardingViewModel = hiltViewModel(),
 ) {
   val navController = rememberNavController()
 
@@ -66,6 +72,16 @@ public fun DashboardScreen(
   val banners by viewModel.notificationCoordinator.activeBanners.collectAsState()
   val dragState by viewModel.editModeCoordinator.dragState.collectAsState()
   val resizeState by viewModel.editModeCoordinator.resizeState.collectAsState()
+
+  // First-run onboarding check
+  val hasCompletedOnboarding by onboardingViewModel.hasCompletedOnboarding.collectAsState()
+  LaunchedEffect(hasCompletedOnboarding) {
+    if (!hasCompletedOnboarding) {
+      navController.navigate(OnboardingRoute) {
+        launchSingleTop = true
+      }
+    }
+  }
 
   // Pause bindings when overlay is active (F1.14)
   // Type-safe check: current destination is NOT EmptyRoute means an overlay is showing
@@ -202,6 +218,9 @@ public fun DashboardScreen(
         setupEvaluator = viewModel.setupEvaluator,
         pairedDeviceStore = viewModel.pairedDeviceStore,
         mainSettingsViewModel = mainSettingsViewModel,
+        themeCoordinator = viewModel.themeCoordinator,
+        allThemes = viewModel.builtInThemes.freeThemes,
+        customThemeCount = 0, // Custom theme count tracking -- future
         onCommand = onCommand,
       )
 

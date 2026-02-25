@@ -13,6 +13,8 @@ dependencies {
   implementation(project(":core:design"))
   implementation(project(":core:thermal"))
   implementation(project(":data"))
+  implementation(project(":feature:diagnostics"))
+  implementation(project(":feature:onboarding"))
   implementation(project(":feature:settings"))
   implementation(project(":sdk:analytics"))
 

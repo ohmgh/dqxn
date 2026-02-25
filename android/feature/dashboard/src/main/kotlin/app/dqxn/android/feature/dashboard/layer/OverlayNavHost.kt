@@ -2,46 +2,61 @@ package app.dqxn.android.feature.dashboard.layer
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.NavHost
 import androidx.navigation.toRoute
 import app.dqxn.android.core.design.motion.DashboardMotion
 import app.dqxn.android.data.device.PairedDeviceStore
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
+import app.dqxn.android.feature.dashboard.coordinator.ThemeCoordinator
+import app.dqxn.android.feature.diagnostics.DiagnosticsScreen
+import app.dqxn.android.feature.onboarding.FirstRunFlow
+import app.dqxn.android.feature.onboarding.OnboardingViewModel
 import app.dqxn.android.feature.settings.WidgetPicker
 import app.dqxn.android.feature.settings.main.MainSettings
 import app.dqxn.android.feature.settings.main.MainSettingsViewModel
 import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
 import app.dqxn.android.feature.settings.setup.SetupSheet
+import app.dqxn.android.feature.settings.theme.ThemeSelector
 import app.dqxn.android.feature.settings.widget.WidgetSettingsSheet
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
 import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
+import kotlinx.collections.immutable.ImmutableList
+import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 
 /**
- * Layer 1 navigation scaffold for overlay UI (settings, widget picker, widget settings, setup).
+ * Layer 1 navigation scaffold for overlay UI.
  *
- * Route table: 5 type-safe routes via `@Serializable` route classes in [OverlayRoutes.kt]:
+ * Route table: 8 type-safe routes via `@Serializable` route classes in [OverlayRoutes.kt]:
  * - [EmptyRoute] -- no overlay (Layer 0 visible)
- * - [WidgetPickerRoute] -- widget selection grid with [DashboardMotion.hubEnter]/[hubExit]
- * - [SettingsRoute] -- main settings with [DashboardMotion.previewEnter]/[previewExit]
- * - [WidgetSettingsRoute] -- per-widget settings with [ExitTransition.None]/[EnterTransition.None]
- *   per replication advisory section 2 (jankless preview navigation)
- * - [SetupRoute] -- provider setup wizard with [DashboardMotion.hubEnter]/[hubExit]
+ * - [WidgetPickerRoute] -- widget selection grid, hub transitions
+ * - [SettingsRoute] -- main settings, source-varying transitions
+ * - [WidgetSettingsRoute] -- per-widget settings, preview transitions with None exit/popEnter
+ * - [SetupRoute] -- provider setup wizard, hub transitions
+ * - [ThemeSelectorRoute] -- theme browser, preview transitions, popEnter=fadeIn(150ms)
+ * - [DiagnosticsRoute] -- diagnostics hub, hub transitions
+ * - [OnboardingRoute] -- first-run onboarding, hub transitions
  *
- * WidgetSettings uses [ExitTransition.None] / [EnterTransition.None] so the widget preview
- * stays visible beneath child overlays (Setup navigated from Data Source tab).
+ * **Source-varying transitions (replication advisory section 4):**
+ * - Settings exit to ThemeSelector: fadeOut(100ms) not previewExit
+ * - Settings popEnter from ThemeSelector: fadeIn(150ms) not previewEnter
+ * - Settings exit to Diagnostics/Onboarding (hub routes): ExitTransition.None
+ * - Settings popEnter from Diagnostics/Onboarding: EnterTransition.None
+ * - ThemeSelector popEnter: fadeIn(150ms) NOT previewEnter (prevents double-slide)
  *
- * Settings clears the preview theme on enter to prevent advisory section 3 race condition.
- *
- * Start destination is [EmptyRoute] (no overlay shown by default). The dashboard is Layer 0 and
- * always renders beneath this NavHost.
+ * Start destination is [EmptyRoute] (no overlay shown by default).
  */
 @Composable
 public fun OverlayNavHost(
@@ -53,6 +68,9 @@ public fun OverlayNavHost(
   setupEvaluator: SetupEvaluatorImpl,
   pairedDeviceStore: PairedDeviceStore,
   mainSettingsViewModel: MainSettingsViewModel,
+  themeCoordinator: ThemeCoordinator,
+  allThemes: ImmutableList<DashboardThemeDefinition>,
+  customThemeCount: Int,
   onCommand: (DashboardCommand) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -79,7 +97,6 @@ public fun OverlayNavHost(
         widgetRegistry = widgetRegistry,
         entitlementManager = entitlementManager,
         onSelectWidget = { typeId ->
-          // Navigate to widget settings after selection
           navController.navigate(WidgetSettingsRoute(widgetId = typeId))
         },
         onDismiss = {
@@ -88,16 +105,35 @@ public fun OverlayNavHost(
       )
     }
 
-    // Main settings -- source-varying preview transitions (vertical slide)
-    // Clears preview theme on enter per advisory section 3 race condition fix
+    // Main settings -- source-varying transitions per replication advisory section 4
+    // Exit/popEnter adapt based on navigation target/source:
+    //   -> ThemeSelector: fadeOut(100ms) / fadeIn(150ms) (smooth cross-fade)
+    //   -> Diagnostics/Onboarding: None (hub overlay covers)
+    //   -> default: previewExit / previewEnter
     composable<SettingsRoute>(
       enterTransition = { DashboardMotion.previewEnter },
-      exitTransition = { DashboardMotion.previewExit },
-      popEnterTransition = { DashboardMotion.previewEnter },
+      exitTransition = {
+        val target = targetState.destination.route ?: ""
+        when {
+          target.contains(THEME_SELECTOR_ROUTE_PATTERN) -> fadeOut(tween(100))
+          target.contains(DIAGNOSTICS_ROUTE_PATTERN) -> ExitTransition.None
+          target.contains(ONBOARDING_ROUTE_PATTERN) -> ExitTransition.None
+          else -> DashboardMotion.previewExit
+        }
+      },
+      popEnterTransition = {
+        val source = initialState.destination.route ?: ""
+        when {
+          source.contains(THEME_SELECTOR_ROUTE_PATTERN) -> fadeIn(tween(150))
+          source.contains(DIAGNOSTICS_ROUTE_PATTERN) -> EnterTransition.None
+          source.contains(ONBOARDING_ROUTE_PATTERN) -> EnterTransition.None
+          else -> DashboardMotion.previewEnter
+        }
+      },
       popExitTransition = { DashboardMotion.previewExit },
     ) {
       // Clear preview theme on settings enter (advisory section 3 race fix)
-      onCommand(DashboardCommand.PreviewTheme(null))
+      LaunchedEffect(Unit) { onCommand(DashboardCommand.PreviewTheme(null)) }
 
       val analyticsConsent by mainSettingsViewModel.analyticsConsent.collectAsState()
       val showStatusBar by mainSettingsViewModel.showStatusBar.collectAsState()
@@ -112,13 +148,16 @@ public fun OverlayNavHost(
         onSetKeepScreenOn = mainSettingsViewModel::setKeepScreenOn,
         onDeleteAllData = mainSettingsViewModel::deleteAllData,
         onNavigateToThemeMode = {
-          // Theme mode picker -- Phase 11
+          // Caller-managed preview: set preview theme BEFORE navigating to ThemeSelector
+          val darkTheme = themeCoordinator.themeState.value.darkTheme
+          onCommand(DashboardCommand.PreviewTheme(darkTheme))
+          navController.navigate(ThemeSelectorRoute)
         },
         onNavigateToDashPacks = {
           // Pack browser navigation -- future
         },
         onNavigateToDiagnostics = {
-          // Diagnostics navigation -- Phase 11
+          navController.navigate(DiagnosticsRoute)
         },
         onClose = {
           navController.popBackStack(EmptyRoute, inclusive = false)
@@ -127,7 +166,6 @@ public fun OverlayNavHost(
     }
 
     // Widget settings -- ExitTransition.None / EnterTransition.None per advisory section 2
-    // The widget preview stays visible when navigating to Setup from Data Source tab
     composable<WidgetSettingsRoute>(
       enterTransition = { DashboardMotion.previewEnter },
       exitTransition = { ExitTransition.None },
@@ -185,5 +223,91 @@ public fun OverlayNavHost(
         )
       }
     }
+
+    // Theme selector -- preview transitions with CRITICAL popEnter override
+    // popEnter uses fadeIn(150ms) NOT previewEnter to prevent double-slide when returning
+    // from a theme sub-screen (replication advisory section 4)
+    composable<ThemeSelectorRoute>(
+      enterTransition = { DashboardMotion.previewEnter },
+      exitTransition = { DashboardMotion.previewExit },
+      popEnterTransition = { fadeIn(tween(150)) },
+      popExitTransition = { DashboardMotion.previewExit },
+    ) {
+      val themeState by themeCoordinator.themeState.collectAsState()
+
+      ThemeSelector(
+        allThemes = allThemes,
+        previewTheme = themeState.previewTheme,
+        customThemeCount = customThemeCount,
+        entitlementManager = entitlementManager,
+        onPreviewTheme = { theme ->
+          onCommand(DashboardCommand.PreviewTheme(theme))
+        },
+        onApplyTheme = { themeId ->
+          onCommand(DashboardCommand.SetTheme(themeId))
+        },
+        onClearPreview = {
+          onCommand(DashboardCommand.PreviewTheme(null))
+        },
+        onCloneToCustom = { _ ->
+          // Clone to custom theme -- handled by ThemeStudio in future
+        },
+        onOpenStudio = { _ ->
+          // Open theme studio -- handled by ThemeStudio route in future
+        },
+        onDeleteCustom = { _ ->
+          // Delete custom theme -- handled by ThemeStudio in future
+        },
+        onShowToast = { _ ->
+          // Toast display -- parent handles
+        },
+        onClose = {
+          navController.popBackStack()
+        },
+      )
+    }
+
+    // Diagnostics -- hub transition (scale + fade)
+    composable<DiagnosticsRoute>(
+      enterTransition = { DashboardMotion.hubEnter },
+      exitTransition = { DashboardMotion.hubExit },
+      popEnterTransition = { DashboardMotion.hubEnter },
+      popExitTransition = { DashboardMotion.hubExit },
+    ) {
+      DiagnosticsScreen(
+        onClose = {
+          navController.popBackStack()
+        },
+      )
+    }
+
+    // Onboarding -- hub transition (scale + fade)
+    composable<OnboardingRoute>(
+      enterTransition = { DashboardMotion.hubEnter },
+      exitTransition = { DashboardMotion.hubExit },
+      popEnterTransition = { DashboardMotion.hubEnter },
+      popExitTransition = { DashboardMotion.hubExit },
+    ) {
+      val onboardingViewModel: OnboardingViewModel = hiltViewModel()
+
+      FirstRunFlow(
+        freeThemes = onboardingViewModel.freeThemes,
+        onConsent = { enabled -> onboardingViewModel.setAnalyticsConsent(enabled) },
+        onDismissDisclaimer = { onboardingViewModel.setHasSeenDisclaimer() },
+        onSelectTheme = { themeId -> onboardingViewModel.selectTheme(themeId) },
+        onComplete = {
+          onboardingViewModel.completeOnboarding()
+          navController.popBackStack(EmptyRoute, inclusive = false)
+        },
+      )
+    }
   }
 }
+
+/**
+ * Route pattern strings for source-varying transition matching.
+ * Navigation Compose serializes `@Serializable` route classes using their qualified name.
+ */
+private val THEME_SELECTOR_ROUTE_PATTERN = ThemeSelectorRoute::class.qualifiedName!!
+private val DIAGNOSTICS_ROUTE_PATTERN = DiagnosticsRoute::class.qualifiedName!!
+private val ONBOARDING_ROUTE_PATTERN = OnboardingRoute::class.qualifiedName!!

@@ -40,3 +40,29 @@ public data class WidgetSettingsRoute(val widgetId: String)
  */
 @Serializable
 public data class SetupRoute(val providerId: String)
+
+/**
+ * Theme selector overlay -- preview-type transitions.
+ *
+ * Caller-managed preview: Settings sets preview theme BEFORE navigating here.
+ * popEnter uses fadeIn(150ms) NOT previewEnter per replication advisory section 4.
+ */
+@Serializable
+public data object ThemeSelectorRoute
+
+/**
+ * Diagnostics overlay -- hub-type transitions.
+ *
+ * Aggregates provider health, session recording, diagnostic snapshots, and observability metrics.
+ */
+@Serializable
+public data object DiagnosticsRoute
+
+/**
+ * Onboarding overlay -- hub-type transitions.
+ *
+ * First-run flow: consent, disclaimer, theme selection, edit tour.
+ * Navigated to automatically when [hasCompletedOnboarding] is false.
+ */
+@Serializable
+public data object OnboardingRoute

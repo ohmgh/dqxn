@@ -3,6 +3,7 @@ package app.dqxn.android.feature.dashboard
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.dqxn.android.core.design.theme.BuiltInThemes
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
 import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
 import app.dqxn.android.core.agentic.SemanticsOwnerHolder
@@ -69,6 +70,7 @@ constructor(
   val entitlementManager: EntitlementManager,
   val setupEvaluator: SetupEvaluatorImpl,
   val pairedDeviceStore: PairedDeviceStore,
+  val builtInThemes: BuiltInThemes,
   private val savedStateHandle: SavedStateHandle,
   private val logger: DqxnLogger,
   private val errorReporter: ErrorReporter,
