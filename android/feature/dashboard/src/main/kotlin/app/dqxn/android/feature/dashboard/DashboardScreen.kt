@@ -1,5 +1,6 @@
 package app.dqxn.android.feature.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -9,9 +10,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,12 +29,10 @@ import app.dqxn.android.feature.dashboard.layer.SettingsRoute
 import app.dqxn.android.feature.dashboard.layer.WidgetPickerRoute
 import app.dqxn.android.feature.dashboard.layer.WidgetSettingsRoute
 import app.dqxn.android.feature.dashboard.profile.ProfilePageTransition
-import app.dqxn.android.feature.dashboard.ui.AUTO_HIDE_DELAY_MS
 import app.dqxn.android.feature.dashboard.ui.DashboardButtonBar
 import app.dqxn.android.feature.onboarding.OnboardingViewModel
 import app.dqxn.android.feature.settings.main.MainSettingsViewModel
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
-import kotlinx.coroutines.delay
 
 /**
  * Root screen composable assembling all dashboard layers.
@@ -43,7 +40,7 @@ import kotlinx.coroutines.delay
  * Layer stack (back to front):
  * 0. DashboardLayer (grid + widgets, always present, dashboard-as-shell F1.13)
  * 0.5 NotificationBannerHost (non-critical banners)
- * 0.8 DashboardButtonBar (auto-hiding bottom bar, floats over canvas)
+ * 0.8 DashboardButtonBar (bottom bar, floats over canvas)
  * 1. OverlayNavHost (settings, widget picker, widget settings, setup, themes, diagnostics, onboarding)
  * 1.5 CriticalBannerHost (safe mode banner, above all overlays)
  *
@@ -75,10 +72,10 @@ public fun DashboardScreen(
   val dragState by viewModel.editModeCoordinator.dragState.collectAsState()
   val resizeState by viewModel.editModeCoordinator.resizeState.collectAsState()
 
-  // First-run onboarding check
-  val hasCompletedOnboarding by onboardingViewModel.hasCompletedOnboarding.collectAsState()
+  // First-run onboarding check (nullable while DataStore value is loading)
+  val hasCompletedOnboarding by onboardingViewModel.hasCompletedOnboarding.collectAsState(initial = null)
   LaunchedEffect(hasCompletedOnboarding) {
-    if (!hasCompletedOnboarding) {
+    if (hasCompletedOnboarding == false) {
       navController.navigate(OnboardingRoute) {
         launchSingleTop = true
       }
@@ -116,26 +113,14 @@ public fun DashboardScreen(
     onDispose {}
   }
 
-  // Bottom bar auto-hide
-  var isBarVisible by remember { mutableStateOf(true) }
-  LaunchedEffect(isBarVisible) {
-    if (isBarVisible) {
-      delay(AUTO_HIDE_DELAY_MS)
-      isBarVisible = false
-    }
-  }
-
-  // Show bar in edit mode always
-  LaunchedEffect(editState.isEditMode) {
-    if (editState.isEditMode) {
-      isBarVisible = true
-    }
-  }
-
   val onCommand: (DashboardCommand) -> Unit = viewModel::dispatch
 
   CompositionLocalProvider(LocalDashboardTheme provides themeState.displayTheme) {
-    Box(Modifier.fillMaxSize()) {
+    Box(
+      Modifier
+        .fillMaxSize()
+        .background(themeState.displayTheme.backgroundBrush)
+    ) {
       // Layer 0: Dashboard with profile paging
       ProfilePageTransition(
         profiles = profileState.profiles,
@@ -177,7 +162,7 @@ public fun DashboardScreen(
         },
       )
 
-      // Layer 0.8: Bottom bar (auto-hiding, floats over canvas)
+      // Layer 0.8: Bottom bar (floats over canvas)
       Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter,
@@ -186,7 +171,7 @@ public fun DashboardScreen(
           isEditMode = editState.isEditMode,
           profiles = profileState.profiles,
           activeProfileId = profileState.activeProfileId,
-          isVisible = isBarVisible || editState.isEditMode,
+          isVisible = true,
           onSettingsClick = {
             navController.navigate(SettingsRoute)
           },
@@ -206,7 +191,7 @@ public fun DashboardScreen(
           onThemeToggle = {
             onCommand(DashboardCommand.CycleThemeMode)
           },
-          onInteraction = { isBarVisible = true },
+          onInteraction = {},
         )
       }
 

@@ -1,5 +1,6 @@
 package app.dqxn.android.feature.dashboard
 
+import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.feature.dashboard.binding.StorageMonitor
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.NotificationCoordinator
@@ -283,12 +284,16 @@ class DashboardTestHarnessTest {
     val reducedMotionHelper: ReducedMotionHelper = mockk {
       every { isReducedMotion } returns false
     }
+    val userPreferencesRepository: UserPreferencesRepository = mockk(relaxed = true) {
+      every { showStatusBar } returns MutableStateFlow(false)
+    }
 
     return EditModeCoordinator(
       layoutCoordinator = harness.layoutCoordinator,
       gridPlacementEngine = harness.gridPlacementEngine,
       haptics = haptics,
       reducedMotionHelper = reducedMotionHelper,
+      userPreferencesRepository = userPreferencesRepository,
       logger = logger,
     )
   }

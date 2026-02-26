@@ -2,6 +2,7 @@ package app.dqxn.android.feature.dashboard.coordinator
 
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
+import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.feature.dashboard.gesture.DashboardHaptics
 import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
 import app.dqxn.android.feature.dashboard.grid.ConfigurationBoundaryDetector
@@ -11,6 +12,7 @@ import app.dqxn.android.feature.dashboard.test.FakeLayoutRepository
 import app.dqxn.android.feature.dashboard.test.TestWidgetFactory.testWidget
 import app.dqxn.android.sdk.observability.log.NoOpLogger
 import com.google.common.truth.Truth.assertThat
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -38,12 +40,20 @@ class EditModeCoordinatorTest {
   private val boundaryDetector: ConfigurationBoundaryDetector = mockk {
     every { boundaries } returns MutableStateFlow(persistentListOf())
   }
+  private val showStatusBarFlow = MutableStateFlow(false)
+  private val userPreferencesRepository: UserPreferencesRepository = mockk(relaxed = true) {
+    every { showStatusBar } returns showStatusBarFlow
+    coEvery { setShowStatusBar(any()) } coAnswers {
+      showStatusBarFlow.value = firstArg()
+    }
+  }
   private lateinit var layoutCoordinator: LayoutCoordinator
   private lateinit var coordinator: EditModeCoordinator
   private lateinit var fakeRepo: FakeLayoutRepository
 
   @BeforeEach
   fun setup() {
+    showStatusBarFlow.value = false
     fakeRepo = FakeLayoutRepository()
     layoutCoordinator = LayoutCoordinator(
       layoutRepository = fakeRepo,
@@ -58,6 +68,7 @@ class EditModeCoordinatorTest {
       gridPlacementEngine = gridPlacementEngine,
       haptics = haptics,
       reducedMotionHelper = reducedMotionHelper,
+      userPreferencesRepository = userPreferencesRepository,
       logger = logger,
     )
   }
@@ -150,6 +161,7 @@ class EditModeCoordinatorTest {
       gridPlacementEngine = gridPlacementEngine,
       haptics = haptics,
       reducedMotionHelper = reducedMotionHelper,
+      userPreferencesRepository = userPreferencesRepository,
       logger = logger,
     )
 
@@ -157,10 +169,11 @@ class EditModeCoordinatorTest {
     val widget = testWidget(instanceId = "w1", col = 2, row = 2)
     fakeRepo.setWidgets(listOf(widget))
     val initJob = Job(coroutineContext[Job])
+    val coordinatorJob = Job(coroutineContext[Job])
     layoutCoordinator.initialize(this + initJob)
     testScheduler.runCurrent()
 
-    coordinator.initialize(this)
+    coordinator.initialize(this + coordinatorJob)
 
     // Start drag from col=2, row=2
     coordinator.startDrag("w1", startCol = 2, startRow = 2)
@@ -180,6 +193,7 @@ class EditModeCoordinatorTest {
     assertThat(updatedWidget!!.position).isEqualTo(snapped)
 
     initJob.cancel()
+    coordinatorJob.cancel()
   }
 
   @Test
@@ -199,15 +213,17 @@ class EditModeCoordinatorTest {
       gridPlacementEngine = gridPlacementEngine,
       haptics = haptics,
       reducedMotionHelper = reducedMotionHelper,
+      userPreferencesRepository = userPreferencesRepository,
       logger = logger,
     )
 
     val widget = testWidget(instanceId = "w1", col = 0, row = 0, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(widget))
     val initJob = Job(coroutineContext[Job])
+    val coordinatorJob = Job(coroutineContext[Job])
     layoutCoordinator.initialize(this + initJob)
     testScheduler.runCurrent()
-    coordinator.initialize(this)
+    coordinator.initialize(this + coordinatorJob)
 
     coordinator.startDrag("w1", startCol = 0, startRow = 0)
     coordinator.updateDrag(48f, 48f) // small drag
@@ -220,6 +236,7 @@ class EditModeCoordinatorTest {
     assertThat(coordinator.dragState.value).isNull()
 
     initJob.cancel()
+    coordinatorJob.cancel()
   }
 
   // -- Resize --
@@ -341,12 +358,12 @@ class EditModeCoordinatorTest {
 
   @Test
   fun `toggleStatusBar toggles showStatusBar in EditState`() {
-    assertThat(coordinator.editState.value.showStatusBar).isTrue()
-
-    coordinator.toggleStatusBar()
     assertThat(coordinator.editState.value.showStatusBar).isFalse()
 
     coordinator.toggleStatusBar()
     assertThat(coordinator.editState.value.showStatusBar).isTrue()
+
+    coordinator.toggleStatusBar()
+    assertThat(coordinator.editState.value.showStatusBar).isFalse()
   }
 }

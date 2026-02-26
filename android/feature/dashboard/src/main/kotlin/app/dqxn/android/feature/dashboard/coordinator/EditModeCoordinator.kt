@@ -3,6 +3,7 @@ package app.dqxn.android.feature.dashboard.coordinator
 import androidx.compose.runtime.Immutable
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
+import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.feature.dashboard.gesture.DashboardHaptics
 import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
 import app.dqxn.android.feature.dashboard.grid.DragUpdate
@@ -32,7 +33,7 @@ import kotlinx.coroutines.launch
 public data class EditState(
   val isEditMode: Boolean = false,
   val focusedWidgetId: String? = null,
-  val showStatusBar: Boolean = true,
+  val showStatusBar: Boolean = false,
 )
 
 /**
@@ -60,6 +61,7 @@ constructor(
   private val gridPlacementEngine: GridPlacementEngine,
   private val haptics: DashboardHaptics,
   private val reducedMotionHelper: ReducedMotionHelper,
+  private val userPreferencesRepository: UserPreferencesRepository,
   private val logger: DqxnLogger,
 ) {
 
@@ -71,6 +73,11 @@ constructor(
    */
   public fun initialize(scope: CoroutineScope) {
     this.scope = scope
+    scope.launch {
+      userPreferencesRepository.showStatusBar.collect { visible ->
+        _editState.update { it.copy(showStatusBar = visible) }
+      }
+    }
     logger.info(TAG) { "EditModeCoordinator initialized" }
   }
 
@@ -336,8 +343,14 @@ constructor(
 
   /** Toggle the status bar visibility. Called by DashboardViewModel on ToggleStatusBar command. */
   public fun toggleStatusBar() {
-    _editState.update { it.copy(showStatusBar = !it.showStatusBar) }
-    logger.debug(TAG) { "Status bar toggled: ${_editState.value.showStatusBar}" }
+    val nextValue = !_editState.value.showStatusBar
+    _editState.update { it.copy(showStatusBar = nextValue) }
+    if (::scope.isInitialized) {
+      scope.launch {
+        userPreferencesRepository.setShowStatusBar(nextValue)
+      }
+    }
+    logger.debug(TAG) { "Status bar toggled: $nextValue" }
   }
 
   // -- Widget animations (F1.21) --

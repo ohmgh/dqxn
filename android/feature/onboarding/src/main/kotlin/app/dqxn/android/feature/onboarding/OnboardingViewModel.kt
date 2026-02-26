@@ -9,6 +9,7 @@ import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -31,12 +32,7 @@ constructor(
 ) : ViewModel() {
 
   /** Whether the user has completed onboarding. */
-  public val hasCompletedOnboarding: StateFlow<Boolean> =
-    userPreferencesRepository.hasCompletedOnboarding.stateIn(
-      scope = viewModelScope,
-      started = SharingStarted.WhileSubscribed(5_000),
-      initialValue = false,
-    )
+  public val hasCompletedOnboarding: Flow<Boolean> = userPreferencesRepository.hasCompletedOnboarding
 
   /** Current analytics consent state. */
   public val analyticsConsent: StateFlow<Boolean> =
@@ -73,8 +69,8 @@ constructor(
   }
 
   /** Marks onboarding as completed, preventing re-show on next launch. */
-  public fun completeOnboarding() {
-    viewModelScope.launch { userPreferencesRepository.setHasCompletedOnboarding(true) }
+  public suspend fun completeOnboarding() {
+    userPreferencesRepository.setHasCompletedOnboarding(true)
   }
 
   /**

@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -36,6 +37,7 @@ import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
 import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
 import kotlinx.collections.immutable.ImmutableList
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
+import kotlinx.coroutines.launch
 
 /**
  * Layer 1 navigation scaffold for overlay UI.
@@ -338,6 +340,7 @@ public fun OverlayNavHost(
       popExitTransition = { DashboardMotion.hubExit },
     ) {
       val onboardingViewModel: OnboardingViewModel = hiltViewModel()
+      val scope = rememberCoroutineScope()
 
       FirstRunFlow(
         freeThemes = onboardingViewModel.freeThemes,
@@ -345,8 +348,10 @@ public fun OverlayNavHost(
         onDismissDisclaimer = { onboardingViewModel.setHasSeenDisclaimer() },
         onSelectTheme = { themeId -> onboardingViewModel.selectTheme(themeId) },
         onComplete = {
-          onboardingViewModel.completeOnboarding()
-          navController.popBackStack(EmptyRoute, inclusive = false)
+          scope.launch {
+            onboardingViewModel.completeOnboarding()
+            navController.popBackStack(EmptyRoute, inclusive = false)
+          }
         },
       )
     }
