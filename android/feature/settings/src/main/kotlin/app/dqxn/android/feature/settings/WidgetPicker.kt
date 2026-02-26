@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.dqxn.android.core.design.token.CardSize
 import app.dqxn.android.core.design.token.DashboardSpacing
@@ -171,6 +172,13 @@ public fun WidgetPicker(
         )
 
         // Widget cards in 2-column FlowRow
+        // Compute card preview height from screen width to maintain 1.5:1 aspect ratio
+        // without using Modifier.aspectRatio, which triggers intrinsic measurement queries
+        // that crash SubcomposeLayout-based widgets (BoxWithConstraints in WidgetContainer).
+        val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
+        val cardWidth = (screenWidthDp - DashboardSpacing.ItemGap - DashboardSpacing.ScreenEdgePadding * 2) / 2
+        val previewHeight = cardWidth / PREVIEW_ASPECT_RATIO
+
         FlowRow(
           horizontalArrangement = Arrangement.spacedBy(DashboardSpacing.ItemGap),
           verticalArrangement = Arrangement.spacedBy(DashboardSpacing.ItemGap),
@@ -181,6 +189,7 @@ public fun WidgetPicker(
               widget = widget,
               entitlementManager = entitlementManager,
               theme = theme,
+              previewHeight = previewHeight,
               onSelect = { typeId ->
                 if (widget.isAccessible(entitlementManager::hasEntitlement)) {
                   onSelectWidget(typeId)
@@ -209,6 +218,7 @@ private fun WidgetPickerCard(
   widget: WidgetRenderer,
   entitlementManager: EntitlementManager,
   theme: DashboardThemeDefinition,
+  previewHeight: Dp,
   onSelect: (String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -227,12 +237,16 @@ private fun WidgetPickerCard(
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
     // Live preview area
+    // Uses requiredHeight (not aspectRatio) to prevent FlowRow's intrinsic measurement
+    // query from propagating into SubcomposeLayout-based widget renderers (WidgetContainer
+    // uses BoxWithConstraints, which crashes on intrinsic measurement).
     Box(
       modifier =
         Modifier.fillMaxWidth()
-          .aspectRatio(1.5f)
+          .requiredHeight(previewHeight)
           .clip(RoundedCornerShape(CardSize.SMALL.cornerRadius))
           .background(theme.widgetBackgroundBrush, RoundedCornerShape(CardSize.SMALL.cornerRadius))
+          .clipToBounds()
           .testTag("widget_preview_${widget.typeId}"),
       contentAlignment = Alignment.Center,
     ) {
@@ -240,8 +254,7 @@ private fun WidgetPickerCard(
       CompositionLocalProvider(LocalWidgetData provides WidgetData.Empty) {
         Box(
           modifier =
-            Modifier.fillMaxSize()
-              .clipToBounds()
+            Modifier.size(previewHeight * PREVIEW_ASPECT_RATIO, previewHeight)
               .graphicsLayer {
                 scaleX = 0.5f
                 scaleY = 0.5f
@@ -323,3 +336,6 @@ private fun WidgetPickerCard(
     }
   }
 }
+
+/** Width:height ratio for widget preview cards. */
+private const val PREVIEW_ASPECT_RATIO = 1.5f
