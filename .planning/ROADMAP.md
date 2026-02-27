@@ -500,10 +500,10 @@ Plans:
 - [ ] 14-03-PLAN.md — Wave 1: Canvas corner brackets + drag lift scale + grid snap overlay (F1.11, F1.20)
 - [ ] 14-04-PLAN.md — Wave 1: Widget status overlay parity: themed, per-type, tappable (F2.5, F3.14, F11.7)
 - [ ] 14-05-PLAN.md — Wave 1: PreviewOverlay dashboard-peek pattern for overlay sheets (F4.6)
-- [ ] 14-06-PLAN.md — Wave 1: Remove theme preview timeout (old codebase has none) (F4.6)
-- [ ] 14-09-PLAN.md — Wave 1: Settings app intro header + orientation lock row
+- [ ] 14-06-PLAN.md — Wave 1: ThemeSelector 4-col HorizontalPager rework + theme mode routing fix + remove preview timeout (F4.6)
+- [ ] 14-09-PLAN.md — Wave 1: Settings UI parity (icons, descriptions, About banner, old codebase item order) (F1.9)
 - [ ] 14-10-PLAN.md — Wave 1: Widget picker adaptive multi-column staggered grid
-- [ ] 14-11-PLAN.md — Wave 1: Onboarding UI with essentials theme + dashboard tokens
+- [ ] 14-11-PLAN.md — Wave 1: Onboarding UI migration to dashboard theme tokens (F11.7)
 - [ ] 14-07-PLAN.md — Wave 2: Focus overlay toolbar: delete/settings buttons + tap-to-focus (F1.8, F2.18)
 - [ ] 14-12-PLAN.md — Wave 2: Adaptive sheet layouts for foldable/tablet screens
 - [ ] 14-08-PLAN.md — Wave 3: Regression gate: full suite + requirement coverage verification (F1.21, F1.29)
