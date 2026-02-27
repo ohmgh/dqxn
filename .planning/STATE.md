@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 current_plan: 02 complete, next plan pending
 status: unknown
-stopped_at: Completed 14-02-PLAN.md (bottom bar auto-hide + FAB settings button)
-last_updated: "2026-02-27T06:29:42.362Z"
+stopped_at: Completed 14-05-PLAN.md (PreviewOverlay dashboard-peek pattern)
+last_updated: "2026-02-27T06:29:53.987Z"
 progress:
   total_phases: 15
   completed_phases: 14
@@ -21,8 +21,8 @@ progress:
 - **Current Plan:** 02 complete, next plan pending
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 14 plans (11 remaining)
-- **Last session:** 2026-02-27T06:27:46Z
-- **Stopped at:** Completed 14-02-PLAN.md (bottom bar auto-hide + FAB settings button)
+- **Last session:** 2026-02-27T06:29:53.982Z
+- **Stopped at:** Completed 14-05-PLAN.md (PreviewOverlay dashboard-peek pattern)
 
 ## Progress
 
@@ -153,6 +153,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 13]: [Phase 13-04]: query-semantics over UiDevice for settings button -- avoids uiautomator dependency, consistent with agentic-first E2E architecture
 - [Phase 13]: runBlocking in Application.onCreate for consent DataStore read -- prevents race with SessionLifecycleTracker
 - [Phase 13]: backgroundScope subscriber needed for WhileSubscribed stateIn in ViewModel consent flow tests
+- [Phase 14]: [Phase 14-05]: clickable (not pointerInput) for PreviewOverlay dismiss zone -- avoids intercepting dashboard widget drag gestures in peek zone
 
 ### Phase 13 Decisions
 
