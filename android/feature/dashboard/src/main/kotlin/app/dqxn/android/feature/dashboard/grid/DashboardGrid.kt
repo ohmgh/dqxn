@@ -1,6 +1,7 @@
 package app.dqxn.android.feature.dashboard.grid
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
@@ -14,28 +15,33 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.dp
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.feature.dashboard.binding.WidgetSlot
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.EditState
-import app.dqxn.android.feature.dashboard.coordinator.WidgetAnimationState
 import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
 import app.dqxn.android.sdk.ui.widget.GridConstants
-import kotlinx.collections.immutable.ImmutableList
 import kotlin.math.roundToInt
+import kotlinx.collections.immutable.ImmutableList
 
 /**
  * Dashboard grid composable rendering widgets via custom [Layout] + MeasurePolicy.
@@ -44,8 +50,8 @@ import kotlin.math.roundToInt
  * viewport are filtered before composition, yielding zero render cost. Each widget is wrapped in
  * [graphicsLayer] for isolated RenderNode (NF1).
  *
- * Edit mode visuals: wiggle animation (+-0.5 degrees, 150ms) and bracket pulse (3-6dp, 800ms).
- * Both disabled when [ReducedMotionHelper.isReducedMotion] is true (NF39).
+ * Edit mode visuals: wiggle animation (+-0.5 degrees, 150ms) and Canvas bracket stroke pulse
+ * (3-6dp, 800ms). Both disabled when [ReducedMotionHelper.isReducedMotion] is true (NF39).
  *
  * Widget add/remove animations: fadeIn+scaleIn spring on add, fadeOut+scaleOut on remove (F1.21).
  */
@@ -71,14 +77,15 @@ public fun DashboardGrid(
   val gridUnitPx = with(density) { GridConstants.GRID_UNIT_SIZE.toPx() }
 
   // NF7: viewport culling -- filter to visible widgets only
-  val visibleWidgets = remember(widgets, viewportCols, viewportRows) {
-    widgets.filter { widget ->
-      widget.position.col < viewportCols &&
-        widget.position.row < viewportRows &&
-        widget.position.col + widget.size.widthUnits > 0 &&
-        widget.position.row + widget.size.heightUnits > 0
+  val visibleWidgets =
+    remember(widgets, viewportCols, viewportRows) {
+      widgets.filter { widget ->
+        widget.position.col < viewportCols &&
+          widget.position.row < viewportRows &&
+          widget.position.col + widget.size.widthUnits > 0 &&
+          widget.position.row + widget.size.heightUnits > 0
+      }
     }
-  }
 
   // Animation tracking
   val animatingWidgets by editModeCoordinator.animatingWidgets.collectAsState()
@@ -87,9 +94,28 @@ public fun DashboardGrid(
   val isEditMode = editState.isEditMode
   val isReducedMotion = reducedMotionHelper.isReducedMotion
 
-  val blankSpaceModifier = with(blankSpaceGestureHandler) {
-    Modifier.blankSpaceGestures()
-  }
+  val blankSpaceModifier = with(blankSpaceGestureHandler) { Modifier.blankSpaceGestures() }
+
+  // Visual grid overlay during drag (F1.20)
+  val gridOverlayModifier =
+    if (dragState != null) {
+      Modifier.drawBehind {
+        val gridPx = gridUnitPx
+        val cols = (size.width / gridPx).toInt()
+        val rows = (size.height / gridPx).toInt()
+        val lineColor = Color.White.copy(alpha = 0.15f)
+        for (col in 0..cols step 2) {
+          val x = col * gridPx
+          drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+        }
+        for (row in 0..rows step 2) {
+          val y = row * gridPx
+          drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+        }
+      }
+    } else {
+      Modifier
+    }
 
   Layout(
     content = {
@@ -100,120 +126,234 @@ public fun DashboardGrid(
 
           AnimatedVisibility(
             visible = isVisible,
-            enter = if (isReducedMotion) {
-              fadeIn(snap()) + scaleIn(initialScale = 0.8f, animationSpec = snap())
-            } else {
-              fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
-                scaleIn(
-                  initialScale = 0.8f,
-                  animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                )
-            },
-            exit = if (isReducedMotion) {
-              fadeOut(snap()) + scaleOut(targetScale = 0.8f, animationSpec = snap())
-            } else {
-              fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) +
-                scaleOut(
-                  targetScale = 0.8f,
-                  animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                )
-            },
+            enter =
+              if (isReducedMotion) {
+                fadeIn(snap()) + scaleIn(initialScale = 0.8f, animationSpec = snap())
+              } else {
+                fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
+                  scaleIn(
+                    initialScale = 0.8f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                  )
+              },
+            exit =
+              if (isReducedMotion) {
+                fadeOut(snap()) + scaleOut(targetScale = 0.8f, animationSpec = snap())
+              } else {
+                fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) +
+                  scaleOut(
+                    targetScale = 0.8f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                  )
+              },
           ) {
             // Per-widget graphicsLayer for isolated RenderNode (NF1)
             val widgetDragState = if (dragState?.widgetId == widget.instanceId) dragState else null
 
             // Wiggle rotation for edit mode (F1.11)
-            val wiggleRotation = if (isEditMode && !isReducedMotion) {
-              val infiniteTransition = rememberInfiniteTransition(label = "wiggle_${widget.instanceId}")
-              val rotation by infiniteTransition.animateFloat(
-                initialValue = -0.5f,
-                targetValue = 0.5f,
-                animationSpec = infiniteRepeatable(
-                  animation = tween(durationMillis = 150),
-                  repeatMode = RepeatMode.Reverse,
-                ),
-                label = "wiggle_rotation_${widget.instanceId}",
-              )
-              rotation
-            } else {
-              0f
-            }
+            val wiggleRotation =
+              if (isEditMode && !isReducedMotion) {
+                val infiniteTransition =
+                  rememberInfiniteTransition(label = "wiggle_${widget.instanceId}")
+                val rotation by
+                  infiniteTransition.animateFloat(
+                    initialValue = -0.5f,
+                    targetValue = 0.5f,
+                    animationSpec =
+                      infiniteRepeatable(
+                        animation = tween(durationMillis = 150),
+                        repeatMode = RepeatMode.Reverse,
+                      ),
+                    label = "wiggle_rotation_${widget.instanceId}",
+                  )
+                rotation
+              } else {
+                0f
+              }
 
-            // Bracket pulse for edit mode
-            val bracketScale = if (isEditMode && !isReducedMotion) {
-              val infiniteTransition = rememberInfiniteTransition(label = "bracket_${widget.instanceId}")
-              val scale by infiniteTransition.animateFloat(
-                initialValue = 1f,
-                targetValue = 1.02f,
-                animationSpec = infiniteRepeatable(
-                  animation = tween(durationMillis = 800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                  repeatMode = RepeatMode.Reverse,
-                ),
-                label = "bracket_scale_${widget.instanceId}",
+            // Bracket stroke pulse for edit mode (F1.11) -- Canvas-drawn, NOT scale
+            val bracketStrokeWidth =
+              if (isEditMode && !isReducedMotion) {
+                val infiniteTransition =
+                  rememberInfiniteTransition(label = "bracket_${widget.instanceId}")
+                val strokeWidth by
+                  infiniteTransition.animateFloat(
+                    initialValue = 3f,
+                    targetValue = 6f,
+                    animationSpec =
+                      infiniteRepeatable(
+                        animation = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse,
+                      ),
+                    label = "bracket_stroke_${widget.instanceId}",
+                  )
+                strokeWidth
+              } else if (isEditMode) {
+                4f // Static midpoint for reduced motion
+              } else {
+                0f // Not in edit mode
+              }
+
+            // Drag lift scale (1.03f spring on drag)
+            val isDragging = widgetDragState?.isDragging == true
+            val liftScale by
+              animateFloatAsState(
+                targetValue = if (isDragging) 1.03f else 1f,
+                animationSpec =
+                  if (isReducedMotion) {
+                    snap()
+                  } else {
+                    spring(
+                      dampingRatio = Spring.DampingRatioMediumBouncy,
+                      stiffness = Spring.StiffnessMedium,
+                    )
+                  },
+                label = "lift_scale_${widget.instanceId}",
               )
-              scale
-            } else {
-              1f
-            }
 
             // Apply gesture handler
             val widgetSpec = widgetRegistry.findByTypeId(widget.typeId)
-            val gestureModifier = if (widgetSpec != null) {
-              with(widgetGestureHandler) {
-                Modifier.widgetGestures(
-                  widgetId = widget.instanceId,
-                  widgetSpec = widgetSpec,
-                  currentPosition = widget.position,
-                  currentSize = widget.size,
-                  gridUnitPx = gridUnitPx,
-                )
+            val gestureModifier =
+              if (widgetSpec != null) {
+                with(widgetGestureHandler) {
+                  Modifier.widgetGestures(
+                    widgetId = widget.instanceId,
+                    widgetSpec = widgetSpec,
+                    currentPosition = widget.position,
+                    currentSize = widget.size,
+                    gridUnitPx = gridUnitPx,
+                  )
+                }
+              } else {
+                Modifier
               }
-            } else {
-              Modifier
-            }
 
-            WidgetSlot(
-              widget = widget,
-              widgetBindingCoordinator = widgetBindingCoordinator,
-              widgetRegistry = widgetRegistry,
-              editModeCoordinator = editModeCoordinator,
-              resizeState = resizeState,
-              onCommand = onCommand,
-              modifier = gestureModifier
-                .graphicsLayer {
-                  // Drag offset via graphicsLayer (NOT Modifier.offset)
-                  if (widgetDragState != null) {
-                    translationX = widgetDragState.currentOffsetX
-                    translationY = widgetDragState.currentOffsetY
-                  }
-                  // Edit mode wiggle
-                  rotationZ = wiggleRotation
-                  // Bracket pulse
-                  scaleX = bracketScale
-                  scaleY = bracketScale
-                },
-            )
+            Box {
+              WidgetSlot(
+                widget = widget,
+                widgetBindingCoordinator = widgetBindingCoordinator,
+                widgetRegistry = widgetRegistry,
+                editModeCoordinator = editModeCoordinator,
+                resizeState = resizeState,
+                onCommand = onCommand,
+                modifier =
+                  gestureModifier.graphicsLayer {
+                    // Drag offset via graphicsLayer (NOT Modifier.offset)
+                    if (widgetDragState != null) {
+                      translationX = widgetDragState.currentOffsetX
+                      translationY = widgetDragState.currentOffsetY
+                    }
+                    // Edit mode wiggle
+                    rotationZ = wiggleRotation
+                    // Drag lift scale
+                    scaleX = liftScale
+                    scaleY = liftScale
+                  },
+              )
+
+              // Corner brackets for edit mode (F1.11)
+              if (isEditMode && bracketStrokeWidth > 0f) {
+                Canvas(
+                  modifier =
+                    Modifier.matchParentSize()
+                      .graphicsLayer {
+                        // Apply same drag offset so brackets follow widget
+                        if (widgetDragState != null) {
+                          translationX = widgetDragState.currentOffsetX
+                          translationY = widgetDragState.currentOffsetY
+                        }
+                        scaleX = liftScale
+                        scaleY = liftScale
+                      }
+                      .testTag("bracket_${widget.instanceId}"),
+                ) {
+                  val strokePx = bracketStrokeWidth.dp.toPx()
+                  val bracketLength = 16.dp.toPx()
+                  val color = Color.White
+
+                  // Top-left corner
+                  drawLine(
+                    color,
+                    Offset(0f, strokePx / 2),
+                    Offset(bracketLength, strokePx / 2),
+                    strokePx,
+                  )
+                  drawLine(
+                    color,
+                    Offset(strokePx / 2, 0f),
+                    Offset(strokePx / 2, bracketLength),
+                    strokePx,
+                  )
+
+                  // Top-right corner
+                  drawLine(
+                    color,
+                    Offset(size.width - bracketLength, strokePx / 2),
+                    Offset(size.width, strokePx / 2),
+                    strokePx,
+                  )
+                  drawLine(
+                    color,
+                    Offset(size.width - strokePx / 2, 0f),
+                    Offset(size.width - strokePx / 2, bracketLength),
+                    strokePx,
+                  )
+
+                  // Bottom-left corner
+                  drawLine(
+                    color,
+                    Offset(0f, size.height - strokePx / 2),
+                    Offset(bracketLength, size.height - strokePx / 2),
+                    strokePx,
+                  )
+                  drawLine(
+                    color,
+                    Offset(strokePx / 2, size.height - bracketLength),
+                    Offset(strokePx / 2, size.height),
+                    strokePx,
+                  )
+
+                  // Bottom-right corner
+                  drawLine(
+                    color,
+                    Offset(size.width - bracketLength, size.height - strokePx / 2),
+                    Offset(size.width, size.height - strokePx / 2),
+                    strokePx,
+                  )
+                  drawLine(
+                    color,
+                    Offset(size.width - strokePx / 2, size.height - bracketLength),
+                    Offset(size.width - strokePx / 2, size.height),
+                    strokePx,
+                  )
+                }
+              }
+            }
           }
         }
       }
     },
-    modifier = modifier
-      .semantics {}
-      .testTag("dashboard_grid")
-      .then(blankSpaceModifier),
+    modifier =
+      modifier
+        .semantics {}
+        .testTag("dashboard_grid")
+        .then(blankSpaceModifier)
+        .then(gridOverlayModifier),
   ) { measurables, constraints ->
     // Custom MeasurePolicy: each widget measured with constraints from widget.size * GRID_UNIT_SIZE
-    val placeables = measurables.mapIndexed { index, measurable ->
-      val widget = if (index < visibleWidgets.size) visibleWidgets[index] else return@Layout layout(0, 0) {}
-      val widthPx = (widget.size.widthUnits * gridUnitPx).roundToInt()
-      val heightPx = (widget.size.heightUnits * gridUnitPx).roundToInt()
-      measurable.measure(
-        Constraints.fixed(
-          width = widthPx.coerceAtLeast(0),
-          height = heightPx.coerceAtLeast(0),
-        ),
-      )
-    }
+    val placeables =
+      measurables.mapIndexed { index, measurable ->
+        val widget =
+          if (index < visibleWidgets.size) visibleWidgets[index] else return@Layout layout(0, 0) {}
+        val widthPx = (widget.size.widthUnits * gridUnitPx).roundToInt()
+        val heightPx = (widget.size.heightUnits * gridUnitPx).roundToInt()
+        measurable.measure(
+          Constraints.fixed(
+            width = widthPx.coerceAtLeast(0),
+            height = heightPx.coerceAtLeast(0),
+          ),
+        )
+      }
 
     val layoutWidth = (viewportCols * gridUnitPx).roundToInt().coerceAtLeast(constraints.minWidth)
     val layoutHeight = (viewportRows * gridUnitPx).roundToInt().coerceAtLeast(constraints.minHeight)
