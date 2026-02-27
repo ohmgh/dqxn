@@ -1,6 +1,6 @@
 package app.dqxn.android.feature.settings
 
-import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import java.io.File
 import org.junit.jupiter.api.Test
 
@@ -39,8 +39,8 @@ class DesignTokenWiringTest {
     fun `no MaterialTheme typography in settings source`() {
         scanSourceFiles().forEach { file ->
             val content = file.readText()
-            assertThat(content)
-                .named("${file.name} should not use MaterialTheme.typography -- use DashboardTypography instead")
+            assertWithMessage("${file.name} should not use MaterialTheme.typography -- use DashboardTypography instead")
+                .that(content)
                 .doesNotContain("MaterialTheme.typography")
         }
     }
@@ -49,8 +49,8 @@ class DesignTokenWiringTest {
     fun `no MaterialTheme colorScheme in settings source`() {
         scanSourceFiles().forEach { file ->
             val content = file.readText()
-            assertThat(content)
-                .named("${file.name} should not use MaterialTheme.colorScheme -- use LocalDashboardTheme instead")
+            assertWithMessage("${file.name} should not use MaterialTheme.colorScheme -- use LocalDashboardTheme instead")
+                .that(content)
                 .doesNotContain("MaterialTheme.colorScheme")
         }
     }
@@ -59,8 +59,8 @@ class DesignTokenWiringTest {
     fun `no MaterialTheme import in settings source`() {
         scanSourceFiles().forEach { file ->
             val content = file.readText()
-            assertThat(content)
-                .named("${file.name} should not import MaterialTheme")
+            assertWithMessage("${file.name} should not import MaterialTheme")
+                .that(content)
                 .doesNotContain("import androidx.compose.material3.MaterialTheme")
         }
     }
@@ -70,8 +70,8 @@ class DesignTokenWiringTest {
         // Verify allowlisted files exist, preventing stale entries
         allowlist.forEach { fileName ->
             val found = sourceDir.walk().any { it.name == fileName }
-            assertThat(found)
-                .named("Allowlisted file $fileName should exist in source tree")
+            assertWithMessage("Allowlisted file $fileName should exist in source tree")
+                .that(found)
                 .isTrue()
         }
     }
@@ -85,8 +85,8 @@ class DesignTokenWiringTest {
             val usesMaterialTheme = content.contains("MaterialTheme.typography") ||
                 content.contains("MaterialTheme.colorScheme") ||
                 content.contains("import androidx.compose.material3.MaterialTheme")
-            assertThat(usesMaterialTheme)
-                .named("Allowlisted $fileName should still use MaterialTheme -- remove from allowlist if migrated")
+            assertWithMessage("Allowlisted $fileName should still use MaterialTheme -- remove from allowlist if migrated")
+                .that(usesMaterialTheme)
                 .isTrue()
         }
     }
