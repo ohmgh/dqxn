@@ -19,41 +19,41 @@ import androidx.compose.ui.platform.testTag
  * - 0.15f = 15% transparent, 85% content (Settings, ThemeSelector, ThemeStudio)
  * - 0.38f = 38% transparent, 62% content (WidgetSettings)
  *
- * Tap on the transparent zone calls [onDismiss]. Content is anchored to the bottom.
- * Uses `clickable(indication = null)` to consume taps without visual ripple.
+ * Tap on the transparent zone calls [onDismiss]. Content is anchored to the bottom. Uses
+ * `clickable(indication = null)` to consume taps without visual ripple.
  *
- * Per Pitfall 4 in research: uses `clickable` (tap only), NOT `pointerInput`, to avoid
- * intercepting drag gestures meant for dashboard widgets visible in the peek zone.
+ * Per Pitfall 4 in research: uses `clickable` (tap only), NOT `pointerInput`, to avoid intercepting
+ * drag gestures meant for dashboard widgets visible in the peek zone.
  */
 @Composable
 public fun PreviewOverlay(
-    previewFraction: Float,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
+  previewFraction: Float,
+  onDismiss: () -> Unit,
+  modifier: Modifier = Modifier,
+  content: @Composable () -> Unit,
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        // Transparent zone: tap to dismiss
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                    onClick = onDismiss,
-                )
-                .testTag("preview_dismiss_zone"),
-        )
+  Box(modifier = modifier.fillMaxSize()) {
+    // Transparent zone: tap to dismiss
+    Box(
+      modifier =
+        Modifier.fillMaxSize()
+          .clickable(
+            indication = null,
+            interactionSource = remember { MutableInteractionSource() },
+            onClick = onDismiss,
+          )
+          .testTag("preview_dismiss_zone"),
+    )
 
-        // Content anchored to bottom, filling (1 - previewFraction) of screen height
-        Box(
-            modifier = Modifier
-                .fillMaxHeight(1f - previewFraction)
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .testTag("preview_content"),
-        ) {
-            content()
-        }
+    // Content anchored to bottom, filling (1 - previewFraction) of screen height
+    Box(
+      modifier =
+        Modifier.fillMaxHeight(1f - previewFraction)
+          .fillMaxWidth()
+          .align(Alignment.BottomCenter)
+          .testTag("preview_content"),
+    ) {
+      content()
     }
+  }
 }
