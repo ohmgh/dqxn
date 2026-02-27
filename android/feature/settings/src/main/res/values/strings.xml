@@ -49,6 +49,17 @@
   <string name="main_settings_delete_all_data">Delete All Data</string>
   <string name="main_settings_delete_all_description">Remove all settings, layouts, paired devices, and analytics data</string>
 
+  <!-- About App Banner -->
+  <string name="about_app_tagline">Life is a dash. Make it beautiful.</string>
+  <string name="about_app_attribution">-- The Dashing Dachshund</string>
+
+  <!-- MainSettings new rows -->
+  <string name="main_settings_light_theme">Light Theme</string>
+  <string name="main_settings_dark_theme">Dark Theme</string>
+  <string name="main_settings_status_bar_subtitle">Applies to current dash</string>
+  <string name="main_settings_reset_dash">Reset Dash</string>
+  <string name="main_settings_reset_dash_subtitle">Restore default layout and theme</string>
+
   <!-- DeleteAllDataDialog -->
   <string name="delete_all_dialog_title">Delete All Data</string>
   <string name="delete_all_dialog_body">This will permanently remove all your settings, dashboard layouts, paired devices, and analytics data. This action cannot be undone.</string>

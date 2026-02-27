@@ -24,7 +24,8 @@ import kotlinx.coroutines.launch
  * [ThemeAutoSwitchEngine.isDarkActive] and [UserPreferencesRepository] for theme selections.
  *
  * Key pattern from replication advisory section 3: preview theme is set BEFORE navigation to
- * prevent flash. [ThemeState.displayTheme] derivation is the single source for `LocalDashboardTheme`.
+ * prevent flash. [ThemeState.displayTheme] derivation is the single source for
+ * `LocalDashboardTheme`.
  */
 public class ThemeCoordinator
 @Inject
@@ -128,8 +129,8 @@ constructor(
   }
 
   /**
-   * Sets or clears the preview theme. When set, [ThemeState.displayTheme] returns the preview
-   * theme instead of the current theme. Pass `null` to clear (revert).
+   * Sets or clears the preview theme. When set, [ThemeState.displayTheme] returns the preview theme
+   * instead of the current theme. Pass `null` to clear (revert).
    *
    * Key pattern: set preview BEFORE navigation to prevent theme flash on transition.
    */
@@ -164,13 +165,27 @@ constructor(
 
     logger.info(LogTags.THEME) { "Theme mode cycled: $currentMode -> $nextMode" }
   }
+
+  /** Sets the auto-switch mode directly. Called from the AutoSwitchMode selector overlay. */
+  public suspend fun handleSetAutoSwitchMode(mode: AutoSwitchMode) {
+    _themeState.update { it.copy(autoSwitchMode = mode) }
+    userPreferencesRepository.setAutoSwitchMode(mode)
+    logger.info(LogTags.THEME) { "Auto-switch mode set: $mode" }
+  }
+
+  /** Sets the illuminance threshold for ILLUMINANCE_AUTO mode. */
+  public suspend fun handleSetIlluminanceThreshold(threshold: Float) {
+    _themeState.update { it.copy(illuminanceThreshold = threshold) }
+    userPreferencesRepository.setIlluminanceThreshold(threshold)
+    logger.info(LogTags.THEME) { "Illuminance threshold set: $threshold" }
+  }
 }
 
 /**
  * Theme state slice for the dashboard.
  *
- * [displayTheme] is the single source for `LocalDashboardTheme` -- returns [previewTheme] when
- * set, otherwise [currentTheme].
+ * [displayTheme] is the single source for `LocalDashboardTheme` -- returns [previewTheme] when set,
+ * otherwise [currentTheme].
  */
 @Immutable
 public data class ThemeState(
@@ -178,6 +193,7 @@ public data class ThemeState(
   val darkTheme: DashboardThemeDefinition,
   val lightTheme: DashboardThemeDefinition,
   val autoSwitchMode: AutoSwitchMode,
+  val illuminanceThreshold: Float = 100f,
   val previewTheme: DashboardThemeDefinition?,
 ) {
   /** The theme to display. Preview takes priority over current. */

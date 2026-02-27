@@ -4,11 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.dqxn.android.core.design.theme.BuiltInThemes
-import app.dqxn.android.feature.dashboard.command.DashboardCommand
-import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
-import dev.agentic.android.semantics.SemanticsOwnerHolder
 import app.dqxn.android.data.device.PairedDeviceStore
 import app.dqxn.android.data.preferences.UserPreferencesRepository
+import app.dqxn.android.feature.dashboard.command.DashboardCommand
+import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.LayoutCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.NotificationCoordinator
@@ -32,6 +31,7 @@ import app.dqxn.android.sdk.observability.session.EventType
 import app.dqxn.android.sdk.observability.session.SessionEvent
 import app.dqxn.android.sdk.observability.session.SessionEventEmitter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.agentic.android.semantics.SemanticsOwnerHolder
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
 import kotlinx.coroutines.CancellationException
@@ -92,22 +92,16 @@ constructor(
     // Restore active profile from SavedStateHandle
     val savedProfileId = savedStateHandle.get<String>(KEY_ACTIVE_PROFILE_ID)
     if (savedProfileId != null) {
-      viewModelScope.launch {
-        profileCoordinator.handleSwitchProfile(savedProfileId)
-      }
+      viewModelScope.launch { profileCoordinator.handleSwitchProfile(savedProfileId) }
     }
 
     // Sequential command processing loop -- exceptions logged but NEVER kill the loop
     viewModelScope.launch {
       for (command in commandChannel) {
         try {
-          val elapsed = measureTimeMillis {
-            routeCommand(command)
-          }
+          val elapsed = measureTimeMillis { routeCommand(command) }
           if (elapsed > SLOW_COMMAND_THRESHOLD_MS) {
-            logger.warn(TAG) {
-              "Slow command: ${command::class.simpleName} took ${elapsed}ms"
-            }
+            logger.warn(TAG) { "Slow command: ${command::class.simpleName} took ${elapsed}ms" }
             // StrictMode.noteSlowCall is available in debug builds at the app level;
             // library modules do not generate BuildConfig by default under AGP 9.
           }
@@ -129,9 +123,7 @@ constructor(
 
     // Relay external commands from singleton-scoped bus into sequential channel
     viewModelScope.launch {
-      commandBus.commands.collect { command ->
-        commandChannel.send(command)
-      }
+      commandBus.commands.collect { command -> commandChannel.send(command) }
     }
 
     // Auto-bind new widgets when layout changes
@@ -206,10 +198,8 @@ constructor(
         themeCoordinator.handleSetTheme(command.themeId)
         recordSessionEvent(EventType.THEME_CHANGE, "themeId=${command.themeId}")
       }
-      is DashboardCommand.PreviewTheme ->
-        themeCoordinator.handlePreviewTheme(command.theme)
-      is DashboardCommand.CycleThemeMode ->
-        themeCoordinator.handleCycleThemeMode()
+      is DashboardCommand.PreviewTheme -> themeCoordinator.handlePreviewTheme(command.theme)
+      is DashboardCommand.CycleThemeMode -> themeCoordinator.handleCycleThemeMode()
       is DashboardCommand.WidgetCrash ->
         widgetBindingCoordinator.reportCrash(command.widgetId, command.typeId)
       is DashboardCommand.SwitchProfile -> {
@@ -219,12 +209,9 @@ constructor(
       }
       is DashboardCommand.CreateProfile ->
         profileCoordinator.handleCreateProfile(command.displayName, command.cloneCurrentId)
-      is DashboardCommand.DeleteProfile ->
-        profileCoordinator.handleDeleteProfile(command.profileId)
-      is DashboardCommand.ResetLayout ->
-        layoutCoordinator.handleResetLayout()
-      is DashboardCommand.ToggleStatusBar ->
-        editModeCoordinator.toggleStatusBar()
+      is DashboardCommand.DeleteProfile -> profileCoordinator.handleDeleteProfile(command.profileId)
+      is DashboardCommand.ResetLayout -> layoutCoordinator.handleResetLayout()
+      is DashboardCommand.ToggleStatusBar -> editModeCoordinator.toggleStatusBar()
       is DashboardCommand.SaveCustomTheme -> {
         // Custom theme persistence -- future (JSON files in internal storage)
         // For now, preview the saved theme so it's immediately visible

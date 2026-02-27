@@ -13,8 +13,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import app.dqxn.android.core.design.motion.DashboardMotion
 import app.dqxn.android.data.device.PairedDeviceStore
@@ -26,11 +26,8 @@ import app.dqxn.android.feature.onboarding.OnboardingViewModel
 import app.dqxn.android.feature.settings.WidgetPicker
 import app.dqxn.android.feature.settings.main.MainSettings
 import app.dqxn.android.feature.settings.main.MainSettingsViewModel
-import app.dqxn.android.feature.settings.overlay.OverlayScaffold
-import app.dqxn.android.feature.settings.overlay.OverlayType
 import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
 import app.dqxn.android.feature.settings.setup.SetupSheet
-import app.dqxn.android.feature.settings.theme.AutoSwitchModeContent
 import app.dqxn.android.feature.settings.theme.ThemeSelector
 import app.dqxn.android.feature.settings.theme.ThemeStudio
 import app.dqxn.android.feature.settings.widget.WidgetSettingsSheet
@@ -38,8 +35,8 @@ import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
 import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
-import kotlinx.collections.immutable.ImmutableList
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 
 /**
@@ -108,9 +105,7 @@ public fun OverlayNavHost(
         onSelectWidget = { typeId ->
           navController.navigate(WidgetSettingsRoute(widgetId = typeId))
         },
-        onDismiss = {
-          navController.popBackStack(EmptyRoute, inclusive = false)
-        },
+        onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
       )
     }
 
@@ -171,12 +166,8 @@ public fun OverlayNavHost(
           onNavigateToDashPacks = {
             // Pack browser navigation -- future
           },
-          onNavigateToDiagnostics = {
-            navController.navigate(DiagnosticsRoute)
-          },
-          onClose = {
-            navController.popBackStack(EmptyRoute, inclusive = false)
-          },
+          onNavigateToDiagnostics = { navController.navigate(DiagnosticsRoute) },
+          onClose = { navController.popBackStack(EmptyRoute, inclusive = false) },
         )
       }
     }
@@ -200,9 +191,7 @@ public fun OverlayNavHost(
           dataProviderRegistry = dataProviderRegistry,
           providerSettingsStore = providerSettingsStore,
           entitlementManager = entitlementManager,
-          onDismiss = {
-            navController.popBackStack(EmptyRoute, inclusive = false)
-          },
+          onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
           onNavigate = { _ ->
             // Sub-navigation for pickers -- Phase 11
           },
@@ -235,12 +224,8 @@ public fun OverlayNavHost(
           pairedDeviceStore = pairedDeviceStore,
           evaluator = setupEvaluator,
           entitlementManager = entitlementManager,
-          onComplete = {
-            navController.popBackStack()
-          },
-          onDismiss = {
-            navController.popBackStack()
-          },
+          onComplete = { navController.popBackStack() },
+          onDismiss = { navController.popBackStack() },
         )
       }
     }
@@ -283,15 +268,9 @@ public fun OverlayNavHost(
           previewTheme = themeState.previewTheme,
           customThemeCount = customThemeCount,
           entitlementManager = entitlementManager,
-          onPreviewTheme = { theme ->
-            onCommand(DashboardCommand.PreviewTheme(theme))
-          },
-          onApplyTheme = { themeId ->
-            onCommand(DashboardCommand.SetTheme(themeId))
-          },
-          onClearPreview = {
-            onCommand(DashboardCommand.PreviewTheme(null))
-          },
+          onPreviewTheme = { theme -> onCommand(DashboardCommand.PreviewTheme(theme)) },
+          onApplyTheme = { themeId -> onCommand(DashboardCommand.SetTheme(themeId)) },
+          onClearPreview = { onCommand(DashboardCommand.PreviewTheme(null)) },
           onCloneToCustom = { sourceTheme ->
             // Clone: navigate to ThemeStudio. ThemeStudio uses existingTheme param
             // to create a copy with a new custom ID.
@@ -314,9 +293,7 @@ public fun OverlayNavHost(
             navController.navigate(ThemeStudioRoute(themeId = null))
           },
           onShowToast = onShowToast,
-          onClose = {
-            navController.popBackStack()
-          },
+          onClose = { navController.popBackStack() },
         )
       }
     }
@@ -363,9 +340,7 @@ public fun OverlayNavHost(
       popExitTransition = { DashboardMotion.hubExit },
     ) {
       DiagnosticsScreen(
-        onClose = {
-          navController.popBackStack()
-        },
+        onClose = { navController.popBackStack() },
       )
     }
 
@@ -396,8 +371,8 @@ public fun OverlayNavHost(
 }
 
 /**
- * Route pattern strings for source-varying transition matching.
- * Navigation Compose serializes `@Serializable` route classes using their qualified name.
+ * Route pattern strings for source-varying transition matching. Navigation Compose serializes
+ * `@Serializable` route classes using their qualified name.
  */
 private val THEME_SELECTOR_ROUTE_PATTERN = ThemeSelectorRoute::class.qualifiedName!!
 private val THEME_STUDIO_ROUTE_PATTERN = ThemeStudioRoute::class.qualifiedName!!
