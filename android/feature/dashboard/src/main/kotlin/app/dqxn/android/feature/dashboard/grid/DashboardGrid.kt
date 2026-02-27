@@ -16,6 +16,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.feature.dashboard.binding.WidgetSlot
+import app.dqxn.android.feature.dashboard.command.DashboardCommand
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.EditState
 import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
@@ -211,6 +214,40 @@ public fun DashboardGrid(
                 label = "lift_scale_${widget.instanceId}",
               )
 
+            // settingsAlpha: dim non-focused widgets when a widget is focused (F1.8)
+            val settingsAlpha by
+              animateFloatAsState(
+                targetValue =
+                  if (editState.focusedWidgetId != null &&
+                    editState.focusedWidgetId != widget.instanceId
+                  ) {
+                    0.5f
+                  } else {
+                    1f
+                  },
+                animationSpec = tween(300),
+                label = "settings_alpha_${widget.instanceId}",
+              )
+
+            // Focus tap handler: in edit mode, tap toggles focus (F2.18)
+            val isFocused = editState.focusedWidgetId == widget.instanceId
+            val focusClickModifier =
+              if (isEditMode) {
+                Modifier.clickable(
+                  indication = null,
+                  interactionSource = remember { MutableInteractionSource() },
+                  onClick = {
+                    if (isFocused) {
+                      editModeCoordinator.focusWidget(null) // Unfocus
+                    } else {
+                      editModeCoordinator.focusWidget(widget.instanceId) // Focus
+                    }
+                  },
+                )
+              } else {
+                Modifier
+              }
+
             // Apply gesture handler
             val widgetSpec = widgetRegistry.findByTypeId(widget.typeId)
             val gestureModifier =
@@ -228,7 +265,7 @@ public fun DashboardGrid(
                 Modifier
               }
 
-            Box {
+            Box(modifier = focusClickModifier) {
               WidgetSlot(
                 widget = widget,
                 widgetBindingCoordinator = widgetBindingCoordinator,
@@ -248,6 +285,8 @@ public fun DashboardGrid(
                     // Drag lift scale
                     scaleX = liftScale
                     scaleY = liftScale
+                    // Dim non-focused widgets (F1.8)
+                    alpha = settingsAlpha
                   },
               )
 
@@ -332,6 +371,20 @@ public fun DashboardGrid(
           }
         }
       }
+
+      // Focus overlay toolbar (F1.8) -- rendered after all widgets = highest z-index
+      if (isEditMode && editState.focusedWidgetId != null) {
+        val focusedWidget = visibleWidgets.find { it.instanceId == editState.focusedWidgetId }
+        if (focusedWidget != null) {
+          FocusOverlayToolbar(
+            widgetId = focusedWidget.instanceId,
+            onDelete = { onCommand(DashboardCommand.RemoveWidget(focusedWidget.instanceId)) },
+            onSettings = {
+              onCommand(DashboardCommand.OpenWidgetSettings(focusedWidget.instanceId))
+            },
+          )
+        }
+      }
     },
     modifier =
       modifier
@@ -340,19 +393,32 @@ public fun DashboardGrid(
         .then(blankSpaceModifier)
         .then(gridOverlayModifier),
   ) { measurables, constraints ->
+    // Pre-compute toolbar gap outside of placement lambda
+    val toolbarGapPx = 8.dp.roundToPx()
+
     // Custom MeasurePolicy: each widget measured with constraints from widget.size * GRID_UNIT_SIZE
+    // If focus toolbar is present, it's the last measurable (index == visibleWidgets.size)
+    val hasFocusToolbar = isEditMode && editState.focusedWidgetId != null &&
+      visibleWidgets.any { it.instanceId == editState.focusedWidgetId }
+
     val placeables =
       measurables.mapIndexed { index, measurable ->
-        val widget =
-          if (index < visibleWidgets.size) visibleWidgets[index] else return@Layout layout(0, 0) {}
-        val widthPx = (widget.size.widthUnits * gridUnitPx).roundToInt()
-        val heightPx = (widget.size.heightUnits * gridUnitPx).roundToInt()
-        measurable.measure(
-          Constraints.fixed(
-            width = widthPx.coerceAtLeast(0),
-            height = heightPx.coerceAtLeast(0),
-          ),
-        )
+        if (index < visibleWidgets.size) {
+          val widget = visibleWidgets[index]
+          val widthPx = (widget.size.widthUnits * gridUnitPx).roundToInt()
+          val heightPx = (widget.size.heightUnits * gridUnitPx).roundToInt()
+          measurable.measure(
+            Constraints.fixed(
+              width = widthPx.coerceAtLeast(0),
+              height = heightPx.coerceAtLeast(0),
+            ),
+          )
+        } else if (hasFocusToolbar && index == visibleWidgets.size) {
+          // Focus toolbar: measure with wrap content
+          measurable.measure(Constraints())
+        } else {
+          return@Layout layout(0, 0) {}
+        }
       }
 
     val layoutWidth = (viewportCols * gridUnitPx).roundToInt().coerceAtLeast(constraints.minWidth)
@@ -368,6 +434,25 @@ public fun DashboardGrid(
             x = x,
             y = y,
             zIndex = widget.zIndex.toFloat(),
+          )
+        }
+      }
+
+      // Place focus toolbar above the focused widget at highest z-index
+      if (hasFocusToolbar && placeables.size > visibleWidgets.size) {
+        val focusedWidget = visibleWidgets.find { it.instanceId == editState.focusedWidgetId }
+        if (focusedWidget != null) {
+          val toolbarPlaceable = placeables[visibleWidgets.size]
+          val widgetX = (focusedWidget.position.col * gridUnitPx).roundToInt()
+          val widgetY = (focusedWidget.position.row * gridUnitPx).roundToInt()
+          // Center toolbar above widget, offset by toolbar height + 8dp gap
+          val widgetWidthPx = (focusedWidget.size.widthUnits * gridUnitPx).roundToInt()
+          val toolbarX = widgetX + (widgetWidthPx - toolbarPlaceable.width) / 2
+          val toolbarY = widgetY - toolbarPlaceable.height - toolbarGapPx
+          toolbarPlaceable.placeRelative(
+            x = toolbarX.coerceAtLeast(0),
+            y = toolbarY.coerceAtLeast(0),
+            zIndex = Float.MAX_VALUE, // Above all widgets
           )
         }
       }
