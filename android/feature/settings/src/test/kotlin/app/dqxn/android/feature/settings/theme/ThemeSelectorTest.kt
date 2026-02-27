@@ -6,16 +6,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import com.google.common.truth.Truth.assertThat
+import java.io.File
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -45,14 +45,18 @@ class ThemeSelectorTest {
   private val freeEntitlementManager =
     object : EntitlementManager {
       override fun hasEntitlement(id: String): Boolean = true
+
       override fun getActiveEntitlements(): Set<String> = setOf("free", "themes")
+
       override val entitlementChanges: Flow<Set<String>> = emptyFlow()
     }
 
   private val noThemesEntitlementManager =
     object : EntitlementManager {
       override fun hasEntitlement(id: String): Boolean = id != "themes"
+
       override fun getActiveEntitlements(): Set<String> = setOf("free")
+
       override val entitlementChanges: Flow<Set<String>> = emptyFlow()
     }
 
@@ -72,50 +76,15 @@ class ThemeSelectorTest {
     assertThat(sorted[4].themeId).isEqualTo("aurora")
   }
 
-  // --- Preview timeout tests ---
+  // --- Star icon tests ---
 
   @Test
-  fun `preview timeout clears preview after 60s`() {
-    var clearPreviewCalled = false
-    var toastMessage: String? = null
-
-    composeTestRule.mainClock.autoAdvance = false
-
-    composeTestRule.setContent {
-      CompositionLocalProvider(LocalDashboardTheme provides containerTheme) {
-        ThemeSelector(
-          allThemes = persistentListOf(freeTheme1),
-          previewTheme = freeTheme1,
-          customThemeCount = 0,
-          entitlementManager = freeEntitlementManager,
-          onPreviewTheme = {},
-          onApplyTheme = {},
-          onClearPreview = { clearPreviewCalled = true },
-          onCloneToCustom = {},
-          onOpenStudio = {},
-          onDeleteCustom = {},
-          onShowToast = { toastMessage = it },
-          onClose = {},
-        )
-      }
-    }
-
-    // Advance past the 60s timeout
-    composeTestRule.mainClock.advanceTimeBy(PREVIEW_TIMEOUT_MS + 100)
-    composeTestRule.waitForIdle()
-
-    assertThat(clearPreviewCalled).isTrue()
-    assertThat(toastMessage).isEqualTo("Preview timed out")
-  }
-
-  // --- Lock icon tests ---
-
-  @Test
-  fun `lock icon shown on gated themes`() {
+  fun `star icon shown on gated themes`() {
     composeTestRule.setContent {
       CompositionLocalProvider(LocalDashboardTheme provides containerTheme) {
         ThemeSelector(
           allThemes = persistentListOf(premiumTheme1),
+          isDark = true,
           previewTheme = null,
           customThemeCount = 0,
           entitlementManager = noThemesEntitlementManager,
@@ -125,15 +94,14 @@ class ThemeSelectorTest {
           onCloneToCustom = {},
           onOpenStudio = {},
           onDeleteCustom = {},
+          onCreateNewTheme = {},
           onShowToast = {},
           onClose = {},
         )
       }
     }
 
-    composeTestRule
-      .onNodeWithTag("theme_lock_neon", useUnmergedTree = true)
-      .assertExists()
+    composeTestRule.onNodeWithTag("theme_star_neon", useUnmergedTree = true).assertExists()
   }
 
   // --- Clone tests ---
@@ -146,6 +114,7 @@ class ThemeSelectorTest {
       CompositionLocalProvider(LocalDashboardTheme provides containerTheme) {
         ThemeSelector(
           allThemes = persistentListOf(freeTheme1),
+          isDark = true,
           previewTheme = null,
           customThemeCount = 0,
           entitlementManager = freeEntitlementManager,
@@ -155,6 +124,7 @@ class ThemeSelectorTest {
           onCloneToCustom = { clonedTheme = it },
           onOpenStudio = {},
           onDeleteCustom = {},
+          onCreateNewTheme = {},
           onShowToast = {},
           onClose = {},
         )
@@ -183,6 +153,7 @@ class ThemeSelectorTest {
         if (showSelector) {
           ThemeSelector(
             allThemes = persistentListOf(freeTheme1),
+            isDark = true,
             previewTheme = null,
             customThemeCount = 0,
             entitlementManager = freeEntitlementManager,
@@ -192,6 +163,7 @@ class ThemeSelectorTest {
             onCloneToCustom = {},
             onOpenStudio = {},
             onDeleteCustom = {},
+            onCreateNewTheme = {},
             onShowToast = {},
             onClose = {},
           )
@@ -219,6 +191,7 @@ class ThemeSelectorTest {
       CompositionLocalProvider(LocalDashboardTheme provides containerTheme) {
         ThemeSelector(
           allThemes = persistentListOf(premiumTheme1),
+          isDark = true,
           previewTheme = null,
           customThemeCount = 0,
           entitlementManager = noThemesEntitlementManager,
@@ -228,6 +201,7 @@ class ThemeSelectorTest {
           onCloneToCustom = {},
           onOpenStudio = {},
           onDeleteCustom = {},
+          onCreateNewTheme = {},
           onShowToast = {},
           onClose = {},
         )
@@ -254,7 +228,145 @@ class ThemeSelectorTest {
     assertThat(previewedTheme!!.themeId).isEqualTo("neon")
   }
 
+  // --- Source verification tests ---
+
+  @Test
+  fun `3-column grid layout verified in source`() {
+    val content = readThemeSelectorSource()
+    assertThat(content).contains("GridCells.Fixed(3)")
+    // Must not use any other column count
+    assertThat(content).doesNotContain("GridCells.Fixed(4)")
+    assertThat(content).doesNotContain("GridCells.Fixed(2)")
+  }
+
+  @Test
+  fun `horizontal pager exists with 2 pages`() {
+    val content = readThemeSelectorSource()
+    assertThat(content).contains("HorizontalPager")
+    assertThat(content).contains("rememberPagerState")
+  }
+
+  @Test
+  fun `no preview timeout in source`() {
+    val content = readThemeSelectorSource()
+    assertThat(content).doesNotContain("PREVIEW_TIMEOUT_MS")
+    assertThat(content).doesNotContain("Preview timed out")
+  }
+
+  @Test
+  fun `selection border uses highlightColor not accentColor`() {
+    val content = readThemeSelectorSource()
+    assertThat(content).contains("highlightColor")
+    // ThemeCard border must use highlightColor param
+    assertThat(content).contains("if (isSelected) highlightColor")
+  }
+
+  @Test
+  fun `theme cards use aspect ratio 2f`() {
+    val content = readThemeSelectorSource()
+    assertThat(content).contains("aspectRatio(2f)")
+    assertThat(content).doesNotContain("aspectRatio(1.5f)")
+  }
+
+  // --- Compose UI tests ---
+
+  @Test
+  fun `theme cards show color dots`() {
+    composeTestRule.setContent {
+      CompositionLocalProvider(LocalDashboardTheme provides containerTheme) {
+        ThemeSelector(
+          allThemes = persistentListOf(freeTheme1),
+          isDark = true,
+          previewTheme = null,
+          customThemeCount = 0,
+          entitlementManager = freeEntitlementManager,
+          onPreviewTheme = {},
+          onApplyTheme = {},
+          onClearPreview = {},
+          onCloneToCustom = {},
+          onOpenStudio = {},
+          onDeleteCustom = {},
+          onCreateNewTheme = {},
+          onShowToast = {},
+          onClose = {},
+        )
+      }
+    }
+
+    composeTestRule.onNodeWithTag("theme_dots_minimalist", useUnmergedTree = true).assertExists()
+  }
+
+  @Test
+  fun `themes filtered by isDark parameter`() {
+    val lightTheme = createTheme("light-test", "Light Test", isDark = false)
+    val darkTheme = createTheme("dark-test", "Dark Test", isDark = true)
+    val mixed = persistentListOf(lightTheme, darkTheme)
+
+    composeTestRule.setContent {
+      CompositionLocalProvider(LocalDashboardTheme provides containerTheme) {
+        ThemeSelector(
+          allThemes = mixed,
+          isDark = false,
+          previewTheme = null,
+          customThemeCount = 0,
+          entitlementManager = freeEntitlementManager,
+          onPreviewTheme = {},
+          onApplyTheme = {},
+          onClearPreview = {},
+          onCloneToCustom = {},
+          onOpenStudio = {},
+          onDeleteCustom = {},
+          onCreateNewTheme = {},
+          onShowToast = {},
+          onClose = {},
+        )
+      }
+    }
+
+    // Light theme visible, dark theme not
+    composeTestRule.onNodeWithTag("theme_card_light-test", useUnmergedTree = true).assertExists()
+    composeTestRule
+      .onNodeWithTag("theme_card_dark-test", useUnmergedTree = true)
+      .assertDoesNotExist()
+  }
+
+  @Test
+  fun `page icons exist`() {
+    composeTestRule.setContent {
+      CompositionLocalProvider(LocalDashboardTheme provides containerTheme) {
+        ThemeSelector(
+          allThemes = persistentListOf(freeTheme1),
+          isDark = true,
+          previewTheme = null,
+          customThemeCount = 0,
+          entitlementManager = freeEntitlementManager,
+          onPreviewTheme = {},
+          onApplyTheme = {},
+          onClearPreview = {},
+          onCloneToCustom = {},
+          onOpenStudio = {},
+          onDeleteCustom = {},
+          onCreateNewTheme = {},
+          onShowToast = {},
+          onClose = {},
+        )
+      }
+    }
+
+    composeTestRule.onNodeWithTag("theme_page_icon_builtin", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithTag("theme_page_icon_custom", useUnmergedTree = true).assertExists()
+  }
+
   // --- Helpers ---
+
+  private fun readThemeSelectorSource(): String {
+    val file =
+      File(
+        System.getProperty("user.dir"),
+        "src/main/kotlin/app/dqxn/android/feature/settings/theme/ThemeSelector.kt",
+      )
+    return file.readText()
+  }
 
   private fun createTheme(
     themeId: String,
@@ -269,6 +381,7 @@ class ThemeSelectorTest {
       primaryTextColor = Color.White,
       secondaryTextColor = Color.Gray,
       accentColor = Color.Cyan,
+      highlightColor = Color.Yellow,
       widgetBorderColor = Color.Red,
       backgroundBrush = Brush.verticalGradient(listOf(Color.Black, Color.DarkGray)),
       widgetBackgroundBrush = Brush.verticalGradient(listOf(Color.DarkGray, Color.Black)),
