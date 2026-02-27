@@ -1,5 +1,6 @@
 package app.dqxn.android.feature.dashboard.grid
 
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import app.dqxn.android.data.layout.DashboardWidgetInstance
@@ -10,10 +11,14 @@ import app.dqxn.android.feature.dashboard.coordinator.EditState
 import app.dqxn.android.feature.dashboard.coordinator.WidgetBindingCoordinator
 import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
+import app.dqxn.android.sdk.contracts.status.WidgetStatusCache
 import app.dqxn.android.sdk.contracts.widget.BackgroundStyle
+import app.dqxn.android.sdk.contracts.widget.WidgetData
 import app.dqxn.android.sdk.contracts.widget.WidgetStyle
+import app.dqxn.android.feature.dashboard.gesture.DashboardHaptics
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,8 +72,24 @@ class CornerBracketTest {
     every { editModeCoordinator.animatingWidgets } returns MutableStateFlow(emptySet())
 
     val widgetBindingCoordinator = mockk<WidgetBindingCoordinator>(relaxed = true)
+    every { widgetBindingCoordinator.widgetData(any()) } returns MutableStateFlow(WidgetData.Empty)
+    every { widgetBindingCoordinator.widgetStatus(any()) } returns
+      MutableStateFlow(WidgetStatusCache.EMPTY)
     val widgetRegistry = mockk<WidgetRegistry>(relaxed = true)
     return Triple(editModeCoordinator, widgetBindingCoordinator, widgetRegistry)
+  }
+
+  private fun createGestureHandlers(
+    editModeCoordinator: EditModeCoordinator,
+  ): Pair<WidgetGestureHandler, BlankSpaceGestureHandler> {
+    val haptics = mockk<DashboardHaptics>(relaxed = true)
+    val gridPlacementEngine = mockk<GridPlacementEngine>(relaxed = true)
+    // Real instances — MockK cannot intercept member extension functions (widgetGestures,
+    // blankSpaceGestures). Real instances return valid Modifier chains via pointerInput which
+    // Robolectric handles correctly.
+    val widgetGestureHandler = WidgetGestureHandler(editModeCoordinator, gridPlacementEngine, haptics)
+    val blankSpaceGestureHandler = BlankSpaceGestureHandler(editModeCoordinator)
+    return widgetGestureHandler to blankSpaceGestureHandler
   }
 
   @Test
@@ -76,8 +97,7 @@ class CornerBracketTest {
     val (editModeCoordinator, widgetBindingCoordinator, widgetRegistry) = createMocks(true)
     val reducedMotionHelper = mockk<ReducedMotionHelper>(relaxed = true)
     every { reducedMotionHelper.isReducedMotion } returns false
-    val widgetGestureHandler = mockk<WidgetGestureHandler>(relaxed = true)
-    val blankSpaceGestureHandler = mockk<BlankSpaceGestureHandler>(relaxed = true)
+    val (widgetGestureHandler, blankSpaceGestureHandler) = createGestureHandlers(editModeCoordinator)
 
     composeTestRule.setContent {
       DashboardGrid(
@@ -106,8 +126,7 @@ class CornerBracketTest {
     val (editModeCoordinator, widgetBindingCoordinator, widgetRegistry) = createMocks(false)
     val reducedMotionHelper = mockk<ReducedMotionHelper>(relaxed = true)
     every { reducedMotionHelper.isReducedMotion } returns false
-    val widgetGestureHandler = mockk<WidgetGestureHandler>(relaxed = true)
-    val blankSpaceGestureHandler = mockk<BlankSpaceGestureHandler>(relaxed = true)
+    val (widgetGestureHandler, blankSpaceGestureHandler) = createGestureHandlers(editModeCoordinator)
 
     composeTestRule.setContent {
       DashboardGrid(
@@ -136,8 +155,7 @@ class CornerBracketTest {
     val (editModeCoordinator, widgetBindingCoordinator, widgetRegistry) = createMocks(false)
     val reducedMotionHelper = mockk<ReducedMotionHelper>(relaxed = true)
     every { reducedMotionHelper.isReducedMotion } returns false
-    val widgetGestureHandler = mockk<WidgetGestureHandler>(relaxed = true)
-    val blankSpaceGestureHandler = mockk<BlankSpaceGestureHandler>(relaxed = true)
+    val (widgetGestureHandler, blankSpaceGestureHandler) = createGestureHandlers(editModeCoordinator)
 
     composeTestRule.setContent {
       DashboardGrid(
