@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -39,13 +41,14 @@ public enum class SwatchType(public val displayName: String) {
 }
 
 /**
- * Color swatch circles for selecting which theme property to edit.
+ * Color swatch containers for selecting which theme property to edit.
  *
- * Selected swatch receives an accent border. Each swatch shows the current color
- * from the provided [theme] definition.
+ * Each swatch is a 48dp rounded-square container (8dp corner radius) with a 36dp inner color
+ * circle. Selected swatch receives a [highlightColor][DashboardThemeDefinition.highlightColor]
+ * border.
  *
- * Uses [Row] with horizontal scroll instead of [LazyRow] so all 7 swatches are
- * always composed (required for semantics test tag assertions).
+ * Uses [Row] with horizontal scroll instead of [LazyRow] so all 7 swatches are always composed
+ * (required for semantics test tag assertions).
  */
 @Composable
 public fun ThemeSwatchRow(
@@ -67,18 +70,33 @@ public fun ThemeSwatchRow(
     types.forEach { swatchType ->
       val isSelected = swatchType == selected
       val swatchColor = swatchType.resolveColor(theme)
-      val borderColor = if (isSelected) theme.accentColor else Color.Transparent
+      val borderColor = if (isSelected) theme.highlightColor else Color.Transparent
+      val containerShape = RoundedCornerShape(8.dp)
 
       Box(
         modifier =
-          Modifier.size(40.dp)
-            .clip(CircleShape)
-            .background(swatchColor, CircleShape)
-            .border(2.dp, borderColor, CircleShape)
+          Modifier.size(48.dp)
+            .clip(containerShape)
+            .background(
+              color =
+                if (isSelected) theme.highlightColor.copy(alpha = 0.15f)
+                else Color.Transparent,
+              shape = containerShape,
+            )
+            .border(2.dp, borderColor, containerShape)
             .clickable { onSelected(swatchType) }
             .semantics { contentDescription = swatchType.displayName }
             .testTag("swatch_${swatchType.name}"),
-      )
+        contentAlignment = Alignment.Center,
+      ) {
+        // 36dp inner color circle
+        Box(
+          modifier =
+            Modifier.size(36.dp)
+              .clip(CircleShape)
+              .background(swatchColor, CircleShape),
+        )
+      }
     }
   }
 }

@@ -1,10 +1,19 @@
 package app.dqxn.android.feature.settings.theme
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -17,11 +26,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.dqxn.android.core.design.token.DashboardSpacing
 import app.dqxn.android.core.design.token.DashboardTypography
+import app.dqxn.android.core.design.token.TextEmphasis
 import app.dqxn.android.feature.settings.overlay.OverlayScaffold
 import app.dqxn.android.feature.settings.overlay.OverlayType
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
@@ -32,11 +46,11 @@ import kotlinx.coroutines.flow.drop
 /**
  * Custom theme CRUD composable with auto-save.
  *
- * Uses [ThemeStudioStateHolder] for decomposed state management.
- * Theme ID stability via remembered ID. Auto-saves via [LaunchedEffect] on state changes.
+ * Uses [ThemeStudioStateHolder] for decomposed state management. Theme ID stability via remembered
+ * ID. Auto-saves via [LaunchedEffect] on state changes.
  *
- * When [customThemeCount] >= [MAX_CUSTOM_THEMES] (12), shows an info banner
- * and disables the "New Theme" action.
+ * When [customThemeCount] >= [MAX_CUSTOM_THEMES] (12), shows an info banner and disables the "New
+ * Theme" action.
  *
  * Delete-while-previewing: calls [onClearPreview] BEFORE [onDelete].
  */
@@ -54,9 +68,8 @@ public fun ThemeStudio(
   val stateHolder = remember(existingTheme) { ThemeStudioStateHolder(existingTheme) }
 
   // Stable theme ID: remember existing or generate once
-  val stableThemeId = remember(existingTheme) {
-    existingTheme?.themeId ?: "custom_${System.currentTimeMillis()}"
-  }
+  val stableThemeId =
+    remember(existingTheme) { existingTheme?.themeId ?: "custom_${System.currentTimeMillis()}" }
 
   // -- Swatch selection state --
   var selectedSwatch by remember { mutableStateOf(SwatchType.PRIMARY_TEXT) }
@@ -75,7 +88,7 @@ public fun ThemeStudio(
   val atMaxThemes = customThemeCount >= MAX_CUSTOM_THEMES
 
   OverlayScaffold(
-    title = if (existingTheme != null) "Edit Theme" else "New Theme",
+    title = "Theme Studio",
     overlayType = OverlayType.Preview,
     onClose = onClose,
     modifier = modifier.testTag("theme_studio"),
@@ -90,11 +103,75 @@ public fun ThemeStudio(
           text = "Maximum of $MAX_CUSTOM_THEMES custom themes reached.",
           style = DashboardTypography.description,
           color = theme.warningColor,
-          modifier =
-            Modifier.fillMaxWidth()
-              .padding(8.dp)
-              .testTag("max_themes_banner"),
+          modifier = Modifier.fillMaxWidth().padding(8.dp).testTag("max_themes_banner"),
         )
+      }
+
+      // -- Custom header: editable title + undo/delete buttons --
+      Row(
+        modifier = Modifier.fillMaxWidth().testTag("theme_studio_header"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(DashboardSpacing.SpaceXS),
+      ) {
+        // Editable theme name
+        BasicTextField(
+          value = stateHolder.displayName,
+          onValueChange = { stateHolder.displayName = it },
+          textStyle = DashboardTypography.itemTitle.copy(color = theme.primaryTextColor),
+          singleLine = true,
+          cursorBrush = SolidColor(theme.accentColor),
+          modifier =
+            Modifier
+              .weight(1f)
+              .testTag("editable_title"),
+        )
+
+        // Undo button -- alpha-dimmed when not dirty
+        Box(
+          modifier =
+            Modifier
+              .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+              .alpha(if (stateHolder.isDirty) 1f else TextEmphasis.Disabled)
+              .testTag("undo_button")
+              .semantics { role = Role.Button }
+              .clickable(enabled = stateHolder.isDirty) { stateHolder.reset() },
+          contentAlignment = Alignment.Center,
+        ) {
+          Icon(
+            imageVector = Icons.AutoMirrored.Filled.Undo,
+            contentDescription = "Undo changes",
+            tint =
+              theme.primaryTextColor.copy(
+                alpha =
+                  if (stateHolder.isDirty) TextEmphasis.High
+                  else TextEmphasis.Disabled,
+              ),
+            modifier = Modifier.size(20.dp),
+          )
+        }
+
+        // Delete button -- hidden for new themes
+        if (existingTheme != null) {
+          Box(
+            modifier =
+              Modifier
+                .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                .testTag("delete_button")
+                .semantics { role = Role.Button }
+                .clickable {
+                  onClearPreview()
+                  onDelete(stableThemeId)
+                },
+            contentAlignment = Alignment.Center,
+          ) {
+            Icon(
+              imageVector = Icons.Filled.Delete,
+              contentDescription = "Delete theme",
+              tint = theme.warningColor,
+              modifier = Modifier.size(20.dp),
+            )
+          }
+        }
       }
 
       // -- Swatch row (7 color properties) --
@@ -132,24 +209,39 @@ public fun ThemeStudio(
             color = stateHolder.widgetBorderColor,
             onColorChanged = { stateHolder.widgetBorderColor = it },
           )
-        SwatchType.BACKGROUND, SwatchType.WIDGET_BACKGROUND -> {
-          // Brush-based properties: show gradient editor
-          // (Gradient editing is future enhancement via GradientStopRow + GradientTypeSelector)
-          Text(
-            text = "Gradient editing for ${selectedSwatch.displayName}",
-            style = DashboardTypography.description,
-            color = theme.secondaryTextColor,
-            modifier = Modifier.padding(8.dp),
-          )
+        SwatchType.BACKGROUND -> {
+          Column(verticalArrangement = Arrangement.spacedBy(DashboardSpacing.ItemGap)) {
+            GradientTypeSelector(
+              selected = stateHolder.backgroundGradientType,
+              onSelected = { stateHolder.backgroundGradientType = it },
+              modifier = Modifier.testTag("gradient_type_background"),
+            )
+            GradientStopRow(
+              stops = stateHolder.backgroundStops,
+              onStopsChanged = { stateHolder.backgroundStops = it },
+              modifier = Modifier.testTag("gradient_stops_background"),
+            )
+          }
+        }
+        SwatchType.WIDGET_BACKGROUND -> {
+          Column(verticalArrangement = Arrangement.spacedBy(DashboardSpacing.ItemGap)) {
+            GradientTypeSelector(
+              selected = stateHolder.widgetBackgroundGradientType,
+              onSelected = { stateHolder.widgetBackgroundGradientType = it },
+              modifier = Modifier.testTag("gradient_type_widget_background"),
+            )
+            GradientStopRow(
+              stops = stateHolder.widgetBackgroundStops,
+              onStopsChanged = { stateHolder.widgetBackgroundStops = it },
+              modifier = Modifier.testTag("gradient_stops_widget_background"),
+            )
+          }
         }
       }
 
       // -- isDark toggle --
       Row(
-        modifier =
-          Modifier.fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .testTag("is_dark_toggle"),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).testTag("is_dark_toggle"),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
       ) {
@@ -176,5 +268,4 @@ public fun ThemeStudio(
 private fun buildPreviewTheme(
   stateHolder: ThemeStudioStateHolder,
   themeId: String,
-): DashboardThemeDefinition =
-  stateHolder.buildCustomTheme(themeId)
+): DashboardThemeDefinition = stateHolder.buildCustomTheme(themeId)
