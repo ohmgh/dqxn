@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_plan: 03 complete, next plan pending
-status: in-progress
-stopped_at: Completed 14-03-PLAN.md (corner brackets + grid overlay)
-last_updated: "2026-02-27T06:36:17.878Z"
+status: unknown
+stopped_at: Completed 14-04-PLAN.md (themed status overlays with tap routing)
+last_updated: "2026-02-27T06:37:27.808Z"
 progress:
   total_phases: 15
   completed_phases: 14
   total_plans: 110
-  completed_plans: 103
+  completed_plans: 104
 ---
 
 # Project State
@@ -21,8 +21,8 @@ progress:
 - **Current Plan:** 03 complete, next plan pending
 - **Milestone:** V1 Launch
 - **Next action:** Continue Phase 14 plans (10 remaining)
-- **Last session:** 2026-02-27T06:34:39Z
-- **Stopped at:** Completed 14-03-PLAN.md (corner brackets + grid overlay)
+- **Last session:** 2026-02-27T06:37:27.805Z
+- **Stopped at:** Completed 14-13-PLAN.md (DesignTokenWiringTest in settings, dashboard, onboarding)
 
 ## Progress
 
@@ -157,6 +157,9 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 14]: Removed android:windowSplashScreenBehavior from v31 theme -- attribute requires API 33, @integer/icon_preferred not in compat library
 - [Phase 14]: Test file paths relative to module projectDir (user.dir = android/app/) not root android/ -- Gradle test worker user.dir is module directory
 - [Phase 14]: Canvas-drawn brackets with stroke width pulse (3-6dp) over scaleX/scaleY animation -- scale caused entire widget content to zoom
+- [Phase 14]: assertWithMessage() over deprecated .named() for Truth assertions in source-scanning tests
+- [Phase 14]: JUnit5 @Test over @RunWith(RobolectricTestRunner) for pure file I/O source-scanning tests
+- [Phase 14]: File(user.dir, 'src/main/kotlin') for module-root-relative source scanning -- Gradle sets user.dir to module root, not android/
 
 ### Phase 13 Decisions
 
@@ -447,6 +450,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 14 P05 | 51min | 2 tasks | 2 files |
 | Phase 14 P01 | 52min | 2 tasks | 4 files |
 | Phase 14 P03 | 57min | 2 tasks | 2 files |
+| Phase 14 P13 | 58min | 2 tasks | 3 files |
 
 ## Context
 
