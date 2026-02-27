@@ -3,7 +3,6 @@ package app.dqxn.android.feature.dashboard.layer
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.navigation.compose.rememberNavController
@@ -11,7 +10,7 @@ import app.dqxn.android.data.device.PairedDeviceStore
 import app.dqxn.android.feature.dashboard.coordinator.ThemeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.ThemeState
 import app.dqxn.android.feature.settings.main.MainSettingsViewModel
-import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
+import app.dqxn.android.sdk.contracts.setup.SetupEvaluator
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
@@ -56,42 +55,46 @@ class OverlayNavHostTest {
       widgetBackgroundBrush = Brush.verticalGradient(listOf(Color.DarkGray, Color.Black)),
     )
 
-  private val mockWidgetRegistry = mockk<WidgetRegistry>(relaxed = true).also {
-    every { it.getAll() } returns emptySet()
-    every { it.findByTypeId(any()) } returns null
-  }
+  private val mockWidgetRegistry =
+    mockk<WidgetRegistry>(relaxed = true).also {
+      every { it.getAll() } returns emptySet()
+      every { it.findByTypeId(any()) } returns null
+    }
 
-  private val mockDataProviderRegistry = mockk<DataProviderRegistry>(relaxed = true).also {
-    every { it.getAll() } returns emptySet()
-  }
+  private val mockDataProviderRegistry =
+    mockk<DataProviderRegistry>(relaxed = true).also { every { it.getAll() } returns emptySet() }
 
   private val mockProviderSettingsStore = mockk<ProviderSettingsStore>(relaxed = true)
 
-  private val mockEntitlementManager = mockk<EntitlementManager>(relaxed = true).also {
-    every { it.hasEntitlement(any()) } returns true
-  }
+  private val mockEntitlementManager =
+    mockk<EntitlementManager>(relaxed = true).also {
+      every { it.hasEntitlement(any()) } returns true
+    }
 
-  private val mockSetupEvaluator = mockk<SetupEvaluatorImpl>(relaxed = true)
+  private val mockSetupEvaluator = mockk<SetupEvaluator>(relaxed = true)
 
   private val mockPairedDeviceStore = mockk<PairedDeviceStore>(relaxed = true)
 
-  private val mockMainSettingsViewModel = mockk<MainSettingsViewModel>(relaxed = true).also {
-    every { it.analyticsConsent } returns MutableStateFlow(false)
-    every { it.showStatusBar } returns MutableStateFlow(false)
-    every { it.keepScreenOn } returns MutableStateFlow(true)
-  }
+  private val mockMainSettingsViewModel =
+    mockk<MainSettingsViewModel>(relaxed = true).also {
+      every { it.analyticsConsent } returns MutableStateFlow(false)
+      every { it.showStatusBar } returns MutableStateFlow(false)
+      every { it.keepScreenOn } returns MutableStateFlow(true)
+    }
 
-  private val mockThemeCoordinator = mockk<ThemeCoordinator>(relaxed = true).also {
-    every { it.themeState } returns MutableStateFlow(
-      ThemeState(
-        currentTheme = testTheme,
-        darkTheme = testTheme,
-        lightTheme = testTheme,
-        autoSwitchMode = app.dqxn.android.sdk.contracts.theme.AutoSwitchMode.SYSTEM,
-        previewTheme = null,
-      )
-    )
-  }
+  private val mockThemeCoordinator =
+    mockk<ThemeCoordinator>(relaxed = true).also {
+      every { it.themeState } returns
+        MutableStateFlow(
+          ThemeState(
+            currentTheme = testTheme,
+            darkTheme = testTheme,
+            lightTheme = testTheme,
+            autoSwitchMode = app.dqxn.android.sdk.contracts.theme.AutoSwitchMode.SYSTEM,
+            previewTheme = null,
+          )
+        )
+    }
 
   // --- Empty route renders ---
 
@@ -152,9 +155,7 @@ class OverlayNavHostTest {
       }
     }
 
-    composeTestRule.runOnUiThread {
-      navController!!.navigate(SettingsRoute)
-    }
+    composeTestRule.runOnUiThread { navController!!.navigate(SettingsRoute) }
 
     composeTestRule.waitForIdle()
 
@@ -189,9 +190,7 @@ class OverlayNavHostTest {
       }
     }
 
-    composeTestRule.runOnUiThread {
-      navController!!.navigate(WidgetPickerRoute)
-    }
+    composeTestRule.runOnUiThread { navController!!.navigate(WidgetPickerRoute) }
 
     composeTestRule.waitForIdle()
 
@@ -227,18 +226,14 @@ class OverlayNavHostTest {
     }
 
     // Navigate to Settings
-    composeTestRule.runOnUiThread {
-      navController!!.navigate(SettingsRoute)
-    }
+    composeTestRule.runOnUiThread { navController!!.navigate(SettingsRoute) }
     composeTestRule.waitForIdle()
 
     // Verify settings overlay present
     composeTestRule.onNodeWithTag("overlay_scaffold_hub").assertExists()
 
     // Navigate back
-    composeTestRule.runOnUiThread {
-      navController!!.popBackStack()
-    }
+    composeTestRule.runOnUiThread { navController!!.popBackStack() }
     composeTestRule.waitForIdle()
 
     // Verify back at EmptyRoute -- no overlay
@@ -250,12 +245,13 @@ class OverlayNavHostTest {
 
   @Test
   fun `widget settings preserved in back stack when setup pushed on top`() {
-    val testRenderer = mockk<WidgetRenderer>(relaxed = true).also {
-      every { it.typeId } returns "essentials:clock"
-      every { it.displayName } returns "Clock"
-      every { it.description } returns "Digital clock"
-      every { it.settingsSchema } returns emptyList()
-    }
+    val testRenderer =
+      mockk<WidgetRenderer>(relaxed = true).also {
+        every { it.typeId } returns "essentials:clock"
+        every { it.displayName } returns "Clock"
+        every { it.description } returns "Digital clock"
+        every { it.settingsSchema } returns emptyList()
+      }
     every { mockWidgetRegistry.findByTypeId("essentials:clock") } returns testRenderer
 
     var navController: androidx.navigation.NavHostController? = null
@@ -298,15 +294,14 @@ class OverlayNavHostTest {
 
     // Verify WidgetSettings is still in the back stack
     val backStack = navController!!.currentBackStack.value
-    val hasWidgetSettings = backStack.any { entry ->
-      entry.destination.route?.contains(WidgetSettingsRoute::class.qualifiedName!!) == true
-    }
+    val hasWidgetSettings =
+      backStack.any { entry ->
+        entry.destination.route?.contains(WidgetSettingsRoute::class.qualifiedName!!) == true
+      }
     assertThat(hasWidgetSettings).isTrue()
 
     // Pop Setup -- should return to WidgetSettings
-    composeTestRule.runOnUiThread {
-      navController!!.popBackStack()
-    }
+    composeTestRule.runOnUiThread { navController!!.popBackStack() }
     composeTestRule.waitForIdle()
 
     // WidgetSettings still visible

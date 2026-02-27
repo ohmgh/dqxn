@@ -26,23 +26,25 @@ class GpsSpeedProviderTest : DataProviderContractTest() {
 
   // Eagerly initialize the default mock that auto-fires a location on requestLocationUpdates.
   // This must be initialized before the parent @BeforeEach calls createProvider().
-  private val locationManager: LocationManager = mockk<LocationManager>(relaxed = true).also { mgr ->
-    every { mgr.isProviderEnabled(LocationManager.GPS_PROVIDER) } returns true
-    every {
-      mgr.requestLocationUpdates(
-        any<String>(),
-        any<Long>(),
-        any<Float>(),
-        capture(listenerSlot),
-        any(),
-      )
-    } answers {
-      val listener = listenerSlot.captured
-      listener.onLocationChanged(
-        createLocation(speed = 10.0f, hasSpeed = true, speedAccuracy = 1.0f)
-      )
+  private val locationManager: LocationManager =
+    mockk<LocationManager>(relaxed = true).also { mgr ->
+      every { mgr.isProviderEnabled(LocationManager.GPS_PROVIDER) } returns true
+      every {
+        mgr.requestLocationUpdates(
+          any<String>(),
+          any<Long>(),
+          any<Float>(),
+          capture(listenerSlot),
+          any(),
+        )
+      } answers
+        {
+          val listener = listenerSlot.captured
+          listener.onLocationChanged(
+            createLocation(speed = 10.0f, hasSpeed = true, speedAccuracy = 1.0f)
+          )
+        }
     }
-  }
 
   override fun createProvider(): DataProvider<*> = GpsSpeedProvider(locationManager)
 
@@ -56,13 +58,18 @@ class GpsSpeedProviderTest : DataProviderContractTest() {
     every { customManager.isProviderEnabled(LocationManager.GPS_PROVIDER) } returns true
     every {
       customManager.requestLocationUpdates(
-        any<String>(), any<Long>(), any<Float>(), capture(customSlot), any(),
+        any<String>(),
+        any<Long>(),
+        any<Float>(),
+        capture(customSlot),
+        any(),
       )
-    } answers {
-      customSlot.captured.onLocationChanged(
-        createLocation(speed = 25.5f, hasSpeed = true, speedAccuracy = 1.2f)
-      )
-    }
+    } answers
+      {
+        customSlot.captured.onLocationChanged(
+          createLocation(speed = 25.5f, hasSpeed = true, speedAccuracy = 1.2f)
+        )
+      }
 
     val provider = GpsSpeedProvider(customManager)
     val snapshot = provider.provideState().first()
@@ -81,20 +88,23 @@ class GpsSpeedProviderTest : DataProviderContractTest() {
     every { customManager.isProviderEnabled(LocationManager.GPS_PROVIDER) } returns true
     every {
       customManager.requestLocationUpdates(
-        any<String>(), any<Long>(), any<Float>(), capture(customSlot), any(),
+        any<String>(),
+        any<Long>(),
+        any<Float>(),
+        capture(customSlot),
+        any(),
       )
-    } answers {
-      // Only fire the first location synchronously. Second will be sent manually.
-      customSlot.captured.onLocationChanged(
-        createLocation(lat = 51.5074, lon = -0.1278, time = 1000L, hasSpeed = false)
-      )
-    }
+    } answers
+      {
+        // Only fire the first location synchronously. Second will be sent manually.
+        customSlot.captured.onLocationChanged(
+          createLocation(lat = 51.5074, lon = -0.1278, time = 1000L, hasSpeed = false)
+        )
+      }
 
     val provider = GpsSpeedProvider(customManager)
     val snapshots = mutableListOf<SpeedSnapshot>()
-    val job = launch {
-      provider.provideState().take(2).toList(snapshots)
-    }
+    val job = launch { provider.provideState().take(2).toList(snapshots) }
     advanceUntilIdle()
 
     // Second location -- dispatched after first is consumed
@@ -116,7 +126,10 @@ class GpsSpeedProviderTest : DataProviderContractTest() {
     val provider = GpsSpeedProvider(locationManager)
     val permissions =
       provider.setupSchema.flatMap { page ->
-        page.definitions.filterIsInstance<app.dqxn.android.sdk.contracts.setup.SetupDefinition.RuntimePermission>()
+        page.definitions
+          .filterIsInstance<
+            app.dqxn.android.sdk.contracts.setup.SetupDefinition.RuntimePermission
+          >()
           .flatMap { it.permissions }
       }
     assertThat(permissions).contains(android.Manifest.permission.ACCESS_FINE_LOCATION)
@@ -136,7 +149,13 @@ class GpsSpeedProviderTest : DataProviderContractTest() {
       mockk<LocationManager>(relaxed = true) {
         every { isProviderEnabled(LocationManager.GPS_PROVIDER) } returns true
         every {
-          requestLocationUpdates(any<String>(), any<Long>(), any<Float>(), any<LocationListener>(), any())
+          requestLocationUpdates(
+            any<String>(),
+            any<Long>(),
+            any<Float>(),
+            any<LocationListener>(),
+            any()
+          )
         } throws SecurityException("No permission")
       }
 

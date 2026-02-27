@@ -24,8 +24,8 @@ import app.dqxn.android.core.thermal.ThermalMonitor
  * Displays current thermal level (NORMAL/WARM/DEGRADED/CRITICAL), target FPS from
  * [app.dqxn.android.core.thermal.RenderConfig], glow enabled state, and gradient fallback status.
  *
- * Reads [ThermalMonitor.thermalLevel] and [ThermalMonitor.renderConfig] flows via
- * [collectAsState]. Layer 0 pattern per CLAUDE.md.
+ * Reads [ThermalMonitor.thermalLevel] and [ThermalMonitor.renderConfig] flows via [collectAsState].
+ * Layer 0 pattern per CLAUDE.md.
  */
 @Composable
 internal fun ThermalTrendingOverlay(
@@ -38,11 +38,7 @@ internal fun ThermalTrendingOverlay(
   val levelColor = remember(thermalLevel) { colorForLevel(thermalLevel) }
 
   Column(
-    modifier =
-      modifier
-        .graphicsLayer()
-        .background(OverlayBg)
-        .padding(8.dp),
+    modifier = modifier.graphicsLayer().background(OverlayBg).padding(8.dp),
   ) {
     Text(
       text = "Thermal",
@@ -79,14 +75,16 @@ private fun colorForLevel(level: ThermalLevel): Color =
 
 private val OverlayBg = Color(0xCC1A1A1A)
 
-private val HeaderStyle = TextStyle(
-  color = Color(0xFFEEEEEE),
-  fontSize = 14.sp,
-  fontFamily = FontFamily.Monospace,
-)
+private val HeaderStyle =
+  TextStyle(
+    color = Color(0xFFEEEEEE),
+    fontSize = 14.sp,
+    fontFamily = FontFamily.Monospace,
+  )
 
-private val BodyStyle = TextStyle(
-  color = Color(0xFFCCCCCC),
-  fontSize = 12.sp,
-  fontFamily = FontFamily.Monospace,
-)
+private val BodyStyle =
+  TextStyle(
+    color = Color(0xFFCCCCCC),
+    fontSize = 12.sp,
+    fontFamily = FontFamily.Monospace,
+  )

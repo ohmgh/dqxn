@@ -11,10 +11,10 @@ import org.junit.jupiter.api.Test
 /**
  * Proves the multi-slot [WidgetData] accumulation model used by merge()+scan() binding.
  *
- * The core invariant: each slot update via [WidgetData.withSlot] preserves all existing slots.
- * This means speed data is immediately available to the SpeedometerRenderer without waiting for
- * acceleration or speed limit providers to emit -- the exact behavior merge()+scan() provides
- * over combine() which would block until all sources emit.
+ * The core invariant: each slot update via [WidgetData.withSlot] preserves all existing slots. This
+ * means speed data is immediately available to the SpeedometerRenderer without waiting for
+ * acceleration or speed limit providers to emit -- the exact behavior merge()+scan() provides over
+ * combine() which would block until all sources emit.
  *
  * This is the Phase 8 proof that independent slot arrival works correctly for the
  * SpeedometerRenderer's 3-provider binding.
@@ -23,23 +23,26 @@ class MultiSlotBindingTest {
 
   private val renderer = SpeedometerRenderer()
 
-  private val speedSnapshot = SpeedSnapshot(
-    speedMps = 27.78f, // ~100 km/h
-    accuracy = 1.0f,
-    timestamp = 1000L,
-  )
+  private val speedSnapshot =
+    SpeedSnapshot(
+      speedMps = 27.78f, // ~100 km/h
+      accuracy = 1.0f,
+      timestamp = 1000L,
+    )
 
-  private val accelSnapshot = AccelerationSnapshot(
-    acceleration = 2.5f,
-    lateralAcceleration = 0.3f,
-    timestamp = 2000L,
-  )
+  private val accelSnapshot =
+    AccelerationSnapshot(
+      acceleration = 2.5f,
+      lateralAcceleration = 0.3f,
+      timestamp = 2000L,
+    )
 
-  private val speedLimitSnapshot = SpeedLimitSnapshot(
-    speedLimitKph = 80f,
-    source = "user",
-    timestamp = 3000L,
-  )
+  private val speedLimitSnapshot =
+    SpeedLimitSnapshot(
+      speedLimitKph = 80f,
+      source = "user",
+      timestamp = 3000L,
+    )
 
   @Test
   fun `empty WidgetData has no snapshots`() {
@@ -52,8 +55,7 @@ class MultiSlotBindingTest {
 
   @Test
   fun `speed slot available immediately without acceleration or limit`() {
-    val data = WidgetData.Empty
-      .withSlot(SpeedSnapshot::class, speedSnapshot)
+    val data = WidgetData.Empty.withSlot(SpeedSnapshot::class, speedSnapshot)
 
     assertThat(data.snapshot<SpeedSnapshot>()).isNotNull()
     assertThat(data.snapshot<SpeedSnapshot>()!!.speedMps).isEqualTo(27.78f)
@@ -64,9 +66,9 @@ class MultiSlotBindingTest {
 
   @Test
   fun `adding acceleration preserves existing speed slot`() {
-    val data = WidgetData.Empty
-      .withSlot(SpeedSnapshot::class, speedSnapshot)
-      .withSlot(AccelerationSnapshot::class, accelSnapshot)
+    val data =
+      WidgetData.Empty.withSlot(SpeedSnapshot::class, speedSnapshot)
+        .withSlot(AccelerationSnapshot::class, accelSnapshot)
 
     assertThat(data.snapshot<SpeedSnapshot>()).isNotNull()
     assertThat(data.snapshot<SpeedSnapshot>()!!.speedMps).isEqualTo(27.78f)
@@ -77,10 +79,10 @@ class MultiSlotBindingTest {
 
   @Test
   fun `all three slots populated after progressive accumulation`() {
-    val data = WidgetData.Empty
-      .withSlot(SpeedSnapshot::class, speedSnapshot)
-      .withSlot(AccelerationSnapshot::class, accelSnapshot)
-      .withSlot(SpeedLimitSnapshot::class, speedLimitSnapshot)
+    val data =
+      WidgetData.Empty.withSlot(SpeedSnapshot::class, speedSnapshot)
+        .withSlot(AccelerationSnapshot::class, accelSnapshot)
+        .withSlot(SpeedLimitSnapshot::class, speedLimitSnapshot)
 
     assertThat(data.snapshot<SpeedSnapshot>()).isNotNull()
     assertThat(data.snapshot<AccelerationSnapshot>()).isNotNull()
@@ -90,8 +92,7 @@ class MultiSlotBindingTest {
 
   @Test
   fun `speedometer renders with partial data - speed only, no crash`() {
-    val data = WidgetData.Empty
-      .withSlot(SpeedSnapshot::class, speedSnapshot)
+    val data = WidgetData.Empty.withSlot(SpeedSnapshot::class, speedSnapshot)
 
     val description = renderer.accessibilityDescription(data)
     assertThat(description).contains("100") // ~100 km/h from 27.78 m/s
@@ -100,10 +101,10 @@ class MultiSlotBindingTest {
 
   @Test
   fun `speedometer renders with all slots - shows over limit warning`() {
-    val data = WidgetData.Empty
-      .withSlot(SpeedSnapshot::class, speedSnapshot) // ~100 km/h
-      .withSlot(AccelerationSnapshot::class, accelSnapshot)
-      .withSlot(SpeedLimitSnapshot::class, speedLimitSnapshot) // 80 km/h limit
+    val data =
+      WidgetData.Empty.withSlot(SpeedSnapshot::class, speedSnapshot) // ~100 km/h
+        .withSlot(AccelerationSnapshot::class, accelSnapshot)
+        .withSlot(SpeedLimitSnapshot::class, speedLimitSnapshot) // 80 km/h limit
 
     val description = renderer.accessibilityDescription(data)
     assertThat(description).contains("100") // speed value
@@ -119,11 +120,12 @@ class MultiSlotBindingTest {
 
   @Test
   fun `slot update replaces previous value for same type`() {
-    val updatedSpeed = SpeedSnapshot(speedMps = 13.89f, accuracy = 0.5f, timestamp = 4000L) // ~50 km/h
-    val data = WidgetData.Empty
-      .withSlot(SpeedSnapshot::class, speedSnapshot) // 100 km/h
-      .withSlot(AccelerationSnapshot::class, accelSnapshot)
-      .withSlot(SpeedSnapshot::class, updatedSpeed) // Replace with 50 km/h
+    val updatedSpeed =
+      SpeedSnapshot(speedMps = 13.89f, accuracy = 0.5f, timestamp = 4000L) // ~50 km/h
+    val data =
+      WidgetData.Empty.withSlot(SpeedSnapshot::class, speedSnapshot) // 100 km/h
+        .withSlot(AccelerationSnapshot::class, accelSnapshot)
+        .withSlot(SpeedSnapshot::class, updatedSpeed) // Replace with 50 km/h
 
     assertThat(data.snapshot<SpeedSnapshot>()!!.speedMps).isEqualTo(13.89f)
     // Acceleration slot must still be present
@@ -133,9 +135,9 @@ class MultiSlotBindingTest {
 
   @Test
   fun `slot addition order does not matter - acceleration first then speed`() {
-    val data = WidgetData.Empty
-      .withSlot(AccelerationSnapshot::class, accelSnapshot)
-      .withSlot(SpeedSnapshot::class, speedSnapshot)
+    val data =
+      WidgetData.Empty.withSlot(AccelerationSnapshot::class, accelSnapshot)
+        .withSlot(SpeedSnapshot::class, speedSnapshot)
 
     assertThat(data.snapshot<SpeedSnapshot>()).isNotNull()
     assertThat(data.snapshot<AccelerationSnapshot>()).isNotNull()

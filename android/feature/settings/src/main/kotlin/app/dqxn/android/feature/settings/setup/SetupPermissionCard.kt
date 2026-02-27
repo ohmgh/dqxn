@@ -5,7 +5,6 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -42,7 +41,6 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 
 /**
  * Permission card with 3 states:
- *
  * 1. **Granted**: Accent-tinted "Granted" label with checkmark, no button.
  * 2. **Can request**: "Grant" button triggers [RequestMultiplePermissions] via native API.
  * 3. **Permanently denied**: "Open Settings" button opens app settings via intent.
@@ -64,30 +62,31 @@ internal fun SetupPermissionCard(
   // Guard against false permanent-denial detection (Pitfall 2)
   var hasRequestedPermissions by remember { mutableStateOf(false) }
 
-  val permissionLauncher = rememberLauncherForActivityResult(
-    contract = ActivityResultContracts.RequestMultiplePermissions(),
-  ) { results ->
-    hasRequestedPermissions = true
-    // Parent recomposition will update `satisfied` via re-evaluation
-    onPermissionRequest()
-  }
+  val permissionLauncher =
+    rememberLauncherForActivityResult(
+      contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { results ->
+      hasRequestedPermissions = true
+      // Parent recomposition will update `satisfied` via re-evaluation
+      onPermissionRequest()
+    }
 
   Card(
     shape = RoundedCornerShape(CardSize.MEDIUM.cornerRadius),
-    colors = CardDefaults.cardColors(
-      containerColor = if (satisfied) {
-        SemanticColors.Success.copy(alpha = 0.1f)
-      } else {
-        theme.widgetBorderColor.copy(alpha = 0.05f)
-      },
-    ),
+    colors =
+      CardDefaults.cardColors(
+        containerColor =
+          if (satisfied) {
+            SemanticColors.Success.copy(alpha = 0.1f)
+          } else {
+            theme.widgetBorderColor.copy(alpha = 0.05f)
+          },
+      ),
     modifier = Modifier.fillMaxWidth(),
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(DashboardSpacing.CardInternalPadding),
+      modifier = Modifier.fillMaxWidth().padding(DashboardSpacing.CardInternalPadding),
     ) {
       // Icon
       Icon(
@@ -99,9 +98,7 @@ internal fun SetupPermissionCard(
 
       // Label + description
       Column(
-        modifier = Modifier
-          .weight(1f)
-          .padding(start = DashboardSpacing.IconTextGap),
+        modifier = Modifier.weight(1f).padding(start = DashboardSpacing.IconTextGap),
       ) {
         Text(
           text = definition.label,
@@ -133,17 +130,19 @@ internal fun SetupPermissionCard(
         hasRequestedPermissions && !satisfied -> {
           Button(
             onClick = {
-              val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.fromParts("package", context.packageName, null)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-              }
+              val intent =
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                  data = Uri.fromParts("package", context.packageName, null)
+                  addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
               context.startActivity(intent)
               onOpenSettings()
             },
-            colors = ButtonDefaults.buttonColors(
-              containerColor = SemanticColors.Warning,
-              contentColor = Color.White,
-            ),
+            colors =
+              ButtonDefaults.buttonColors(
+                containerColor = SemanticColors.Warning,
+                contentColor = Color.White,
+              ),
             modifier = Modifier.defaultMinSize(minWidth = 76.dp, minHeight = 76.dp),
           ) {
             Text(text = "Open Settings", style = DashboardTypography.buttonLabel)
@@ -153,13 +152,12 @@ internal fun SetupPermissionCard(
         // State 2: Can request
         else -> {
           Button(
-            onClick = {
-              permissionLauncher.launch(definition.permissions.toTypedArray())
-            },
-            colors = ButtonDefaults.buttonColors(
-              containerColor = theme.accentColor,
-              contentColor = Color.White,
-            ),
+            onClick = { permissionLauncher.launch(definition.permissions.toTypedArray()) },
+            colors =
+              ButtonDefaults.buttonColors(
+                containerColor = theme.accentColor,
+                contentColor = Color.White,
+              ),
             modifier = Modifier.defaultMinSize(minWidth = 76.dp, minHeight = 76.dp),
           ) {
             Text(text = "Grant", style = DashboardTypography.buttonLabel)

@@ -5,8 +5,8 @@ import androidx.compose.runtime.Immutable
 /**
  * A single session event captured during user interaction with the dashboard.
  *
- * Events are recorded via [SessionEventEmitter] and stored in a ring buffer
- * by the SessionRecorder implementation in `:feature:diagnostics`.
+ * Events are recorded via [SessionEventEmitter] and stored in a ring buffer by the SessionRecorder
+ * implementation in `:feature:diagnostics`.
  */
 @Immutable
 public data class SessionEvent(

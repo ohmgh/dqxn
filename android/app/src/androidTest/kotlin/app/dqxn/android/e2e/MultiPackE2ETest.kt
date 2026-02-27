@@ -16,21 +16,20 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * E2E instrumented test verifying all 3 packs load on device with correct binding counts
- * and that widgets from each pack render.
+ * E2E instrumented test verifying all 3 packs load on device with correct binding counts and that
+ * widgets from each pack render.
  *
- * Also validates offline functionality requirements NF24/NF25/NF26 -- core dashboard operates
- * fully without internet connectivity.
+ * Also validates offline functionality requirements NF24/NF25/NF26 -- core dashboard operates fully
+ * without internet connectivity.
  *
- * Requires a device/emulator. Execution deferred to CI per project policy
- * ("connected device != manual test").
+ * Requires a device/emulator. Execution deferred to CI per project policy ("connected device !=
+ * manual test").
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class MultiPackE2ETest {
 
-  @get:Rule
-  val hiltRule = HiltAndroidRule(this)
+  @get:Rule val hiltRule = HiltAndroidRule(this)
 
   private val client = AgenticTestClient()
 
@@ -60,21 +59,21 @@ class MultiPackE2ETest {
     assertThat(commandNames).contains("list-diagnostics")
   }
 
-  /**
-   * Adds a widget from essentials pack and checks it renders.
-   */
+  /** Adds a widget from essentials pack and checks it renders. */
   @Test
   fun widgetFromEachPackRenders() {
     client.assertReady()
 
     // Add a clock-digital widget from essentials pack
-    val addResponse = client.send(
-      "add-widget",
-      mapOf("typeId" to "essentials:clock-digital"),
-    )
+    val addResponse =
+      client.send(
+        "add-widget",
+        mapOf("typeId" to "essentials:clock-digital"),
+      )
     assertThat(addResponse["status"]?.jsonPrimitive?.content).isEqualTo("ok")
-    val widgetId = addResponse["data"]?.jsonObject?.get("widgetId")?.jsonPrimitive?.content
-      ?: addResponse["widgetId"]?.jsonPrimitive?.content
+    val widgetId =
+      addResponse["data"]?.jsonObject?.get("widgetId")?.jsonPrimitive?.content
+        ?: addResponse["widgetId"]?.jsonPrimitive?.content
     assertThat(widgetId).isNotNull()
 
     // Verify the widget appears in dump-health
@@ -89,21 +88,18 @@ class MultiPackE2ETest {
    * Enables airplane mode, verifies the app still responds and local providers (time, battery,
    * orientation) still function, then disables airplane mode.
    *
-   * NF24: Core dashboard fully functional offline.
-   * NF25: BLE device connections require no internet.
-   * NF26: Internet only needed for entitlements checking and weather data.
+   * NF24: Core dashboard fully functional offline. NF25: BLE device connections require no
+   * internet. NF26: Internet only needed for entitlements checking and weather data.
    */
   @Test
   fun offlineFunctionality() {
     client.assertReady()
 
-    val uiAutomation: UiAutomation =
-      InstrumentationRegistry.getInstrumentation().uiAutomation
+    val uiAutomation: UiAutomation = InstrumentationRegistry.getInstrumentation().uiAutomation
 
     try {
       // Enable airplane mode
-      uiAutomation.executeShellCommand("cmd connectivity airplane-mode enable")
-        .close()
+      uiAutomation.executeShellCommand("cmd connectivity airplane-mode enable").close()
       // Brief wait for mode change to propagate
       Thread.sleep(2_000)
 
@@ -115,15 +111,14 @@ class MultiPackE2ETest {
       assertThat(health["status"]?.jsonPrimitive?.content).isNotEqualTo("error")
     } finally {
       // Always restore connectivity
-      uiAutomation.executeShellCommand("cmd connectivity airplane-mode disable")
-        .close()
+      uiAutomation.executeShellCommand("cmd connectivity airplane-mode disable").close()
       Thread.sleep(2_000)
     }
   }
 
   /**
-   * Extracts command names from the list-commands response.
-   * The response format is either a top-level JSON array or nested under "data".
+   * Extracts command names from the list-commands response. The response format is either a
+   * top-level JSON array or nested under "data".
    */
   private fun extractCommandNames(response: kotlinx.serialization.json.JsonObject): List<String> {
     // Try direct "data" array first

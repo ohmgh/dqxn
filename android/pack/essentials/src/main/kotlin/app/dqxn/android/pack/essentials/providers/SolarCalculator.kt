@@ -12,9 +12,9 @@ import kotlin.math.tan
 /**
  * Solar position calculator using the Meeus/NOAA algorithm.
  *
- * Based on equations from "Astronomical Algorithms" by Jean Meeus (1991, 2nd ed. 1998),
- * as implemented in the NOAA Solar Calculator spreadsheet. Accurate to +/-1 minute
- * for locations between +/-72 degrees latitude.
+ * Based on equations from "Astronomical Algorithms" by Jean Meeus (1991, 2nd ed. 1998), as
+ * implemented in the NOAA Solar Calculator spreadsheet. Accurate to +/-1 minute for locations
+ * between +/-72 degrees latitude.
  *
  * Reference: https://gml.noaa.gov/grad/solcalc/calcdetails.html
  */
@@ -69,8 +69,7 @@ internal object SolarCalculator {
     val sunAppLonRad = Math.toRadians(sunAppLon)
 
     // Mean obliquity of the ecliptic (degrees)
-    val meanObliquity =
-      23.439291 - 0.013004 * T - 0.00000164 * T * T + 0.000000504 * T * T * T
+    val meanObliquity = 23.439291 - 0.013004 * T - 0.00000164 * T * T + 0.000000504 * T * T * T
 
     // Corrected obliquity (degrees)
     val obliquity = meanObliquity + 0.00256 * cos(omegaRad)
@@ -84,17 +83,14 @@ internal object SolarCalculator {
     val l0Rad = Math.toRadians(L0)
     val eqTime =
       229.18 *
-        (y * sin(2 * l0Rad) -
-          2 * e * sin(mRad) +
-          4 * e * y * sin(mRad) * cos(2 * l0Rad) -
+        (y * sin(2 * l0Rad) - 2 * e * sin(mRad) + 4 * e * y * sin(mRad) * cos(2 * l0Rad) -
           0.5 * y * y * sin(4 * l0Rad) -
           1.25 * e * e * sin(2 * mRad))
 
     // Hour angle for sunrise/sunset (degrees)
     val latRad = Math.toRadians(latitude)
     val zenith = Math.toRadians(90.833) // Official sunrise/sunset zenith
-    val rawCosHa =
-      cos(zenith) / (cos(latRad) * cos(decl)) - tan(latRad) * tan(decl)
+    val rawCosHa = cos(zenith) / (cos(latRad) * cos(decl)) - tan(latRad) * tan(decl)
 
     // Polar edge case: cosHa outside [-1, 1] means no sunrise or no sunset
     val polarNoSunrise = rawCosHa > 1.0 // polar night
@@ -112,46 +108,52 @@ internal object SolarCalculator {
     if (polarNoSunrise || polarNoSunset) {
       sunriseEpoch =
         if (polarNoSunrise) Long.MIN_VALUE
-        else minutesToLocalTime(
+        else
+          minutesToLocalTime(
+            (solarNoonMin - ha * 4).coerceIn(0.0, 1439.0),
+            date,
+            zoneId,
+          )
+      sunsetEpoch =
+        if (polarNoSunset) Long.MIN_VALUE
+        else
+          minutesToLocalTime(
+            (solarNoonMin + ha * 4).coerceIn(0.0, 1439.0),
+            date,
+            zoneId,
+          )
+    } else {
+      sunriseEpoch =
+        minutesToLocalTime(
           (solarNoonMin - ha * 4).coerceIn(0.0, 1439.0),
           date,
           zoneId,
         )
       sunsetEpoch =
-        if (polarNoSunset) Long.MIN_VALUE
-        else minutesToLocalTime(
+        minutesToLocalTime(
           (solarNoonMin + ha * 4).coerceIn(0.0, 1439.0),
           date,
           zoneId,
         )
-    } else {
-      sunriseEpoch = minutesToLocalTime(
-        (solarNoonMin - ha * 4).coerceIn(0.0, 1439.0),
-        date,
-        zoneId,
-      )
-      sunsetEpoch = minutesToLocalTime(
-        (solarNoonMin + ha * 4).coerceIn(0.0, 1439.0),
-        date,
-        zoneId,
-      )
     }
 
-    val noonEpoch = minutesToLocalTime(
-      solarNoonMin.coerceIn(0.0, 1439.0),
-      date,
-      zoneId,
-    )
+    val noonEpoch =
+      minutesToLocalTime(
+        solarNoonMin.coerceIn(0.0, 1439.0),
+        date,
+        zoneId,
+      )
 
     // Determine isDaytime from current time relative to sunrise/sunset
     val nowEpoch = ZonedDateTime.now(zoneId).toInstant().toEpochMilli()
-    val isDaytime = when {
-      polarNoSunrise -> false // polar night -- always dark
-      polarNoSunset -> true // midnight sun -- always light
-      sunriseEpoch != Long.MIN_VALUE && sunsetEpoch != Long.MIN_VALUE ->
-        nowEpoch in sunriseEpoch..sunsetEpoch
-      else -> false
-    }
+    val isDaytime =
+      when {
+        polarNoSunrise -> false // polar night -- always dark
+        polarNoSunset -> true // midnight sun -- always light
+        sunriseEpoch != Long.MIN_VALUE && sunsetEpoch != Long.MIN_VALUE ->
+          nowEpoch in sunriseEpoch..sunsetEpoch
+        else -> false
+      }
 
     return SolarResult(
       sunriseEpochMillis = sunriseEpoch,
@@ -162,8 +164,8 @@ internal object SolarCalculator {
   }
 
   /**
-   * Convert UTC minutes-of-day to epoch millis in the given timezone.
-   * Guards against negative values and values >= 1440.
+   * Convert UTC minutes-of-day to epoch millis in the given timezone. Guards against negative
+   * values and values >= 1440.
    */
   internal fun minutesToLocalTime(
     minutes: Double,
@@ -177,8 +179,8 @@ internal object SolarCalculator {
   }
 
   /**
-   * Convert calendar date to Julian Day number.
-   * Valid for Gregorian calendar dates (1582-10-15 onward).
+   * Convert calendar date to Julian Day number. Valid for Gregorian calendar dates (1582-10-15
+   * onward).
    */
   internal fun toJulianDay(year: Int, month: Int, day: Int): Double {
     var y = year
@@ -189,9 +191,7 @@ internal object SolarCalculator {
     }
     val A = y / 100
     val B = 2 - A + A / 4
-    return (365.25 * (y + 4716)).toInt() +
-      (30.6001 * (m + 1)).toInt() +
-      day + B - 1524.5
+    return (365.25 * (y + 4716)).toInt() + (30.6001 * (m + 1)).toInt() + day + B - 1524.5
   }
 
   private fun normalizeDegrees(degrees: Double): Double {

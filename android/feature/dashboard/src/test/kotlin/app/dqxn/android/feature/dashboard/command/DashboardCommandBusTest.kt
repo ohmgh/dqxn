@@ -61,9 +61,7 @@ class DashboardCommandBusTest {
     val bus = DashboardCommandBus()
 
     // Emit 65 commands (buffer capacity = 64) with no collector
-    repeat(65) {
-      bus.dispatch(DashboardCommand.EnterEditMode)
-    }
+    repeat(65) { bus.dispatch(DashboardCommand.EnterEditMode) }
 
     // Now start collector and emit one final command -- should receive it
     bus.commands.test {

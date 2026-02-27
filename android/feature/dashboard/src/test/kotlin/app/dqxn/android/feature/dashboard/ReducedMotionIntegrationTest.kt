@@ -27,16 +27,17 @@ import org.junit.jupiter.api.Test
  * 3. Helper correctly detects enabled animations (scale == 1f)
  *
  * DashboardGrid and ProfilePageTransition consume [ReducedMotionHelper.isReducedMotion] directly.
- * These tests verify the helper returns the correct value for both states, ensuring the
- * production gate conditions in those composables evaluate correctly.
+ * These tests verify the helper returns the correct value for both states, ensuring the production
+ * gate conditions in those composables evaluate correctly.
  */
 @Tag("fast")
 class ReducedMotionIntegrationTest {
 
   private val contentResolver = mockk<ContentResolver>()
-  private val context = mockk<Context> {
-    every { this@mockk.contentResolver } returns this@ReducedMotionIntegrationTest.contentResolver
-  }
+  private val context =
+    mockk<Context> {
+      every { this@mockk.contentResolver } returns this@ReducedMotionIntegrationTest.contentResolver
+    }
 
   @BeforeEach
   fun setup() {

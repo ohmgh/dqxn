@@ -94,11 +94,12 @@ class PresetLoaderTest {
     assertThat(typeIds).doesNotContain("essentials:speed-limit-circle")
     assertThat(typeIds).doesNotContain("essentials:speed-limit-rect")
     // Verify only non-GPS widgets present
-    assertThat(typeIds).containsExactly(
-      "essentials:clock",
-      "essentials:battery",
-      "essentials:date-simple",
-    )
+    assertThat(typeIds)
+      .containsExactly(
+        "essentials:clock",
+        "essentials:battery",
+        "essentials:date-simple",
+      )
   }
 
   @Test

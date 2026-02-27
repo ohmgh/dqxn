@@ -1,31 +1,14 @@
 package app.dqxn.android.feature.dashboard.session
 
 import androidx.lifecycle.SavedStateHandle
-import dev.agentic.android.semantics.SemanticsOwnerHolder
-import app.dqxn.android.data.device.PairedDeviceStore
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
-import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.feature.dashboard.DashboardViewModel
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
 import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
-import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.LayoutCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.LayoutState
-import app.dqxn.android.feature.dashboard.coordinator.NotificationCoordinator
-import app.dqxn.android.feature.dashboard.coordinator.ProfileCoordinator
-import app.dqxn.android.feature.dashboard.coordinator.ThemeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.WidgetBindingCoordinator
-import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
-import app.dqxn.android.feature.dashboard.grid.BlankSpaceGestureHandler
-import app.dqxn.android.feature.dashboard.grid.WidgetGestureHandler
-import app.dqxn.android.feature.dashboard.test.TestWidgetFactory.testWidget
-import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
-import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
-import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
-import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
-import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
-import app.dqxn.android.sdk.observability.crash.ErrorReporter
 import app.dqxn.android.sdk.observability.log.NoOpLogger
 import app.dqxn.android.sdk.observability.session.EventType
 import app.dqxn.android.sdk.observability.session.SessionEvent
@@ -49,8 +32,8 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 /**
- * Verifies that DashboardViewModel records session events via [SessionEventEmitter]
- * when dashboard interactions (tap, move, resize, navigation) occur through the command channel.
+ * Verifies that DashboardViewModel records session events via [SessionEventEmitter] when dashboard
+ * interactions (tap, move, resize, navigation) occur through the command channel.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Tag("fast")
@@ -71,12 +54,10 @@ class SessionEventEmissionTest {
   }
 
   private fun createViewModel(): DashboardViewModel {
-    val layoutCoordinator: LayoutCoordinator = mockk(relaxed = true) {
-      every { layoutState } returns MutableStateFlow(LayoutState())
-    }
-    val widgetBindingCoordinator: WidgetBindingCoordinator = mockk(relaxed = true) {
-      every { activeBindings() } returns emptyMap()
-    }
+    val layoutCoordinator: LayoutCoordinator =
+      mockk(relaxed = true) { every { layoutState } returns MutableStateFlow(LayoutState()) }
+    val widgetBindingCoordinator: WidgetBindingCoordinator =
+      mockk(relaxed = true) { every { activeBindings() } returns emptyMap() }
 
     return DashboardViewModel(
       layoutCoordinator = layoutCoordinator,

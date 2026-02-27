@@ -21,8 +21,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /**
- * Release-only Hilt module. Provides NoOp/default implementations for observability
- * bindings that DebugModule overrides in debug builds.
+ * Release-only Hilt module. Provides NoOp/default implementations for observability bindings that
+ * DebugModule overrides in debug builds.
  *
  * All 6 bindings mirror DebugModule's structure but with release-appropriate configuration:
  * - NoOpLogger (zero-alloc logging disabled in release)
@@ -35,13 +35,9 @@ internal abstract class ReleaseModule {
 
   companion object {
 
-    @Provides
-    @Singleton
-    fun provideDqxnLogger(): DqxnLogger = NoOpLogger
+    @Provides @Singleton fun provideDqxnLogger(): DqxnLogger = NoOpLogger
 
-    @Provides
-    @Singleton
-    fun provideMetricsCollector(): MetricsCollector = MetricsCollector()
+    @Provides @Singleton fun provideMetricsCollector(): MetricsCollector = MetricsCollector()
 
     @Provides
     @Singleton

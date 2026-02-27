@@ -20,13 +20,15 @@ import org.junit.jupiter.api.Test
 class CallActionProviderTest : DataProviderContractTest() {
 
   private val mockIntent: Intent = mockk<Intent>(relaxed = true)
-  private val packageManager: PackageManager = mockk<PackageManager>(relaxed = true).also { pm ->
-    every { pm.getLaunchIntentForPackage("com.example.app") } returns mockIntent
-    every { pm.getLaunchIntentForPackage("com.nonexistent.app") } returns null
-  }
-  private val context: Context = mockk<Context>(relaxed = true).also { ctx ->
-    every { ctx.packageManager } returns packageManager
-  }
+  private val packageManager: PackageManager =
+    mockk<PackageManager>(relaxed = true).also { pm ->
+      every { pm.getLaunchIntentForPackage("com.example.app") } returns mockIntent
+      every { pm.getLaunchIntentForPackage("com.nonexistent.app") } returns null
+    }
+  private val context: Context =
+    mockk<Context>(relaxed = true).also { ctx ->
+      every { ctx.packageManager } returns packageManager
+    }
 
   override fun createProvider(): DataProvider<*> = CallActionProvider(context)
 
@@ -49,10 +51,11 @@ class CallActionProviderTest : DataProviderContractTest() {
   @Test
   fun `onAction with valid package launches activity`() {
     val provider = CallActionProvider(context)
-    val action = WidgetAction.Custom(
-      actionId = "launch",
-      params = mapOf("packageName" to "com.example.app"),
-    )
+    val action =
+      WidgetAction.Custom(
+        actionId = "launch",
+        params = mapOf("packageName" to "com.example.app"),
+      )
 
     provider.onAction(action)
 
@@ -64,10 +67,11 @@ class CallActionProviderTest : DataProviderContractTest() {
   @Test
   fun `onAction with unknown package does not crash`() {
     val provider = CallActionProvider(context)
-    val action = WidgetAction.Custom(
-      actionId = "launch",
-      params = mapOf("packageName" to "com.nonexistent.app"),
-    )
+    val action =
+      WidgetAction.Custom(
+        actionId = "launch",
+        params = mapOf("packageName" to "com.nonexistent.app"),
+      )
 
     // Should not throw
     provider.onAction(action)
@@ -89,10 +93,11 @@ class CallActionProviderTest : DataProviderContractTest() {
   @Test
   fun `onAction with missing packageName param does nothing`() {
     val provider = CallActionProvider(context)
-    val action = WidgetAction.Custom(
-      actionId = "launch",
-      params = emptyMap(),
-    )
+    val action =
+      WidgetAction.Custom(
+        actionId = "launch",
+        params = emptyMap(),
+      )
 
     provider.onAction(action)
 

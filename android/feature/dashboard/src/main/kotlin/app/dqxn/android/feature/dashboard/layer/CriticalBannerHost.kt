@@ -50,9 +50,7 @@ public fun CriticalBannerHost(
   val criticalBanners = banners.filter { it.priority == NotificationPriority.CRITICAL }
 
   Column(
-    modifier = modifier
-      .fillMaxWidth()
-      .padding(horizontal = 16.dp, vertical = 8.dp),
+    modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
     verticalArrangement = Arrangement.spacedBy(8.dp),
   ) {
     for (banner in criticalBanners) {
@@ -78,10 +76,11 @@ private fun CriticalBannerCard(
   modifier: Modifier = Modifier,
 ) {
   Column(
-    modifier = modifier
-      .fillMaxWidth()
-      .background(MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp))
-      .padding(16.dp),
+    modifier =
+      modifier
+        .fillMaxWidth()
+        .background(MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp))
+        .padding(16.dp),
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       Icon(
@@ -122,10 +121,11 @@ private fun CriticalBannerCard(
         // Default safe mode actions: Reset and Report
         Button(
           onClick = { onAction(banner.id, "reset") },
-          colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.onError,
-            contentColor = MaterialTheme.colorScheme.error,
-          ),
+          colors =
+            ButtonDefaults.buttonColors(
+              containerColor = MaterialTheme.colorScheme.onError,
+              contentColor = MaterialTheme.colorScheme.error,
+            ),
         ) {
           Text("Reset")
         }

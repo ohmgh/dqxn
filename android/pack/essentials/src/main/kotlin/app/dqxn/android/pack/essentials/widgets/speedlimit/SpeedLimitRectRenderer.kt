@@ -36,8 +36,7 @@ public class SpeedLimitRectRenderer @Inject constructor() : WidgetRenderer {
   override val typeId: String = "essentials:speedlimit-rect"
   override val displayName: String = "Speed Limit (Rectangle)"
   override val description: String = "US MUTCD-style rectangular speed limit sign"
-  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> =
-    setOf(SpeedLimitSnapshot::class)
+  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> = setOf(SpeedLimitSnapshot::class)
   override val aspectRatio: Float? = null
   override val supportsTap: Boolean = false
   override val priority: Int = 99

@@ -29,7 +29,6 @@ import app.dqxn.android.feature.settings.overlay.OverlayType
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.entitlement.isAccessible
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
-import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 
@@ -59,8 +58,7 @@ public fun PackBrowserContent(
             packId = packId,
             displayName = packId.replaceFirstChar { it.uppercase() },
             widgetCount = widgets.size,
-            isFullyAccessible =
-              widgets.all { it.isAccessible(entitlementManager::hasEntitlement) },
+            isFullyAccessible = widgets.all { it.isAccessible(entitlementManager::hasEntitlement) },
           )
         }
         .sortedBy { it.packId }
@@ -74,9 +72,7 @@ public fun PackBrowserContent(
   ) {
     Column(
       modifier =
-        Modifier.fillMaxSize()
-          .verticalScroll(rememberScrollState())
-          .testTag("pack_browser_list"),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).testTag("pack_browser_list"),
       verticalArrangement = Arrangement.spacedBy(DashboardSpacing.ItemGap),
     ) {
       packInfos.forEach { packInfo ->
@@ -135,9 +131,7 @@ private fun PackCard(
         if (packInfo.isFullyAccessible) stringResource(R.string.pack_browser_accessible)
         else stringResource(R.string.pack_browser_locked),
       style = DashboardTypography.caption,
-      color =
-        if (packInfo.isFullyAccessible) theme.successColor
-        else theme.secondaryTextColor,
+      color = if (packInfo.isFullyAccessible) theme.successColor else theme.secondaryTextColor,
       modifier = Modifier.testTag("pack_status_${packInfo.packId}"),
     )
   }

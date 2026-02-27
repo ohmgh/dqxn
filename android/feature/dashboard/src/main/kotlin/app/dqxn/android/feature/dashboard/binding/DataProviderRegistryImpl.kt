@@ -13,8 +13,8 @@ import javax.inject.Singleton
 /**
  * Implementation of [DataProviderRegistry] backed by Hilt-injected [Set] of [DataProvider].
  *
- * Provides both unfiltered and entitlement-filtered views. Indexes providers by [DataProvider.dataType]
- * for fast lookup during widget binding resolution.
+ * Provides both unfiltered and entitlement-filtered views. Indexes providers by
+ * [DataProvider.dataType] for fast lookup during widget binding resolution.
  */
 @Singleton
 public class DataProviderRegistryImpl
@@ -48,8 +48,9 @@ constructor(
     providers.filter { it.isAccessible(entitlementCheck) }.toSet()
 
   /** Returns all providers accessible with current entitlements. */
-  public fun availableProviders(): Set<DataProvider<*>> =
-    getFiltered { entitlementManager.hasEntitlement(it) }
+  public fun availableProviders(): Set<DataProvider<*>> = getFiltered {
+    entitlementManager.hasEntitlement(it)
+  }
 
   internal companion object {
     val TAG: LogTag = LogTag("ProviderRegistry")

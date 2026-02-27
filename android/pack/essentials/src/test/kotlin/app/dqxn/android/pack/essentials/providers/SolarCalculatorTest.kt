@@ -66,11 +66,12 @@ class SolarCalculatorTest {
 
   @Test
   fun `equatorial location always has sunrise and sunset`() {
-    val dates = listOf(
-      LocalDate.of(2025, 3, 20),
-      LocalDate.of(2025, 6, 21),
-      LocalDate.of(2025, 12, 21),
-    )
+    val dates =
+      listOf(
+        LocalDate.of(2025, 3, 20),
+        LocalDate.of(2025, 6, 21),
+        LocalDate.of(2025, 12, 21),
+      )
     for (date in dates) {
       val result = SolarCalculator.calculate(0.0, 0.0, date, UTC)
       assertThat(result.sunriseEpochMillis).isNotEqualTo(Long.MIN_VALUE)

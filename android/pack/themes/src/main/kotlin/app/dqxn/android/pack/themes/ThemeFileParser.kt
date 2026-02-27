@@ -8,7 +8,6 @@ import app.dqxn.android.sdk.ui.theme.GradientSpec
 import app.dqxn.android.sdk.ui.theme.GradientStop
 import app.dqxn.android.sdk.ui.theme.GradientType
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 

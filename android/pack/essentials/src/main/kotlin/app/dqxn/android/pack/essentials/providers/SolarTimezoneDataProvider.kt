@@ -21,30 +21,27 @@ import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.reflect.KClass
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onStart
 
 /**
  * Data provider for solar times using timezone-based coordinates.
  *
- * Always works without any permissions. Estimates coordinates from the device timezone
- * using [IanaTimezoneCoordinates], which provides sunrise/sunset accuracy within ~30 minutes
- * for most locations.
+ * Always works without any permissions. Estimates coordinates from the device timezone using
+ * [IanaTimezoneCoordinates], which provides sunrise/sunset accuracy within ~30 minutes for most
+ * locations.
  *
- * Recalculates on timezone change (via [Intent.ACTION_TIMEZONE_CHANGED] broadcast) and at
- * midnight for daily refresh.
+ * Recalculates on timezone change (via [Intent.ACTION_TIMEZONE_CHANGED] broadcast) and at midnight
+ * for daily refresh.
  */
 @DashboardDataProvider(
   localId = "solar-timezone",
@@ -52,7 +49,9 @@ import kotlinx.coroutines.flow.onStart
   description = "Sunrise and sunset times based on timezone location",
 )
 @Singleton
-public class SolarTimezoneDataProvider @Inject constructor(
+public class SolarTimezoneDataProvider
+@Inject
+constructor(
   @param:ApplicationContext private val context: Context,
 ) : DataProvider<SolarSnapshot> {
 
@@ -64,16 +63,18 @@ public class SolarTimezoneDataProvider @Inject constructor(
   override val snapshotType: KClass<SolarSnapshot> = SolarSnapshot::class
   override val requiredAnyEntitlement: Set<String>? = null
 
-  override val schema: DataSchema = DataSchema(
-    fields = listOf(
-      DataFieldSpec(name = "sunriseEpochMillis", typeId = "long"),
-      DataFieldSpec(name = "sunsetEpochMillis", typeId = "long"),
-      DataFieldSpec(name = "solarNoonEpochMillis", typeId = "long"),
-      DataFieldSpec(name = "isDaytime", typeId = "boolean"),
-      DataFieldSpec(name = "sourceMode", typeId = "string"),
-    ),
-    stalenessThresholdMs = 3_600_000L, // 1 hour
-  )
+  override val schema: DataSchema =
+    DataSchema(
+      fields =
+        listOf(
+          DataFieldSpec(name = "sunriseEpochMillis", typeId = "long"),
+          DataFieldSpec(name = "sunsetEpochMillis", typeId = "long"),
+          DataFieldSpec(name = "solarNoonEpochMillis", typeId = "long"),
+          DataFieldSpec(name = "isDaytime", typeId = "boolean"),
+          DataFieldSpec(name = "sourceMode", typeId = "string"),
+        ),
+      stalenessThresholdMs = 3_600_000L, // 1 hour
+    )
 
   override val setupSchema: List<SetupPageDefinition> = emptyList()
   override val subscriberTimeout: kotlin.time.Duration = 30.seconds
@@ -86,11 +87,12 @@ public class SolarTimezoneDataProvider @Inject constructor(
   override fun provideState(): Flow<SolarSnapshot> {
     // Timezone change events via broadcast receiver
     val timezoneChanges = callbackFlow {
-      val receiver = object : BroadcastReceiver() {
-        override fun onReceive(ctx: Context?, intent: Intent?) {
-          trySend(Unit)
+      val receiver =
+        object : BroadcastReceiver() {
+          override fun onReceive(ctx: Context?, intent: Intent?) {
+            trySend(Unit)
+          }
         }
-      }
       val filter = IntentFilter(Intent.ACTION_TIMEZONE_CHANGED)
       context.registerReceiver(receiver, filter)
       awaitClose { context.unregisterReceiver(receiver) }
@@ -105,9 +107,13 @@ public class SolarTimezoneDataProvider @Inject constructor(
           while (true) {
             val zoneId = ZoneId.systemDefault()
             val date = LocalDate.now(zoneId)
-            val result = SolarCalculator.calculate(
-              coords.first, coords.second, date, zoneId,
-            )
+            val result =
+              SolarCalculator.calculate(
+                coords.first,
+                coords.second,
+                date,
+                zoneId,
+              )
 
             emit(
               SolarSnapshot(
@@ -130,7 +136,9 @@ public class SolarTimezoneDataProvider @Inject constructor(
 
   private fun getTimezoneCoordinates(): Pair<Double, Double> {
     val tz = TimeZone.getDefault()
-    IanaTimezoneCoordinates.getCoordinates(tz.id)?.let { return it }
+    IanaTimezoneCoordinates.getCoordinates(tz.id)?.let {
+      return it
+    }
     // Fallback: equatorial (0, 0) -- always has sunrise/sunset
     return 0.0 to 0.0
   }

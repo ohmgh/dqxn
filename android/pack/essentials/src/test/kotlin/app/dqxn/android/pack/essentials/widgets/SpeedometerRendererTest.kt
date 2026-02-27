@@ -20,8 +20,7 @@ class SpeedometerRendererTest : WidgetRendererContractTest() {
   override fun createRenderer(): WidgetRenderer = SpeedometerRenderer()
 
   override fun createTestWidgetData(): WidgetData =
-    WidgetData.Empty
-      .withSlot(
+    WidgetData.Empty.withSlot(
         SpeedSnapshot::class,
         SpeedSnapshot(speedMps = 16.67f, accuracy = 1.0f, timestamp = 1000L),
       )
@@ -109,8 +108,7 @@ class SpeedometerRendererTest : WidgetRendererContractTest() {
   fun `accessibilityDescription with speed over limit includes Over limit`() {
     val renderer = SpeedometerRenderer()
     val data =
-      WidgetData.Empty
-        .withSlot(
+      WidgetData.Empty.withSlot(
           SpeedSnapshot::class,
           SpeedSnapshot(speedMps = 19.44f, accuracy = 1.0f, timestamp = 1000L),
         )

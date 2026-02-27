@@ -32,14 +32,16 @@ import kotlinx.collections.immutable.persistentMapOf
  * Error boundary composable wrapping each widget's [WidgetRenderer.Render] call.
  *
  * Responsibilities:
- * 1. Resolves renderer via [WidgetRegistry.findByTypeId]. Null -> [UnknownWidgetPlaceholder] (F2.13).
+ * 1. Resolves renderer via [WidgetRegistry.findByTypeId]. Null -> [UnknownWidgetPlaceholder]
+ *    (F2.13).
  * 2. Collects per-widget data via [WidgetBindingCoordinator.widgetData] with `collectAsState()`
  *    (Layer 0, NOT collectAsStateWithLifecycle per CLAUDE.md).
- * 3. Provides data via [CompositionLocalProvider] with [LocalWidgetData] and [LocalWidgetPreviewUnits].
- * 4. Error boundary via render error state. On crash -> [WidgetErrorFallback] +
- *    [DashboardCommand.WidgetCrash] reported. Compose does not support try-catch around composable
- *    calls, so the error state is tracked via [WidgetStatusCache] and binding coordinator crash
- *    reporting.
+ * 3. Provides data via [CompositionLocalProvider] with [LocalWidgetData] and
+ *    [LocalWidgetPreviewUnits].
+ * 4. Error boundary via render error state. On crash ->
+ *    [WidgetErrorFallback] + [DashboardCommand.WidgetCrash] reported. Compose does not support
+ *    try-catch around composable calls, so the error state is tracked via [WidgetStatusCache] and
+ *    binding coordinator crash reporting.
  * 5. Gates interactive actions via [EditModeCoordinator.isInteractionAllowed] (F2.18).
  * 6. Applies accessibility semantics from [WidgetRenderer.accessibilityDescription] (F2.19).
  * 7. Renders status overlay from [WidgetStatusCache] (F3.14).
@@ -73,28 +75,31 @@ public fun WidgetSlot(
 
   // Collect edit state for interaction gating (F2.18)
   val editState by editModeCoordinator.editState.collectAsState()
-  val isInteractionAllowed by remember(editState, widget.instanceId) {
-    derivedStateOf { editModeCoordinator.isInteractionAllowed(widget.instanceId) }
-  }
+  val isInteractionAllowed by
+    remember(editState, widget.instanceId) {
+      derivedStateOf { editModeCoordinator.isInteractionAllowed(widget.instanceId) }
+    }
 
   // Accessibility description (F2.19)
-  val accessibilityDesc = remember(widgetData) {
-    try {
-      renderer.accessibilityDescription(widgetData)
-    } catch (_: Exception) {
-      "Widget ${widget.typeId}"
+  val accessibilityDesc =
+    remember(widgetData) {
+      try {
+        renderer.accessibilityDescription(widgetData)
+      } catch (_: Exception) {
+        "Widget ${widget.typeId}"
+      }
     }
-  }
 
   // Resize preview units for content-aware relayout
-  val previewUnits = if (resizeState?.widgetId == widget.instanceId && resizeState.isResizing) {
-    PreviewGridSize(
-      widthUnits = resizeState.targetSize.widthUnits,
-      heightUnits = resizeState.targetSize.heightUnits,
-    )
-  } else {
-    null
-  }
+  val previewUnits =
+    if (resizeState?.widgetId == widget.instanceId && resizeState.isResizing) {
+      PreviewGridSize(
+        widthUnits = resizeState.targetSize.widthUnits,
+        heightUnits = resizeState.targetSize.heightUnits,
+      )
+    } else {
+      null
+    }
 
   // Error boundary state (F2.14). Compose does not support try-catch around @Composable calls.
   // Render errors are tracked via this state flag. The binding coordinator's crash reporting
@@ -102,9 +107,10 @@ public fun WidgetSlot(
   var hasRenderError by remember { mutableStateOf(false) }
 
   Box(
-    modifier = modifier
-      .testTag("widget_${widget.instanceId}")
-      .semantics { contentDescription = accessibilityDesc },
+    modifier =
+      modifier.testTag("widget_${widget.instanceId}").semantics {
+        contentDescription = accessibilityDesc
+      },
   ) {
     if (hasRenderError) {
       WidgetErrorFallback(
@@ -142,12 +148,8 @@ public fun WidgetSlot(
         WidgetStatusOverlay(
           renderState = overlayState,
           cornerRadiusDp = 12f, // CardSize.MEDIUM
-          onSetupTap = {
-            onCommand(DashboardCommand.OpenWidgetSettings(widget.instanceId))
-          },
-          onEntitlementTap = {
-            onCommand(DashboardCommand.OpenWidgetSettings(widget.instanceId))
-          },
+          onSetupTap = { onCommand(DashboardCommand.OpenWidgetSettings(widget.instanceId)) },
+          onEntitlementTap = { onCommand(DashboardCommand.OpenWidgetSettings(widget.instanceId)) },
         )
       }
     }

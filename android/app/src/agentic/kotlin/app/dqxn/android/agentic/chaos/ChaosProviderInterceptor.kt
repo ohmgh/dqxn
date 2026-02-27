@@ -20,7 +20,8 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
-public class ChaosProviderInterceptor @Inject constructor() : DataProviderInterceptor, FaultInjector {
+public class ChaosProviderInterceptor @Inject constructor() :
+  DataProviderInterceptor, FaultInjector {
 
   private val activeFaultsMap = ConcurrentHashMap<String, Fault>()
 
@@ -51,7 +52,7 @@ public class ChaosProviderInterceptor @Inject constructor() : DataProviderInterc
     fault: Fault,
   ): Flow<T> =
     when (fault) {
-      is Fault.Kill -> flow { /* emit nothing, flow completes immediately */ }
+      is Fault.Kill -> flow { /* emit nothing, flow completes immediately */}
       is Fault.Stall -> flow { awaitCancellation() }
       is Fault.Error -> flow { throw fault.exception }
       is Fault.Delay ->
@@ -72,8 +73,7 @@ public class ChaosProviderInterceptor @Inject constructor() : DataProviderInterc
         }
       is Fault.Corrupt ->
         upstream.transformLatest { value ->
-          @Suppress("UNCHECKED_CAST")
-          emit(fault.transform(value) as T)
+          @Suppress("UNCHECKED_CAST") emit(fault.transform(value) as T)
         }
       is Fault.Flap ->
         flow {

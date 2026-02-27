@@ -10,20 +10,17 @@ import org.junit.runner.RunWith
 /**
  * Baseline profile generator covering critical user journeys.
  *
- * Generates AOT compilation hints for ART to optimize startup, dashboard rendering,
- * edit mode transitions, and widget picker overlay navigation.
+ * Generates AOT compilation hints for ART to optimize startup, dashboard rendering, edit mode
+ * transitions, and widget picker overlay navigation.
  *
  * Run on a connected device: `./gradlew :baselineprofile:connectedDebugAndroidTest`
  */
 @RunWith(AndroidJUnit4::class)
 public class BaselineProfileGenerator {
 
-  @get:Rule
-  public val rule: BaselineProfileRule = BaselineProfileRule()
+  @get:Rule public val rule: BaselineProfileRule = BaselineProfileRule()
 
-  /**
-   * Minimal startup critical path. ART compiles the startup trace.
-   */
+  /** Minimal startup critical path. ART compiles the startup trace. */
   @Test
   public fun startup() {
     rule.collect(packageName = PACKAGE_NAME) {
@@ -32,9 +29,7 @@ public class BaselineProfileGenerator {
     }
   }
 
-  /**
-   * Dashboard steady-state rendering path with active widgets and data binding.
-   */
+  /** Dashboard steady-state rendering path with active widgets and data binding. */
   @Test
   public fun dashboardInteraction() {
     rule.collect(packageName = PACKAGE_NAME) {
@@ -45,9 +40,7 @@ public class BaselineProfileGenerator {
     }
   }
 
-  /**
-   * Edit mode enter/exit + gesture handling codepath.
-   */
+  /** Edit mode enter/exit + gesture handling codepath. */
   @Test
   public fun editMode() {
     rule.collect(packageName = PACKAGE_NAME) {
@@ -65,9 +58,7 @@ public class BaselineProfileGenerator {
     }
   }
 
-  /**
-   * Overlay navigation + widget picker rendering path.
-   */
+  /** Overlay navigation + widget picker rendering path. */
   @Test
   public fun widgetPicker() {
     rule.collect(packageName = PACKAGE_NAME) {

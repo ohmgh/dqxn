@@ -33,8 +33,9 @@ import kotlinx.coroutines.flow.scan
  * chain, throttles by thermal config, merges all provider flows, and scans into [WidgetData] with
  * per-type slots.
  *
- * Provider resolution priority (F3.10): user-selected > HARDWARE > DEVICE_SENSOR > NETWORK > SIMULATED.
- * Fallback: if the assigned provider is unavailable, falls back to the next available by priority.
+ * Provider resolution priority (F3.10): user-selected > HARDWARE > DEVICE_SENSOR > NETWORK >
+ * SIMULATED. Fallback: if the assigned provider is unavailable, falls back to the next available by
+ * priority.
  */
 public class WidgetDataBinder
 @Inject
@@ -87,8 +88,7 @@ constructor(
         // Get the raw provider flow, apply interceptors, then throttle.
         // Unchecked cast: provider is DataProvider<*> from resolveProvider, but we know it
         // produces DataSnapshot subtypes. The interceptor chain is type-safe internally.
-        @Suppress("UNCHECKED_CAST")
-        val typedProvider = provider as DataProvider<DataSnapshot>
+        @Suppress("UNCHECKED_CAST") val typedProvider = provider as DataProvider<DataSnapshot>
         val rawFlow = typedProvider.provideState()
         val interceptedFlow = applyInterceptors(typedProvider, rawFlow)
 
@@ -119,8 +119,8 @@ constructor(
   /**
    * Resolve a provider for the given snapshot type using priority ordering (F3.10).
    *
-   * Priority: user-selected > HARDWARE > DEVICE_SENSOR > NETWORK > SIMULATED.
-   * If user-selected is unavailable, falls back to next by priority.
+   * Priority: user-selected > HARDWARE > DEVICE_SENSOR > NETWORK > SIMULATED. If user-selected is
+   * unavailable, falls back to next by priority.
    */
   public fun resolveProvider(
     snapshotType: KClass<out DataSnapshot>,
@@ -129,8 +129,7 @@ constructor(
     val allProviders = providerRegistry.getAll()
 
     // Filter providers compatible with this snapshot type
-    val compatible =
-      allProviders.filter { provider -> provider.snapshotType == snapshotType }
+    val compatible = allProviders.filter { provider -> provider.snapshotType == snapshotType }
 
     if (compatible.isEmpty()) return null
 
@@ -175,9 +174,9 @@ constructor(
   }
 
   /**
-   * Returns the minimum staleness threshold (ms) across all providers bound to the given
-   * snapshot types. Used by [WidgetBindingCoordinator] for per-widget staleness watchdogs.
-   * Returns null if no providers are found for any of the snapshot types.
+   * Returns the minimum staleness threshold (ms) across all providers bound to the given snapshot
+   * types. Used by [WidgetBindingCoordinator] for per-widget staleness watchdogs. Returns null if
+   * no providers are found for any of the snapshot types.
    */
   public fun minStalenessThresholdMs(
     compatibleSnapshots: Set<KClass<out DataSnapshot>>,

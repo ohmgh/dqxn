@@ -33,8 +33,8 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 /**
  * Info card for setup pages with [SemanticColors] styling.
  *
- * Bridges to the info row pattern from Plan 04 (InfoSettingRow), adapted for
- * [SetupDefinition.Info] subtypes. Maps [InfoStyle] to semantic colors:
+ * Bridges to the info row pattern from Plan 04 (InfoSettingRow), adapted for [SetupDefinition.Info]
+ * subtypes. Maps [InfoStyle] to semantic colors:
  * - [InfoStyle.INFO] -> [SemanticColors.Info]
  * - [InfoStyle.WARNING] -> [SemanticColors.Warning]
  * - [InfoStyle.SUCCESS] -> [SemanticColors.Success]
@@ -49,9 +49,10 @@ internal fun InfoCard(
 
   Card(
     shape = RoundedCornerShape(CardSize.MEDIUM.cornerRadius),
-    colors = CardDefaults.cardColors(
-      containerColor = tintColor.copy(alpha = 0.1f),
-    ),
+    colors =
+      CardDefaults.cardColors(
+        containerColor = tintColor.copy(alpha = 0.1f),
+      ),
     modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp),
   ) {
     Row(
@@ -69,9 +70,7 @@ internal fun InfoCard(
         text = definition.label,
         style = DashboardTypography.itemTitle,
         color = theme.primaryTextColor,
-        modifier = Modifier
-          .weight(1f)
-          .padding(start = DashboardSpacing.IconTextGap),
+        modifier = Modifier.weight(1f).padding(start = DashboardSpacing.IconTextGap),
       )
     }
 
@@ -80,11 +79,12 @@ internal fun InfoCard(
         text = desc,
         style = DashboardTypography.description,
         color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
-        modifier = Modifier.padding(
-          start = DashboardSpacing.CardInternalPadding + 24.dp + DashboardSpacing.IconTextGap,
-          end = DashboardSpacing.CardInternalPadding,
-          bottom = DashboardSpacing.CardInternalPadding,
-        ),
+        modifier =
+          Modifier.padding(
+            start = DashboardSpacing.CardInternalPadding + 24.dp + DashboardSpacing.IconTextGap,
+            end = DashboardSpacing.CardInternalPadding,
+            bottom = DashboardSpacing.CardInternalPadding,
+          ),
       )
     }
   }

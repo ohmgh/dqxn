@@ -34,8 +34,7 @@ public class SpeedLimitCircleRenderer @Inject constructor() : WidgetRenderer {
   override val typeId: String = "essentials:speedlimit-circle"
   override val displayName: String = "Speed Limit (Circle)"
   override val description: String = "European-style circular speed limit sign"
-  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> =
-    setOf(SpeedLimitSnapshot::class)
+  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> = setOf(SpeedLimitSnapshot::class)
   override val aspectRatio: Float = 1f
   override val supportsTap: Boolean = false
   override val priority: Int = 100
@@ -106,8 +105,7 @@ public class SpeedLimitCircleRenderer @Inject constructor() : WidgetRenderer {
     val textPaint =
       remember(useBlueDigits) {
         android.graphics.Paint().apply {
-          color =
-            if (useBlueDigits) android.graphics.Color.BLUE else android.graphics.Color.BLACK
+          color = if (useBlueDigits) android.graphics.Color.BLUE else android.graphics.Color.BLACK
           textAlign = android.graphics.Paint.Align.CENTER
           isAntiAlias = true
           isFakeBoldText = true

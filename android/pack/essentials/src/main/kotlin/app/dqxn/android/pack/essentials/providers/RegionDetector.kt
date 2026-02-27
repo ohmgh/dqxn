@@ -29,13 +29,33 @@ internal object RegionDetector {
    */
   val MPH_COUNTRIES: Set<String> =
     setOf(
-      "US", "GB", "MM", "LR",
+      "US",
+      "GB",
+      "MM",
+      "LR",
       // US territories
-      "AS", "VI", "GU", "MP", "PR",
+      "AS",
+      "VI",
+      "GU",
+      "MP",
+      "PR",
       // Other mph users
-      "WS", "BS", "BZ", "KY", "FK",
+      "WS",
+      "BS",
+      "BZ",
+      "KY",
+      "FK",
       // Caribbean
-      "AG", "DM", "GD", "KN", "LC", "VC", "MS", "TC", "VG", "AI",
+      "AG",
+      "DM",
+      "GD",
+      "KN",
+      "LC",
+      "VC",
+      "MS",
+      "TC",
+      "VG",
+      "AI",
     )
 
   /**

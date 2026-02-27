@@ -9,9 +9,7 @@ import app.dqxn.android.core.design.token.DashboardTypography
 import app.dqxn.android.core.design.token.TextEmphasis
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 
-/**
- * "N/M devices" text counter, only visible when [pairedCount] >= 2.
- */
+/** "N/M devices" text counter, only visible when [pairedCount] >= 2. */
 @Composable
 internal fun DeviceLimitCounter(
   pairedCount: Int,

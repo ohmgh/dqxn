@@ -33,23 +33,24 @@ constructor(
    * Apply blank space gesture handling to this [Modifier]. Must be placed AFTER widget gesture
    * modifiers in the composition tree so widgets consume their events first.
    */
-  public fun Modifier.blankSpaceGestures(): Modifier = this.pointerInput(Unit) {
-    awaitEachGesture {
-      // Only fire on unconsumed events -- widgets consume theirs via down.consume()
-      val down = awaitFirstDown(requireUnconsumed = true, pass = PointerEventPass.Main)
+  public fun Modifier.blankSpaceGestures(): Modifier =
+    this.pointerInput(Unit) {
+      awaitEachGesture {
+        // Only fire on unconsumed events -- widgets consume theirs via down.consume()
+        val down = awaitFirstDown(requireUnconsumed = true, pass = PointerEventPass.Main)
 
-      val isEditMode = editModeCoordinator.editState.value.isEditMode
+        val isEditMode = editModeCoordinator.editState.value.isEditMode
 
-      if (isEditMode) {
-        // Tap in edit mode -> exit
-        awaitUpAndExitEditMode()
-        return@awaitEachGesture
+        if (isEditMode) {
+          // Tap in edit mode -> exit
+          awaitUpAndExitEditMode()
+          return@awaitEachGesture
+        }
+
+        // Non-edit mode: long-press to enter edit mode
+        awaitLongPress()
       }
-
-      // Non-edit mode: long-press to enter edit mode
-      awaitLongPress()
     }
-  }
 
   /** Wait for pointer up and exit edit mode. */
   private suspend fun AwaitPointerEventScope.awaitUpAndExitEditMode() {
@@ -90,8 +91,9 @@ constructor(
 
       val posChange = change.positionChange()
       if (posChange != Offset.Zero && !longPressTriggered) {
-        if (abs(posChange.x) > CANCELLATION_THRESHOLD_PX ||
-          abs(posChange.y) > CANCELLATION_THRESHOLD_PX
+        if (
+          abs(posChange.x) > CANCELLATION_THRESHOLD_PX ||
+            abs(posChange.y) > CANCELLATION_THRESHOLD_PX
         ) {
           // Movement exceeds threshold -- cancel
           break

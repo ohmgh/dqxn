@@ -34,11 +34,13 @@ class CrashRecoveryTest {
   fun `crashes outside window do not count`() {
     // Record 3 crashes "in the past" by writing timestamps directly
     val now = System.currentTimeMillis()
-    val oldTimestamps = listOf(
-      now - 120_000L,
-      now - 100_000L,
-      now - 80_000L,
-    ).joinToString(",")
+    val oldTimestamps =
+      listOf(
+          now - 120_000L,
+          now - 100_000L,
+          now - 80_000L,
+        )
+        .joinToString(",")
     prefs.edit().putString(CrashRecovery.KEY_TIMESTAMPS, oldTimestamps).commit()
 
     // Record one recent crash
@@ -51,11 +53,13 @@ class CrashRecoveryTest {
   fun `boundary condition - crash at exactly 60001ms after first is excluded`() {
     val now = System.currentTimeMillis()
     // 3 crashes: first one is exactly 60_001ms old, two are recent
-    val timestamps = listOf(
-      now - 60_001L,
-      now - 1000L,
-      now - 500L,
-    ).joinToString(",")
+    val timestamps =
+      listOf(
+          now - 60_001L,
+          now - 1000L,
+          now - 500L,
+        )
+        .joinToString(",")
     prefs.edit().putString(CrashRecovery.KEY_TIMESTAMPS, timestamps).commit()
 
     // Record one more recent crash -- total recent should be 3 (the old one is excluded)
@@ -86,31 +90,40 @@ class CrashRecoveryTest {
   }
 
   /**
-   * Minimal in-memory [SharedPreferences] for unit testing without Robolectric.
-   * Only implements methods used by [CrashRecovery].
+   * Minimal in-memory [SharedPreferences] for unit testing without Robolectric. Only implements
+   * methods used by [CrashRecovery].
    */
   private class FakeSharedPreferences : SharedPreferences {
     private val data = mutableMapOf<String, Any?>()
     private val listeners = mutableSetOf<SharedPreferences.OnSharedPreferenceChangeListener>()
 
     override fun getAll(): MutableMap<String, *> = data.toMutableMap()
+
     override fun getString(key: String?, defValue: String?): String? =
       data[key] as? String ?: defValue
+
     override fun getStringSet(key: String?, defValues: MutableSet<String>?): MutableSet<String>? =
-      @Suppress("UNCHECKED_CAST")
-      (data[key] as? MutableSet<String>) ?: defValues
+      @Suppress("UNCHECKED_CAST") (data[key] as? MutableSet<String>) ?: defValues
+
     override fun getInt(key: String?, defValue: Int): Int = data[key] as? Int ?: defValue
+
     override fun getLong(key: String?, defValue: Long): Long = data[key] as? Long ?: defValue
+
     override fun getFloat(key: String?, defValue: Float): Float = data[key] as? Float ?: defValue
+
     override fun getBoolean(key: String?, defValue: Boolean): Boolean =
       data[key] as? Boolean ?: defValue
+
     override fun contains(key: String?): Boolean = data.containsKey(key)
+
     override fun edit(): SharedPreferences.Editor = FakeEditor(data, listeners)
+
     override fun registerOnSharedPreferenceChangeListener(
       listener: SharedPreferences.OnSharedPreferenceChangeListener?,
     ) {
       listener?.let { listeners.add(it) }
     }
+
     override fun unregisterOnSharedPreferenceChangeListener(
       listener: SharedPreferences.OnSharedPreferenceChangeListener?,
     ) {
@@ -129,6 +142,7 @@ class CrashRecoveryTest {
         key?.let { pending[it] = value }
         return this
       }
+
       override fun putStringSet(
         key: String?,
         values: MutableSet<String>?,
@@ -136,34 +150,42 @@ class CrashRecoveryTest {
         key?.let { pending[it] = values }
         return this
       }
+
       override fun putInt(key: String?, value: Int): SharedPreferences.Editor {
         key?.let { pending[it] = value }
         return this
       }
+
       override fun putLong(key: String?, value: Long): SharedPreferences.Editor {
         key?.let { pending[it] = value }
         return this
       }
+
       override fun putFloat(key: String?, value: Float): SharedPreferences.Editor {
         key?.let { pending[it] = value }
         return this
       }
+
       override fun putBoolean(key: String?, value: Boolean): SharedPreferences.Editor {
         key?.let { pending[it] = value }
         return this
       }
+
       override fun remove(key: String?): SharedPreferences.Editor {
         key?.let { removals.add(it) }
         return this
       }
+
       override fun clear(): SharedPreferences.Editor {
         clearAll = true
         return this
       }
+
       override fun commit(): Boolean {
         applyChanges()
         return true
       }
+
       override fun apply() {
         applyChanges()
       }

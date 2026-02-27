@@ -12,9 +12,8 @@ import org.w3c.dom.NodeList
  * Verifies the Terms of Service speed accuracy disclaimer string resource (NF-D2).
  *
  * Parses `app/src/main/res/values/strings.xml` directly as XML and asserts the
- * `tos_speed_disclaimer` element exists with required legal phrases. This ensures
- * the disclaimer text cannot be accidentally emptied or stripped without breaking
- * the build.
+ * `tos_speed_disclaimer` element exists with required legal phrases. This ensures the disclaimer
+ * text cannot be accidentally emptied or stripped without breaking the build.
  *
  * Pure JVM test -- no Robolectric or Android runtime required.
  */
@@ -44,9 +43,7 @@ class ToSDisclaimerTest {
       }
     }
 
-    assertWithMessage("tos_speed_disclaimer string resource must exist")
-      .that(text)
-      .isNotNull()
+    assertWithMessage("tos_speed_disclaimer string resource must exist").that(text).isNotNull()
     text!!
   }
 

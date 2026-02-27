@@ -1,18 +1,18 @@
 package app.dqxn.android.agentic.handlers
 
+import dev.agentic.android.chaos.ChaosEngine
 import dev.agentic.android.runtime.AgenticCommand
 import dev.agentic.android.runtime.CommandHandler
 import dev.agentic.android.runtime.CommandParams
 import dev.agentic.android.runtime.CommandResult
-import dev.agentic.android.chaos.ChaosEngine
 import javax.inject.Inject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * Stops the active chaos testing session and returns a summary of injected faults.
- * Returns an error if no session is active.
+ * Stops the active chaos testing session and returns a summary of injected faults. Returns an error
+ * if no session is active.
  */
 @AgenticCommand(
   name = "chaos-stop",
@@ -26,7 +26,8 @@ constructor(
 ) : CommandHandler {
 
   override val name: String = "chaos-stop"
-  override val description: String = "Stop the active chaos testing session and return injection summary"
+  override val description: String =
+    "Stop the active chaos testing session and return injection summary"
   override val category: String = "chaos"
   override val aliases: List<String> = listOf("chaos-end")
 

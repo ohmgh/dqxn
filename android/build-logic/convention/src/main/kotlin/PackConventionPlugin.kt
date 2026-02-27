@@ -44,13 +44,14 @@ class PackConventionPlugin : Plugin<Project> {
         arg("packId", project.name)
 
         // Pack category derived from packId for ManifestGenerator
-        val packCategory = when (project.name) {
-          "essentials" -> "ESSENTIALS"
-          "plus" -> "PREMIUM"
-          "themes" -> "PREMIUM"
-          "demo" -> "DEBUG"
-          else -> "ESSENTIALS" // safe default
-        }
+        val packCategory =
+          when (project.name) {
+            "essentials" -> "ESSENTIALS"
+            "plus" -> "PREMIUM"
+            "themes" -> "PREMIUM"
+            "demo" -> "DEBUG"
+            else -> "ESSENTIALS" // safe default
+          }
         arg("packCategory", packCategory)
       }
 

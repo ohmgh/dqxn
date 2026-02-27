@@ -19,12 +19,12 @@ import org.junit.jupiter.api.Test
 class SolarTimezoneDataProviderTest : DataProviderContractTest() {
 
   private val receiverSlot = slot<BroadcastReceiver>()
-  private val mockContext: Context = mockk<Context>(relaxed = true).also { ctx ->
-    every { ctx.registerReceiver(capture(receiverSlot), any<IntentFilter>()) } returns mockk()
-  }
+  private val mockContext: Context =
+    mockk<Context>(relaxed = true).also { ctx ->
+      every { ctx.registerReceiver(capture(receiverSlot), any<IntentFilter>()) } returns mockk()
+    }
 
-  override fun createProvider(): DataProvider<*> =
-    SolarTimezoneDataProvider(context = mockContext)
+  override fun createProvider(): DataProvider<*> = SolarTimezoneDataProvider(context = mockContext)
 
   @Test
   fun `sourceId follows convention`() {

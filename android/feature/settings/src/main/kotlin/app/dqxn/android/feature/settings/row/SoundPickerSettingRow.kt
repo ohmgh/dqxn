@@ -23,8 +23,8 @@ import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 /**
  * Sound picker setting row that shows the current ringtone name.
  *
- * Ringtone name resolved via [RingtoneManager.getRingtone] with fallback to "Default". The
- * action button fires [onSoundPickerRequested] which the parent composable connects to an
+ * Ringtone name resolved via [RingtoneManager.getRingtone] with fallback to "Default". The action
+ * button fires [onSoundPickerRequested] which the parent composable connects to an
  * [ActivityResultLauncher] for the system `ACTION_RINGTONE_PICKER`.
  */
 @Composable

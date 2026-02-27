@@ -26,13 +26,17 @@ public class SafeModeManager
 constructor(
   private val prefs: SharedPreferences,
   private val logger: DqxnLogger,
-  /** Clock source for timestamps. Defaults to [System.currentTimeMillis]. Inject a fake for tests. */
+  /**
+   * Clock source for timestamps. Defaults to [System.currentTimeMillis]. Inject a fake for tests.
+   */
   public val clock: () -> Long = { System.currentTimeMillis() },
 ) {
 
   private val _safeModeActive: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
-  /** Whether safe mode is currently active. Observed by NotificationCoordinator for CRITICAL banner. */
+  /**
+   * Whether safe mode is currently active. Observed by NotificationCoordinator for CRITICAL banner.
+   */
   public val safeModeActive: StateFlow<Boolean> = _safeModeActive.asStateFlow()
 
   init {
@@ -82,10 +86,7 @@ constructor(
   }
 
   private fun readTimestamps(): List<Long> =
-    prefs
-      .getString(KEY_CRASH_TIMESTAMPS, null)
-      ?.split(",")
-      ?.mapNotNull { it.toLongOrNull() }
+    prefs.getString(KEY_CRASH_TIMESTAMPS, null)?.split(",")?.mapNotNull { it.toLongOrNull() }
       ?: emptyList()
 
   internal companion object {

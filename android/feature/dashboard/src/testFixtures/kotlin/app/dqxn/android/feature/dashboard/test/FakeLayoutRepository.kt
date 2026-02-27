@@ -19,8 +19,8 @@ import kotlinx.coroutines.flow.update
  * In-memory [LayoutRepository] for testing. All operations are immediate (no debounce). Backs
  * profile and widget state with [MutableStateFlow] so collectors see updates instantly.
  *
- * Uses a [Versioned] wrapper around the profile list to force [MutableStateFlow] re-emission
- * when the structural content is unchanged but the active profile changed (profile switching).
+ * Uses a [Versioned] wrapper around the profile list to force [MutableStateFlow] re-emission when
+ * the structural content is unchanged but the active profile changed (profile switching).
  */
 public class FakeLayoutRepository : LayoutRepository {
 
@@ -45,12 +45,14 @@ public class FakeLayoutRepository : LayoutRepository {
   private val _profiles: MutableStateFlow<Versioned<List<ProfileData>>> =
     MutableStateFlow(
       Versioned(
-        data = listOf(
-          ProfileData(
-            summary = ProfileSummary(profileId = DEFAULT_PROFILE_ID, displayName = "Main", sortOrder = 0),
-            widgets = emptyList(),
-          )
-        ),
+        data =
+          listOf(
+            ProfileData(
+              summary =
+                ProfileSummary(profileId = DEFAULT_PROFILE_ID, displayName = "Main", sortOrder = 0),
+              widgets = emptyList(),
+            )
+          ),
         version = 0L,
       )
     )
@@ -80,10 +82,17 @@ public class FakeLayoutRepository : LayoutRepository {
     val newId = UUID.randomUUID().toString()
     _profiles.update { versioned ->
       Versioned(
-        data = versioned.data + ProfileData(
-          summary = ProfileSummary(profileId = newId, displayName = displayName, sortOrder = versioned.data.size),
-          widgets = emptyList(),
-        ),
+        data =
+          versioned.data +
+            ProfileData(
+              summary =
+                ProfileSummary(
+                  profileId = newId,
+                  displayName = displayName,
+                  sortOrder = versioned.data.size
+                ),
+              widgets = emptyList(),
+            ),
         version = nextVersion(),
       )
     }
@@ -97,10 +106,17 @@ public class FakeLayoutRepository : LayoutRepository {
       val clonedWidgets =
         source?.widgets?.map { it.copy(instanceId = UUID.randomUUID().toString()) } ?: emptyList()
       Versioned(
-        data = versioned.data + ProfileData(
-          summary = ProfileSummary(profileId = newId, displayName = displayName, sortOrder = versioned.data.size),
-          widgets = clonedWidgets,
-        ),
+        data =
+          versioned.data +
+            ProfileData(
+              summary =
+                ProfileSummary(
+                  profileId = newId,
+                  displayName = displayName,
+                  sortOrder = versioned.data.size
+                ),
+              widgets = clonedWidgets,
+            ),
         version = nextVersion(),
       )
     }
@@ -130,13 +146,14 @@ public class FakeLayoutRepository : LayoutRepository {
     val activeId = _activeProfileId.value
     _profiles.update { versioned ->
       Versioned(
-        data = versioned.data.map {
-          if (it.summary.profileId == activeId) {
-            it.copy(widgets = it.widgets + widget)
-          } else {
-            it
-          }
-        },
+        data =
+          versioned.data.map {
+            if (it.summary.profileId == activeId) {
+              it.copy(widgets = it.widgets + widget)
+            } else {
+              it
+            }
+          },
         version = nextVersion(),
       )
     }
@@ -146,13 +163,14 @@ public class FakeLayoutRepository : LayoutRepository {
     val activeId = _activeProfileId.value
     _profiles.update { versioned ->
       Versioned(
-        data = versioned.data.map {
-          if (it.summary.profileId == activeId) {
-            it.copy(widgets = it.widgets.filter { w -> w.instanceId != instanceId })
-          } else {
-            it
-          }
-        },
+        data =
+          versioned.data.map {
+            if (it.summary.profileId == activeId) {
+              it.copy(widgets = it.widgets.filter { w -> w.instanceId != instanceId })
+            } else {
+              it
+            }
+          },
         version = nextVersion(),
       )
     }
@@ -162,15 +180,17 @@ public class FakeLayoutRepository : LayoutRepository {
     val activeId = _activeProfileId.value
     _profiles.update { versioned ->
       Versioned(
-        data = versioned.data.map {
-          if (it.summary.profileId == activeId) {
-            it.copy(
-              widgets = it.widgets.map { w -> if (w.instanceId == widget.instanceId) widget else w }
-            )
-          } else {
-            it
-          }
-        },
+        data =
+          versioned.data.map {
+            if (it.summary.profileId == activeId) {
+              it.copy(
+                widgets =
+                  it.widgets.map { w -> if (w.instanceId == widget.instanceId) widget else w }
+              )
+            } else {
+              it
+            }
+          },
         version = nextVersion(),
       )
     }
@@ -180,17 +200,19 @@ public class FakeLayoutRepository : LayoutRepository {
     val activeId = _activeProfileId.value
     _profiles.update { versioned ->
       Versioned(
-        data = versioned.data.map {
-          if (it.summary.profileId == activeId) {
-            it.copy(
-              widgets = it.widgets.map { w ->
-                if (w.instanceId == instanceId) w.copy(position = position) else w
-              }
-            )
-          } else {
-            it
-          }
-        },
+        data =
+          versioned.data.map {
+            if (it.summary.profileId == activeId) {
+              it.copy(
+                widgets =
+                  it.widgets.map { w ->
+                    if (w.instanceId == instanceId) w.copy(position = position) else w
+                  }
+              )
+            } else {
+              it
+            }
+          },
         version = nextVersion(),
       )
     }
@@ -200,17 +222,17 @@ public class FakeLayoutRepository : LayoutRepository {
     val activeId = _activeProfileId.value
     _profiles.update { versioned ->
       Versioned(
-        data = versioned.data.map {
-          if (it.summary.profileId == activeId) {
-            it.copy(
-              widgets = it.widgets.map { w ->
-                if (w.instanceId == instanceId) w.copy(size = size) else w
-              }
-            )
-          } else {
-            it
-          }
-        },
+        data =
+          versioned.data.map {
+            if (it.summary.profileId == activeId) {
+              it.copy(
+                widgets =
+                  it.widgets.map { w -> if (w.instanceId == instanceId) w.copy(size = size) else w }
+              )
+            } else {
+              it
+            }
+          },
         version = nextVersion(),
       )
     }
@@ -219,12 +241,14 @@ public class FakeLayoutRepository : LayoutRepository {
   override suspend fun clearAll() {
     _profiles.value =
       Versioned(
-        data = listOf(
-          ProfileData(
-            summary = ProfileSummary(profileId = DEFAULT_PROFILE_ID, displayName = "Main", sortOrder = 0),
-            widgets = emptyList(),
-          )
-        ),
+        data =
+          listOf(
+            ProfileData(
+              summary =
+                ProfileSummary(profileId = DEFAULT_PROFILE_ID, displayName = "Main", sortOrder = 0),
+              widgets = emptyList(),
+            )
+          ),
         version = nextVersion(),
       )
     _activeProfileId.value = DEFAULT_PROFILE_ID
@@ -235,9 +259,10 @@ public class FakeLayoutRepository : LayoutRepository {
     val activeId = _activeProfileId.value
     _profiles.update { versioned ->
       Versioned(
-        data = versioned.data.map {
-          if (it.summary.profileId == activeId) it.copy(widgets = widgets) else it
-        },
+        data =
+          versioned.data.map {
+            if (it.summary.profileId == activeId) it.copy(widgets = widgets) else it
+          },
         version = nextVersion(),
       )
     }

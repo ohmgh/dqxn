@@ -165,7 +165,7 @@ Visual customization with auto-switching.
 | F4.3  | Dual-theme model (separate light/dark selections)                                             | Must     |
 | F4.4  | 5 auto-switch modes: LIGHT, DARK, SYSTEM, SOLAR_AUTO, ILLUMINANCE_AUTO                       | Must     |
 | F4.5  | `ThemeAutoSwitchEngine` with eager sharing (ready at cold start)                              | Must     |
-| F4.6  | Theme preview: live preview before committing, reverts on cancel. Preview times out after 60 seconds with toast "Theme preview ended." Follow old codebase behavior | Must     |
+| F4.6  | Theme preview: live preview before committing, reverts on cancel. No auto-timeout (user may be comparing themes; old codebase didn't implement timeout either) | Must     |
 | F4.7  | Theme Studio — create/edit custom themes (max 12). Follow old codebase behavior               | Must     |
 | F4.8  | Gradient editor (vertical, horizontal, linear, radial, sweep; 2-5 stops). Follow old codebase behavior | Must     |
 | F4.9  | Preview-regardless-of-entitlement, gate-at-persistence. No degradation during preview — gated themes render at full quality, revert to free only upon exit. Follow old codebase behavior | Must     |

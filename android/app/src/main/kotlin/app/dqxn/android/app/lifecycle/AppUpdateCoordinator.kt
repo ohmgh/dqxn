@@ -11,7 +11,6 @@ import javax.inject.Inject
 
 /**
  * Coordinates Google Play In-App Update flow (NF-L2).
- *
  * - Priority >= 4: IMMEDIATE update (blocks usage until installed).
  * - Priority < 4: FLEXIBLE update (downloads in background, completes on next restart).
  *

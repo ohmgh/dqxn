@@ -37,18 +37,16 @@ import org.junit.jupiter.api.extension.RegisterExtension
  * - ResetLayout -> layout contains preset widgets
  * - Profile switching -> layout loads new profile widgets
  *
- * Uses [StandardTestDispatcher] (default for [runTest]) per CLAUDE.md testing rules.
- * The harness receives the [runTest] TestScope so all dispatchers share one scheduler.
- * Forever-collecting coordinator flows are cancelled via [DashboardTestHarness.close] before
- * [runTest] exits to avoid [UncompletedCoroutinesError].
+ * Uses [StandardTestDispatcher] (default for [runTest]) per CLAUDE.md testing rules. The harness
+ * receives the [runTest] TestScope so all dispatchers share one scheduler. Forever-collecting
+ * coordinator flows are cancelled via [DashboardTestHarness.close] before [runTest] exits to avoid
+ * [UncompletedCoroutinesError].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Tag("fast")
 class DashboardTestHarnessTest {
 
-  @JvmField
-  @RegisterExtension
-  val stateOnFailure = HarnessStateOnFailure()
+  @JvmField @RegisterExtension val stateOnFailure = HarnessStateOnFailure()
 
   private val logger = NoOpLogger
 
@@ -163,10 +161,11 @@ class DashboardTestHarnessTest {
     // Use a cancellable scope for the profile coordinator's forever-collecting flows
     val profileJob = Job(coroutineContext[Job])
     val profileScope = this + profileJob
-    val profileCoordinator = ProfileCoordinator(
-      layoutRepository = harness.fakeLayoutRepository,
-      logger = logger,
-    )
+    val profileCoordinator =
+      ProfileCoordinator(
+        layoutRepository = harness.fakeLayoutRepository,
+        logger = logger,
+      )
     profileCoordinator.initialize(profileScope)
     advanceUntilIdle()
 
@@ -239,20 +238,19 @@ class DashboardTestHarnessTest {
     harness.initialize()
     advanceUntilIdle()
 
-    val storageMonitor: StorageMonitor = mockk {
-      every { isLow } returns MutableStateFlow(false)
-    }
+    val storageMonitor: StorageMonitor = mockk { every { isLow } returns MutableStateFlow(false) }
     val alertEmitter: AlertEmitter = mockk(relaxed = true)
 
     // Use a cancellable scope for the notification coordinator's forever-collecting flows
     val notifJob = Job(coroutineContext[Job])
     val notifScope = this + notifJob
-    val notificationCoordinator = NotificationCoordinator(
-      safeModeManager = harness.safeModeManager,
-      storageMonitor = storageMonitor,
-      alertEmitter = alertEmitter,
-      logger = logger,
-    )
+    val notificationCoordinator =
+      NotificationCoordinator(
+        safeModeManager = harness.safeModeManager,
+        storageMonitor = storageMonitor,
+        alertEmitter = alertEmitter,
+        logger = logger,
+      )
     notificationCoordinator.initialize(notifScope)
     advanceUntilIdle()
 
@@ -281,12 +279,9 @@ class DashboardTestHarnessTest {
 
   private fun createEditModeCoordinator(harness: DashboardTestHarness): EditModeCoordinator {
     val haptics: DashboardHaptics = mockk(relaxed = true)
-    val reducedMotionHelper: ReducedMotionHelper = mockk {
-      every { isReducedMotion } returns false
-    }
-    val userPreferencesRepository: UserPreferencesRepository = mockk(relaxed = true) {
-      every { showStatusBar } returns MutableStateFlow(false)
-    }
+    val reducedMotionHelper: ReducedMotionHelper = mockk { every { isReducedMotion } returns false }
+    val userPreferencesRepository: UserPreferencesRepository =
+      mockk(relaxed = true) { every { showStatusBar } returns MutableStateFlow(false) }
 
     return EditModeCoordinator(
       layoutCoordinator = harness.layoutCoordinator,

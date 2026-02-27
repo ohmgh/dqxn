@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -25,6 +24,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 
 /**
  * Overlay toolbar rendered above a focused widget in edit mode (F1.8).
@@ -86,6 +86,8 @@ private fun ActionButton(
         label = "action_press_scale",
     )
 
+    val theme = LocalDashboardTheme.current
+
     FilledIconButton(
         onClick = onClick,
         modifier = Modifier
@@ -97,8 +99,8 @@ private fun ActionButton(
             .testTag(testTag)
             .semantics { contentDescription = description },
         colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
-            contentColor = MaterialTheme.colorScheme.onSurface,
+            containerColor = theme.primaryTextColor.copy(alpha = 0.15f),
+            contentColor = theme.primaryTextColor,
         ),
         interactionSource = interactionSource,
     ) {

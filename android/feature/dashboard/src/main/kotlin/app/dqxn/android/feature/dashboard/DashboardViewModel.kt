@@ -17,7 +17,7 @@ import app.dqxn.android.feature.dashboard.coordinator.WidgetBindingCoordinator
 import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
 import app.dqxn.android.feature.dashboard.grid.BlankSpaceGestureHandler
 import app.dqxn.android.feature.dashboard.grid.WidgetGestureHandler
-import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
+import app.dqxn.android.sdk.contracts.setup.SetupEvaluator
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
@@ -68,7 +68,7 @@ constructor(
   val dataProviderRegistry: DataProviderRegistry,
   val providerSettingsStore: ProviderSettingsStore,
   val entitlementManager: EntitlementManager,
-  val setupEvaluator: SetupEvaluatorImpl,
+  val setupEvaluator: SetupEvaluator,
   val pairedDeviceStore: PairedDeviceStore,
   val builtInThemes: BuiltInThemes,
   private val savedStateHandle: SavedStateHandle,

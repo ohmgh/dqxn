@@ -112,8 +112,7 @@ constructor(
               if (location.hasSpeed()) {
                 speedMps = location.speed
                 accuracy =
-                  if (location.hasSpeedAccuracy()) location.speedAccuracyMetersPerSecond
-                  else null
+                  if (location.hasSpeedAccuracy()) location.speedAccuracyMetersPerSecond else null
               } else if (hasLastLocation) {
                 val timeDeltaS = (location.time - lastLocationTime) / 1000.0f
                 if (timeDeltaS > 0f) {

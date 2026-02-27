@@ -20,8 +20,8 @@ import androidx.compose.ui.unit.dp
 /**
  * Fallback UI for a widget that has crashed during rendering (F2.14).
  *
- * Shows an error icon, "Widget error" message, and "Tap to retry" prompt. Tapping clears the
- * error state in [WidgetSlot], triggering a re-render attempt.
+ * Shows an error icon, "Widget error" message, and "Tap to retry" prompt. Tapping clears the error
+ * state in [WidgetSlot], triggering a re-render attempt.
  */
 @Composable
 public fun WidgetErrorFallback(
@@ -29,9 +29,7 @@ public fun WidgetErrorFallback(
   modifier: Modifier = Modifier,
 ) {
   Column(
-    modifier = modifier
-      .fillMaxSize()
-      .clickable(onClick = onRetry),
+    modifier = modifier.fillMaxSize().clickable(onClick = onRetry),
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.Center,
   ) {

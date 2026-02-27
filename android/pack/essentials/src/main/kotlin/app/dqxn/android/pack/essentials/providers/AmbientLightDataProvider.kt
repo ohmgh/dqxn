@@ -49,8 +49,7 @@ constructor(
   override val priority: ProviderPriority = ProviderPriority.DEVICE_SENSOR
   override val subscriberTimeout: Duration = 5.seconds
   override val firstEmissionTimeout: Duration = 5.seconds
-  override val isAvailable: Boolean =
-    sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT) != null
+  override val isAvailable: Boolean = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT) != null
   override val requiredAnyEntitlement: Set<String>? = null
   override val connectionState: Flow<Boolean> = flowOf(isAvailable)
   override val connectionErrorDescription: Flow<String?> =

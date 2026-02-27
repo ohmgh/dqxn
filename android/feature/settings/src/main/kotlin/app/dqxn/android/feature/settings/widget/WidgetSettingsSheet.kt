@@ -11,18 +11,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.graphics.Color
 import app.dqxn.android.feature.settings.R
 import app.dqxn.android.feature.settings.SettingNavigation
 import app.dqxn.android.feature.settings.overlay.OverlayScaffold
 import app.dqxn.android.feature.settings.overlay.OverlayType
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
-import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
 import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
+import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import kotlinx.coroutines.launch
@@ -131,7 +131,6 @@ private fun WidgetSettingsTabPager(
             theme = theme,
             onNavigate = onNavigate,
           )
-
         TAB_DATA_SOURCE ->
           DataProviderSettingsContent(
             widgetSpec = widgetSpec,
@@ -139,7 +138,6 @@ private fun WidgetSettingsTabPager(
             theme = theme,
             onNavigateToSetup = onNavigateToSetup,
           )
-
         TAB_INFO ->
           WidgetInfoContent(
             widgetTypeId = widgetTypeId,

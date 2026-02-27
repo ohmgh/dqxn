@@ -7,7 +7,8 @@ import org.junit.jupiter.api.Test
 
 /**
  * Guard test ensuring the HardcodedText lint check stays configured as error severity in convention
- * plugins, and that production Compose source files do not introduce NEW hardcoded user-facing text.
+ * plugins, and that production Compose source files do not introduce NEW hardcoded user-facing
+ * text.
  *
  * The primary enforcement mechanism is Android lint's built-in HardcodedText check elevated to
  * error severity. This test is a secondary guard that:
@@ -104,8 +105,7 @@ class HardcodedTextLintTest {
               val suffix = parts.drop(1).joinToString("*")
               val target = File(child, suffix)
               if (target.isDirectory) listOf(target) else emptyList()
-            }
-            ?: emptyList()
+            } ?: emptyList()
         } else {
           listOf(baseDir)
         }
@@ -121,11 +121,11 @@ class HardcodedTextLintTest {
               if (trimmed.startsWith("//") || trimmed.startsWith("*")) return@forEachIndexed
 
               // Only match Compose Text() composable calls, not Canvas drawText
-              if (COMPOSE_TEXT_PATTERN.containsMatchIn(line) &&
-                !CANVAS_DRAW_TEXT_PATTERN.containsMatchIn(line)
+              if (
+                COMPOSE_TEXT_PATTERN.containsMatchIn(line) &&
+                  !CANVAS_DRAW_TEXT_PATTERN.containsMatchIn(line)
               ) {
-                val matchValue =
-                  COMPOSE_TEXT_PATTERN.find(line)?.groupValues?.getOrNull(1) ?: ""
+                val matchValue = COMPOSE_TEXT_PATTERN.find(line)?.groupValues?.getOrNull(1) ?: ""
                 if (!isSafeHardcodedText(matchValue)) {
                   val relativePath = file.relativeTo(root).path
                   violations.add("$relativePath:${index + 1}: $trimmed")
@@ -151,21 +151,20 @@ class HardcodedTextLintTest {
 
   companion object {
     /**
-     * Known pre-existing hardcoded text count across feature/settings, feature/dashboard, and
-     * pack modules. This count should only decrease as violations are fixed.
+     * Known pre-existing hardcoded text count across feature/settings, feature/dashboard, and pack
+     * modules. This count should only decrease as violations are fixed.
      */
     private const val KNOWN_BASELINE_COUNT = 14
 
     /** Matches Compose Text() composable calls with hardcoded string literals. */
-    private val COMPOSE_TEXT_PATTERN =
-      Regex("""Text\(\s*(?:text\s*=\s*)?"([^"]*)"[^)]*\)""")
+    private val COMPOSE_TEXT_PATTERN = Regex("""Text\(\s*(?:text\s*=\s*)?"([^"]*)"[^)]*\)""")
 
     /** Matches Canvas drawText calls (not Compose Text composable). */
     private val CANVAS_DRAW_TEXT_PATTERN = Regex("""\.drawText\(""")
 
     /**
-     * Returns true if the matched text value is a safe/expected hardcoded string that doesn't
-     * need localization.
+     * Returns true if the matched text value is a safe/expected hardcoded string that doesn't need
+     * localization.
      */
     private fun isSafeHardcodedText(value: String): Boolean {
       if (value.isBlank()) return true

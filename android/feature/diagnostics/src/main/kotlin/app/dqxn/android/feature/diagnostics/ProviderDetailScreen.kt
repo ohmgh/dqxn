@@ -28,8 +28,8 @@ import kotlinx.collections.immutable.ImmutableList
 /**
  * Detail screen for a single data provider showing its current status and connection event log.
  *
- * The event log shows the rolling 50 events from [ConnectionEventStore], sorted newest first.
- * A "Retry Connection" button fires the [onRetry] callback with the provider's ID.
+ * The event log shows the rolling 50 events from [ConnectionEventStore], sorted newest first. A
+ * "Retry Connection" button fires the [onRetry] callback with the provider's ID.
  *
  * @param providerStatus The current status of the provider, or null if not found.
  * @param events Connection events filtered for this provider, sorted newest first.
@@ -111,11 +111,7 @@ private fun ConnectionEventRow(
   index: Int,
 ) {
   Row(
-    modifier =
-      Modifier
-        .fillMaxWidth()
-        .padding(vertical = 8.dp)
-        .testTag("connection_event_$index"),
+    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("connection_event_$index"),
     horizontalArrangement = Arrangement.SpaceBetween,
   ) {
     Column(modifier = Modifier.weight(1f)) {
@@ -139,9 +135,7 @@ private fun ConnectionEventRow(
   }
 }
 
-/**
- * Formats a timestamp into a simple time string for display in the event log.
- */
+/** Formats a timestamp into a simple time string for display in the event log. */
 @Stable
 internal fun formatTimestamp(timestampMs: Long): String {
   val seconds = (timestampMs / 1_000) % 60

@@ -21,8 +21,8 @@ public object WcagContrastChecker {
   /**
    * Linearizes a single sRGB channel value per WCAG 2.1 spec.
    *
-   * If [channel] <= 0.04045, returns `channel / 12.92`. Otherwise returns
-   * `((channel + 0.055) / 1.055) ^ 2.4`.
+   * If [channel] <= 0.04045, returns `channel / 12.92`. Otherwise returns `((channel + 0.055) /
+   * 1.055) ^ 2.4`.
    */
   public fun linearize(channel: Float): Double {
     val c = channel.toDouble()
@@ -36,8 +36,8 @@ public object WcagContrastChecker {
   /**
    * Computes relative luminance of a [Color] per WCAG 2.1.
    *
-   * Formula: `L = 0.2126 * R_lin + 0.7152 * G_lin + 0.0722 * B_lin`
-   * where R_lin, G_lin, B_lin are the linearized sRGB channel values.
+   * Formula: `L = 0.2126 * R_lin + 0.7152 * G_lin + 0.0722 * B_lin` where R_lin, G_lin, B_lin are
+   * the linearized sRGB channel values.
    */
   public fun Color.relativeLuminance(): Double {
     val rLin = linearize(red)
@@ -63,8 +63,8 @@ public object WcagContrastChecker {
   /**
    * Checks whether the contrast ratio between [foreground] and [background] meets WCAG AA.
    *
-   * @param isLargeText If true, uses the 3.0:1 threshold (large text). Otherwise uses 4.5:1
-   *   (normal text).
+   * @param isLargeText If true, uses the 3.0:1 threshold (large text). Otherwise uses 4.5:1 (normal
+   *   text).
    */
   public fun meetsAA(
     foreground: Color,

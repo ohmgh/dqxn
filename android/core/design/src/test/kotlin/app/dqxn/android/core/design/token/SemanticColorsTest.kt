@@ -27,7 +27,13 @@ class SemanticColorsTest {
 
   @Test
   fun `all four semantic colors have distinct values`() {
-    val colors = setOf(SemanticColors.Info, SemanticColors.Warning, SemanticColors.Success, SemanticColors.Error)
+    val colors =
+      setOf(
+        SemanticColors.Info,
+        SemanticColors.Warning,
+        SemanticColors.Success,
+        SemanticColors.Error
+      )
     assertThat(colors).hasSize(4)
   }
 }

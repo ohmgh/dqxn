@@ -27,8 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.dqxn.android.sdk.observability.session.SessionEvent
-import kotlinx.collections.immutable.ImmutableList
 import java.text.NumberFormat
+import kotlinx.collections.immutable.ImmutableList
 
 /**
  * Session recording viewer showing a toggle button, event timeline, clear button, and event count.
@@ -67,8 +67,7 @@ public fun SessionRecorderViewer(
           if (isRecording) {
             Box(
               modifier =
-                Modifier
-                  .size(8.dp)
+                Modifier.size(8.dp)
                   .clip(CircleShape)
                   .background(Color.Red)
                   .testTag("recording_indicator"),

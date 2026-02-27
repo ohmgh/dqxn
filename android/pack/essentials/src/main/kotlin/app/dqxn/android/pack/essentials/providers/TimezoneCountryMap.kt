@@ -16,12 +16,16 @@ internal object TimezoneCountryMap {
    */
   fun getCountryCode(timezoneId: String): String? {
     // Direct lookup first
-    TIMEZONE_TO_COUNTRY[timezoneId]?.let { return it }
+    TIMEZONE_TO_COUNTRY[timezoneId]?.let {
+      return it
+    }
 
     // Try canonical ID resolution via ICU
     val canonical = resolveCanonicalId(timezoneId)
     if (canonical != null && canonical != timezoneId) {
-      TIMEZONE_TO_COUNTRY[canonical]?.let { return it }
+      TIMEZONE_TO_COUNTRY[canonical]?.let {
+        return it
+      }
     }
 
     return null

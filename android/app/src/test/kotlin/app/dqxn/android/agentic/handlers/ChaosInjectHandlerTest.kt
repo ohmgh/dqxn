@@ -1,10 +1,10 @@
 package app.dqxn.android.agentic.handlers
 
+import app.dqxn.android.agentic.chaos.ChaosProviderInterceptor
+import com.google.common.truth.Truth.assertThat
+import dev.agentic.android.chaos.Fault
 import dev.agentic.android.runtime.CommandParams
 import dev.agentic.android.runtime.CommandResult
-import app.dqxn.android.agentic.chaos.ChaosProviderInterceptor
-import dev.agentic.android.chaos.Fault
-import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -20,13 +20,14 @@ class ChaosInjectHandlerTest {
 
   @Test
   fun `execute injects kill fault`() = runTest {
-    val result = handler.execute(
-      CommandParams(
-        raw = mapOf("providerId" to "test-provider", "fault" to "kill"),
-        traceId = "t1",
-      ),
-      "cmd-1",
-    )
+    val result =
+      handler.execute(
+        CommandParams(
+          raw = mapOf("providerId" to "test-provider", "fault" to "kill"),
+          traceId = "t1",
+        ),
+        "cmd-1",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
     val data = (result as CommandResult.Success).data
@@ -40,13 +41,14 @@ class ChaosInjectHandlerTest {
 
   @Test
   fun `execute injects delay fault with delayMs`() = runTest {
-    val result = handler.execute(
-      CommandParams(
-        raw = mapOf("providerId" to "test-provider", "fault" to "delay", "delayMs" to "500"),
-        traceId = "t1",
-      ),
-      "cmd-1",
-    )
+    val result =
+      handler.execute(
+        CommandParams(
+          raw = mapOf("providerId" to "test-provider", "fault" to "delay", "delayMs" to "500"),
+          traceId = "t1",
+        ),
+        "cmd-1",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
 
@@ -57,18 +59,20 @@ class ChaosInjectHandlerTest {
 
   @Test
   fun `execute injects flap fault with onMs and offMs`() = runTest {
-    val result = handler.execute(
-      CommandParams(
-        raw = mapOf(
-          "providerId" to "test-provider",
-          "fault" to "flap",
-          "onMs" to "1000",
-          "offMs" to "3000",
+    val result =
+      handler.execute(
+        CommandParams(
+          raw =
+            mapOf(
+              "providerId" to "test-provider",
+              "fault" to "flap",
+              "onMs" to "1000",
+              "offMs" to "3000",
+            ),
+          traceId = "t1",
         ),
-        traceId = "t1",
-      ),
-      "cmd-1",
-    )
+        "cmd-1",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
 
@@ -81,13 +85,14 @@ class ChaosInjectHandlerTest {
 
   @Test
   fun `execute with missing providerId returns error`() = runTest {
-    val result = handler.execute(
-      CommandParams(
-        raw = mapOf("fault" to "kill"),
-        traceId = "t1",
-      ),
-      "cmd-1",
-    )
+    val result =
+      handler.execute(
+        CommandParams(
+          raw = mapOf("fault" to "kill"),
+          traceId = "t1",
+        ),
+        "cmd-1",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Error::class.java)
     val error = result as CommandResult.Error
@@ -97,13 +102,14 @@ class ChaosInjectHandlerTest {
 
   @Test
   fun `execute with missing fault returns error`() = runTest {
-    val result = handler.execute(
-      CommandParams(
-        raw = mapOf("providerId" to "test-provider"),
-        traceId = "t1",
-      ),
-      "cmd-1",
-    )
+    val result =
+      handler.execute(
+        CommandParams(
+          raw = mapOf("providerId" to "test-provider"),
+          traceId = "t1",
+        ),
+        "cmd-1",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Error::class.java)
     val error = result as CommandResult.Error
@@ -112,13 +118,14 @@ class ChaosInjectHandlerTest {
 
   @Test
   fun `execute with unknown fault type returns error`() = runTest {
-    val result = handler.execute(
-      CommandParams(
-        raw = mapOf("providerId" to "test-provider", "fault" to "explode"),
-        traceId = "t1",
-      ),
-      "cmd-1",
-    )
+    val result =
+      handler.execute(
+        CommandParams(
+          raw = mapOf("providerId" to "test-provider", "fault" to "explode"),
+          traceId = "t1",
+        ),
+        "cmd-1",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Error::class.java)
     val error = result as CommandResult.Error

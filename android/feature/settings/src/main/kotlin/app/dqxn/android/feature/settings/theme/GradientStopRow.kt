@@ -36,7 +36,6 @@ internal const val MAX_GRADIENT_STOPS: Int = 5
 
 /**
  * Gradient stop editor: 2-5 stops, each with position slider and color picker.
- *
  * - Add button disabled at [MAX_GRADIENT_STOPS] (5)
  * - Remove button per stop disabled at [MIN_GRADIENT_STOPS] (2)
  * - Position clamped to [0.0, 1.0]
@@ -76,9 +75,7 @@ public fun GradientStopRow(
       Icon(
         imageVector = Icons.Filled.Add,
         contentDescription = "Add stop",
-        tint =
-          if (canAdd) theme.accentColor
-          else theme.secondaryTextColor.copy(alpha = 0.3f),
+        tint = if (canAdd) theme.accentColor else theme.secondaryTextColor.copy(alpha = 0.3f),
       )
     }
 
@@ -90,15 +87,12 @@ public fun GradientStopRow(
         canRemove = canRemove,
         onPositionChanged = { newPosition ->
           val clamped = newPosition.coerceIn(0f, 1f)
-          val updated =
-            stops.toPersistentList().set(index, stop.copy(position = clamped))
+          val updated = stops.toPersistentList().set(index, stop.copy(position = clamped))
           onStopsChanged(updated.toImmutableList())
         },
         onColorChanged = { newColor ->
           val updated =
-            stops
-              .toPersistentList()
-              .set(index, stop.copy(color = newColor.value.toLong()))
+            stops.toPersistentList().set(index, stop.copy(color = newColor.value.toLong()))
           onStopsChanged(updated.toImmutableList())
         },
         onRemove = {
@@ -130,9 +124,7 @@ private fun GradientStopItem(
 ) {
   Column(
     modifier =
-      Modifier.fillMaxWidth()
-        .padding(vertical = 4.dp)
-        .testTag("gradient_stop_item_$index"),
+      Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("gradient_stop_item_$index"),
   ) {
     Row(
       modifier = Modifier.fillMaxWidth(),
@@ -153,10 +145,7 @@ private fun GradientStopItem(
             thumbColor = accentColor,
             activeTrackColor = accentColor,
           ),
-        modifier =
-          Modifier.weight(1f)
-            .height(32.dp)
-            .testTag("gradient_stop_position_$index"),
+        modifier = Modifier.weight(1f).height(32.dp).testTag("gradient_stop_position_$index"),
       )
       Text(
         text = "%.2f".format(stop.position.coerceIn(0f, 1f)),
@@ -171,9 +160,7 @@ private fun GradientStopItem(
         Icon(
           imageVector = Icons.Filled.Remove,
           contentDescription = "Remove stop $index",
-          tint =
-            if (canRemove) accentColor
-            else secondaryTextColor.copy(alpha = 0.3f),
+          tint = if (canRemove) accentColor else secondaryTextColor.copy(alpha = 0.3f),
         )
       }
     }

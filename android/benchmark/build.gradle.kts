@@ -1,6 +1,4 @@
-plugins {
-  id("com.android.test")
-}
+plugins { id("com.android.test") }
 
 android {
   namespace = "app.dqxn.android.benchmark"

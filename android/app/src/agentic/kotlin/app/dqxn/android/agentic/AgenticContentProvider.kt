@@ -19,8 +19,7 @@ internal class AgenticContentProvider : BaseAgenticContentProvider() {
   override fun provideRouter(): AgenticCommandRouter? {
     val appContext = context?.applicationContext ?: return null
     return try {
-      EntryPointAccessors.fromApplication(appContext, AgenticEntryPoint::class.java)
-        .commandRouter()
+      EntryPointAccessors.fromApplication(appContext, AgenticEntryPoint::class.java).commandRouter()
     } catch (_: IllegalStateException) {
       null
     }
@@ -28,7 +27,8 @@ internal class AgenticContentProvider : BaseAgenticContentProvider() {
 
   override fun onQueryPath(pathSegment: String): Cursor? =
     when (pathSegment) {
-      "health", "anr" -> null
+      "health",
+      "anr" -> null
       else -> null
     }
 }

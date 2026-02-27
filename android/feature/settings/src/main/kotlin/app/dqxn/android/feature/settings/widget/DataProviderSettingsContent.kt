@@ -56,9 +56,7 @@ internal fun DataProviderSettingsContent(
   }
 
   val dataTypes =
-    remember(widgetSpec) {
-      widgetSpec.compatibleSnapshots.map { it.simpleName ?: "Unknown" }
-    }
+    remember(widgetSpec) { widgetSpec.compatibleSnapshots.map { it.simpleName ?: "Unknown" } }
 
   val allProviders =
     remember(widgetSpec) {

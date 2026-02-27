@@ -27,73 +27,69 @@ import kotlinx.coroutines.SupervisorJob
  * Debug-only Hilt module providing observability type bindings with debug-appropriate
  * configuration: verbose logging, 512-entry ring buffer, CrashEvidenceWriter.
  *
- * Agentic bindings (@Multibinds CommandHandler, ChaosProviderInterceptor) moved to
- * AgenticModule in `src/agentic/` (shared by debug + benchmark).
+ * Agentic bindings (@Multibinds CommandHandler, ChaosProviderInterceptor) moved to AgenticModule in
+ * `src/agentic/` (shared by debug + benchmark).
  */
 @Module
 @InstallIn(SingletonComponent::class)
 internal object DebugModule {
 
-    @Provides
-    @Singleton
-    fun provideRingBufferSink(): RingBufferSink = RingBufferSink(capacity = 512)
+  @Provides @Singleton fun provideRingBufferSink(): RingBufferSink = RingBufferSink(capacity = 512)
 
-    @Provides
-    @Singleton
-    fun provideDqxnLogger(ringBufferSink: RingBufferSink): DqxnLogger =
-      DqxnLoggerImpl(
-        sinks = listOf(ringBufferSink),
-        minimumLevel = LogLevel.DEBUG,
-        sessionId = UUID.randomUUID().toString().take(8),
-      )
+  @Provides
+  @Singleton
+  fun provideDqxnLogger(ringBufferSink: RingBufferSink): DqxnLogger =
+    DqxnLoggerImpl(
+      sinks = listOf(ringBufferSink),
+      minimumLevel = LogLevel.DEBUG,
+      sessionId = UUID.randomUUID().toString().take(8),
+    )
 
-    @Provides
-    @Singleton
-    fun provideMetricsCollector(): MetricsCollector = MetricsCollector()
+  @Provides @Singleton fun provideMetricsCollector(): MetricsCollector = MetricsCollector()
 
-    @Provides
-    @Singleton
-    fun provideWidgetHealthMonitor(
-      logger: DqxnLogger,
-    ): WidgetHealthMonitor =
-      WidgetHealthMonitor(
-        logger = logger,
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-      )
+  @Provides
+  @Singleton
+  fun provideWidgetHealthMonitor(
+    logger: DqxnLogger,
+  ): WidgetHealthMonitor =
+    WidgetHealthMonitor(
+      logger = logger,
+      scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    )
 
-    @Provides
-    @Singleton
-    fun provideCrashEvidenceWriter(
-      @ApplicationContext context: Context,
-    ): CrashEvidenceWriter =
-      CrashEvidenceWriter(
-        context.getSharedPreferences("crash_evidence", Context.MODE_PRIVATE),
-      )
+  @Provides
+  @Singleton
+  fun provideCrashEvidenceWriter(
+    @ApplicationContext context: Context,
+  ): CrashEvidenceWriter =
+    CrashEvidenceWriter(
+      context.getSharedPreferences("crash_evidence", Context.MODE_PRIVATE),
+    )
 
-    @Provides
-    @Singleton
-    fun provideDiagnosticFileWriter(
-      @ApplicationContext context: Context,
-      logger: DqxnLogger,
-    ): DiagnosticFileWriter =
-      DiagnosticFileWriter(
-        baseDirectory = File(context.filesDir, "diagnostics"),
-        logger = logger,
-      )
+  @Provides
+  @Singleton
+  fun provideDiagnosticFileWriter(
+    @ApplicationContext context: Context,
+    logger: DqxnLogger,
+  ): DiagnosticFileWriter =
+    DiagnosticFileWriter(
+      baseDirectory = File(context.filesDir, "diagnostics"),
+      logger = logger,
+    )
 
-    @Provides
-    @Singleton
-    fun provideDiagnosticSnapshotCapture(
-      logger: DqxnLogger,
-      metricsCollector: MetricsCollector,
-      ringBufferSink: RingBufferSink,
-      fileWriter: DiagnosticFileWriter,
-    ): DiagnosticSnapshotCapture =
-      DiagnosticSnapshotCapture(
-        logger = logger,
-        metricsCollector = metricsCollector,
-        tracer = DqxnTracer,
-        logRingBuffer = ringBufferSink,
-        fileWriter = fileWriter,
-      )
+  @Provides
+  @Singleton
+  fun provideDiagnosticSnapshotCapture(
+    logger: DqxnLogger,
+    metricsCollector: MetricsCollector,
+    ringBufferSink: RingBufferSink,
+    fileWriter: DiagnosticFileWriter,
+  ): DiagnosticSnapshotCapture =
+    DiagnosticSnapshotCapture(
+      logger = logger,
+      metricsCollector = metricsCollector,
+      tracer = DqxnTracer,
+      logRingBuffer = ringBufferSink,
+      fileWriter = fileWriter,
+    )
 }

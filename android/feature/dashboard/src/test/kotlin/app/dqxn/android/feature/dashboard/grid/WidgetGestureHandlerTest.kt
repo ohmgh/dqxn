@@ -27,56 +27,61 @@ class WidgetGestureHandlerTest {
 
   @Test
   fun `detectResizeHandle returns TOP_LEFT for corner tap`() {
-    val result = handler.detectResizeHandle(
-      tapPosition = Offset(10f, 10f),
-      widgetWidthPx = 200f,
-      widgetHeightPx = 200f,
-      touchTargetPx = 48f,
-    )
+    val result =
+      handler.detectResizeHandle(
+        tapPosition = Offset(10f, 10f),
+        widgetWidthPx = 200f,
+        widgetHeightPx = 200f,
+        touchTargetPx = 48f,
+      )
     assertThat(result).isEqualTo(ResizeHandle.TOP_LEFT)
   }
 
   @Test
   fun `detectResizeHandle returns TOP_RIGHT for top-right corner`() {
-    val result = handler.detectResizeHandle(
-      tapPosition = Offset(190f, 10f),
-      widgetWidthPx = 200f,
-      widgetHeightPx = 200f,
-      touchTargetPx = 48f,
-    )
+    val result =
+      handler.detectResizeHandle(
+        tapPosition = Offset(190f, 10f),
+        widgetWidthPx = 200f,
+        widgetHeightPx = 200f,
+        touchTargetPx = 48f,
+      )
     assertThat(result).isEqualTo(ResizeHandle.TOP_RIGHT)
   }
 
   @Test
   fun `detectResizeHandle returns BOTTOM_LEFT for bottom-left corner`() {
-    val result = handler.detectResizeHandle(
-      tapPosition = Offset(10f, 190f),
-      widgetWidthPx = 200f,
-      widgetHeightPx = 200f,
-      touchTargetPx = 48f,
-    )
+    val result =
+      handler.detectResizeHandle(
+        tapPosition = Offset(10f, 190f),
+        widgetWidthPx = 200f,
+        widgetHeightPx = 200f,
+        touchTargetPx = 48f,
+      )
     assertThat(result).isEqualTo(ResizeHandle.BOTTOM_LEFT)
   }
 
   @Test
   fun `detectResizeHandle returns BOTTOM_RIGHT for bottom-right corner`() {
-    val result = handler.detectResizeHandle(
-      tapPosition = Offset(190f, 190f),
-      widgetWidthPx = 200f,
-      widgetHeightPx = 200f,
-      touchTargetPx = 48f,
-    )
+    val result =
+      handler.detectResizeHandle(
+        tapPosition = Offset(190f, 190f),
+        widgetWidthPx = 200f,
+        widgetHeightPx = 200f,
+        touchTargetPx = 48f,
+      )
     assertThat(result).isEqualTo(ResizeHandle.BOTTOM_RIGHT)
   }
 
   @Test
   fun `detectResizeHandle returns null for center tap`() {
-    val result = handler.detectResizeHandle(
-      tapPosition = Offset(100f, 100f),
-      widgetWidthPx = 200f,
-      widgetHeightPx = 200f,
-      touchTargetPx = 48f,
-    )
+    val result =
+      handler.detectResizeHandle(
+        tapPosition = Offset(100f, 100f),
+        widgetWidthPx = 200f,
+        widgetHeightPx = 200f,
+        touchTargetPx = 48f,
+      )
     assertThat(result).isNull()
   }
 

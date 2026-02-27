@@ -38,7 +38,7 @@ internal fun UriSettingRow(
       modifier
         .fillMaxWidth()
         .defaultMinSize(minHeight = 76.dp)
-        .clickable { /* onNavigate for URI sub-picker -- no dedicated SettingNavigation event yet */ },
+        .clickable { /* onNavigate for URI sub-picker -- no dedicated SettingNavigation event yet */},
     verticalAlignment = Alignment.CenterVertically,
   ) {
     SettingLabel(

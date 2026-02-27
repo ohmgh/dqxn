@@ -22,10 +22,8 @@ import app.dqxn.android.sdk.observability.metrics.MetricsCollector
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.jupiter.api.BeforeEach
@@ -46,35 +44,35 @@ class WidgetSlotTest {
   private val editModeCoordinator = mockk<EditModeCoordinator>()
   private val renderer = mockk<WidgetRenderer>(relaxed = true)
 
-  private val defaultStyle = WidgetStyle(
-    backgroundStyle = BackgroundStyle.NONE,
-    opacity = 1f,
-    showBorder = false,
-    hasGlowEffect = false,
-    cornerRadiusPercent = 0,
-    rimSizePercent = 0,
-    zLayer = 0,
-  )
+  private val defaultStyle =
+    WidgetStyle(
+      backgroundStyle = BackgroundStyle.NONE,
+      opacity = 1f,
+      showBorder = false,
+      hasGlowEffect = false,
+      cornerRadiusPercent = 0,
+      rimSizePercent = 0,
+      zLayer = 0,
+    )
 
-  private val testWidget = DashboardWidgetInstance(
-    instanceId = "test-widget-1",
-    typeId = "essentials:clock",
-    position = GridPosition(col = 0, row = 0),
-    size = GridSize(widthUnits = 4, heightUnits = 3),
-    style = defaultStyle,
-    settings = persistentMapOf(),
-    dataSourceBindings = persistentMapOf(),
-    zIndex = 0,
-  )
+  private val testWidget =
+    DashboardWidgetInstance(
+      instanceId = "test-widget-1",
+      typeId = "essentials:clock",
+      position = GridPosition(col = 0, row = 0),
+      size = GridSize(widthUnits = 4, heightUnits = 3),
+      style = defaultStyle,
+      settings = persistentMapOf(),
+      dataSourceBindings = persistentMapOf(),
+      zIndex = 0,
+    )
 
   @BeforeEach
   fun setup() {
-    every { widgetBindingCoordinator.widgetData(any()) } returns
-      MutableStateFlow(WidgetData.Empty)
+    every { widgetBindingCoordinator.widgetData(any()) } returns MutableStateFlow(WidgetData.Empty)
     every { widgetBindingCoordinator.widgetStatus(any()) } returns
       MutableStateFlow(WidgetStatusCache.EMPTY)
-    every { editModeCoordinator.editState } returns
-      MutableStateFlow(EditState())
+    every { editModeCoordinator.editState } returns MutableStateFlow(EditState())
     every { editModeCoordinator.isInteractionAllowed(any()) } returns true
   }
 
@@ -101,51 +99,55 @@ class WidgetSlotTest {
 
   @Test
   fun `widget crash delegates to SafeModeManager via real WidgetBindingCoordinator`() {
-    // F2.14: widget crash reporting flows through a real WidgetBindingCoordinator to SafeModeManager.
+    // F2.14: widget crash reporting flows through a real WidgetBindingCoordinator to
+    // SafeModeManager.
     // Unlike the original test (which mocked both sides), this uses a REAL coordinator and a REAL
     // SafeModeManager. If someone removes the safeModeManager.reportCrash() call from the
     // coordinator's reportCrash(), this test fails.
     val logger = NoOpLogger
     val safeModeManager = SafeModeManager(FakeSharedPreferences(), logger)
-    val entitlementManager = mockk<EntitlementManager>(relaxed = true) {
-      every { entitlementChanges } returns MutableStateFlow(setOf("free"))
-    }
+    val entitlementManager =
+      mockk<EntitlementManager>(relaxed = true) {
+        every { entitlementChanges } returns MutableStateFlow(setOf("free"))
+      }
     val testDispatcher = StandardTestDispatcher()
-    val binder = mockk<WidgetDataBinder>(relaxed = true) {
-      every { bind(any(), any(), any()) } returns MutableStateFlow(WidgetData.Empty)
-      every { minStalenessThresholdMs(any()) } returns null
-    }
+    val binder =
+      mockk<WidgetDataBinder>(relaxed = true) {
+        every { bind(any(), any(), any()) } returns MutableStateFlow(WidgetData.Empty)
+        every { minStalenessThresholdMs(any()) } returns null
+      }
 
-    val realCoordinator = WidgetBindingCoordinator(
-      binder = binder,
-      widgetRegistry = widgetRegistry,
-      safeModeManager = safeModeManager,
-      entitlementManager = entitlementManager,
-      thermalMonitor = FakeThermalManager(),
-      metricsCollector = MetricsCollector(),
-      logger = logger,
-      ioDispatcher = testDispatcher,
-      defaultDispatcher = testDispatcher,
-    )
+    val realCoordinator =
+      WidgetBindingCoordinator(
+        binder = binder,
+        widgetRegistry = widgetRegistry,
+        safeModeManager = safeModeManager,
+        entitlementManager = entitlementManager,
+        thermalMonitor = FakeThermalManager(),
+        metricsCollector = MetricsCollector(),
+        logger = logger,
+        ioDispatcher = testDispatcher,
+        defaultDispatcher = testDispatcher,
+      )
 
     // Report 4 crashes — SafeModeManager triggers at threshold=4
     assertThat(safeModeManager.safeModeActive.value).isFalse()
-    repeat(4) { i ->
-      realCoordinator.reportCrash("widget-$i", "essentials:clock")
-    }
+    repeat(4) { i -> realCoordinator.reportCrash("widget-$i", "essentials:clock") }
     assertThat(safeModeManager.safeModeActive.value).isTrue()
   }
 
   @Test
   fun `status overlay rendered for SetupRequired state`() {
     // F3.14: SetupRequired status triggers overlay
-    val setupStatus = WidgetStatusCache(
-      overlayState = WidgetRenderState.SetupRequired(
-        requirementType = "permission",
-        message = "Location permission required",
-      ),
-      issues = persistentListOf(),
-    )
+    val setupStatus =
+      WidgetStatusCache(
+        overlayState =
+          WidgetRenderState.SetupRequired(
+            requirementType = "permission",
+            message = "Location permission required",
+          ),
+        issues = persistentListOf(),
+      )
 
     assertThat(setupStatus.overlayState).isInstanceOf(WidgetRenderState.SetupRequired::class.java)
     assertThat(setupStatus.overlayState).isNotEqualTo(WidgetRenderState.Ready)
@@ -157,10 +159,11 @@ class WidgetSlotTest {
 
   @Test
   fun `status overlay rendered for EntitlementRevoked state`() {
-    val revokedStatus = WidgetStatusCache(
-      overlayState = WidgetRenderState.EntitlementRevoked(upgradeEntitlement = "plus"),
-      issues = persistentListOf(),
-    )
+    val revokedStatus =
+      WidgetStatusCache(
+        overlayState = WidgetRenderState.EntitlementRevoked(upgradeEntitlement = "plus"),
+        issues = persistentListOf(),
+      )
 
     assertThat(revokedStatus.overlayState)
       .isInstanceOf(WidgetRenderState.EntitlementRevoked::class.java)

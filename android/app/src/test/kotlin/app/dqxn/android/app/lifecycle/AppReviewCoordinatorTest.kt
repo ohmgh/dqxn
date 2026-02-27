@@ -5,14 +5,11 @@ import app.dqxn.android.data.preferences.UserPreferencesRepository
 import com.google.android.gms.tasks.Task
 import com.google.android.play.core.review.ReviewInfo
 import com.google.android.play.core.review.ReviewManager
-import com.google.common.truth.Truth.assertThat
-import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -22,8 +19,8 @@ import org.junit.jupiter.api.Test
  * Unit tests for [AppReviewCoordinator].
  *
  * Uses MockK for ReviewManager since FakeReviewManager requires real Android Context. Gating
- * conditions tested via injectable timeProvider and MutableStateFlow-backed UserPreferencesRepository
- * mock.
+ * conditions tested via injectable timeProvider and MutableStateFlow-backed
+ * UserPreferencesRepository mock.
  */
 @DisplayName("AppReviewCoordinator")
 class AppReviewCoordinatorTest {
@@ -70,7 +67,9 @@ class AppReviewCoordinatorTest {
   }
 
   @Test
-  @DisplayName("triggers review when all conditions met (3+ sessions, customized, no crash, first time)")
+  @DisplayName(
+    "triggers review when all conditions met (3+ sessions, customized, no crash, first time)"
+  )
   fun `review triggered when all conditions met first time`() = runTest {
     sessionCountFlow.value = 3
     lastReviewTimestampFlow.value = 0L // Never prompted before

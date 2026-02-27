@@ -1,7 +1,6 @@
 package app.dqxn.android.feature.settings.widget
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,35 +66,41 @@ internal fun WidgetInfoContent(
     )
 
     // Description
-    widgetSpec?.description?.takeIf { it.isNotBlank() }?.let { description ->
-      Text(
-        text = description,
-        style = DashboardTypography.description,
-        color = theme.secondaryTextColor,
-        modifier = Modifier.fillMaxWidth().testTag("widget_info_description"),
-      )
-    }
-
-    // Compatible data types
-    widgetSpec?.compatibleSnapshots?.takeIf { it.isNotEmpty() }?.let { snapshots ->
-      HorizontalDivider(
-        color = theme.widgetBorderColor.copy(alpha = DashboardThemeDefinition.EMPHASIS_DISABLED),
-      )
-      Text(
-        text = stringResource(R.string.widget_info_compatible_data),
-        style = DashboardTypography.itemTitle,
-        color = theme.primaryTextColor,
-      )
-      snapshots.forEach { snapshotType ->
-        val dataTypeName = snapshotType.simpleName?.removeSuffix("Snapshot") ?: "Unknown"
+    widgetSpec
+      ?.description
+      ?.takeIf { it.isNotBlank() }
+      ?.let { description ->
         Text(
-          text = dataTypeName,
+          text = description,
           style = DashboardTypography.description,
           color = theme.secondaryTextColor,
-          modifier = Modifier.testTag("widget_info_data_type_$dataTypeName"),
+          modifier = Modifier.fillMaxWidth().testTag("widget_info_description"),
         )
       }
-    }
+
+    // Compatible data types
+    widgetSpec
+      ?.compatibleSnapshots
+      ?.takeIf { it.isNotEmpty() }
+      ?.let { snapshots ->
+        HorizontalDivider(
+          color = theme.widgetBorderColor.copy(alpha = DashboardThemeDefinition.EMPHASIS_DISABLED),
+        )
+        Text(
+          text = stringResource(R.string.widget_info_compatible_data),
+          style = DashboardTypography.itemTitle,
+          color = theme.primaryTextColor,
+        )
+        snapshots.forEach { snapshotType ->
+          val dataTypeName = snapshotType.simpleName?.removeSuffix("Snapshot") ?: "Unknown"
+          Text(
+            text = dataTypeName,
+            style = DashboardTypography.description,
+            color = theme.secondaryTextColor,
+            modifier = Modifier.testTag("widget_info_data_type_$dataTypeName"),
+          )
+        }
+      }
 
     // NF-D1 speed disclaimer for speed-related widgets
     if (widgetTypeId in SPEED_TYPE_IDS) {

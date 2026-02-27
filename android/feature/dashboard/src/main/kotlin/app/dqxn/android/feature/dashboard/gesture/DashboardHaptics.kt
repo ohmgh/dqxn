@@ -14,8 +14,8 @@ import javax.inject.Inject
  * Provides 8 distinct haptic methods per replication advisory section 6. Each method uses
  * predefined effects on API 30+ with [VibrationEffect] fallbacks for older APIs.
  *
- * When reduced motion is active (via [ReducedMotionHelper]), heavy click variants are replaced
- * with lighter alternatives. Haptics are NOT motion -- they still fire under reduced motion.
+ * When reduced motion is active (via [ReducedMotionHelper]), heavy click variants are replaced with
+ * lighter alternatives. Haptics are NOT motion -- they still fire under reduced motion.
  */
 public class DashboardHaptics
 @Inject

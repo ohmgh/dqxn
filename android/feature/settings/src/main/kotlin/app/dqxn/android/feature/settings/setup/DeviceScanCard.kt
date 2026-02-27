@@ -39,16 +39,16 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 /**
  * UI wrapper around [DeviceScanStateMachine] (from Plan 03).
  *
- * Collects [DeviceScanStateMachine.state] as Compose state and renders the appropriate UI for
- * each [ScanState]:
+ * Collects [DeviceScanStateMachine.state] as Compose state and renders the appropriate UI for each
+ * [ScanState]:
  * - **PreCDM**: "Scan" button (disabled if at device limit)
  * - **Waiting**: Loading indicator + "Searching..."
  * - **Verifying**: Progress indicator + "Verifying (attempt N/3)..."
  * - **Success**: Green checkmark + device name
  * - **Failed**: Error message + auto-return indicator
  *
- * Already-paired devices shown as [PairedDeviceCard] list above the scan button.
- * CDM launch via `CompanionDeviceManager.associate()` wrapped in try-catch for
+ * Already-paired devices shown as [PairedDeviceCard] list above the scan button. CDM launch via
+ * `CompanionDeviceManager.associate()` wrapped in try-catch for
  * `ActivityNotFoundException`/`UnsupportedOperationException` (Pitfall 4).
  */
 @Composable
@@ -59,20 +59,20 @@ internal fun DeviceScanCard(
   onDeviceForget: (String) -> Unit,
 ) {
   val theme = LocalDashboardTheme.current
-  val scanState by stateMachine?.state?.collectAsState()
-    ?: return // No state machine provided -- nothing to render
+  val scanState by
+    stateMachine?.state?.collectAsState()
+      ?: return // No state machine provided -- nothing to render
 
   Card(
     shape = RoundedCornerShape(CardSize.MEDIUM.cornerRadius),
-    colors = CardDefaults.cardColors(
-      containerColor = theme.widgetBorderColor.copy(alpha = 0.05f),
-    ),
+    colors =
+      CardDefaults.cardColors(
+        containerColor = theme.widgetBorderColor.copy(alpha = 0.05f),
+      ),
     modifier = Modifier.fillMaxWidth(),
   ) {
     Column(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(DashboardSpacing.CardInternalPadding),
+      modifier = Modifier.fillMaxWidth().padding(DashboardSpacing.CardInternalPadding),
     ) {
       // Header
       Row(
@@ -86,9 +86,7 @@ internal fun DeviceScanCard(
           modifier = Modifier.size(24.dp),
         )
         Column(
-          modifier = Modifier
-            .weight(1f)
-            .padding(start = DashboardSpacing.IconTextGap),
+          modifier = Modifier.weight(1f).padding(start = DashboardSpacing.IconTextGap),
         ) {
           Text(
             text = definition.label,
@@ -112,8 +110,9 @@ internal fun DeviceScanCard(
         pairedDevices.forEach { device ->
           PairedDeviceCard(
             device = device,
-            isConnected = scanState is ScanState.Success &&
-              (scanState as ScanState.Success).device.macAddress == device.macAddress,
+            isConnected =
+              scanState is ScanState.Success &&
+                (scanState as ScanState.Success).device.macAddress == device.macAddress,
             onForget = { onDeviceForget(device.macAddress) },
           )
           Spacer(modifier = Modifier.height(DashboardSpacing.SpaceXXS))
@@ -155,15 +154,14 @@ private fun ScanStateContent(
       Button(
         onClick = onStartScan,
         enabled = !isAtLimit,
-        colors = ButtonDefaults.buttonColors(
-          containerColor = theme.accentColor,
-          contentColor = Color.White,
-          disabledContainerColor = theme.accentColor.copy(alpha = 0.3f),
-          disabledContentColor = Color.White.copy(alpha = 0.5f),
-        ),
-        modifier = Modifier
-          .fillMaxWidth()
-          .defaultMinSize(minHeight = 76.dp),
+        colors =
+          ButtonDefaults.buttonColors(
+            containerColor = theme.accentColor,
+            contentColor = Color.White,
+            disabledContainerColor = theme.accentColor.copy(alpha = 0.3f),
+            disabledContentColor = Color.White.copy(alpha = 0.5f),
+          ),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp),
       ) {
         Text(
           text = if (isAtLimit) "Device limit reached" else "Scan",
@@ -171,14 +169,11 @@ private fun ScanStateContent(
         )
       }
     }
-
     is ScanState.Waiting -> {
       Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
-        modifier = Modifier
-          .fillMaxWidth()
-          .defaultMinSize(minHeight = 76.dp),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp),
       ) {
         CircularProgressIndicator(
           strokeWidth = 2.dp,
@@ -193,14 +188,11 @@ private fun ScanStateContent(
         )
       }
     }
-
     is ScanState.Verifying -> {
       Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
-        modifier = Modifier
-          .fillMaxWidth()
-          .defaultMinSize(minHeight = 76.dp),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp),
       ) {
         CircularProgressIndicator(
           strokeWidth = 2.dp,
@@ -215,13 +207,10 @@ private fun ScanStateContent(
         )
       }
     }
-
     is ScanState.Success -> {
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-          .fillMaxWidth()
-          .defaultMinSize(minHeight = 76.dp),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp),
       ) {
         Icon(
           imageVector = Icons.Filled.CheckCircle,
@@ -237,13 +226,10 @@ private fun ScanStateContent(
         )
       }
     }
-
     is ScanState.Failed -> {
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-          .fillMaxWidth()
-          .defaultMinSize(minHeight = 76.dp),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp),
       ) {
         Icon(
           imageVector = Icons.Filled.Error,

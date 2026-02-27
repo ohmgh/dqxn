@@ -46,14 +46,17 @@ internal class PluginProcessor(
     // already returned null for invalid entries. Empty lists are fine (no annotated classes).
 
     // Compute manifest ClassName for HiltModule to reference
-    val manifestClassName = ClassName(
-      "app.dqxn.android.pack.$packId.generated",
-      "${packId.replaceFirstChar { it.uppercase() }}GeneratedManifest",
-    )
+    val manifestClassName =
+      ClassName(
+        "app.dqxn.android.pack.$packId.generated",
+        "${packId.replaceFirstChar { it.uppercase() }}GeneratedManifest",
+      )
 
     // Generate outputs
-    ManifestGenerator(codeGenerator).generate(packId, packCategory, widgetInfos, providerInfos, themeProviderInfos)
-    HiltModuleGenerator(codeGenerator).generate(packId, widgetInfos, providerInfos, themeProviderInfos, manifestClassName)
+    ManifestGenerator(codeGenerator)
+      .generate(packId, packCategory, widgetInfos, providerInfos, themeProviderInfos)
+    HiltModuleGenerator(codeGenerator)
+      .generate(packId, widgetInfos, providerInfos, themeProviderInfos, manifestClassName)
     StabilityConfigGenerator(codeGenerator).generate(snapshotInfos)
 
     return emptyList()

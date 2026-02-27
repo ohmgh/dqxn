@@ -14,22 +14,21 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Full user journey E2E test exercising the entire dashboard lifecycle:
- * launch -> dashboard load -> widget health -> add widget -> verify rendering ->
- * theme state -> data providers -> settings presence -> observability metrics.
+ * Full user journey E2E test exercising the entire dashboard lifecycle: launch -> dashboard load ->
+ * widget health -> add widget -> verify rendering -> theme state -> data providers -> settings
+ * presence -> observability metrics.
  *
- * Uses [AgenticTestClient] from Plan 13-05 to send agentic commands and assert
- * responses via the response-file protocol.
+ * Uses [AgenticTestClient] from Plan 13-05 to send agentic commands and assert responses via the
+ * response-file protocol.
  *
- * Requires a device/emulator. Execution deferred to CI per project policy
- * ("connected device != manual test").
+ * Requires a device/emulator. Execution deferred to CI per project policy ("connected device !=
+ * manual test").
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class FullJourneyE2ETest {
 
-  @get:Rule
-  val hiltRule = HiltAndroidRule(this)
+  @get:Rule val hiltRule = HiltAndroidRule(this)
 
   private val client = AgenticTestClient()
 
@@ -72,27 +71,30 @@ class FullJourneyE2ETest {
     assertThat(baselineCount).isAtLeast(0)
 
     // Step 4 - Add widget: add an essentials:clock-digital widget
-    val addResponse = client.send(
-      "add-widget",
-      mapOf("typeId" to "essentials:clock-digital"),
-    )
+    val addResponse =
+      client.send(
+        "add-widget",
+        mapOf("typeId" to "essentials:clock-digital"),
+      )
     assertThat(addResponse["status"]?.jsonPrimitive?.content).isEqualTo("ok")
-    val widgetId = addResponse["data"]?.jsonObject?.get("widgetId")?.jsonPrimitive?.content
-      ?: addResponse["widgetId"]?.jsonPrimitive?.content
+    val widgetId =
+      addResponse["data"]?.jsonObject?.get("widgetId")?.jsonPrimitive?.content
+        ?: addResponse["widgetId"]?.jsonPrimitive?.content
     assertThat(widgetId).isNotNull()
 
     // Step 5 - Widget health: poll dump-health until widget count increases
-    val healthAfterAdd = client.awaitCondition(
-      command = "dump-health",
-      jsonPath = "widgets",
-      condition = { widgets ->
-        widgets.any { widget ->
-          val obj = widget.jsonObject
-          obj["typeId"]?.jsonPrimitive?.content == "essentials:clock-digital"
-        }
-      },
-      timeoutMs = 5_000L,
-    )
+    val healthAfterAdd =
+      client.awaitCondition(
+        command = "dump-health",
+        jsonPath = "widgets",
+        condition = { widgets ->
+          widgets.any { widget ->
+            val obj = widget.jsonObject
+            obj["typeId"]?.jsonPrimitive?.content == "essentials:clock-digital"
+          }
+        },
+        timeoutMs = 5_000L,
+      )
     val countAfterAdd = healthAfterAdd["widgetCount"]?.jsonPrimitive?.int ?: 0
     assertThat(countAfterAdd).isGreaterThan(baselineCount)
 
@@ -122,9 +124,7 @@ class FullJourneyE2ETest {
     val commands = client.send("list-commands")
     val commandData = commands["data"]?.jsonArray
     assertThat(commandData).isNotNull()
-    val commandNames = commandData!!.map {
-      it.jsonObject["name"]?.jsonPrimitive?.content ?: ""
-    }
+    val commandNames = commandData!!.map { it.jsonObject["name"]?.jsonPrimitive?.content ?: "" }
     // Core commands must be present
     assertThat(commandNames).contains("ping")
     assertThat(commandNames).contains("add-widget")
@@ -134,10 +134,11 @@ class FullJourneyE2ETest {
     assertThat(commandNames).contains("dump-semantics")
 
     // Step 10 - Settings: verify settings_button exists in semantics tree
-    val settingsQuery = client.send(
-      "query-semantics",
-      mapOf("testTag" to "settings_button"),
-    )
+    val settingsQuery =
+      client.send(
+        "query-semantics",
+        mapOf("testTag" to "settings_button"),
+      )
     val settingsMatchCount = settingsQuery["matchCount"]?.jsonPrimitive?.int ?: 0
     // Settings button should be in the semantics tree
     assertThat(settingsMatchCount).isGreaterThan(0)

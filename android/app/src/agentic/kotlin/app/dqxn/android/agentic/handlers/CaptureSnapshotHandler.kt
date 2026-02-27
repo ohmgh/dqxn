@@ -1,12 +1,12 @@
 package app.dqxn.android.agentic.handlers
 
+import app.dqxn.android.sdk.observability.diagnostic.AnomalyTrigger
+import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotCapture
 import dev.agentic.android.runtime.AgenticCommand
 import dev.agentic.android.runtime.CommandHandler
 import dev.agentic.android.runtime.CommandParams
 import dev.agentic.android.runtime.CommandResult
 import dev.agentic.android.runtime.getString
-import app.dqxn.android.sdk.observability.diagnostic.AnomalyTrigger
-import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotCapture
 import javax.inject.Inject
 
 /** Fires a diagnostic snapshot capture with a custom reason from parameters. */
@@ -30,10 +30,11 @@ constructor(
   override suspend fun execute(params: CommandParams, commandId: String): CommandResult {
     val reason = params.getString("reason") ?: "agentic-capture"
 
-    val snapshot = diagnosticCapture.capture(
-      trigger = AnomalyTrigger.JankSpike(consecutiveFrames = 0),
-      agenticTraceId = "$commandId:$reason",
-    )
+    val snapshot =
+      diagnosticCapture.capture(
+        trigger = AnomalyTrigger.JankSpike(consecutiveFrames = 0),
+        agenticTraceId = "$commandId:$reason",
+      )
 
     return if (snapshot != null) {
       CommandResult.Success(
@@ -46,7 +47,9 @@ constructor(
     }
   }
 
-  override fun paramsSchema(): Map<String, String> = mapOf(
-    "reason" to "Custom reason string for the snapshot capture (optional, defaults to 'agentic-capture')",
-  )
+  override fun paramsSchema(): Map<String, String> =
+    mapOf(
+      "reason" to
+        "Custom reason string for the snapshot capture (optional, defaults to 'agentic-capture')",
+    )
 }

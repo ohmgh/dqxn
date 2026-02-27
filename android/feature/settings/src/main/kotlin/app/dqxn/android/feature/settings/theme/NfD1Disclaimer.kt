@@ -29,11 +29,7 @@ public fun NfD1Disclaimer(
   modifier: Modifier = Modifier,
 ) {
   Row(
-    modifier =
-      modifier
-        .fillMaxWidth()
-        .padding(vertical = 8.dp)
-        .testTag("nf_d1_disclaimer"),
+    modifier = modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("nf_d1_disclaimer"),
   ) {
     Text(
       text = "\u26A0",

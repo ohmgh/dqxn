@@ -1,12 +1,12 @@
 package app.dqxn.android.agentic.handlers
 
+import app.dqxn.android.sdk.contracts.provider.DataProvider
+import dev.agentic.android.chaos.ChaosEngine
 import dev.agentic.android.runtime.AgenticCommand
 import dev.agentic.android.runtime.CommandHandler
 import dev.agentic.android.runtime.CommandParams
 import dev.agentic.android.runtime.CommandResult
 import dev.agentic.android.runtime.getString
-import dev.agentic.android.chaos.ChaosEngine
-import app.dqxn.android.sdk.contracts.provider.DataProvider
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,8 +15,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * Starts a deterministic chaos testing session via ADB. Resolves all registered provider IDs
- * and delegates to [ChaosEngine.start].
+ * Starts a deterministic chaos testing session via ADB. Resolves all registered provider IDs and
+ * delegates to [ChaosEngine.start].
  *
  * Params: `seed` (optional Long, default: current time), `profile` (optional, default: "combined").
  */
@@ -53,14 +53,19 @@ constructor(
       }
       CommandResult.Success(json.toString())
     } catch (e: IllegalStateException) {
-      CommandResult.Error(message = e.message ?: "Failed to start chaos session", code = "ALREADY_ACTIVE")
+      CommandResult.Error(
+        message = e.message ?: "Failed to start chaos session",
+        code = "ALREADY_ACTIVE"
+      )
     } catch (e: IllegalArgumentException) {
       CommandResult.Error(message = e.message ?: "Invalid profile", code = "INVALID_PROFILE")
     }
   }
 
-  override fun paramsSchema(): Map<String, String> = mapOf(
-    "seed" to "Random seed for deterministic reproduction (Long, default: current time)",
-    "profile" to "Chaos profile name: provider-stress, provider-flap, widget-storm, process-death, combined (default: combined)",
-  )
+  override fun paramsSchema(): Map<String, String> =
+    mapOf(
+      "seed" to "Random seed for deterministic reproduction (Long, default: current time)",
+      "profile" to
+        "Chaos profile name: provider-stress, provider-flap, widget-storm, process-death, combined (default: combined)",
+    )
 }

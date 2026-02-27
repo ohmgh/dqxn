@@ -27,8 +27,8 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
  * 3. Entitlement gating via [isAccessible]
  *
  * For [SetupDefinition.Setting], dispatches to [SettingRowDispatcher] (two-layer dispatch per
- * replication advisory section 7). The Setting wrapper's own [visibleWhen] is checked first,
- * then the inner definition's visibility is handled by the row dispatcher.
+ * replication advisory section 7). The Setting wrapper's own [visibleWhen] is checked first, then
+ * the inner definition's visibility is handled by the row dispatcher.
  */
 @Composable
 fun SetupDefinitionRenderer(
@@ -52,11 +52,10 @@ fun SetupDefinitionRenderer(
   if (!definition.isAccessible(entitlementManager::hasEntitlement)) return
 
   // Layer 2: Conditional visibility with animation
-  val isVisible by remember(definition, currentSettings) {
-    derivedStateOf {
-      definition.visibleWhen?.invoke(currentSettings) != false
+  val isVisible by
+    remember(definition, currentSettings) {
+      derivedStateOf { definition.visibleWhen?.invoke(currentSettings) != false }
     }
-  }
 
   AnimatedVisibility(
     visible = isVisible,
@@ -95,46 +94,44 @@ private fun DefinitionContent(
   onDeviceForget: (String) -> Unit,
 ) {
   when (definition) {
-    is SetupDefinition.RuntimePermission -> SetupPermissionCard(
-      definition = definition,
-      satisfied = result?.satisfied == true,
-      onPermissionRequest = { onPermissionRequest(definition) },
-      onOpenSettings = {
-        onSystemSettingsOpen(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-      },
-    )
-
-    is SetupDefinition.SystemServiceToggle -> SetupToggleCard(
-      label = definition.label,
-      description = definition.description,
-      satisfied = result?.satisfied == true,
-      onEnableClick = { onSystemSettingsOpen(definition.settingsAction) },
-    )
-
-    is SetupDefinition.SystemService -> SetupToggleCard(
-      label = definition.label,
-      description = definition.description,
-      satisfied = result?.satisfied == true,
-      onEnableClick = {
-        onSystemSettingsOpen(android.provider.Settings.ACTION_SETTINGS)
-      },
-    )
-
-    is SetupDefinition.DeviceScan -> DeviceScanCard(
-      definition = definition,
-      stateMachine = scanStateMachine,
-      pairedDevices = pairedDevices,
-      onDeviceForget = onDeviceForget,
-    )
-
-    is SetupDefinition.Instruction -> InstructionCard(
-      definition = definition,
-    )
-
-    is SetupDefinition.Info -> InfoCard(
-      definition = definition,
-    )
-
+    is SetupDefinition.RuntimePermission ->
+      SetupPermissionCard(
+        definition = definition,
+        satisfied = result?.satisfied == true,
+        onPermissionRequest = { onPermissionRequest(definition) },
+        onOpenSettings = {
+          onSystemSettingsOpen(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        },
+      )
+    is SetupDefinition.SystemServiceToggle ->
+      SetupToggleCard(
+        label = definition.label,
+        description = definition.description,
+        satisfied = result?.satisfied == true,
+        onEnableClick = { onSystemSettingsOpen(definition.settingsAction) },
+      )
+    is SetupDefinition.SystemService ->
+      SetupToggleCard(
+        label = definition.label,
+        description = definition.description,
+        satisfied = result?.satisfied == true,
+        onEnableClick = { onSystemSettingsOpen(android.provider.Settings.ACTION_SETTINGS) },
+      )
+    is SetupDefinition.DeviceScan ->
+      DeviceScanCard(
+        definition = definition,
+        stateMachine = scanStateMachine,
+        pairedDevices = pairedDevices,
+        onDeviceForget = onDeviceForget,
+      )
+    is SetupDefinition.Instruction ->
+      InstructionCard(
+        definition = definition,
+      )
+    is SetupDefinition.Info ->
+      InfoCard(
+        definition = definition,
+      )
     is SetupDefinition.Setting -> {
       // Two-layer dispatch: Setting wrapper -> SettingRowDispatcher
       // The Setting wrapper's visibleWhen is already checked above (layer 2).

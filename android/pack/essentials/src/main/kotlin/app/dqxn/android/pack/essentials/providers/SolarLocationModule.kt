@@ -17,6 +17,5 @@ public object SolarLocationModule {
   @Singleton
   public fun provideFusedLocationProviderClient(
     @ApplicationContext context: Context,
-  ): FusedLocationProviderClient =
-    LocationServices.getFusedLocationProviderClient(context)
+  ): FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
 }

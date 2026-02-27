@@ -47,22 +47,22 @@ public class DateSimpleRenderer @Inject constructor() : WidgetRenderer {
   override val priority: Int = 95
   override val requiredAnyEntitlement: Set<String>? = null
 
-  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> =
-    setOf(TimeSnapshot::class)
+  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> = setOf(TimeSnapshot::class)
 
-  override val settingsSchema: List<SettingDefinition<*>> = listOf(
-    SettingDefinition.DateFormatSetting(
-      key = "dateFormat",
-      label = "Date Format",
-      description = "Choose how the date is displayed",
-      default = DateFormatOption.MONTH_DAY_YEAR,
-    ),
-    SettingDefinition.TimezoneSetting(
-      key = "timezoneId",
-      label = "Timezone",
-      description = "Override the system timezone",
-    ),
-  )
+  override val settingsSchema: List<SettingDefinition<*>> =
+    listOf(
+      SettingDefinition.DateFormatSetting(
+        key = "dateFormat",
+        label = "Date Format",
+        description = "Choose how the date is displayed",
+        default = DateFormatOption.MONTH_DAY_YEAR,
+      ),
+      SettingDefinition.TimezoneSetting(
+        key = "timezoneId",
+        label = "Timezone",
+        description = "Override the system timezone",
+      ),
+    )
 
   override fun getDefaults(context: WidgetContext): WidgetDefaults =
     WidgetDefaults(
@@ -95,11 +95,12 @@ public class DateSimpleRenderer @Inject constructor() : WidgetRenderer {
       Text(
         text = dateText ?: "--",
         style = MaterialTheme.typography.titleLarge,
-        color = if (dateText != null) {
-          MaterialTheme.colorScheme.onSurface
-        } else {
-          MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        },
+        color =
+          if (dateText != null) {
+            MaterialTheme.colorScheme.onSurface
+          } else {
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+          },
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
       )
@@ -123,8 +124,9 @@ public class DateSimpleRenderer @Inject constructor() : WidgetRenderer {
       val formatValue = settings["dateFormat"]
       return when (formatValue) {
         is DateFormatOption -> formatValue
-        is String -> DateFormatOption.entries.find { it.name == formatValue }
-          ?: DateFormatOption.MONTH_DAY_YEAR
+        is String ->
+          DateFormatOption.entries.find { it.name == formatValue }
+            ?: DateFormatOption.MONTH_DAY_YEAR
         else -> DateFormatOption.MONTH_DAY_YEAR
       }
     }
@@ -134,11 +136,12 @@ public class DateSimpleRenderer @Inject constructor() : WidgetRenderer {
       formatOption: DateFormatOption,
       timezoneIdStr: String? = null,
     ): String {
-      val zoneId = if (!timezoneIdStr.isNullOrEmpty()) {
-        ZoneId.of(timezoneIdStr)
-      } else {
-        ZoneId.of(snapshot.zoneId)
-      }
+      val zoneId =
+        if (!timezoneIdStr.isNullOrEmpty()) {
+          ZoneId.of(timezoneIdStr)
+        } else {
+          ZoneId.of(snapshot.zoneId)
+        }
       val zonedDate = Instant.ofEpochMilli(snapshot.epochMillis).atZone(zoneId)
       val formatter = DateTimeFormatter.ofPattern(formatOption.pattern, Locale.getDefault())
       return zonedDate.format(formatter)

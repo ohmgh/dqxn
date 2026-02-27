@@ -27,10 +27,11 @@ class LayoutCoordinatorTest {
   private val logger = NoOpLogger
 
   private val presetLoader: PresetLoader = mockk {
-    every { loadPreset(any()) } returns listOf(
-      testWidget(typeId = "essentials:clock", col = 0, row = 0),
-      testWidget(typeId = "essentials:battery", col = 4, row = 0),
-    )
+    every { loadPreset(any()) } returns
+      listOf(
+        testWidget(typeId = "essentials:clock", col = 0, row = 0),
+        testWidget(typeId = "essentials:battery", col = 4, row = 0),
+      )
   }
 
   @Test
@@ -124,7 +125,8 @@ class LayoutCoordinatorTest {
   fun `handleResizeWidget updates size and optional position`() = runTest {
     val fakeRepo = FakeLayoutRepository()
     val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
-    val widget = testWidget(instanceId = "resizable", col = 2, row = 2, widthUnits = 4, heightUnits = 4)
+    val widget =
+      testWidget(instanceId = "resizable", col = 2, row = 2, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(widget))
 
     val initJob = Job(coroutineContext[Job])
@@ -147,7 +149,8 @@ class LayoutCoordinatorTest {
   fun `handleResizeWidget keeps position when null`() = runTest {
     val fakeRepo = FakeLayoutRepository()
     val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
-    val widget = testWidget(instanceId = "br-resize", col = 2, row = 2, widthUnits = 4, heightUnits = 4)
+    val widget =
+      testWidget(instanceId = "br-resize", col = 2, row = 2, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(widget))
 
     val initJob = Job(coroutineContext[Job])
@@ -192,8 +195,10 @@ class LayoutCoordinatorTest {
   fun `visibleWidgets filters by viewport`() = runTest {
     val fakeRepo = FakeLayoutRepository()
     val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
-    val inside = testWidget(instanceId = "inside", col = 0, row = 0, widthUnits = 4, heightUnits = 4)
-    val outside = testWidget(instanceId = "outside", col = 100, row = 100, widthUnits = 4, heightUnits = 4)
+    val inside =
+      testWidget(instanceId = "inside", col = 0, row = 0, widthUnits = 4, heightUnits = 4)
+    val outside =
+      testWidget(instanceId = "outside", col = 100, row = 100, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(inside, outside))
 
     val initJob = Job(coroutineContext[Job])
@@ -211,7 +216,8 @@ class LayoutCoordinatorTest {
   fun `viewport culling returns zero for fully off-screen widgets`() = runTest {
     val fakeRepo = FakeLayoutRepository()
     val coordinator = createCoordinator(fakeRepo, StandardTestDispatcher(testScheduler))
-    val farAway = testWidget(instanceId = "far", col = 100, row = 100, widthUnits = 4, heightUnits = 4)
+    val farAway =
+      testWidget(instanceId = "far", col = 100, row = 100, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(farAway))
 
     val initJob = Job(coroutineContext[Job])
@@ -232,10 +238,11 @@ class LayoutCoordinatorTest {
       layoutRepository = fakeRepo,
       presetLoader = presetLoader,
       gridPlacementEngine = GridPlacementEngine(logger = logger),
-      configurationBoundaryDetector = ConfigurationBoundaryDetector(
-        windowInfoTracker = mockk(relaxed = true),
-        logger = logger,
-      ),
+      configurationBoundaryDetector =
+        ConfigurationBoundaryDetector(
+          windowInfoTracker = mockk(relaxed = true),
+          logger = logger,
+        ),
       ioDispatcher = ioDispatcher,
       logger = logger,
     )

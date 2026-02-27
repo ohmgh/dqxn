@@ -59,15 +59,15 @@ internal fun WidgetStatusOverlay(
   when (renderState) {
     is WidgetRenderState.SetupRequired -> {
       Box(
-        modifier = modifier
-          .fillMaxSize()
-          .clip(shape)
-          .background(Color.Black.copy(alpha = 0.60f))
-          .then(
-            if (onSetupTap != null) Modifier.clickable(onClick = onSetupTap)
-            else Modifier,
-          )
-          .testTag("status_setup_required"),
+        modifier =
+          modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(Color.Black.copy(alpha = 0.60f))
+            .then(
+              if (onSetupTap != null) Modifier.clickable(onClick = onSetupTap) else Modifier,
+            )
+            .testTag("status_setup_required"),
         contentAlignment = Alignment.Center,
       ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -86,35 +86,33 @@ internal fun WidgetStatusOverlay(
         }
       }
     }
-
     is WidgetRenderState.Disconnected -> {
       // Corner-positioned (top-end), not centered
       Box(
-        modifier = modifier
-          .fillMaxSize()
-          .clip(shape)
-          .background(Color.Black.copy(alpha = 0.15f))
-          .testTag("status_disconnected"),
+        modifier =
+          modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(Color.Black.copy(alpha = 0.15f))
+            .testTag("status_disconnected"),
         contentAlignment = Alignment.TopEnd,
       ) {
         Icon(
           imageVector = Icons.Filled.Block,
           contentDescription = "Disconnected",
-          modifier = Modifier
-            .padding(4.dp)
-            .size(20.dp),
+          modifier = Modifier.padding(4.dp).size(20.dp),
           tint = accentColor,
         )
       }
     }
-
     is WidgetRenderState.ConnectionError -> {
       Box(
-        modifier = modifier
-          .fillMaxSize()
-          .clip(shape)
-          .background(Color.Black.copy(alpha = 0.30f))
-          .testTag("status_connection_error"),
+        modifier =
+          modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(Color.Black.copy(alpha = 0.30f))
+            .testTag("status_connection_error"),
         contentAlignment = Alignment.Center,
       ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -133,18 +131,18 @@ internal fun WidgetStatusOverlay(
         }
       }
     }
-
     is WidgetRenderState.EntitlementRevoked -> {
       Box(
-        modifier = modifier
-          .fillMaxSize()
-          .clip(shape)
-          .background(Color.Black.copy(alpha = 0.60f))
-          .then(
-            if (onEntitlementTap != null) Modifier.clickable(onClick = onEntitlementTap)
-            else Modifier,
-          )
-          .testTag("status_entitlement_revoked"),
+        modifier =
+          modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(Color.Black.copy(alpha = 0.60f))
+            .then(
+              if (onEntitlementTap != null) Modifier.clickable(onClick = onEntitlementTap)
+              else Modifier,
+            )
+            .testTag("status_entitlement_revoked"),
         contentAlignment = Alignment.Center,
       ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -163,14 +161,14 @@ internal fun WidgetStatusOverlay(
         }
       }
     }
-
     is WidgetRenderState.ProviderMissing -> {
       Box(
-        modifier = modifier
-          .fillMaxSize()
-          .clip(shape)
-          .background(Color.Black.copy(alpha = 0.60f))
-          .testTag("status_provider_missing"),
+        modifier =
+          modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(Color.Black.copy(alpha = 0.60f))
+            .testTag("status_provider_missing"),
         contentAlignment = Alignment.Center,
       ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -189,14 +187,14 @@ internal fun WidgetStatusOverlay(
         }
       }
     }
-
     is WidgetRenderState.DataTimeout -> {
       Box(
-        modifier = modifier
-          .fillMaxSize()
-          .clip(shape)
-          .background(Color.Black.copy(alpha = 0.30f))
-          .testTag("status_data_timeout"),
+        modifier =
+          modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(Color.Black.copy(alpha = 0.30f))
+            .testTag("status_data_timeout"),
         contentAlignment = Alignment.Center,
       ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -215,14 +213,14 @@ internal fun WidgetStatusOverlay(
         }
       }
     }
-
     is WidgetRenderState.DataStale -> {
       Box(
-        modifier = modifier
-          .fillMaxSize()
-          .clip(shape)
-          .background(Color.Black.copy(alpha = 0.15f))
-          .testTag("status_data_stale"),
+        modifier =
+          modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(Color.Black.copy(alpha = 0.15f))
+            .testTag("status_data_stale"),
         contentAlignment = Alignment.Center,
       ) {
         Icon(
@@ -233,7 +231,6 @@ internal fun WidgetStatusOverlay(
         )
       }
     }
-
     else -> return // Ready or unknown -- no overlay
   }
 }

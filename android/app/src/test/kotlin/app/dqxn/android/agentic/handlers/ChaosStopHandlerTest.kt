@@ -1,11 +1,11 @@
 package app.dqxn.android.agentic.handlers
 
-import dev.agentic.android.runtime.CommandParams
-import dev.agentic.android.runtime.CommandResult
-import dev.agentic.android.chaos.ChaosEngine
-import dev.agentic.android.chaos.ChaosProfileRegistry
 import app.dqxn.android.agentic.chaos.ChaosProviderInterceptor
 import com.google.common.truth.Truth.assertThat
+import dev.agentic.android.chaos.ChaosEngine
+import dev.agentic.android.chaos.ChaosProfileRegistry
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -24,10 +24,11 @@ class ChaosStopHandlerTest {
   fun `execute stops session and returns summary`() = runTest {
     engine.start(42L, "provider-stress", listOf("provider-a"), backgroundScope)
 
-    val result = handler.execute(
-      CommandParams(traceId = "test-trace"),
-      "test-cmd",
-    )
+    val result =
+      handler.execute(
+        CommandParams(traceId = "test-trace"),
+        "test-cmd",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
     val data = (result as CommandResult.Success).data
@@ -41,10 +42,11 @@ class ChaosStopHandlerTest {
 
   @Test
   fun `execute with no active session returns error`() = runTest {
-    val result = handler.execute(
-      CommandParams(traceId = "test-trace"),
-      "test-cmd",
-    )
+    val result =
+      handler.execute(
+        CommandParams(traceId = "test-trace"),
+        "test-cmd",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Error::class.java)
     val error = result as CommandResult.Error

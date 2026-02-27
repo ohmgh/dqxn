@@ -103,9 +103,7 @@ class ThemeJsonValidationTest {
   }
 
   private fun loadThemeJson(filename: String): String =
-    javaClass.classLoader!!.getResourceAsStream("themes/$filename")!!
-      .bufferedReader()
-      .readText()
+    javaClass.classLoader!!.getResourceAsStream("themes/$filename")!!.bufferedReader().readText()
 
   private fun loadAndParse(filename: String): DashboardThemeDefinition {
     val json = loadThemeJson(filename)
@@ -113,7 +111,6 @@ class ThemeJsonValidationTest {
   }
 
   companion object {
-    @JvmStatic
-    fun themeFiles(): Stream<String> = ThemesPackThemeProvider.THEME_FILES.stream()
+    @JvmStatic fun themeFiles(): Stream<String> = ThemesPackThemeProvider.THEME_FILES.stream()
   }
 }

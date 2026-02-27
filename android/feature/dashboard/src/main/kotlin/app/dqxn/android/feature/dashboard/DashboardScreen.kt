@@ -95,9 +95,7 @@ public fun DashboardScreen(
   }
 
   // Edit mode forces bar visible
-  LaunchedEffect(editState.isEditMode) {
-    if (editState.isEditMode) isBarVisible = true
-  }
+  LaunchedEffect(editState.isEditMode) { if (editState.isEditMode) isBarVisible = true }
 
   // Drag/resize hides bar
   LaunchedEffect(dragState, resizeState) {
@@ -189,16 +187,17 @@ public fun DashboardScreen(
       // Layer 0.8: Bottom bar (floats over canvas, tap to reveal when hidden)
       Box(
         modifier =
-          Modifier.fillMaxSize().clickable(
-            indication = null,
-            interactionSource = remember { MutableInteractionSource() },
-            onClick = {
-              if (!isBarVisible) {
-                lastInteractionTime = System.currentTimeMillis()
-                isBarVisible = true
-              }
-            },
-          ),
+          Modifier.fillMaxSize()
+            .clickable(
+              indication = null,
+              interactionSource = remember { MutableInteractionSource() },
+              onClick = {
+                if (!isBarVisible) {
+                  lastInteractionTime = System.currentTimeMillis()
+                  isBarVisible = true
+                }
+              },
+            ),
         contentAlignment = Alignment.BottomCenter,
       ) {
         DashboardButtonBar(

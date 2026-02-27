@@ -5,8 +5,8 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 /**
- * Tests for [EssentialsThemeProvider] verifying 2 free themes (Minimalist light, Slate dark)
- * with correct metadata, color tokens, and free-tier gating.
+ * Tests for [EssentialsThemeProvider] verifying 2 free themes (Minimalist light, Slate dark) with
+ * correct metadata, color tokens, and free-tier gating.
  */
 class EssentialsThemeProviderTest {
 

@@ -34,7 +34,8 @@ public class BatteryRenderer @Inject constructor() : WidgetRenderer {
 
   override val typeId: String = "essentials:battery"
   override val displayName: String = "Battery"
-  override val description: String = "Displays battery level, charging state, and optional temperature"
+  override val description: String =
+    "Displays battery level, charging state, and optional temperature"
   override val compatibleSnapshots: Set<KClass<out DataSnapshot>> = setOf(BatterySnapshot::class)
   override val aspectRatio: Float? = null
   override val supportsTap: Boolean = false

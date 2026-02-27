@@ -8,7 +8,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.provider.DataSnapshot
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
@@ -80,6 +83,10 @@ class WidgetPickerTest {
     composeTestRule.onNodeWithTag("pack_header_plus", useUnmergedTree = true).assertExists()
     composeTestRule.onNodeWithText("Digital Clock", useUnmergedTree = true).assertExists()
     composeTestRule.onNodeWithText("Compass", useUnmergedTree = true).assertExists()
+    // "Gauge" is in the second pack group — scroll lazy grid to ensure it's composed
+    composeTestRule
+      .onNode(hasScrollAction())
+      .performScrollToNode(hasText("Gauge"))
     composeTestRule.onNodeWithText("Gauge", useUnmergedTree = true).assertExists()
   }
 

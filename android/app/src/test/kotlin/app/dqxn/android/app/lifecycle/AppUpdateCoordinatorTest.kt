@@ -23,8 +23,8 @@ import org.junit.jupiter.api.Test
 /**
  * Unit tests for [AppUpdateCoordinator].
  *
- * Uses MockK-based approach since FakeAppUpdateManager requires real Android Context
- * (incompatible with JUnit5 pure JVM tests).
+ * Uses MockK-based approach since FakeAppUpdateManager requires real Android Context (incompatible
+ * with JUnit5 pure JVM tests).
  */
 @DisplayName("AppUpdateCoordinator")
 class AppUpdateCoordinatorTest {
@@ -45,10 +45,11 @@ class AppUpdateCoordinatorTest {
     every { appUpdateManager.appUpdateInfo } returns task
 
     val listenerSlot = slot<OnSuccessListener<AppUpdateInfo>>()
-    every { task.addOnSuccessListener(capture(listenerSlot)) } answers {
-      listenerSlot.captured.onSuccess(appUpdateInfo)
-      task
-    }
+    every { task.addOnSuccessListener(capture(listenerSlot)) } answers
+      {
+        listenerSlot.captured.onSuccess(appUpdateInfo)
+        task
+      }
 
     every { appUpdateInfo.updateAvailability() } returns UpdateAvailability.UPDATE_AVAILABLE
     every { appUpdateInfo.updatePriority() } returns priority
@@ -63,10 +64,11 @@ class AppUpdateCoordinatorTest {
     every { appUpdateManager.appUpdateInfo } returns task
 
     val listenerSlot = slot<OnSuccessListener<AppUpdateInfo>>()
-    every { task.addOnSuccessListener(capture(listenerSlot)) } answers {
-      listenerSlot.captured.onSuccess(appUpdateInfo)
-      task
-    }
+    every { task.addOnSuccessListener(capture(listenerSlot)) } answers
+      {
+        listenerSlot.captured.onSuccess(appUpdateInfo)
+        task
+      }
 
     every { appUpdateInfo.updateAvailability() } returns UpdateAvailability.UPDATE_NOT_AVAILABLE
   }

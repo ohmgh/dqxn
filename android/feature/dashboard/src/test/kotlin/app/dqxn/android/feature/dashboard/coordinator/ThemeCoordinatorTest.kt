@@ -5,7 +5,6 @@ import app.dqxn.android.core.design.theme.ThemeAutoSwitchEngine
 import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.sdk.contracts.theme.AutoSwitchMode
 import app.dqxn.android.sdk.observability.log.NoOpLogger
-import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 import app.dqxn.android.sdk.ui.theme.MinimalistTheme
 import app.dqxn.android.sdk.ui.theme.SlateTheme
 import com.google.common.truth.Truth.assertThat
@@ -40,23 +39,24 @@ class ThemeCoordinatorTest {
   private val lightThemeIdFlow = MutableStateFlow("minimalist")
   private val darkThemeIdFlow = MutableStateFlow("slate")
 
-  private val mockEngine = mockk<ThemeAutoSwitchEngine>(relaxed = true) {
-    every { isDarkActive } returns isDarkActiveFlow
-  }
+  private val mockEngine =
+    mockk<ThemeAutoSwitchEngine>(relaxed = true) { every { isDarkActive } returns isDarkActiveFlow }
 
-  private val mockBuiltInThemes = mockk<BuiltInThemes> {
-    every { minimalist } returns MinimalistTheme
-    every { slate } returns SlateTheme
-    every { resolveById("minimalist") } returns MinimalistTheme
-    every { resolveById("slate") } returns SlateTheme
-    every { resolveById("nonexistent") } returns null
-  }
+  private val mockBuiltInThemes =
+    mockk<BuiltInThemes> {
+      every { minimalist } returns MinimalistTheme
+      every { slate } returns SlateTheme
+      every { resolveById("minimalist") } returns MinimalistTheme
+      every { resolveById("slate") } returns SlateTheme
+      every { resolveById("nonexistent") } returns null
+    }
 
-  private val mockPrefsRepo = mockk<UserPreferencesRepository>(relaxed = true) {
-    every { autoSwitchMode } returns autoSwitchModeFlow
-    every { lightThemeId } returns lightThemeIdFlow
-    every { darkThemeId } returns darkThemeIdFlow
-  }
+  private val mockPrefsRepo =
+    mockk<UserPreferencesRepository>(relaxed = true) {
+      every { autoSwitchMode } returns autoSwitchModeFlow
+      every { lightThemeId } returns lightThemeIdFlow
+      every { darkThemeId } returns darkThemeIdFlow
+    }
 
   private lateinit var coordinator: ThemeCoordinator
 
@@ -192,8 +192,7 @@ class ThemeCoordinatorTest {
         assertThat(coordinator.themeState.value.autoSwitchMode).isEqualTo(AutoSwitchMode.SYSTEM)
 
         coordinator.handleCycleThemeMode()
-        assertThat(coordinator.themeState.value.autoSwitchMode)
-          .isEqualTo(AutoSwitchMode.SOLAR_AUTO)
+        assertThat(coordinator.themeState.value.autoSwitchMode).isEqualTo(AutoSwitchMode.SOLAR_AUTO)
 
         coordinator.handleCycleThemeMode()
         assertThat(coordinator.themeState.value.autoSwitchMode)

@@ -21,9 +21,9 @@ import app.dqxn.android.sdk.observability.metrics.MetricsSnapshot
 /**
  * Debug overlay showing frame timing statistics. Positioned at top-right.
  *
- * Displays FPS counter (derived from frame histogram), frame time percentiles (P50/P95/P99),
- * and jank frame count (>33ms bucket). At Phase 6, [metricsCollector] will have empty data --
- * overlay shows zeros until the dashboard shell starts recording frames in Phase 7.
+ * Displays FPS counter (derived from frame histogram), frame time percentiles (P50/P95/P99), and
+ * jank frame count (>33ms bucket). At Phase 6, [metricsCollector] will have empty data -- overlay
+ * shows zeros until the dashboard shell starts recording frames in Phase 7.
  *
  * Uses [derivedStateOf] to defer reads and [graphicsLayer] for render isolation.
  */
@@ -32,9 +32,7 @@ internal fun FrameStatsOverlay(
   metricsCollector: MetricsCollector,
   modifier: Modifier = Modifier,
 ) {
-  val snapshot: MetricsSnapshot by remember {
-    derivedStateOf { metricsCollector.snapshot() }
-  }
+  val snapshot: MetricsSnapshot by remember { derivedStateOf { metricsCollector.snapshot() } }
 
   val fpsEstimate: String by remember {
     derivedStateOf {
@@ -51,21 +49,18 @@ internal fun FrameStatsOverlay(
   }
 
   Column(
-    modifier =
-      modifier
-        .graphicsLayer()
-        .background(OverlayBackground)
-        .padding(8.dp),
+    modifier = modifier.graphicsLayer().background(OverlayBackground).padding(8.dp),
     horizontalAlignment = Alignment.End,
   ) {
     OverlayText(text = fpsEstimate)
 
     val total = snapshot.totalFrameCount
     if (total > 0L) {
-      val percentiles = remember(snapshot.frameHistogram) {
-        computePercentiles(snapshot.frameHistogram, total)
-      }
-      OverlayText(text = "P50: ${percentiles.p50}ms  P95: ${percentiles.p95}ms  P99: ${percentiles.p99}ms")
+      val percentiles =
+        remember(snapshot.frameHistogram) { computePercentiles(snapshot.frameHistogram, total) }
+      OverlayText(
+        text = "P50: ${percentiles.p50}ms  P95: ${percentiles.p95}ms  P99: ${percentiles.p99}ms"
+      )
       OverlayText(text = "Jank: $jankCount")
       OverlayText(text = "Frames: $total")
     } else {
@@ -75,8 +70,8 @@ internal fun FrameStatsOverlay(
 }
 
 /**
- * Estimates FPS from the frame histogram. Uses weighted midpoints of each bucket to
- * compute average frame time, then converts to FPS.
+ * Estimates FPS from the frame histogram. Uses weighted midpoints of each bucket to compute average
+ * frame time, then converts to FPS.
  */
 private fun estimateFps(snapshot: MetricsSnapshot): String {
   val histogram = snapshot.frameHistogram
@@ -100,8 +95,8 @@ private fun estimateFps(snapshot: MetricsSnapshot): String {
 private data class Percentiles(val p50: Long, val p95: Long, val p99: Long)
 
 /**
- * Computes P50/P95/P99 frame time percentiles from the histogram.
- * Uses bucket upper bounds as the representative value for each bucket.
+ * Computes P50/P95/P99 frame time percentiles from the histogram. Uses bucket upper bounds as the
+ * representative value for each bucket.
  */
 private fun computePercentiles(
   histogram: List<Long>,
@@ -137,11 +132,12 @@ private const val MAX_DISPLAY_FPS = 120
 private fun OverlayText(text: String) {
   androidx.compose.material3.Text(
     text = text,
-    style = TextStyle(
-      color = OverlayTextColor,
-      fontSize = 12.sp,
-      fontFamily = FontFamily.Monospace,
-    ),
+    style =
+      TextStyle(
+        color = OverlayTextColor,
+        fontSize = 12.sp,
+        fontFamily = FontFamily.Monospace,
+      ),
   )
 }
 

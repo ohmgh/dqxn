@@ -17,8 +17,8 @@ private val LOG_MAX_LUX: Float = log10(MAX_LUX)
  *
  * Formula: position = log10(max(lux, MIN_LUX)) / log10(MAX_LUX)
  *
- * Values at or below [MIN_LUX] map to 0. Values at [MAX_LUX] map to 1.
- * Negative and sub-MIN_LUX values are clamped.
+ * Values at or below [MIN_LUX] map to 0. Values at [MAX_LUX] map to 1. Negative and sub-MIN_LUX
+ * values are clamped.
  *
  * @param lux Ambient light level in lux.
  * @return Position in [0, 1] range.
@@ -33,8 +33,7 @@ internal fun luxToPosition(lux: Float): Float {
  *
  * Formula: lux = 10^(position * log10(MAX_LUX))
  *
- * Position 0 yields [MIN_LUX], position 1 yields [MAX_LUX].
- * Out-of-range positions are clamped.
+ * Position 0 yields [MIN_LUX], position 1 yields [MAX_LUX]. Out-of-range positions are clamped.
  *
  * @param position Slider position in [0, 1] range.
  * @return Lux value in [MIN_LUX, MAX_LUX] range.

@@ -89,9 +89,7 @@ internal fun hslToColor(hsl: FloatArray): Color {
   return Color(r, g, b)
 }
 
-/**
- * Converts a [Color] to hex string in #AARRGGBB format.
- */
+/** Converts a [Color] to hex string in #AARRGGBB format. */
 internal fun colorToHex(color: Color): String {
   val a = (color.alpha * 255f).roundToInt().coerceIn(0, 255)
   val r = (color.red * 255f).roundToInt().coerceIn(0, 255)
@@ -103,8 +101,7 @@ internal fun colorToHex(color: Color): String {
 /**
  * Parses a hex color string to [Color].
  *
- * Supports 6-digit (#RRGGBB) and 8-digit (#AARRGGBB) formats.
- * Returns null for invalid input.
+ * Supports 6-digit (#RRGGBB) and 8-digit (#AARRGGBB) formats. Returns null for invalid input.
  */
 internal fun parseHexToColor(hex: String): Color? {
   if (hex.isEmpty() || hex[0] != '#') return null

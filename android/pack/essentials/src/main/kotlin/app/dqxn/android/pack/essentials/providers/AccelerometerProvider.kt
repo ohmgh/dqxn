@@ -80,8 +80,7 @@ constructor(
     callbackFlow {
         val linearSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
         val useLinear = linearSensor != null
-        val sensor =
-          linearSensor ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val sensor = linearSensor ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         if (sensor == null) {
           close()

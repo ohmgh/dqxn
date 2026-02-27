@@ -152,8 +152,8 @@ constructor(
   // -- Drag --
 
   /**
-   * Begin a drag gesture for [widgetId] from the widget's current grid position. The [startCol]
-   * and [startRow] are the widget's grid coordinates at drag start — used to compute final snap
+   * Begin a drag gesture for [widgetId] from the widget's current grid position. The [startCol] and
+   * [startRow] are the widget's grid coordinates at drag start — used to compute final snap
    * position.
    */
   public fun startDrag(widgetId: String, startCol: Int, startRow: Int) {
@@ -173,7 +173,12 @@ constructor(
   public fun updateDrag(offsetX: Float, offsetY: Float) {
     val currentId = dragStartWidgetId ?: return
     _dragState.value =
-      DragUpdate(widgetId = currentId, currentOffsetX = offsetX, currentOffsetY = offsetY, isDragging = true)
+      DragUpdate(
+        widgetId = currentId,
+        currentOffsetX = offsetX,
+        currentOffsetY = offsetY,
+        isDragging = true
+      )
   }
 
   /**
@@ -203,7 +208,8 @@ constructor(
     val widget = layoutCoordinator.layoutState.value.widgets.find { it.instanceId == widgetId }
     if (widget != null) {
       val boundaries = layoutCoordinator.configurationBoundaries.value
-      snappedPosition = gridPlacementEngine.enforceNoStraddle(snappedPosition, widget.size, boundaries)
+      snappedPosition =
+        gridPlacementEngine.enforceNoStraddle(snappedPosition, widget.size, boundaries)
     }
 
     // Commit position asynchronously via ViewModel scope
@@ -271,7 +277,8 @@ constructor(
     val widgetId = resizeWidgetId ?: return
 
     var newWidth = (resizeOriginalSize.widthUnits + deltaWidthUnits).coerceAtLeast(MIN_WIDGET_UNITS)
-    var newHeight = (resizeOriginalSize.heightUnits + deltaHeightUnits).coerceAtLeast(MIN_WIDGET_UNITS)
+    var newHeight =
+      (resizeOriginalSize.heightUnits + deltaHeightUnits).coerceAtLeast(MIN_WIDGET_UNITS)
 
     // Enforce aspect ratio if declared (F2.16)
     val aspectRatio = resizeWidgetSpec?.aspectRatio
@@ -293,29 +300,34 @@ constructor(
     val actualDeltaHeight = newHeight - resizeOriginalSize.heightUnits
 
     // Position compensation for non-BottomRight handles
-    val targetPosition = when (resizeHandle) {
-      ResizeHandle.TOP_LEFT -> GridPosition(
-        col = resizeOriginalPosition.col - actualDeltaWidth,
-        row = resizeOriginalPosition.row - actualDeltaHeight,
-      )
-      ResizeHandle.TOP_RIGHT -> GridPosition(
-        col = resizeOriginalPosition.col,
-        row = resizeOriginalPosition.row - actualDeltaHeight,
-      )
-      ResizeHandle.BOTTOM_LEFT -> GridPosition(
-        col = resizeOriginalPosition.col - actualDeltaWidth,
-        row = resizeOriginalPosition.row,
-      )
-      ResizeHandle.BOTTOM_RIGHT -> null
-    }
+    val targetPosition =
+      when (resizeHandle) {
+        ResizeHandle.TOP_LEFT ->
+          GridPosition(
+            col = resizeOriginalPosition.col - actualDeltaWidth,
+            row = resizeOriginalPosition.row - actualDeltaHeight,
+          )
+        ResizeHandle.TOP_RIGHT ->
+          GridPosition(
+            col = resizeOriginalPosition.col,
+            row = resizeOriginalPosition.row - actualDeltaHeight,
+          )
+        ResizeHandle.BOTTOM_LEFT ->
+          GridPosition(
+            col = resizeOriginalPosition.col - actualDeltaWidth,
+            row = resizeOriginalPosition.row,
+          )
+        ResizeHandle.BOTTOM_RIGHT -> null
+      }
 
-    _resizeState.value = ResizeUpdate(
-      widgetId = widgetId,
-      handle = resizeHandle,
-      targetSize = GridSize(newWidth, newHeight),
-      targetPosition = targetPosition,
-      isResizing = true,
-    )
+    _resizeState.value =
+      ResizeUpdate(
+        widgetId = widgetId,
+        handle = resizeHandle,
+        targetSize = GridSize(newWidth, newHeight),
+        targetPosition = targetPosition,
+        isResizing = true,
+      )
   }
 
   /**
@@ -346,9 +358,7 @@ constructor(
     val nextValue = !_editState.value.showStatusBar
     _editState.update { it.copy(showStatusBar = nextValue) }
     if (::scope.isInitialized) {
-      scope.launch {
-        userPreferencesRepository.setShowStatusBar(nextValue)
-      }
+      scope.launch { userPreferencesRepository.setShowStatusBar(nextValue) }
     }
     logger.debug(TAG) { "Status bar toggled: $nextValue" }
   }

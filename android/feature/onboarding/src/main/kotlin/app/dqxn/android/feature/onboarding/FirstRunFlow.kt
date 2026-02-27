@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -188,10 +187,7 @@ private fun ThemeCard(
   modifier: Modifier = Modifier,
 ) {
   Card(
-    modifier =
-      modifier
-        .testTag("theme_card_${theme.themeId}")
-        .clickable(onClick = onClick),
+    modifier = modifier.testTag("theme_card_${theme.themeId}").clickable(onClick = onClick),
     colors =
       CardDefaults.cardColors(
         containerColor =

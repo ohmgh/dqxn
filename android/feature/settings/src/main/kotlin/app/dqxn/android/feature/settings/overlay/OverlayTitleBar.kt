@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,8 +27,8 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
  *
  * Row layout with title on the left and a close button on the right. Close button meets the 76dp
  * minimum touch target requirement (F10.4). Title uses [DashboardTypography.title] with the theme's
- * [primaryTextColor][app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition.primaryTextColor]. Close
- * icon uses [TextEmphasis.Medium] (0.7f) alpha -- NOT inline 0.6f per replication advisory.
+ * [primaryTextColor][app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition.primaryTextColor].
+ * Close icon uses [TextEmphasis.Medium] (0.7f) alpha -- NOT inline 0.6f per replication advisory.
  */
 @Composable
 internal fun OverlayTitleBar(

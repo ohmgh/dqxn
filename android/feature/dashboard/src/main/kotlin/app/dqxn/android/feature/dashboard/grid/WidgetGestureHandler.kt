@@ -57,51 +57,57 @@ constructor(
     currentPosition: GridPosition,
     currentSize: GridSize,
     gridUnitPx: Float,
-  ): Modifier = this.pointerInput(widgetId, widgetSpec, currentPosition, currentSize, gridUnitPx) {
-    awaitEachGesture {
-      val wasInEditModeAtStart = editModeCoordinator.editState.value.isEditMode
-      val pass = if (wasInEditModeAtStart) PointerEventPass.Initial else PointerEventPass.Main
+  ): Modifier =
+    this.pointerInput(widgetId, widgetSpec, currentPosition, currentSize, gridUnitPx) {
+      awaitEachGesture {
+        val wasInEditModeAtStart = editModeCoordinator.editState.value.isEditMode
+        val pass = if (wasInEditModeAtStart) PointerEventPass.Initial else PointerEventPass.Main
 
-      val down = awaitFirstDown(requireUnconsumed = !wasInEditModeAtStart, pass = pass)
+        val down = awaitFirstDown(requireUnconsumed = !wasInEditModeAtStart, pass = pass)
 
-      // In edit mode, consume immediately to prevent blank space handler from firing
-      if (wasInEditModeAtStart) {
-        down.consume()
+        // In edit mode, consume immediately to prevent blank space handler from firing
+        if (wasInEditModeAtStart) {
+          down.consume()
+        }
+
+        val isFocused = editModeCoordinator.editState.value.focusedWidgetId == widgetId
+
+        if (!wasInEditModeAtStart) {
+          // Non-edit mode: wait for up, then toggle focus
+          awaitUpAndToggleFocus(widgetId)
+          return@awaitEachGesture
+        }
+
+        if (!isFocused) {
+          // Edit mode, not focused: tap to focus
+          awaitUpAndFocus(widgetId)
+          return@awaitEachGesture
+        }
+
+        // Edit mode, focused: check for resize handle hit, then fall through to drag
+        val touchTarget = HANDLE_TOUCH_TARGET_DP.dp.toPx()
+        val widgetWidthPx = currentSize.widthUnits * gridUnitPx
+        val widgetHeightPx = currentSize.heightUnits * gridUnitPx
+        val hitHandle =
+          detectResizeHandle(down.position, widgetWidthPx, widgetHeightPx, touchTarget)
+
+        if (hitHandle != null) {
+          // Resize: immediate start, no long-press
+          editModeCoordinator.startResize(
+            widgetId,
+            hitHandle,
+            currentSize,
+            currentPosition,
+            widgetSpec,
+          )
+          awaitResizeEvents(hitHandle, gridUnitPx)
+          return@awaitEachGesture
+        }
+
+        // Drag: long-press detection with 8px cancellation threshold
+        awaitDragEvents(widgetId, currentPosition, gridUnitPx, pass)
       }
-
-      val isFocused = editModeCoordinator.editState.value.focusedWidgetId == widgetId
-
-      if (!wasInEditModeAtStart) {
-        // Non-edit mode: wait for up, then toggle focus
-        awaitUpAndToggleFocus(widgetId)
-        return@awaitEachGesture
-      }
-
-      if (!isFocused) {
-        // Edit mode, not focused: tap to focus
-        awaitUpAndFocus(widgetId)
-        return@awaitEachGesture
-      }
-
-      // Edit mode, focused: check for resize handle hit, then fall through to drag
-      val touchTarget = HANDLE_TOUCH_TARGET_DP.dp.toPx()
-      val widgetWidthPx = currentSize.widthUnits * gridUnitPx
-      val widgetHeightPx = currentSize.heightUnits * gridUnitPx
-      val hitHandle = detectResizeHandle(down.position, widgetWidthPx, widgetHeightPx, touchTarget)
-
-      if (hitHandle != null) {
-        // Resize: immediate start, no long-press
-        editModeCoordinator.startResize(
-          widgetId, hitHandle, currentSize, currentPosition, widgetSpec,
-        )
-        awaitResizeEvents(hitHandle, gridUnitPx)
-        return@awaitEachGesture
-      }
-
-      // Drag: long-press detection with 8px cancellation threshold
-      awaitDragEvents(widgetId, currentPosition, gridUnitPx, pass)
     }
-  }
 
   /**
    * Non-edit mode: wait for pointer up, then toggle focus. Uses `requireUnconsumed = true` so
@@ -218,14 +224,18 @@ constructor(
         change.consume()
 
         // Invert deltas for left/top handles per replication advisory section 6
-        val dx = when (handle) {
-          ResizeHandle.TOP_LEFT, ResizeHandle.BOTTOM_LEFT -> -posChange.x
-          else -> posChange.x
-        }
-        val dy = when (handle) {
-          ResizeHandle.TOP_LEFT, ResizeHandle.TOP_RIGHT -> -posChange.y
-          else -> posChange.y
-        }
+        val dx =
+          when (handle) {
+            ResizeHandle.TOP_LEFT,
+            ResizeHandle.BOTTOM_LEFT -> -posChange.x
+            else -> posChange.x
+          }
+        val dy =
+          when (handle) {
+            ResizeHandle.TOP_LEFT,
+            ResizeHandle.TOP_RIGHT -> -posChange.y
+            else -> posChange.y
+          }
 
         accumulatedDeltaX += dx
         accumulatedDeltaY += dy

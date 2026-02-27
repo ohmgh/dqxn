@@ -21,9 +21,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
           unitTests.isReturnDefaultValues = true
         }
 
-        lint {
-          error.add("HardcodedText")
-        }
+        lint { error.add("HardcodedText") }
       }
 
       extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {

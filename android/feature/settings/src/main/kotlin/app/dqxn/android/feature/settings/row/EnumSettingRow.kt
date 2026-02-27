@@ -29,7 +29,6 @@ import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 
 /**
  * Enum setting row with 3 render modes:
- *
  * 1. Preview cards grid (if `optionPreviews` were non-null -- not yet available in contracts).
  * 2. Chips via [FlowRow] (options <= 10).
  * 3. Dropdown via [ExposedDropdownMenuBox] (options > 10).
@@ -64,8 +63,7 @@ internal fun <E : Enum<E>> EnumSettingRow(
       ) {
         definition.options.forEach { option ->
           val label = definition.optionLabels?.get(option) ?: option.name
-          val isSelected =
-            currentValue == option || currentValue?.toString() == option.name
+          val isSelected = currentValue == option || currentValue?.toString() == option.name
           SelectionChip(
             text = label,
             isSelected = isSelected,
@@ -78,9 +76,11 @@ internal fun <E : Enum<E>> EnumSettingRow(
       // Dropdown mode
       var expanded by remember { mutableStateOf(false) }
       val selectedLabel =
-        definition.options.firstOrNull { option ->
-          currentValue == option || currentValue?.toString() == option.name
-        }?.let { definition.optionLabels?.get(it) ?: it.name } ?: ""
+        definition.options
+          .firstOrNull { option ->
+            currentValue == option || currentValue?.toString() == option.name
+          }
+          ?.let { definition.optionLabels?.get(it) ?: it.name } ?: ""
 
       ExposedDropdownMenuBox(
         expanded = expanded,

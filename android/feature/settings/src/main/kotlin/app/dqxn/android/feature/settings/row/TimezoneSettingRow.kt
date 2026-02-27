@@ -44,17 +44,14 @@ internal fun TimezoneSettingRow(
 
   Row(
     modifier =
-      modifier
-        .fillMaxWidth()
-        .defaultMinSize(minHeight = 76.dp)
-        .clickable {
-          onNavigate?.invoke(
-            SettingNavigation.ToTimezonePicker(
-              settingKey = definition.key,
-              currentValue = currentValue,
-            )
+      modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp).clickable {
+        onNavigate?.invoke(
+          SettingNavigation.ToTimezonePicker(
+            settingKey = definition.key,
+            currentValue = currentValue,
           )
-        },
+        )
+      },
     verticalAlignment = Alignment.CenterVertically,
   ) {
     SettingLabel(

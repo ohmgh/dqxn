@@ -21,8 +21,8 @@ import app.dqxn.android.sdk.observability.metrics.MetricsSnapshot
 /**
  * Simple text-based observability dashboard showing frame time metrics and jank percentage.
  *
- * Displays P50, P95, P99 frame times derived from the [MetricsSnapshot] histogram and
- * a jank percentage indicator (frames > 16ms).
+ * Displays P50, P95, P99 frame times derived from the [MetricsSnapshot] histogram and a jank
+ * percentage indicator (frames > 16ms).
  *
  * @param metricsSnapshot The current metrics snapshot, or null if no data available.
  */
@@ -126,8 +126,8 @@ private fun MetricRow(
 /**
  * Frame metrics computed from a [MetricsSnapshot] histogram.
  *
- * Histogram buckets: <8ms, <12ms, <16ms, <24ms, <33ms, >33ms
- * Bucket midpoints used for percentile estimation: 4, 10, 14, 20, 28, 40
+ * Histogram buckets: <8ms, <12ms, <16ms, <24ms, <33ms, >33ms Bucket midpoints used for percentile
+ * estimation: 4, 10, 14, 20, 28, 40
  */
 @Stable
 internal data class FrameMetrics(

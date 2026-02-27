@@ -21,13 +21,13 @@ class SessionLifecycleTrackerTest {
 
   private val analyticsTracker = mockk<AnalyticsTracker>(relaxed = true)
   private val metricsCollector = MetricsCollector()
-  private val healthMonitor = mockk<WidgetHealthMonitor>(relaxed = true).also {
-    every { it.allStatuses() } returns emptyMap()
-  }
+  private val healthMonitor =
+    mockk<WidgetHealthMonitor>(relaxed = true).also {
+      every { it.allStatuses() } returns emptyMap()
+    }
   private val thermalLevelFlow = MutableStateFlow(ThermalLevel.NORMAL)
-  private val thermalMonitor = mockk<ThermalMonitor>().also {
-    every { it.thermalLevel } returns thermalLevelFlow
-  }
+  private val thermalMonitor =
+    mockk<ThermalMonitor>().also { every { it.thermalLevel } returns thermalLevelFlow }
 
   private var fakeTimeMs = 1_000_000L
   private lateinit var tracker: SessionLifecycleTracker
@@ -35,13 +35,14 @@ class SessionLifecycleTrackerTest {
   @BeforeEach
   fun setUp() {
     fakeTimeMs = 1_000_000L
-    tracker = SessionLifecycleTracker(
-      analyticsTracker = analyticsTracker,
-      metricsCollector = metricsCollector,
-      healthMonitor = healthMonitor,
-      thermalMonitor = thermalMonitor,
-      clock = { fakeTimeMs },
-    )
+    tracker =
+      SessionLifecycleTracker(
+        analyticsTracker = analyticsTracker,
+        metricsCollector = metricsCollector,
+        healthMonitor = healthMonitor,
+        thermalMonitor = thermalMonitor,
+        clock = { fakeTimeMs },
+      )
   }
 
   @Test
@@ -109,28 +110,33 @@ class SessionLifecycleTrackerTest {
 
   @Test
   fun `onSessionEnd includes render failures and provider errors`() {
-    every { healthMonitor.allStatuses() } returns mapOf(
-      "widget-1" to WidgetHealthMonitor.WidgetHealthStatus(
-        widgetId = "widget-1",
-        typeId = "essentials:clock",
-        status = WidgetHealthMonitor.Status.CRASHED,
-      ),
-      "widget-2" to WidgetHealthMonitor.WidgetHealthStatus(
-        widgetId = "widget-2",
-        typeId = "essentials:speed",
-        status = WidgetHealthMonitor.Status.STALLED_RENDER,
-      ),
-      "widget-3" to WidgetHealthMonitor.WidgetHealthStatus(
-        widgetId = "widget-3",
-        typeId = "essentials:battery",
-        status = WidgetHealthMonitor.Status.STALE_DATA,
-      ),
-      "widget-4" to WidgetHealthMonitor.WidgetHealthStatus(
-        widgetId = "widget-4",
-        typeId = "essentials:date",
-        status = WidgetHealthMonitor.Status.ACTIVE,
-      ),
-    )
+    every { healthMonitor.allStatuses() } returns
+      mapOf(
+        "widget-1" to
+          WidgetHealthMonitor.WidgetHealthStatus(
+            widgetId = "widget-1",
+            typeId = "essentials:clock",
+            status = WidgetHealthMonitor.Status.CRASHED,
+          ),
+        "widget-2" to
+          WidgetHealthMonitor.WidgetHealthStatus(
+            widgetId = "widget-2",
+            typeId = "essentials:speed",
+            status = WidgetHealthMonitor.Status.STALLED_RENDER,
+          ),
+        "widget-3" to
+          WidgetHealthMonitor.WidgetHealthStatus(
+            widgetId = "widget-3",
+            typeId = "essentials:battery",
+            status = WidgetHealthMonitor.Status.STALE_DATA,
+          ),
+        "widget-4" to
+          WidgetHealthMonitor.WidgetHealthStatus(
+            widgetId = "widget-4",
+            typeId = "essentials:date",
+            status = WidgetHealthMonitor.Status.ACTIVE,
+          ),
+      )
 
     tracker.onSessionStart(widgetCount = 4)
     tracker.onSessionEnd(editCount = 1)

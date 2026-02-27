@@ -90,25 +90,26 @@ class ProviderDetailScreenTest {
   fun `events sorted newest first`() {
     val events =
       listOf(
-        ConnectionEvent(
-          timestamp = 3_000L, // newest
-          deviceMac = "AA:BB:CC:DD:EE:FF",
-          eventType = "DISCONNECTED",
-          details = "Latest event",
-        ),
-        ConnectionEvent(
-          timestamp = 2_000L,
-          deviceMac = "AA:BB:CC:DD:EE:FF",
-          eventType = "CONNECTED",
-          details = "Middle event",
-        ),
-        ConnectionEvent(
-          timestamp = 1_000L, // oldest
-          deviceMac = "AA:BB:CC:DD:EE:FF",
-          eventType = "CONNECTED",
-          details = "Oldest event",
-        ),
-      ).toImmutableList()
+          ConnectionEvent(
+            timestamp = 3_000L, // newest
+            deviceMac = "AA:BB:CC:DD:EE:FF",
+            eventType = "DISCONNECTED",
+            details = "Latest event",
+          ),
+          ConnectionEvent(
+            timestamp = 2_000L,
+            deviceMac = "AA:BB:CC:DD:EE:FF",
+            eventType = "CONNECTED",
+            details = "Middle event",
+          ),
+          ConnectionEvent(
+            timestamp = 1_000L, // oldest
+            deviceMac = "AA:BB:CC:DD:EE:FF",
+            eventType = "CONNECTED",
+            details = "Oldest event",
+          ),
+        )
+        .toImmutableList()
 
     composeTestRule.setContent {
       ProviderDetailScreen(

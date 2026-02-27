@@ -17,7 +17,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.dqxn.android.pack.essentials.snapshots.SolarSnapshot
 import app.dqxn.android.sdk.contracts.annotation.DashboardWidget
 import app.dqxn.android.sdk.contracts.provider.DataSnapshot
@@ -125,8 +124,7 @@ public class SolarRenderer @Inject constructor() : WidgetRenderer {
   ) {
     val widgetData = LocalWidgetData.current
     val solar = widgetData.snapshot<SolarSnapshot>()
-    val displayMode =
-      (settings["displayMode"] as? SolarDisplayMode) ?: SolarDisplayMode.NEXT_EVENT
+    val displayMode = (settings["displayMode"] as? SolarDisplayMode) ?: SolarDisplayMode.NEXT_EVENT
     val arcSize = (settings["arcSize"] as? ArcSize) ?: ArcSize.MEDIUM
 
     if (solar == null) {
@@ -190,8 +188,8 @@ public class SolarRenderer @Inject constructor() : WidgetRenderer {
     /**
      * Computes the sun's position as a fraction of the day arc.
      *
-     * Returns 0.0 at sunrise, 0.5 at solar noon, 1.0 at sunset. Values outside sunrise-sunset
-     * range are clamped to [0.0, 1.0].
+     * Returns 0.0 at sunrise, 0.5 at solar noon, 1.0 at sunset. Values outside sunrise-sunset range
+     * are clamped to [0.0, 1.0].
      *
      * @param currentTimeMillis current time in epoch milliseconds
      * @param sunriseMillis sunrise time in epoch milliseconds
@@ -325,7 +323,7 @@ private fun ArcContent(solar: SolarSnapshot, arcSize: ArcSize, modifier: Modifie
   val dayStartMillis = sunriseMillis - (sunriseMillis % (24L * 3600L * 1000L))
   val dawnStartFraction =
     ((sunriseMillis - SolarRenderer.DAWN_DURATION_MILLIS - dayStartMillis).toFloat() /
-      (24f * 3600f * 1000f))
+        (24f * 3600f * 1000f))
       .coerceIn(0f, 1f)
   val sunriseFraction =
     ((sunriseMillis - dayStartMillis).toFloat() / (24f * 3600f * 1000f)).coerceIn(0f, 1f)
@@ -333,7 +331,7 @@ private fun ArcContent(solar: SolarSnapshot, arcSize: ArcSize, modifier: Modifie
     ((sunsetMillis - dayStartMillis).toFloat() / (24f * 3600f * 1000f)).coerceIn(0f, 1f)
   val duskEndFraction =
     ((sunsetMillis + SolarRenderer.DUSK_DURATION_MILLIS - dayStartMillis).toFloat() /
-      (24f * 3600f * 1000f))
+        (24f * 3600f * 1000f))
       .coerceIn(0f, 1f)
 
   // Current position as fraction of full day
@@ -346,8 +344,7 @@ private fun ArcContent(solar: SolarSnapshot, arcSize: ArcSize, modifier: Modifie
   Canvas(modifier = modifier.fillMaxSize().padding(8.dp)) {
     val arcStrokePx = arcStrokeWidth.toPx()
     val padding = arcStrokePx / 2f
-    val arcRect =
-      Size(size.width - arcStrokePx, size.height - arcStrokePx)
+    val arcRect = Size(size.width - arcStrokePx, size.height - arcStrokePx)
     val arcTopLeft = Offset(padding, padding)
 
     // Night band (full circle background)

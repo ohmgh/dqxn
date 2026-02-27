@@ -6,9 +6,9 @@ import android.content.SharedPreferences
  * Crash timestamp tracking for safe-mode detection.
  *
  * Uses [SharedPreferences] (not DataStore) because crash recording must be synchronous --
- * [recordCrash] is called from an [Thread.UncaughtExceptionHandler] where the process is about
- * to die. [SharedPreferences.Editor.commit] is used instead of apply() to guarantee persistence
- * before process termination.
+ * [recordCrash] is called from an [Thread.UncaughtExceptionHandler] where the process is about to
+ * die. [SharedPreferences.Editor.commit] is used instead of apply() to guarantee persistence before
+ * process termination.
  *
  * Safe mode triggers when [THRESHOLD] or more crashes occur within [WINDOW_MS] (60 seconds).
  */
@@ -19,10 +19,9 @@ public class CrashRecovery(
   /** Records the current timestamp as a crash event. Uses [commit] to survive process death. */
   public fun recordCrash() {
     val now = System.currentTimeMillis()
-    val timestamps = readTimestamps()
-      .filter { now - it < WINDOW_MS }
-      .plus(now)
-    prefs.edit()
+    val timestamps = readTimestamps().filter { now - it < WINDOW_MS }.plus(now)
+    prefs
+      .edit()
       .putString(KEY_TIMESTAMPS, timestamps.joinToString(","))
       .commit() // commit(), NOT apply() -- must survive process death
   }
@@ -39,9 +38,7 @@ public class CrashRecovery(
   }
 
   private fun readTimestamps(): List<Long> =
-    prefs.getString(KEY_TIMESTAMPS, null)
-      ?.split(",")
-      ?.mapNotNull { it.toLongOrNull() }
+    prefs.getString(KEY_TIMESTAMPS, null)?.split(",")?.mapNotNull { it.toLongOrNull() }
       ?: emptyList()
 
   internal companion object {

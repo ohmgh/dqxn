@@ -54,27 +54,23 @@ internal fun SetupNavigationBar(
   val isLastPage = currentPage >= totalPages - 1
 
   Row(
-    modifier = modifier
-      .fillMaxWidth()
-      .padding(vertical = DashboardSpacing.SpaceS),
+    modifier = modifier.fillMaxWidth().padding(vertical = DashboardSpacing.SpaceS),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
   ) {
     // Back button -- invisible (but space-holding) on page 0
     Box(
-      modifier = Modifier
-        .sizeIn(minWidth = 76.dp, minHeight = 76.dp)
-        .testTag("setup_back_button")
-        .alpha(if (currentPage > 0) 1f else 0f)
-        .then(
-          if (currentPage > 0) {
-            Modifier
-              .semantics { role = Role.Button }
-              .clickable(onClick = onBack)
-          } else {
-            Modifier
-          },
-        ),
+      modifier =
+        Modifier.sizeIn(minWidth = 76.dp, minHeight = 76.dp)
+          .testTag("setup_back_button")
+          .alpha(if (currentPage > 0) 1f else 0f)
+          .then(
+            if (currentPage > 0) {
+              Modifier.semantics { role = Role.Button }.clickable(onClick = onBack)
+            } else {
+              Modifier
+            },
+          ),
       contentAlignment = Alignment.Center,
     ) {
       Icon(
@@ -91,17 +87,18 @@ internal fun SetupNavigationBar(
     ) {
       repeat(totalPages) { index ->
         Box(
-          modifier = Modifier
-            .testTag("setup_page_dot_$index")
-            .size(8.dp)
-            .background(
-              color = if (index == currentPage) {
-                theme.accentColor
-              } else {
-                theme.secondaryTextColor.copy(alpha = TextEmphasis.Disabled)
-              },
-              shape = CircleShape,
-            ),
+          modifier =
+            Modifier.testTag("setup_page_dot_$index")
+              .size(8.dp)
+              .background(
+                color =
+                  if (index == currentPage) {
+                    theme.accentColor
+                  } else {
+                    theme.secondaryTextColor.copy(alpha = TextEmphasis.Disabled)
+                  },
+                shape = CircleShape,
+              ),
         )
       }
     }
@@ -109,12 +106,12 @@ internal fun SetupNavigationBar(
     // Next / Done button
     if (isLastPage) {
       Box(
-        modifier = Modifier
-          .sizeIn(minWidth = 76.dp, minHeight = 76.dp)
-          .testTag("setup_done_button")
-          .alpha(if (isPageSatisfied) 1f else 0.5f)
-          .semantics { role = Role.Button }
-          .clickable(onClick = onDone),
+        modifier =
+          Modifier.sizeIn(minWidth = 76.dp, minHeight = 76.dp)
+            .testTag("setup_done_button")
+            .alpha(if (isPageSatisfied) 1f else 0.5f)
+            .semantics { role = Role.Button }
+            .clickable(onClick = onDone),
         contentAlignment = Alignment.Center,
       ) {
         Row(
@@ -135,12 +132,12 @@ internal fun SetupNavigationBar(
       }
     } else {
       Box(
-        modifier = Modifier
-          .sizeIn(minWidth = 76.dp, minHeight = 76.dp)
-          .testTag("setup_next_button")
-          .alpha(if (isPageSatisfied) 1f else 0.5f)
-          .semantics { role = Role.Button }
-          .clickable(onClick = onNext),
+        modifier =
+          Modifier.sizeIn(minWidth = 76.dp, minHeight = 76.dp)
+            .testTag("setup_next_button")
+            .alpha(if (isPageSatisfied) 1f else 0.5f)
+            .semantics { role = Role.Button }
+            .clickable(onClick = onNext),
         contentAlignment = Alignment.Center,
       ) {
         Row(

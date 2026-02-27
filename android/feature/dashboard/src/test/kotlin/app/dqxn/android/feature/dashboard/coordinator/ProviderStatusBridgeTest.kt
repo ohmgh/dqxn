@@ -1,5 +1,6 @@
 package app.dqxn.android.feature.dashboard.coordinator
 
+import app.cash.turbine.test
 import app.dqxn.android.sdk.contracts.provider.DataProvider
 import app.dqxn.android.sdk.contracts.provider.DataSchema
 import app.dqxn.android.sdk.contracts.provider.DataSnapshot
@@ -8,7 +9,6 @@ import app.dqxn.android.sdk.contracts.provider.ProviderPriority
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.setup.SetupPageDefinition
 import app.dqxn.android.sdk.observability.log.NoOpLogger
-import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import kotlin.reflect.KClass
 import kotlin.time.Duration
@@ -51,6 +51,7 @@ class ProviderStatusBridgeTest {
     override val isAvailable: Boolean = true
     override val connectionState: Flow<Boolean> = connectionFlow
     override val connectionErrorDescription: Flow<String?> = errorFlow
+
     override fun provideState(): Flow<TestSnapshot> = flow { emit(TestSnapshot()) }
   }
 
@@ -58,8 +59,10 @@ class ProviderStatusBridgeTest {
 
   class TestRegistry(private val providers: Set<DataProvider<*>>) : DataProviderRegistry {
     override fun getAll(): Set<DataProvider<*>> = providers
+
     override fun findByDataType(dataType: String): List<DataProvider<*>> =
       providers.filter { it.dataType == dataType }
+
     override fun getFiltered(entitlementCheck: (String) -> Boolean): Set<DataProvider<*>> =
       providers
   }
@@ -78,10 +81,11 @@ class ProviderStatusBridgeTest {
 
   @Test
   fun `providerStatuses reflects bound provider with correct id and displayName`() = runTest {
-    val provider = TestProvider(
-      sourceId = "essentials:gps-speed",
-      displayName = "GPS Speed",
-    )
+    val provider =
+      TestProvider(
+        sourceId = "essentials:gps-speed",
+        displayName = "GPS Speed",
+      )
     val registry = TestRegistry(setOf(provider))
     val bridge = ProviderStatusBridge(registry, logger)
 
@@ -101,10 +105,11 @@ class ProviderStatusBridgeTest {
 
   @Test
   fun `provider error updates status description`() = runTest {
-    val provider = TestProvider(
-      sourceId = "essentials:accelerometer",
-      displayName = "Accelerometer",
-    )
+    val provider =
+      TestProvider(
+        sourceId = "essentials:accelerometer",
+        displayName = "Accelerometer",
+      )
     val registry = TestRegistry(setOf(provider))
     val bridge = ProviderStatusBridge(registry, logger)
 
@@ -125,10 +130,11 @@ class ProviderStatusBridgeTest {
 
   @Test
   fun `disconnected provider shows isConnected false`() = runTest {
-    val provider = TestProvider(
-      sourceId = "essentials:battery",
-      displayName = "Battery",
-    )
+    val provider =
+      TestProvider(
+        sourceId = "essentials:battery",
+        displayName = "Battery",
+      )
     val registry = TestRegistry(setOf(provider))
     val bridge = ProviderStatusBridge(registry, logger)
 

@@ -4,7 +4,6 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -79,8 +78,6 @@ class StorageMonitorTest {
     storageChecker: () -> Boolean,
   ): StorageMonitor {
     val context: android.content.Context = mockk(relaxed = true)
-    return StorageMonitor(context = context).also {
-      it.storageChecker = storageChecker
-    }
+    return StorageMonitor(context = context).also { it.storageChecker = storageChecker }
   }
 }

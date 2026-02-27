@@ -20,10 +20,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
           testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         }
 
-        @Suppress("UnstableApiUsage")
-        testOptions {
-          unitTests.isReturnDefaultValues = true
-        }
+        @Suppress("UnstableApiUsage") testOptions { unitTests.isReturnDefaultValues = true }
 
         buildTypes {
           release {
@@ -36,9 +33,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
           }
         }
 
-        lint {
-          error.add("HardcodedText")
-        }
+        lint { error.add("HardcodedText") }
       }
 
       extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {

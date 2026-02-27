@@ -11,20 +11,18 @@ import org.junit.runner.RunWith
 /**
  * Startup timing benchmarks measuring cold and warm start performance.
  *
- * Cold startup gate: P50 < 1.5s (NF1).
- * Warm startup: trend tracking for P50 regression detection.
+ * Cold startup gate: P50 < 1.5s (NF1). Warm startup: trend tracking for P50 regression detection.
  *
  * Run on a connected device: `./gradlew :benchmark:connectedBenchmarkAndroidTest`
  */
 @RunWith(AndroidJUnit4::class)
 public class StartupBenchmark {
 
-  @get:Rule
-  public val rule: MacrobenchmarkRule = MacrobenchmarkRule()
+  @get:Rule public val rule: MacrobenchmarkRule = MacrobenchmarkRule()
 
   /**
-   * Cold startup: process killed before each iteration.
-   * Measures full process init + Activity creation + first frame.
+   * Cold startup: process killed before each iteration. Measures full process init + Activity
+   * creation + first frame.
    */
   @Test
   public fun coldStartup() {
@@ -39,8 +37,8 @@ public class StartupBenchmark {
   }
 
   /**
-   * Warm startup: process alive, Activity recreated.
-   * Lower variance than cold; useful for P50 trend tracking.
+   * Warm startup: process alive, Activity recreated. Lower variance than cold; useful for P50 trend
+   * tracking.
    */
   @Test
   public fun warmStartup() {

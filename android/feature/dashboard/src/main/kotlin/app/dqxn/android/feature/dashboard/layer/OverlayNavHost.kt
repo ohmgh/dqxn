@@ -26,8 +26,9 @@ import app.dqxn.android.feature.onboarding.OnboardingViewModel
 import app.dqxn.android.feature.settings.WidgetPicker
 import app.dqxn.android.feature.settings.main.MainSettings
 import app.dqxn.android.feature.settings.main.MainSettingsViewModel
-import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
+import app.dqxn.android.sdk.contracts.setup.SetupEvaluator
 import app.dqxn.android.feature.settings.setup.SetupSheet
+import app.dqxn.android.feature.settings.theme.AutoSwitchModeContent
 import app.dqxn.android.feature.settings.theme.ThemeSelector
 import app.dqxn.android.feature.settings.theme.ThemeStudio
 import app.dqxn.android.feature.settings.widget.WidgetSettingsSheet
@@ -70,7 +71,7 @@ public fun OverlayNavHost(
   dataProviderRegistry: DataProviderRegistry,
   providerSettingsStore: ProviderSettingsStore,
   entitlementManager: EntitlementManager,
-  setupEvaluator: SetupEvaluatorImpl,
+  setupEvaluator: SetupEvaluator,
   pairedDeviceStore: PairedDeviceStore,
   mainSettingsViewModel: MainSettingsViewModel,
   themeCoordinator: ThemeCoordinator,
@@ -145,6 +146,8 @@ public fun OverlayNavHost(
       val showStatusBar by mainSettingsViewModel.showStatusBar.collectAsState()
       val keepScreenOn by mainSettingsViewModel.keepScreenOn.collectAsState()
 
+      val themeState by themeCoordinator.themeState.collectAsState()
+
       PreviewOverlay(
         previewFraction = 0.15f,
         onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
@@ -153,20 +156,35 @@ public fun OverlayNavHost(
           analyticsConsent = analyticsConsent,
           showStatusBar = showStatusBar,
           keepScreenOn = keepScreenOn,
+          lightThemeName = themeState.lightTheme.displayName,
+          darkThemeName = themeState.darkTheme.displayName,
+          packCount = widgetRegistry.getAll().map { it.typeId.substringBefore(':') }.toSet().size,
+          themeCount = allThemes.size,
+          widgetCount = widgetRegistry.getAll().size,
+          providerCount = dataProviderRegistry.getAll().size,
+          autoSwitchModeDescription = themeState.autoSwitchMode.name.lowercase().replace('_', ' ')
+            .replaceFirstChar { it.uppercase() },
+          versionName = "1.0",
           onSetAnalyticsConsent = mainSettingsViewModel::setAnalyticsConsent,
           onSetShowStatusBar = mainSettingsViewModel::setShowStatusBar,
           onSetKeepScreenOn = mainSettingsViewModel::setKeepScreenOn,
           onDeleteAllData = mainSettingsViewModel::deleteAllData,
           onNavigateToThemeMode = {
-            // Caller-managed preview: set preview theme BEFORE navigating to ThemeSelector
-            val darkTheme = themeCoordinator.themeState.value.darkTheme
-            onCommand(DashboardCommand.PreviewTheme(darkTheme))
-            navController.navigate(ThemeSelectorRoute)
+            navController.navigate(AutoSwitchModeRoute)
+          },
+          onNavigateToLightTheme = {
+            onCommand(DashboardCommand.PreviewTheme(themeState.lightTheme))
+            navController.navigate(ThemeSelectorRoute(isDark = false))
+          },
+          onNavigateToDarkTheme = {
+            onCommand(DashboardCommand.PreviewTheme(themeState.darkTheme))
+            navController.navigate(ThemeSelectorRoute(isDark = true))
           },
           onNavigateToDashPacks = {
             // Pack browser navigation -- future
           },
           onNavigateToDiagnostics = { navController.navigate(DiagnosticsRoute) },
+          onResetDash = { onCommand(DashboardCommand.ResetLayout) },
           onClose = { navController.popBackStack(EmptyRoute, inclusive = false) },
         )
       }
@@ -230,6 +248,31 @@ public fun OverlayNavHost(
       }
     }
 
+    // Auto-switch mode selector -- preview transitions
+    composable<AutoSwitchModeRoute>(
+      enterTransition = { DashboardMotion.previewEnter },
+      exitTransition = { DashboardMotion.previewExit },
+      popEnterTransition = { fadeIn(tween(150)) },
+      popExitTransition = { DashboardMotion.previewExit },
+    ) {
+      val themeState by themeCoordinator.themeState.collectAsState()
+
+      PreviewOverlay(
+        previewFraction = 0.15f,
+        onDismiss = { navController.popBackStack() },
+      ) {
+        AutoSwitchModeContent(
+          selectedMode = themeState.autoSwitchMode,
+          illuminanceThreshold = themeState.illuminanceThreshold,
+          entitlementManager = entitlementManager,
+          onModeSelected = { mode -> onCommand(DashboardCommand.SetAutoSwitchMode(mode)) },
+          onIlluminanceThresholdChanged = { threshold ->
+            onCommand(DashboardCommand.SetIlluminanceThreshold(threshold))
+          },
+        )
+      }
+    }
+
     // Theme selector -- preview transitions with CRITICAL popEnter override
     // popEnter uses fadeIn(150ms) NOT previewEnter to prevent double-slide when returning
     // from a theme sub-screen (replication advisory section 4)
@@ -252,7 +295,8 @@ public fun OverlayNavHost(
         }
       },
       popExitTransition = { DashboardMotion.previewExit },
-    ) {
+    ) { backStackEntry ->
+      val route = backStackEntry.toRoute<ThemeSelectorRoute>()
       val themeState by themeCoordinator.themeState.collectAsState()
 
       PreviewOverlay(
@@ -264,7 +308,7 @@ public fun OverlayNavHost(
       ) {
         ThemeSelector(
           allThemes = allThemes,
-          isDark = themeState.currentTheme.isDark,
+          isDark = route.isDark,
           previewTheme = themeState.previewTheme,
           customThemeCount = customThemeCount,
           entitlementManager = entitlementManager,

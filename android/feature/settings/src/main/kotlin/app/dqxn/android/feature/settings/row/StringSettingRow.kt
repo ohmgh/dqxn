@@ -52,7 +52,13 @@ internal fun StringSettingRow(
       },
       placeholder =
         definition.placeholder?.let {
-          { Text(text = it, style = DashboardTypography.description, color = theme.secondaryTextColor) }
+          {
+            Text(
+              text = it,
+              style = DashboardTypography.description,
+              color = theme.secondaryTextColor
+            )
+          }
         },
       singleLine = true,
       textStyle = DashboardTypography.itemTitle.copy(color = theme.primaryTextColor),

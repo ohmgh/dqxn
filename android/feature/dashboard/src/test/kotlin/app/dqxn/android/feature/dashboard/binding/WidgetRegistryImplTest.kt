@@ -7,7 +7,6 @@ import app.dqxn.android.sdk.observability.log.LogTag
 import app.dqxn.android.sdk.observability.log.NoOpLogger
 import com.google.common.truth.Truth.assertThat
 import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentMapOf
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
@@ -49,20 +48,22 @@ class WidgetRegistryImplTest {
   @Test
   fun `duplicate typeId last-write-wins with warning log`() {
     val warnings = mutableListOf<String>()
-    val trackingLogger = object : DqxnLogger {
-      override fun isEnabled(level: LogLevel, tag: LogTag): Boolean = true
-      override fun log(
-        level: LogLevel,
-        tag: LogTag,
-        message: String,
-        throwable: Throwable?,
-        traceId: String?,
-        spanId: String?,
-        fields: ImmutableMap<String, Any>,
-      ) {
-        if (level == LogLevel.WARN) warnings.add(message)
+    val trackingLogger =
+      object : DqxnLogger {
+        override fun isEnabled(level: LogLevel, tag: LogTag): Boolean = true
+
+        override fun log(
+          level: LogLevel,
+          tag: LogTag,
+          message: String,
+          throwable: Throwable?,
+          traceId: String?,
+          spanId: String?,
+          fields: ImmutableMap<String, Any>,
+        ) {
+          if (level == LogLevel.WARN) warnings.add(message)
+        }
       }
-    }
 
     val renderer1 = TestWidgetRenderer(typeId = "essentials:clock", displayName = "Clock v1")
     val renderer2 = TestWidgetRenderer(typeId = "essentials:clock", displayName = "Clock v2")
@@ -82,16 +83,20 @@ class WidgetRegistryImplTest {
 
   @Test
   fun `getAll returns all registered renderers`() {
-    val renderers = setOf(
-      TestWidgetRenderer(typeId = "essentials:clock"),
-      TestWidgetRenderer(typeId = "essentials:battery"),
-      TestWidgetRenderer(typeId = "essentials:compass"),
-    )
+    val renderers =
+      setOf(
+        TestWidgetRenderer(typeId = "essentials:clock"),
+        TestWidgetRenderer(typeId = "essentials:battery"),
+        TestWidgetRenderer(typeId = "essentials:compass"),
+      )
     val registry = WidgetRegistryImpl(renderers, logger)
 
     assertThat(registry.getAll()).hasSize(3)
-    assertThat(registry.getTypeIds()).containsExactly(
-      "essentials:clock", "essentials:battery", "essentials:compass",
-    )
+    assertThat(registry.getTypeIds())
+      .containsExactly(
+        "essentials:clock",
+        "essentials:battery",
+        "essentials:compass",
+      )
   }
 }

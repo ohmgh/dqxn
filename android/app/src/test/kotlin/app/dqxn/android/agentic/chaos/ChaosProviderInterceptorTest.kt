@@ -81,9 +81,7 @@ class ChaosProviderInterceptorTest {
       emit(TestSnapshot(timestamp = 2L, value = 2))
     }
 
-    interceptor.intercept(provider, upstream).test {
-      awaitComplete()
-    }
+    interceptor.intercept(provider, upstream).test { awaitComplete() }
   }
 
   @Test
@@ -93,9 +91,10 @@ class ChaosProviderInterceptorTest {
     val upstream = flow { emit(TestSnapshot(timestamp = 1L, value = 1)) }
 
     val collected = mutableListOf<TestSnapshot>()
-    val job = backgroundScope.launch {
-      interceptor.intercept(provider, upstream).collect { collected.add(it) }
-    }
+    val job =
+      backgroundScope.launch {
+        interceptor.intercept(provider, upstream).collect { collected.add(it) }
+      }
 
     runCurrent()
     assertThat(collected).isEmpty()
@@ -145,9 +144,10 @@ class ChaosProviderInterceptorTest {
     val upstream = flow { emit(TestSnapshot(timestamp = 1L, value = 1)) }
 
     val collected = mutableListOf<TestSnapshot>()
-    val job = backgroundScope.launch {
-      interceptor.intercept(provider, upstream).collect { collected.add(it) }
-    }
+    val job =
+      backgroundScope.launch {
+        interceptor.intercept(provider, upstream).collect { collected.add(it) }
+      }
 
     advanceTimeBy(5000)
     runCurrent()
@@ -174,9 +174,10 @@ class ChaosProviderInterceptorTest {
     }
 
     val collected = mutableListOf<TestSnapshot>()
-    val job = backgroundScope.launch {
-      interceptor.intercept(provider, upstream).collect { collected.add(it) }
-    }
+    val job =
+      backgroundScope.launch {
+        interceptor.intercept(provider, upstream).collect { collected.add(it) }
+      }
 
     runCurrent()
     assertThat(collected.map { it.value }).containsExactly(1)

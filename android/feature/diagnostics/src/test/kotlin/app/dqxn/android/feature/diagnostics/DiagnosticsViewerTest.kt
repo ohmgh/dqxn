@@ -29,14 +29,13 @@ class DiagnosticsViewerTest {
   fun `snapshot filter chips filter by type`() {
     val snapshots =
       listOf(
-        snapshotDto(id = "1", triggerType = "WidgetCrash", description = "crash 1"),
-        snapshotDto(id = "2", triggerType = "JankSpike", description = "jank 1"),
-        snapshotDto(id = "3", triggerType = "WidgetCrash", description = "crash 2"),
-      ).toImmutableList()
+          snapshotDto(id = "1", triggerType = "WidgetCrash", description = "crash 1"),
+          snapshotDto(id = "2", triggerType = "JankSpike", description = "jank 1"),
+          snapshotDto(id = "3", triggerType = "WidgetCrash", description = "crash 2"),
+        )
+        .toImmutableList()
 
-    composeTestRule.setContent {
-      DiagnosticSnapshotViewer(snapshots = snapshots)
-    }
+    composeTestRule.setContent { DiagnosticSnapshotViewer(snapshots = snapshots) }
 
     // Initially all 3 snapshots visible
     composeTestRule.onNodeWithTag("snapshot_row_0", useUnmergedTree = true).assertIsDisplayed()
@@ -54,9 +53,7 @@ class DiagnosticsViewerTest {
 
   @Test
   fun `snapshot viewer empty state`() {
-    composeTestRule.setContent {
-      DiagnosticSnapshotViewer(snapshots = persistentListOf())
-    }
+    composeTestRule.setContent { DiagnosticSnapshotViewer(snapshots = persistentListOf()) }
 
     composeTestRule.onNodeWithText("No snapshots").assertIsDisplayed()
   }
@@ -75,9 +72,7 @@ class DiagnosticsViewerTest {
       )
     }
 
-    composeTestRule
-      .onNodeWithTag("recording_indicator", useUnmergedTree = true)
-      .assertIsDisplayed()
+    composeTestRule.onNodeWithTag("recording_indicator", useUnmergedTree = true).assertIsDisplayed()
     composeTestRule.onNodeWithText("Stop Recording", useUnmergedTree = true).assertIsDisplayed()
   }
 
@@ -137,9 +132,7 @@ class DiagnosticsViewerTest {
         captureTimestamp = System.currentTimeMillis(),
       )
 
-    composeTestRule.setContent {
-      ObservabilityDashboard(metricsSnapshot = metrics)
-    }
+    composeTestRule.setContent { ObservabilityDashboard(metricsSnapshot = metrics) }
 
     // P50 should be 4ms (80% in first bucket, p50 lands in bucket 0 midpoint=4)
     composeTestRule.onNodeWithTag("frame_time_p50").assertIsDisplayed()

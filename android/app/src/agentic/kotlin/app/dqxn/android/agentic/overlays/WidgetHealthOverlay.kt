@@ -23,24 +23,18 @@ import app.dqxn.android.sdk.observability.health.WidgetHealthMonitor
  * Displays each tracked widget's health (ACTIVE, STALE_DATA, STALLED_RENDER, CRASHED,
  * SETUP_REQUIRED) with a color indicator. Shows stalled render count.
  *
- * At Phase 6, no widgets exist -- overlay shows "No widgets" until the essentials pack
- * registers widgets in Phase 8.
+ * At Phase 6, no widgets exist -- overlay shows "No widgets" until the essentials pack registers
+ * widgets in Phase 8.
  */
 @Composable
 internal fun WidgetHealthOverlay(
   healthMonitor: WidgetHealthMonitor,
   modifier: Modifier = Modifier,
 ) {
-  val statuses by remember {
-    derivedStateOf { healthMonitor.allStatuses() }
-  }
+  val statuses by remember { derivedStateOf { healthMonitor.allStatuses() } }
 
   Column(
-    modifier =
-      modifier
-        .graphicsLayer()
-        .background(OverlayBg)
-        .padding(8.dp),
+    modifier = modifier.graphicsLayer().background(OverlayBg).padding(8.dp),
   ) {
     Text(
       text = "Widget Health",
@@ -55,9 +49,7 @@ internal fun WidgetHealthOverlay(
     } else {
       val stalledCount by remember {
         derivedStateOf {
-          statuses.values.count {
-            it.status == WidgetHealthMonitor.Status.STALLED_RENDER
-          }
+          statuses.values.count { it.status == WidgetHealthMonitor.Status.STALLED_RENDER }
         }
       }
 
@@ -88,14 +80,16 @@ private fun colorForStatus(status: WidgetHealthMonitor.Status): Color =
 
 private val OverlayBg = Color(0xCC1A1A1A)
 
-private val HeaderStyle = TextStyle(
-  color = Color(0xFFEEEEEE),
-  fontSize = 14.sp,
-  fontFamily = FontFamily.Monospace,
-)
+private val HeaderStyle =
+  TextStyle(
+    color = Color(0xFFEEEEEE),
+    fontSize = 14.sp,
+    fontFamily = FontFamily.Monospace,
+  )
 
-private val BodyStyle = TextStyle(
-  color = Color(0xFFCCCCCC),
-  fontSize = 12.sp,
-  fontFamily = FontFamily.Monospace,
-)
+private val BodyStyle =
+  TextStyle(
+    color = Color(0xFFCCCCCC),
+    fontSize = 12.sp,
+    fontFamily = FontFamily.Monospace,
+  )

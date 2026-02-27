@@ -84,8 +84,7 @@ class StubEntitlementManagerTest {
     manager.simulateGrant("plus")
     manager.simulateGrant("themes")
     manager.simulateGrant("premium")
-    assertThat(manager.getActiveEntitlements())
-      .containsExactly("free", "plus", "themes", "premium")
+    assertThat(manager.getActiveEntitlements()).containsExactly("free", "plus", "themes", "premium")
   }
 
   @Test

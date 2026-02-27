@@ -48,22 +48,22 @@ public class DateStackRenderer @Inject constructor() : WidgetRenderer {
   override val priority: Int = 94
   override val requiredAnyEntitlement: Set<String>? = null
 
-  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> =
-    setOf(TimeSnapshot::class)
+  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> = setOf(TimeSnapshot::class)
 
-  override val settingsSchema: List<SettingDefinition<*>> = listOf(
-    SettingDefinition.DateFormatSetting(
-      key = "dateFormat",
-      label = "Date Format",
-      description = "Choose how the date is displayed",
-      default = DateFormatOption.MONTH_DAY_YEAR,
-    ),
-    SettingDefinition.TimezoneSetting(
-      key = "timezoneId",
-      label = "Timezone",
-      description = "Override the system timezone",
-    ),
-  )
+  override val settingsSchema: List<SettingDefinition<*>> =
+    listOf(
+      SettingDefinition.DateFormatSetting(
+        key = "dateFormat",
+        label = "Date Format",
+        description = "Choose how the date is displayed",
+        default = DateFormatOption.MONTH_DAY_YEAR,
+      ),
+      SettingDefinition.TimezoneSetting(
+        key = "timezoneId",
+        label = "Timezone",
+        description = "Override the system timezone",
+      ),
+    )
 
   override fun getDefaults(context: WidgetContext): WidgetDefaults =
     WidgetDefaults(
@@ -143,11 +143,12 @@ public class DateStackRenderer @Inject constructor() : WidgetRenderer {
     settings: ImmutableMap<String, Any>,
   ): DateParts {
     val timezoneIdStr = settings["timezoneId"] as? String
-    val zoneId = if (!timezoneIdStr.isNullOrEmpty()) {
-      ZoneId.of(timezoneIdStr)
-    } else {
-      ZoneId.of(snapshot.zoneId)
-    }
+    val zoneId =
+      if (!timezoneIdStr.isNullOrEmpty()) {
+        ZoneId.of(timezoneIdStr)
+      } else {
+        ZoneId.of(snapshot.zoneId)
+      }
     val zonedDate = Instant.ofEpochMilli(snapshot.epochMillis).atZone(zoneId)
     val locale = Locale.getDefault()
 

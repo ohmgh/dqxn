@@ -1,8 +1,6 @@
 package app.dqxn.android.agentic.handlers
 
 import app.cash.turbine.test
-import dev.agentic.android.runtime.CommandParams
-import dev.agentic.android.runtime.CommandResult
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
@@ -15,6 +13,8 @@ import app.dqxn.android.sdk.contracts.widget.WidgetDefaults
 import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.contracts.widget.WidgetStyle
 import com.google.common.truth.Truth.assertThat
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
 import kotlin.reflect.KClass
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.test.runTest
@@ -27,10 +27,11 @@ import org.junit.jupiter.api.Test
 @Tag("fast")
 class AddWidgetHandlerTest {
 
-  private val fakeWidgets: Set<WidgetRenderer> = setOf(
-    StubRenderer(typeId = "essentials:clock", displayName = "Clock"),
-    StubRenderer(typeId = "essentials:speedometer", displayName = "Speedometer"),
-  )
+  private val fakeWidgets: Set<WidgetRenderer> =
+    setOf(
+      StubRenderer(typeId = "essentials:clock", displayName = "Clock"),
+      StubRenderer(typeId = "essentials:speedometer", displayName = "Speedometer"),
+    )
 
   private val commandBus = DashboardCommandBus()
   private val handler = AddWidgetHandler(fakeWidgets, commandBus)
@@ -47,10 +48,11 @@ class AddWidgetHandlerTest {
 
   @Test
   fun `successful add returns ok status with typeId and widgetId`() = runTest {
-    val result = handler.execute(
-      CommandParams(raw = mapOf("typeId" to "essentials:clock"), traceId = "test-trace"),
-      "test-cmd",
-    )
+    val result =
+      handler.execute(
+        CommandParams(raw = mapOf("typeId" to "essentials:clock"), traceId = "test-trace"),
+        "test-cmd",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
     val data = (result as CommandResult.Success).data
@@ -63,10 +65,11 @@ class AddWidgetHandlerTest {
 
   @Test
   fun `unknown typeId returns error with UNKNOWN_TYPE code`() = runTest {
-    val result = handler.execute(
-      CommandParams(raw = mapOf("typeId" to "nonexistent:widget"), traceId = "test-trace"),
-      "test-cmd",
-    )
+    val result =
+      handler.execute(
+        CommandParams(raw = mapOf("typeId" to "nonexistent:widget"), traceId = "test-trace"),
+        "test-cmd",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Error::class.java)
     val error = result as CommandResult.Error
@@ -76,10 +79,11 @@ class AddWidgetHandlerTest {
 
   @Test
   fun `missing typeId returns error with MISSING_PARAM code`() = runTest {
-    val result = handler.execute(
-      CommandParams(raw = emptyMap(), traceId = "test-trace"),
-      "test-cmd",
-    )
+    val result =
+      handler.execute(
+        CommandParams(raw = emptyMap(), traceId = "test-trace"),
+        "test-cmd",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Error::class.java)
     val error = result as CommandResult.Error
@@ -151,8 +155,8 @@ class AddWidgetHandlerTest {
 }
 
 /**
- * Minimal stub renderer for handler tests. Only [typeId] and [displayName] are relevant;
- * all other fields use sensible defaults.
+ * Minimal stub renderer for handler tests. Only [typeId] and [displayName] are relevant; all other
+ * fields use sensible defaults.
  */
 private class StubRenderer(
   override val typeId: String,
@@ -178,5 +182,6 @@ private class StubRenderer(
   ) = Unit
 
   override fun accessibilityDescription(data: WidgetData): String = ""
+
   override fun onTap(widgetId: String, settings: ImmutableMap<String, Any>): Boolean = false
 }

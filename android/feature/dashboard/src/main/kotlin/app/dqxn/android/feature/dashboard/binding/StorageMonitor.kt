@@ -25,8 +25,8 @@ constructor(
 ) {
 
   /**
-   * Storage check function. Defaults to [StatFs]-based check on the app's data directory.
-   * Tests override this to control storage state without mocking final Android APIs.
+   * Storage check function. Defaults to [StatFs]-based check on the app's data directory. Tests
+   * override this to control storage state without mocking final Android APIs.
    */
   internal var storageChecker: () -> Boolean = {
     try {
@@ -43,8 +43,8 @@ constructor(
   public val isLow: StateFlow<Boolean> = _isLow.asStateFlow()
 
   /**
-   * Start monitoring storage. Call once with a long-lived scope (e.g., application scope).
-   * Performs an immediate check then polls every 60 seconds.
+   * Start monitoring storage. Call once with a long-lived scope (e.g., application scope). Performs
+   * an immediate check then polls every 60 seconds.
    */
   public fun startMonitoring(scope: CoroutineScope) {
     scope.launch {

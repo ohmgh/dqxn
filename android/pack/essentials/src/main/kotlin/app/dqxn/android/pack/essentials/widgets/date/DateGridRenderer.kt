@@ -48,16 +48,16 @@ public class DateGridRenderer @Inject constructor() : WidgetRenderer {
   override val priority: Int = 93
   override val requiredAnyEntitlement: Set<String>? = null
 
-  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> =
-    setOf(TimeSnapshot::class)
+  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> = setOf(TimeSnapshot::class)
 
-  override val settingsSchema: List<SettingDefinition<*>> = listOf(
-    SettingDefinition.TimezoneSetting(
-      key = "timezoneId",
-      label = "Timezone",
-      description = "Override the system timezone",
-    ),
-  )
+  override val settingsSchema: List<SettingDefinition<*>> =
+    listOf(
+      SettingDefinition.TimezoneSetting(
+        key = "timezoneId",
+        label = "Timezone",
+        description = "Override the system timezone",
+      ),
+    )
 
   override fun getDefaults(context: WidgetContext): WidgetDefaults =
     WidgetDefaults(
@@ -147,11 +147,12 @@ public class DateGridRenderer @Inject constructor() : WidgetRenderer {
     settings: ImmutableMap<String, Any>,
   ): GridParts {
     val timezoneIdStr = settings["timezoneId"] as? String
-    val zoneId = if (!timezoneIdStr.isNullOrEmpty()) {
-      ZoneId.of(timezoneIdStr)
-    } else {
-      ZoneId.of(snapshot.zoneId)
-    }
+    val zoneId =
+      if (!timezoneIdStr.isNullOrEmpty()) {
+        ZoneId.of(timezoneIdStr)
+      } else {
+        ZoneId.of(snapshot.zoneId)
+      }
     val zonedDate = Instant.ofEpochMilli(snapshot.epochMillis).atZone(zoneId)
     val locale = Locale.getDefault()
 

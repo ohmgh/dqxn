@@ -31,8 +31,8 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 /**
  * Binary toggle card for [SetupDefinition.SystemServiceToggle] and [SetupDefinition.SystemService].
  *
- * Shows a green checkmark when [satisfied], or an "Enable" button linking to system settings
- * when unsatisfied. Works for both toggle types -- the difference is in the evaluation logic
+ * Shows a green checkmark when [satisfied], or an "Enable" button linking to system settings when
+ * unsatisfied. Works for both toggle types -- the difference is in the evaluation logic
  * (SetupEvaluatorImpl), not the UI.
  */
 @Composable
@@ -46,20 +46,20 @@ internal fun SetupToggleCard(
 
   Card(
     shape = RoundedCornerShape(CardSize.MEDIUM.cornerRadius),
-    colors = CardDefaults.cardColors(
-      containerColor = if (satisfied) {
-        SemanticColors.Success.copy(alpha = 0.1f)
-      } else {
-        theme.widgetBorderColor.copy(alpha = 0.05f)
-      },
-    ),
+    colors =
+      CardDefaults.cardColors(
+        containerColor =
+          if (satisfied) {
+            SemanticColors.Success.copy(alpha = 0.1f)
+          } else {
+            theme.widgetBorderColor.copy(alpha = 0.05f)
+          },
+      ),
     modifier = Modifier.fillMaxWidth(),
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(DashboardSpacing.CardInternalPadding),
+      modifier = Modifier.fillMaxWidth().padding(DashboardSpacing.CardInternalPadding),
     ) {
       Icon(
         imageVector = if (satisfied) Icons.Filled.CheckCircle else Icons.Filled.ToggleOff,
@@ -69,9 +69,7 @@ internal fun SetupToggleCard(
       )
 
       Column(
-        modifier = Modifier
-          .weight(1f)
-          .padding(start = DashboardSpacing.IconTextGap),
+        modifier = Modifier.weight(1f).padding(start = DashboardSpacing.IconTextGap),
       ) {
         Text(
           text = label,
@@ -97,10 +95,11 @@ internal fun SetupToggleCard(
       } else {
         Button(
           onClick = onEnableClick,
-          colors = ButtonDefaults.buttonColors(
-            containerColor = theme.accentColor,
-            contentColor = Color.White,
-          ),
+          colors =
+            ButtonDefaults.buttonColors(
+              containerColor = theme.accentColor,
+              contentColor = Color.White,
+            ),
           modifier = Modifier.defaultMinSize(minWidth = 76.dp, minHeight = 76.dp),
         ) {
           Text(text = "Enable", style = DashboardTypography.buttonLabel)

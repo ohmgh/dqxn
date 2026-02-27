@@ -34,8 +34,8 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 /**
  * Inline HSL color picker with 4 sliders (H, S, L, A) and a hex text editor.
  *
- * Bidirectional sync: slider changes update hex, hex changes update sliders.
- * Uses [colorToHsl]/[hslToColor] from ColorConversion.kt for conversion.
+ * Bidirectional sync: slider changes update hex, hex changes update sliders. Uses
+ * [colorToHsl]/[hslToColor] from ColorConversion.kt for conversion.
  */
 @Composable
 public fun InlineColorPicker(

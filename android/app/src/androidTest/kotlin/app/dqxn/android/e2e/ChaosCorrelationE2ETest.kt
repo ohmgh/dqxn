@@ -18,18 +18,17 @@ import org.junit.runner.RunWith
  * E2E instrumented test verifying the deterministic chaos -> detect -> correlate pipeline.
  *
  * Uses seed=42 to produce a reproducible fault sequence via the agentic `chaos-start` command.
- * Validates that chaos injection produces correlated diagnostic snapshots that reference the
- * fault types from the chaos profile (SC2).
+ * Validates that chaos injection produces correlated diagnostic snapshots that reference the fault
+ * types from the chaos profile (SC2).
  *
- * Requires a device/emulator. Execution deferred to CI per project policy
- * ("connected device != manual test").
+ * Requires a device/emulator. Execution deferred to CI per project policy ("connected device !=
+ * manual test").
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class ChaosCorrelationE2ETest {
 
-  @get:Rule
-  val hiltRule = HiltAndroidRule(this)
+  @get:Rule val hiltRule = HiltAndroidRule(this)
 
   private val client = AgenticTestClient()
 
@@ -44,23 +43,26 @@ class ChaosCorrelationE2ETest {
     client.assertReady()
 
     // Start chaos with deterministic seed=42 and standard profile
-    val startResponse = client.send(
-      "chaos-start",
-      mapOf("seed" to 42, "profile" to "combined"),
-    )
+    val startResponse =
+      client.send(
+        "chaos-start",
+        mapOf("seed" to 42, "profile" to "combined"),
+      )
     assertThat(startResponse["status"]?.jsonPrimitive?.content).isEqualTo("ok")
-    val sessionId = startResponse["data"]?.jsonObject?.get("sessionId")?.jsonPrimitive?.content
-      ?: startResponse["sessionId"]?.jsonPrimitive?.content
+    val sessionId =
+      startResponse["data"]?.jsonObject?.get("sessionId")?.jsonPrimitive?.content
+        ?: startResponse["sessionId"]?.jsonPrimitive?.content
     assertThat(sessionId).isNotNull()
 
     // Wait for faults to inject -- poll list-diagnostics until at least one snapshot appears.
     // Do NOT use Thread.sleep -- use deterministic condition polling.
-    val diagnostics = client.awaitCondition(
-      command = "list-diagnostics",
-      jsonPath = "snapshots",
-      condition = { it.isNotEmpty() },
-      timeoutMs = 15_000L,
-    )
+    val diagnostics =
+      client.awaitCondition(
+        command = "list-diagnostics",
+        jsonPath = "snapshots",
+        condition = { it.isNotEmpty() },
+        timeoutMs = 15_000L,
+      )
 
     // Assert diagnostics are not empty (chaos produced at least 1 diagnostic snapshot)
     val snapshots = diagnostics["snapshots"]?.jsonArray

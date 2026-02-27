@@ -23,8 +23,8 @@ import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 /**
  * Float setting row with discrete value selection.
  *
- * Uses +/- buttons with step increments. Explicitly NOT a slider (sliders conflict with pager
- * swipe per anti-pattern).
+ * Uses +/- buttons with step increments. Explicitly NOT a slider (sliders conflict with pager swipe
+ * per anti-pattern).
  */
 @Composable
 internal fun FloatSettingRow(

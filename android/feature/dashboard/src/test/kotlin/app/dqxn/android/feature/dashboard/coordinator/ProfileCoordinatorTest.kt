@@ -91,10 +91,11 @@ class ProfileCoordinatorTest {
     testScheduler.runCurrent()
 
     // Clone the default profile
-    val clonedId = coordinator.handleCreateProfile(
-      displayName = "Cloned",
-      cloneCurrentId = FakeLayoutRepository.DEFAULT_PROFILE_ID,
-    )
+    val clonedId =
+      coordinator.handleCreateProfile(
+        displayName = "Cloned",
+        cloneCurrentId = FakeLayoutRepository.DEFAULT_PROFILE_ID,
+      )
     testScheduler.runCurrent()
 
     // Switch to the cloned profile to verify widgets were copied

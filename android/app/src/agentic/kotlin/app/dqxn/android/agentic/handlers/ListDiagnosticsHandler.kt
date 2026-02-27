@@ -1,11 +1,11 @@
 package app.dqxn.android.agentic.handlers
 
+import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotCapture
 import dev.agentic.android.runtime.AgenticCommand
 import dev.agentic.android.runtime.CommandHandler
 import dev.agentic.android.runtime.CommandParams
 import dev.agentic.android.runtime.CommandResult
 import dev.agentic.android.runtime.getString
-import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotCapture
 import javax.inject.Inject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -31,8 +31,8 @@ constructor(
 
   override suspend fun execute(params: CommandParams, commandId: String): CommandResult {
     val sinceMs = params.getString("since")?.toLongOrNull()
-    val snapshots = diagnosticCapture.recentSnapshots()
-      .let { all ->
+    val snapshots =
+      diagnosticCapture.recentSnapshots().let { all ->
         if (sinceMs != null) all.filter { it.timestamp >= sinceMs } else all
       }
 
@@ -58,7 +58,8 @@ constructor(
     return CommandResult.Success(json.toString())
   }
 
-  override fun paramsSchema(): Map<String, String> = mapOf(
-    "since" to "Filter snapshots after this epoch millisecond timestamp (optional)",
-  )
+  override fun paramsSchema(): Map<String, String> =
+    mapOf(
+      "since" to "Filter snapshots after this epoch millisecond timestamp (optional)",
+    )
 }

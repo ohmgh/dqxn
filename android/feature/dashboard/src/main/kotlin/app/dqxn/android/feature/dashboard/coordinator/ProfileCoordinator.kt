@@ -75,13 +75,16 @@ constructor(
       layoutRepository.profiles.collect { summaries ->
         _profileState.update { state ->
           state.copy(
-            profiles = summaries.mapIndexed { index, summary ->
-              ProfileInfo(
-                id = summary.profileId,
-                displayName = summary.displayName,
-                isDefault = index == 0,
-              )
-            }.toImmutableList()
+            profiles =
+              summaries
+                .mapIndexed { index, summary ->
+                  ProfileInfo(
+                    id = summary.profileId,
+                    displayName = summary.displayName,
+                    isDefault = index == 0,
+                  )
+                }
+                .toImmutableList()
           )
         }
         logger.info(TAG) { "Profiles loaded: ${summaries.size}" }
@@ -122,11 +125,12 @@ constructor(
     displayName: String,
     cloneCurrentId: String? = null,
   ): String {
-    val newId = if (cloneCurrentId != null) {
-      layoutRepository.cloneProfile(cloneCurrentId, displayName)
-    } else {
-      layoutRepository.createProfile(displayName)
-    }
+    val newId =
+      if (cloneCurrentId != null) {
+        layoutRepository.cloneProfile(cloneCurrentId, displayName)
+      } else {
+        layoutRepository.createProfile(displayName)
+      }
 
     logger.info(TAG) {
       if (cloneCurrentId != null) {
@@ -140,8 +144,8 @@ constructor(
   }
 
   /**
-   * Delete a profile. Fails silently if trying to delete the default profile (first in list).
-   * If deleting the currently active profile, switches to the default profile first.
+   * Delete a profile. Fails silently if trying to delete the default profile (first in list). If
+   * deleting the currently active profile, switches to the default profile first.
    */
   public suspend fun handleDeleteProfile(profileId: String) {
     val state = _profileState.value

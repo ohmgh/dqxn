@@ -126,7 +126,9 @@ class DemoDeterminismTest {
     // Tick 24: peak of descending ramp -> 140 km/h -> ~38.89 m/s
     val expectedTick24 =
       (DemoSpeedProvider.PEAK_SPEED_KMH * (DemoSpeedProvider.CYCLE_LENGTH - 24) /
-        DemoSpeedProvider.HALF_CYCLE / 3.6).toFloat()
+          DemoSpeedProvider.HALF_CYCLE /
+          3.6)
+        .toFloat()
     assertWithMessage("tick 24 speedMps").that(emissions[24].speedMps).isEqualTo(expectedTick24)
   }
 

@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Device discovered via Companion Device Manager scan.
- * Uses MAC address string instead of BluetoothDevice to keep this class testable without Android runtime.
+ * Device discovered via Companion Device Manager scan. Uses MAC address string instead of
+ * BluetoothDevice to keep this class testable without Android runtime.
  */
 data class ScanDevice(
   val name: String,
@@ -18,9 +18,7 @@ data class ScanDevice(
   val associationId: Int? = null,
 )
 
-/**
- * States for the BLE device pairing lifecycle via Companion Device Manager.
- */
+/** States for the BLE device pairing lifecycle via Companion Device Manager. */
 sealed interface ScanState {
   /** Initial state, ready to start a scan. */
   data object PreCDM : ScanState
@@ -48,9 +46,9 @@ sealed interface ScanState {
 /**
  * Pure-logic state machine for BLE device pairing via Companion Device Manager.
  *
- * Encapsulates the 5-state CDM pairing lifecycle as a testable non-UI class.
- * All transition methods are non-suspend -- delays (retries, auto-return) launch
- * coroutines internally on the provided [scope].
+ * Encapsulates the 5-state CDM pairing lifecycle as a testable non-UI class. All transition methods
+ * are non-suspend -- delays (retries, auto-return) launch coroutines internally on the provided
+ * [scope].
  *
  * @param scope CoroutineScope for delay-based transitions
  * @param maxAttempts Maximum verification attempts before failing (default 3)
@@ -77,19 +75,20 @@ class DeviceScanStateMachine(
 
   /** Transition from Waiting to Verifying(attempt=1) when user selects a device in CDM dialog. */
   fun onDeviceFound(device: ScanDevice) {
-    _state.value = ScanState.Verifying(
-      device = device,
-      attempt = 1,
-      maxAttempts = maxAttempts,
-    )
+    _state.value =
+      ScanState.Verifying(
+        device = device,
+        attempt = 1,
+        maxAttempts = maxAttempts,
+      )
   }
 
   /**
    * Process verification result.
    *
-   * On success: transitions to [ScanState.Success].
-   * On failure with remaining attempts: schedules retry after [retryDelayMs].
-   * On failure with exhausted attempts: transitions to [ScanState.Failed] with auto-return.
+   * On success: transitions to [ScanState.Success]. On failure with remaining attempts: schedules
+   * retry after [retryDelayMs]. On failure with exhausted attempts: transitions to
+   * [ScanState.Failed] with auto-return.
    */
   fun onVerificationResult(success: Boolean) {
     val current = _state.value
@@ -110,14 +109,16 @@ class DeviceScanStateMachine(
     } else {
       // Schedule retry with delay
       cancelPendingJobs()
-      verificationJob = scope.launch {
-        delay(retryDelayMs)
-        _state.value = ScanState.Verifying(
-          device = current.device,
-          attempt = current.attempt + 1,
-          maxAttempts = current.maxAttempts,
-        )
-      }
+      verificationJob =
+        scope.launch {
+          delay(retryDelayMs)
+          _state.value =
+            ScanState.Verifying(
+              device = current.device,
+              attempt = current.attempt + 1,
+              maxAttempts = current.maxAttempts,
+            )
+        }
     }
   }
 
@@ -130,8 +131,8 @@ class DeviceScanStateMachine(
   /**
    * Handle CDM system error.
    *
-   * If the error indicates user cancellation ("user_rejected" or "canceled" substring),
-   * silently returns to PreCDM. Otherwise transitions to [ScanState.Failed] with the error.
+   * If the error indicates user cancellation ("user_rejected" or "canceled" substring), silently
+   * returns to PreCDM. Otherwise transitions to [ScanState.Failed] with the error.
    */
   fun onCdmError(error: String) {
     cancelPendingJobs()
@@ -158,10 +159,11 @@ class DeviceScanStateMachine(
   }
 
   private fun scheduleAutoReturn() {
-    verificationJob = scope.launch {
-      delay(autoReturnDelayMs)
-      _state.value = ScanState.PreCDM
-    }
+    verificationJob =
+      scope.launch {
+        delay(autoReturnDelayMs)
+        _state.value = ScanState.PreCDM
+      }
   }
 
   private fun cancelPendingJobs() {

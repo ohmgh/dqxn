@@ -13,7 +13,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.rotate
 import app.dqxn.android.pack.essentials.snapshots.TimeSnapshot
 import app.dqxn.android.sdk.contracts.annotation.DashboardWidget
 import app.dqxn.android.sdk.contracts.provider.DataSnapshot
@@ -47,22 +46,22 @@ public class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
   override val priority: Int = 99
   override val requiredAnyEntitlement: Set<String>? = null
 
-  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> =
-    setOf(TimeSnapshot::class)
+  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> = setOf(TimeSnapshot::class)
 
-  override val settingsSchema: List<SettingDefinition<*>> = listOf(
-    SettingDefinition.BooleanSetting(
-      key = "showTickMarks",
-      label = "Show Tick Marks",
-      description = "Display hour and minute tick marks around the clock face",
-      default = true,
-    ),
-    SettingDefinition.TimezoneSetting(
-      key = "timezoneId",
-      label = "Timezone",
-      description = "Override the system timezone",
-    ),
-  )
+  override val settingsSchema: List<SettingDefinition<*>> =
+    listOf(
+      SettingDefinition.BooleanSetting(
+        key = "showTickMarks",
+        label = "Show Tick Marks",
+        description = "Display hour and minute tick marks around the clock face",
+        default = true,
+      ),
+      SettingDefinition.TimezoneSetting(
+        key = "timezoneId",
+        label = "Timezone",
+        description = "Override the system timezone",
+      ),
+    )
 
   override fun getDefaults(context: WidgetContext): WidgetDefaults =
     WidgetDefaults(
@@ -94,9 +93,7 @@ public class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
     val error = MaterialTheme.colorScheme.error
 
     Canvas(
-      modifier = modifier
-        .fillMaxSize()
-        .aspectRatio(1f),
+      modifier = modifier.fillMaxSize().aspectRatio(1f),
     ) {
       val radius = min(size.width, size.height) / 2f
       val center = Offset(size.width / 2f, size.height / 2f)
@@ -202,14 +199,16 @@ public class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
 
       drawLine(
         color = color,
-        start = Offset(
-          center.x + (innerRadius * cos(angleRad)).toFloat(),
-          center.y + (innerRadius * sin(angleRad)).toFloat(),
-        ),
-        end = Offset(
-          center.x + (radius * 0.95f * cos(angleRad)).toFloat(),
-          center.y + (radius * 0.95f * sin(angleRad)).toFloat(),
-        ),
+        start =
+          Offset(
+            center.x + (innerRadius * cos(angleRad)).toFloat(),
+            center.y + (innerRadius * sin(angleRad)).toFloat(),
+          ),
+        end =
+          Offset(
+            center.x + (radius * 0.95f * cos(angleRad)).toFloat(),
+            center.y + (radius * 0.95f * sin(angleRad)).toFloat(),
+          ),
         strokeWidth = strokeWidth,
         cap = StrokeCap.Round,
       )
@@ -224,10 +223,11 @@ public class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
     color: Color,
   ) {
     val angleRad = Math.toRadians((angle - 90).toDouble())
-    val end = Offset(
-      center.x + (length * cos(angleRad)).toFloat(),
-      center.y + (length * sin(angleRad)).toFloat(),
-    )
+    val end =
+      Offset(
+        center.x + (length * cos(angleRad)).toFloat(),
+        center.y + (length * sin(angleRad)).toFloat(),
+      )
     drawLine(
       color = color,
       start = center,

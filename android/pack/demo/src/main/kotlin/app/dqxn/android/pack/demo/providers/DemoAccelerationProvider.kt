@@ -60,11 +60,12 @@ public class DemoAccelerationProvider @Inject constructor() : DataProvider<Accel
     var tick = 0
     while (true) {
       val lateralG = LATERAL_AMPLITUDE * sin(tick * PI / LATERAL_HALF_CYCLE).toFloat()
-      val longitudinalG = if (tick % LONGITUDINAL_CYCLE < LONGITUDINAL_HALF_CYCLE) {
-        LONGITUDINAL_G
-      } else {
-        -LONGITUDINAL_G
-      }
+      val longitudinalG =
+        if (tick % LONGITUDINAL_CYCLE < LONGITUDINAL_HALF_CYCLE) {
+          LONGITUDINAL_G
+        } else {
+          -LONGITUDINAL_G
+        }
       emit(
         AccelerationSnapshot(
           acceleration = longitudinalG,

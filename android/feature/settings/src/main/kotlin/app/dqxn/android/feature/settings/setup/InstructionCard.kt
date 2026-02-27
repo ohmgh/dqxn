@@ -29,8 +29,8 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
  * Setup instruction card with step number badge rendering and verification state display.
  *
  * Bridges to the instruction row pattern from Plan 05 (InstructionSettingRow), adding a card
- * wrapper with step badge. Step number badge renders as an accent-colored circle with white
- * number text.
+ * wrapper with step badge. Step number badge renders as an accent-colored circle with white number
+ * text.
  */
 @Composable
 internal fun InstructionCard(
@@ -40,25 +40,25 @@ internal fun InstructionCard(
 
   Card(
     shape = RoundedCornerShape(CardSize.MEDIUM.cornerRadius),
-    colors = CardDefaults.cardColors(
-      containerColor = theme.widgetBorderColor.copy(alpha = 0.05f),
-    ),
+    colors =
+      CardDefaults.cardColors(
+        containerColor = theme.widgetBorderColor.copy(alpha = 0.05f),
+      ),
     modifier = Modifier.fillMaxWidth(),
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
-      modifier = Modifier
-        .fillMaxWidth()
-        .defaultMinSize(minHeight = 76.dp)
-        .padding(DashboardSpacing.CardInternalPadding),
+      modifier =
+        Modifier.fillMaxWidth()
+          .defaultMinSize(minHeight = 76.dp)
+          .padding(DashboardSpacing.CardInternalPadding),
     ) {
       // Step number badge
       if (definition.stepNumber > 0) {
         Box(
           contentAlignment = Alignment.Center,
-          modifier = Modifier
-            .size(32.dp)
-            .background(color = theme.accentColor, shape = CircleShape),
+          modifier =
+            Modifier.size(32.dp).background(color = theme.accentColor, shape = CircleShape),
         ) {
           Text(
             text = definition.stepNumber.toString(),
@@ -70,11 +70,11 @@ internal fun InstructionCard(
 
       // Label + description
       Column(
-        modifier = Modifier
-          .weight(1f)
-          .padding(
-            start = if (definition.stepNumber > 0) DashboardSpacing.SpaceS else 0.dp,
-          ),
+        modifier =
+          Modifier.weight(1f)
+            .padding(
+              start = if (definition.stepNumber > 0) DashboardSpacing.SpaceS else 0.dp,
+            ),
       ) {
         Text(
           text = definition.label,
@@ -93,11 +93,12 @@ internal fun InstructionCard(
         // Verification status
         if (definition.verificationStrategy != null) {
           Text(
-            text = if (definition.verificationOptional) {
-              "Verification: optional"
-            } else {
-              "Verification: required"
-            },
+            text =
+              if (definition.verificationOptional) {
+                "Verification: optional"
+              } else {
+                "Verification: required"
+              },
             style = DashboardTypography.caption,
             color = theme.primaryTextColor.copy(alpha = TextEmphasis.Disabled),
             modifier = Modifier.padding(top = DashboardSpacing.SpaceXXS),

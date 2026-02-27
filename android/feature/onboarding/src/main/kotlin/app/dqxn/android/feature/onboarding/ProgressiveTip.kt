@@ -26,7 +26,8 @@ import kotlinx.coroutines.launch
  * Reusable progressive tip composable.
  *
  * Observes [tipManager].[ProgressiveTipManager.shouldShowTip] flow for the given [tipKey]. Shows a
- * dismissable card with the [message] text. Dismiss persists via [ProgressiveTipManager.dismissTip].
+ * dismissable card with the [message] text. Dismiss persists via
+ * [ProgressiveTipManager.dismissTip].
  *
  * Uses [DashboardMotion.expandEnter]/[DashboardMotion.expandExit] for enter/exit animations.
  */

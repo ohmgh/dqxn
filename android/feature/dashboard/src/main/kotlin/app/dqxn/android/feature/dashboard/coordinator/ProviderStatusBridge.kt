@@ -22,8 +22,8 @@ import kotlinx.coroutines.flow.onEach
  * Each provider's [DataProvider.connectionState] and [DataProvider.connectionErrorDescription]
  * flows are combined into a single [Map] of [ProviderStatus] keyed by [DataProvider.sourceId].
  *
- * This class lives in `:feature:dashboard` (where the registry implementation is) and is bound
- * to the [ProviderStatusProvider] interface in [DashboardModule], making it injectable by
+ * This class lives in `:feature:dashboard` (where the registry implementation is) and is bound to
+ * the [ProviderStatusProvider] interface in [DashboardModule], making it injectable by
  * `:feature:diagnostics` via `:sdk:observability` without cross-feature dependency.
  */
 @Singleton
@@ -46,16 +46,13 @@ constructor(
       providers.map { provider -> providerStatusFlow(provider) }
 
     // Combine all individual status flows into a single map
-    return combine(statusFlows) { statuses ->
-      statuses.associate { it }
-    }.onEach { map ->
-      logger.debug(TAG) { "Provider statuses updated: ${map.size} providers" }
-    }
+    return combine(statusFlows) { statuses -> statuses.associate { it } }
+      .onEach { map -> logger.debug(TAG) { "Provider statuses updated: ${map.size} providers" } }
   }
 
   /**
-   * Creates a [Flow] that emits a [Pair] of (providerId, [ProviderStatus]) by combining
-   * the provider's [DataProvider.connectionState] and [DataProvider.connectionErrorDescription].
+   * Creates a [Flow] that emits a [Pair] of (providerId, [ProviderStatus]) by combining the
+   * provider's [DataProvider.connectionState] and [DataProvider.connectionErrorDescription].
    */
   private fun providerStatusFlow(
     provider: DataProvider<*>,
@@ -64,13 +61,14 @@ constructor(
       provider.connectionState,
       provider.connectionErrorDescription,
     ) { isConnected, errorDesc ->
-      provider.sourceId to ProviderStatus(
-        providerId = provider.sourceId,
-        displayName = provider.displayName,
-        isConnected = isConnected,
-        lastUpdateTimestamp = System.currentTimeMillis(),
-        errorDescription = errorDesc,
-      )
+      provider.sourceId to
+        ProviderStatus(
+          providerId = provider.sourceId,
+          displayName = provider.displayName,
+          isConnected = isConnected,
+          lastUpdateTimestamp = System.currentTimeMillis(),
+          errorDescription = errorDesc,
+        )
     }
 
   internal companion object {

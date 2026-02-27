@@ -20,6 +20,7 @@ import app.dqxn.android.sdk.observability.log.warn
 import app.dqxn.android.sdk.observability.metrics.MetricsCollector
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -33,15 +34,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.collections.immutable.persistentListOf
 
 /**
  * Manages per-widget data binding lifecycle with [SupervisorJob] isolation.
  *
  * Each widget binding runs under an independent child job of the [bindingSupervisor]. One widget
  * crash does NOT cancel sibling bindings (NF19). Failed bindings retry with exponential backoff
- * (1s, 2s, 4s) up to [MAX_RETRIES] attempts (NF16). Crashes are reported to [SafeModeManager]
- * for cross-widget counting.
+ * (1s, 2s, 4s) up to [MAX_RETRIES] attempts (NF16). Crashes are reported to [SafeModeManager] for
+ * cross-widget counting.
  *
  * Entitlement changes are observed reactively (NF18): when entitlements change, all widget statuses
  * are re-evaluated.
@@ -109,10 +109,11 @@ constructor(
   }
 
   /**
-   * Bind a widget to its data providers. Cancels any existing binding for this widget, creates
-   * a new job under [bindingScope] with [CoroutineExceptionHandler] for crash isolation.
+   * Bind a widget to its data providers. Cancels any existing binding for this widget, creates a
+   * new job under [bindingScope] with [CoroutineExceptionHandler] for crash isolation.
    *
-   * Resets the error count for a fresh start. For retries after errors, use [startBinding] directly.
+   * Resets the error count for a fresh start. For retries after errors, use [startBinding]
+   * directly.
    */
   public fun bind(widget: DashboardWidgetInstance) {
     // Reset error count for fresh (non-retry) binding
@@ -121,8 +122,8 @@ constructor(
   }
 
   /**
-   * Internal binding entry point shared by [bind] and retry logic. Does NOT reset error count
-   * so retries correctly track cumulative failures.
+   * Internal binding entry point shared by [bind] and retry logic. Does NOT reset error count so
+   * retries correctly track cumulative failures.
    */
   private fun startBinding(widget: DashboardWidgetInstance) {
     // Cancel existing binding if present
@@ -139,7 +140,9 @@ constructor(
     // Resolve compatible snapshots from the widget registry
     val renderer = widgetRegistry.findByTypeId(widget.typeId)
     if (renderer == null) {
-      logger.warn(TAG) { "No renderer found for typeId '${widget.typeId}', setting ProviderMissing" }
+      logger.warn(TAG) {
+        "No renderer found for typeId '${widget.typeId}', setting ProviderMissing"
+      }
       statusFlow.value =
         WidgetStatusCache(
           overlayState = WidgetRenderState.ProviderMissing,
@@ -187,9 +190,10 @@ constructor(
             if (timeProvider() - lastTs > stalenessThresholdMs) {
               val currentState = statusFlow.value.overlayState
               // Don't override higher-priority error states
-              if (currentState !is WidgetRenderState.ConnectionError &&
-                currentState !is WidgetRenderState.EntitlementRevoked &&
-                currentState !is WidgetRenderState.SetupRequired
+              if (
+                currentState !is WidgetRenderState.ConnectionError &&
+                  currentState !is WidgetRenderState.EntitlementRevoked &&
+                  currentState !is WidgetRenderState.SetupRequired
               ) {
                 statusFlow.value =
                   WidgetStatusCache(
@@ -231,47 +235,43 @@ constructor(
           widget.dataSourceBindings.let { bindings ->
             val mutable = bindings.toMutableMap()
             mutable["_override"] = newProviderTypeId
-            kotlinx.collections.immutable.persistentMapOf(*mutable.entries.map { it.key to it.value }.toTypedArray())
+            kotlinx.collections.immutable.persistentMapOf(
+              *mutable.entries.map { it.key to it.value }.toTypedArray()
+            )
           }
       )
     bind(updatedWidget)
     logger.info(TAG) { "Widget $widgetId rebound to provider $newProviderTypeId" }
   }
 
-  /**
-   * Returns a per-widget data flow. Creates an empty flow if the widget hasn't been bound yet.
-   */
+  /** Returns a per-widget data flow. Creates an empty flow if the widget hasn't been bound yet. */
   public fun widgetData(widgetId: String): StateFlow<WidgetData> =
     _widgetData.getOrPut(widgetId) { MutableStateFlow(WidgetData.Empty) }.asStateFlow()
 
   /** Returns a per-widget status flow. */
   public fun widgetStatus(widgetId: String): StateFlow<WidgetStatusCache> =
-    _widgetStatuses
-      .getOrPut(widgetId) { MutableStateFlow(WidgetStatusCache.EMPTY) }
-      .asStateFlow()
+    _widgetStatuses.getOrPut(widgetId) { MutableStateFlow(WidgetStatusCache.EMPTY) }.asStateFlow()
 
   /** Snapshot of all widget statuses for diagnostics. */
   public fun allStatuses(): Map<String, WidgetStatusCache> =
     _widgetStatuses.mapValues { it.value.value }
 
-  /**
-   * Pause all bindings (F1.14). Cancels all active jobs for CPU-heavy overlays.
-   */
+  /** Pause all bindings (F1.14). Cancels all active jobs for CPU-heavy overlays. */
   public fun pauseAll() {
     for ((widgetId, job) in bindings) {
       job.cancel()
       logger.debug(TAG) { "Paused binding for $widgetId" }
     }
     bindings.clear()
-    for ((_, job) in stalenessJobs) { job.cancel() }
+    for ((_, job) in stalenessJobs) {
+      job.cancel()
+    }
     stalenessJobs.clear()
     lastEmissionTimestamps.clear()
     logger.info(TAG) { "All ${boundWidgets.size} bindings paused" }
   }
 
-  /**
-   * Resume all bindings (F1.14). Rebinds all previously bound widgets.
-   */
+  /** Resume all bindings (F1.14). Rebinds all previously bound widgets. */
   public fun resumeAll() {
     val widgets = boundWidgets.values.toList()
     for (widget in widgets) {
@@ -281,8 +281,8 @@ constructor(
   }
 
   /**
-   * Report a widget crash. Delegates to [SafeModeManager] for cross-widget counting.
-   * Called by DashboardViewModel on WidgetCrash command.
+   * Report a widget crash. Delegates to [SafeModeManager] for cross-widget counting. Called by
+   * DashboardViewModel on WidgetCrash command.
    */
   public fun reportCrash(widgetId: String, typeId: String) {
     safeModeManager.reportCrash(widgetId, typeId)
@@ -290,8 +290,8 @@ constructor(
   }
 
   /**
-   * Cancel the binding supervisor and all child jobs.
-   * Called from ViewModel.onCleared() to prevent leaks.
+   * Cancel the binding supervisor and all child jobs. Called from ViewModel.onCleared() to prevent
+   * leaks.
    */
   public fun destroy() {
     bindingSupervisor.cancel()
@@ -311,8 +311,8 @@ constructor(
   }
 
   /**
-   * Handle a binding error with exponential backoff retry (NF16).
-   * Backoff: 1s, 2s, 4s. Max 3 attempts.
+   * Handle a binding error with exponential backoff retry (NF16). Backoff: 1s, 2s, 4s. Max 3
+   * attempts.
    */
   private fun handleBindingError(widget: DashboardWidgetInstance, throwable: Throwable) {
     val widgetId = widget.instanceId
@@ -331,9 +331,7 @@ constructor(
       _widgetStatuses.getOrPut(widgetId) { MutableStateFlow(WidgetStatusCache.EMPTY) }.value =
         WidgetStatusCache(
           overlayState =
-            WidgetRenderState.ConnectionError(
-              message = "Provider error: retries exhausted"
-            ),
+            WidgetRenderState.ConnectionError(message = "Provider error: retries exhausted"),
           issues = persistentListOf(),
         )
       return
@@ -355,8 +353,8 @@ constructor(
   }
 
   /**
-   * Re-evaluate entitlement status for all bound widgets (NF18).
-   * Widgets requiring entitlements the user no longer holds get EntitlementRevoked status.
+   * Re-evaluate entitlement status for all bound widgets (NF18). Widgets requiring entitlements the
+   * user no longer holds get EntitlementRevoked status.
    */
   private fun reevaluateEntitlements(activeEntitlements: Set<String>) {
     for ((widgetId, widget) in boundWidgets) {
@@ -367,9 +365,7 @@ constructor(
         _widgetStatuses.getOrPut(widgetId) { MutableStateFlow(WidgetStatusCache.EMPTY) }.value =
           WidgetStatusCache(
             overlayState =
-              WidgetRenderState.EntitlementRevoked(
-                upgradeEntitlement = required.first()
-              ),
+              WidgetRenderState.EntitlementRevoked(upgradeEntitlement = required.first()),
             issues = persistentListOf(),
           )
         logger.info(TAG) {

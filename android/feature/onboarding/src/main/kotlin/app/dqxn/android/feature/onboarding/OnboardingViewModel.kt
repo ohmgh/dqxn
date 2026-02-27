@@ -19,8 +19,8 @@ import kotlinx.coroutines.launch
  * ViewModel orchestrating the first-run onboarding flow.
  *
  * Exposes consent/completion state flows and provides actions for each onboarding step. Theme
- * selection persists to the appropriate light/dark slot based on the theme's [DashboardThemeDefinition.isDark]
- * property, matching the pattern in ThemeCoordinator.
+ * selection persists to the appropriate light/dark slot based on the theme's
+ * [DashboardThemeDefinition.isDark] property, matching the pattern in ThemeCoordinator.
  */
 @HiltViewModel
 public class OnboardingViewModel
@@ -32,7 +32,8 @@ constructor(
 ) : ViewModel() {
 
   /** Whether the user has completed onboarding. */
-  public val hasCompletedOnboarding: Flow<Boolean> = userPreferencesRepository.hasCompletedOnboarding
+  public val hasCompletedOnboarding: Flow<Boolean> =
+    userPreferencesRepository.hasCompletedOnboarding
 
   /** Current analytics consent state. */
   public val analyticsConsent: StateFlow<Boolean> =
@@ -76,8 +77,9 @@ constructor(
   /**
    * Persists the selected theme to the appropriate light/dark slot.
    *
-   * Resolves the theme from [BuiltInThemes] and persists based on [DashboardThemeDefinition.isDark].
-   * ThemeCoordinator monitors lightThemeId/darkThemeId flows and applies the theme on startup.
+   * Resolves the theme from [BuiltInThemes] and persists based on
+   * [DashboardThemeDefinition.isDark]. ThemeCoordinator monitors lightThemeId/darkThemeId flows and
+   * applies the theme on startup.
    */
   public fun selectTheme(themeId: String) {
     val theme = builtInThemes.resolveById(themeId) ?: return

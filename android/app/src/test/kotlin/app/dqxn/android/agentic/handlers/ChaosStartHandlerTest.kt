@@ -1,9 +1,5 @@
 package app.dqxn.android.agentic.handlers
 
-import dev.agentic.android.runtime.CommandParams
-import dev.agentic.android.runtime.CommandResult
-import dev.agentic.android.chaos.ChaosEngine
-import dev.agentic.android.chaos.ChaosProfileRegistry
 import app.dqxn.android.agentic.chaos.ChaosProviderInterceptor
 import app.dqxn.android.sdk.contracts.provider.DataProvider
 import app.dqxn.android.sdk.contracts.provider.DataSchema
@@ -11,6 +7,10 @@ import app.dqxn.android.sdk.contracts.provider.DataSnapshot
 import app.dqxn.android.sdk.contracts.provider.ProviderPriority
 import app.dqxn.android.sdk.contracts.setup.SetupPageDefinition
 import com.google.common.truth.Truth.assertThat
+import dev.agentic.android.chaos.ChaosEngine
+import dev.agentic.android.chaos.ChaosProfileRegistry
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -44,15 +44,17 @@ class ChaosStartHandlerTest {
     override val connectionState: Flow<Boolean> = MutableStateFlow(true)
     override val connectionErrorDescription: Flow<String?> = MutableStateFlow(null)
     override val requiredAnyEntitlement: Set<String>? = null
+
     override fun provideState(): Flow<StubSnapshot> = emptyFlow()
   }
 
   private val interceptor = ChaosProviderInterceptor()
   private val engine = ChaosEngine(interceptor, ChaosProfileRegistry())
-  private val providers: Set<DataProvider<*>> = setOf(
-    StubProvider("provider-a"),
-    StubProvider("provider-b"),
-  )
+  private val providers: Set<DataProvider<*>> =
+    setOf(
+      StubProvider("provider-a"),
+      StubProvider("provider-b"),
+    )
   private val handler = ChaosStartHandler(engine, providers)
 
   @AfterEach
@@ -62,10 +64,11 @@ class ChaosStartHandlerTest {
 
   @Test
   fun `execute with default params starts combined profile`() = runTest {
-    val result = handler.execute(
-      CommandParams(raw = emptyMap(), traceId = "test-trace"),
-      "test-cmd",
-    )
+    val result =
+      handler.execute(
+        CommandParams(raw = emptyMap(), traceId = "test-trace"),
+        "test-cmd",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
     val data = (result as CommandResult.Success).data
@@ -75,10 +78,11 @@ class ChaosStartHandlerTest {
 
   @Test
   fun `execute with explicit seed and profile`() = runTest {
-    val result = handler.execute(
-      CommandParams(raw = mapOf("seed" to "42", "profile" to "provider-stress"), traceId = "t1"),
-      "cmd-1",
-    )
+    val result =
+      handler.execute(
+        CommandParams(raw = mapOf("seed" to "42", "profile" to "provider-stress"), traceId = "t1"),
+        "cmd-1",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
     val data = (result as CommandResult.Success).data
@@ -89,10 +93,11 @@ class ChaosStartHandlerTest {
 
   @Test
   fun `execute returns session info`() = runTest {
-    val result = handler.execute(
-      CommandParams(raw = mapOf("seed" to "42", "profile" to "provider-stress"), traceId = "t1"),
-      "cmd-1",
-    )
+    val result =
+      handler.execute(
+        CommandParams(raw = mapOf("seed" to "42", "profile" to "provider-stress"), traceId = "t1"),
+        "cmd-1",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
     val data = (result as CommandResult.Success).data
@@ -108,10 +113,11 @@ class ChaosStartHandlerTest {
       "cmd-1",
     )
 
-    val result = handler.execute(
-      CommandParams(raw = mapOf("seed" to "2"), traceId = "t2"),
-      "cmd-2",
-    )
+    val result =
+      handler.execute(
+        CommandParams(raw = mapOf("seed" to "2"), traceId = "t2"),
+        "cmd-2",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Error::class.java)
     assertThat((result as CommandResult.Error).code).isEqualTo("ALREADY_ACTIVE")

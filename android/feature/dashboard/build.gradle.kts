@@ -47,14 +47,4 @@ dependencies {
   testFixturesImplementation(project(":core:thermal"))
 }
 
-kover {
-  reports {
-    verify {
-      rule {
-        bound {
-          minValue = 90
-        }
-      }
-    }
-  }
-}
+kover { reports { verify { rule { bound { minValue = 90 } } } } }

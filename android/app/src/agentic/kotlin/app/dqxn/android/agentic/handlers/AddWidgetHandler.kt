@@ -1,10 +1,5 @@
 package app.dqxn.android.agentic.handlers
 
-import dev.agentic.android.runtime.AgenticCommand
-import dev.agentic.android.runtime.CommandHandler
-import dev.agentic.android.runtime.CommandParams
-import dev.agentic.android.runtime.CommandResult
-import dev.agentic.android.runtime.getString
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
@@ -13,6 +8,11 @@ import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
 import app.dqxn.android.sdk.contracts.widget.WidgetContext
 import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.contracts.widget.WidgetStyle
+import dev.agentic.android.runtime.AgenticCommand
+import dev.agentic.android.runtime.CommandHandler
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
+import dev.agentic.android.runtime.getString
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.collections.immutable.persistentMapOf
@@ -25,8 +25,8 @@ import kotlinx.serialization.json.put
  * positioning.
  *
  * The handler returns the generated widget instance ID on success, enabling downstream agentic
- * commands (move, resize, remove) to reference the new widget. The actual dashboard placement
- * is performed by the command channel consumer in [DashboardViewModel].
+ * commands (move, resize, remove) to reference the new widget. The actual dashboard placement is
+ * performed by the command channel consumer in [DashboardViewModel].
  */
 @AgenticCommand(
   name = "add-widget",
@@ -47,32 +47,35 @@ constructor(
   override val aliases: List<String> = listOf("add")
 
   override suspend fun execute(params: CommandParams, commandId: String): CommandResult {
-    val typeId = params.getString("typeId")
-      ?: return CommandResult.Error(
-        message = "Missing required param: typeId",
-        code = "MISSING_PARAM",
-      )
+    val typeId =
+      params.getString("typeId")
+        ?: return CommandResult.Error(
+          message = "Missing required param: typeId",
+          code = "MISSING_PARAM",
+        )
 
-    val renderer = widgets.find { it.typeId == typeId }
-      ?: return CommandResult.Error(
-        message = "Unknown typeId: $typeId",
-        code = "UNKNOWN_TYPE",
-      )
+    val renderer =
+      widgets.find { it.typeId == typeId }
+        ?: return CommandResult.Error(
+          message = "Unknown typeId: $typeId",
+          code = "UNKNOWN_TYPE",
+        )
 
     val widgetId = "widget-${UUID.randomUUID()}"
 
     // Construct widget instance with renderer defaults
     val defaults = renderer.getDefaults(WidgetContext.DEFAULT)
-    val instance = DashboardWidgetInstance(
-      instanceId = widgetId,
-      typeId = renderer.typeId,
-      position = GridPosition(col = 0, row = 0),
-      size = GridSize(widthUnits = defaults.widthUnits, heightUnits = defaults.heightUnits),
-      style = WidgetStyle.Default,
-      settings = persistentMapOf(),
-      dataSourceBindings = persistentMapOf(),
-      zIndex = 0,
-    )
+    val instance =
+      DashboardWidgetInstance(
+        instanceId = widgetId,
+        typeId = renderer.typeId,
+        position = GridPosition(col = 0, row = 0),
+        size = GridSize(widthUnits = defaults.widthUnits, heightUnits = defaults.heightUnits),
+        style = WidgetStyle.Default,
+        settings = persistentMapOf(),
+        dataSourceBindings = persistentMapOf(),
+        zIndex = 0,
+      )
 
     // Dispatch to dashboard via singleton command bus
     commandBus.dispatch(
@@ -88,7 +91,8 @@ constructor(
     return CommandResult.Success(json.toString())
   }
 
-  override fun paramsSchema(): Map<String, String> = mapOf(
-    "typeId" to "Widget type ID to add (e.g., essentials:clock)",
-  )
+  override fun paramsSchema(): Map<String, String> =
+    mapOf(
+      "typeId" to "Widget type ID to add (e.g., essentials:clock)",
+    )
 }

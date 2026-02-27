@@ -10,10 +10,10 @@ import javax.inject.Singleton
  * Provides 22 premium themes loaded from JSON resource files in this pack.
  *
  * Every returned theme has `requiredAnyEntitlement = setOf("themes")`, gating Theme Studio access
- * (F6.2) and ensuring SOLAR_AUTO/ILLUMINANCE_AUTO modes (F6.3/F6.4) only resolve between
- * entitled theme selections. The gating chain is complete at the theme level -- mode activation
- * itself needs no separate entitlement check because modes only pick between user-selected
- * light/dark themes, which are already gated at selection time.
+ * (F6.2) and ensuring SOLAR_AUTO/ILLUMINANCE_AUTO modes (F6.3/F6.4) only resolve between entitled
+ * theme selections. The gating chain is complete at the theme level -- mode activation itself needs
+ * no separate entitlement check because modes only pick between user-selected light/dark themes,
+ * which are already gated at selection time.
  */
 @DashboardThemeProvider
 @Singleton
@@ -26,10 +26,10 @@ public class ThemesPackThemeProvider @Inject constructor() : ThemeProvider {
   private val loadedThemes: List<ThemeSpec> by lazy {
     THEME_FILES.mapNotNull { filename ->
       val json =
-        javaClass.classLoader!!.getResourceAsStream("themes/$filename")
+        javaClass.classLoader!!
+          .getResourceAsStream("themes/$filename")
           ?.bufferedReader()
-          ?.readText()
-          ?: return@mapNotNull null
+          ?.readText() ?: return@mapNotNull null
       parseThemeJson(json)?.copy(requiredAnyEntitlement = setOf("themes"))
     }
   }

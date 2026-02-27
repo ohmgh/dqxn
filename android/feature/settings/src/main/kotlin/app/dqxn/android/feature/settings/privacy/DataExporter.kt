@@ -27,8 +27,8 @@ constructor(
   private val json = Json { prettyPrint = true }
 
   /**
-   * Collects all user data from all repositories and returns a JSON string. Each repository is
-   * read once via `.first()` to capture a consistent snapshot.
+   * Collects all user data from all repositories and returns a JSON string. Each repository is read
+   * once via `.first()` to capture a consistent snapshot.
    */
   public suspend fun exportToJson(): String {
     val profileSummaries = layoutRepository.profiles.first()

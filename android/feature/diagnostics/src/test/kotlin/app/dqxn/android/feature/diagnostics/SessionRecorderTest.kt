@@ -22,9 +22,7 @@ class SessionRecorderTest {
 
   @Test
   fun `record does nothing when not recording`() {
-    repeat(5) { i ->
-      recorder.record(event(timestamp = i.toLong(), type = EventType.TAP))
-    }
+    repeat(5) { i -> recorder.record(event(timestamp = i.toLong(), type = EventType.TAP)) }
 
     assertThat(recorder.snapshot()).isEmpty()
   }
@@ -33,11 +31,12 @@ class SessionRecorderTest {
   fun `record captures events when recording`() {
     recorder.startRecording()
 
-    val events = listOf(
-      event(timestamp = 1L, type = EventType.TAP),
-      event(timestamp = 2L, type = EventType.MOVE),
-      event(timestamp = 3L, type = EventType.RESIZE),
-    )
+    val events =
+      listOf(
+        event(timestamp = 1L, type = EventType.TAP),
+        event(timestamp = 2L, type = EventType.MOVE),
+        event(timestamp = 3L, type = EventType.RESIZE),
+      )
     events.forEach { recorder.record(it) }
 
     val snapshot = recorder.snapshot()

@@ -8,32 +8,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 
-/**
- * Light bulb icon drawn via Canvas. Tint varies by ambient light category.
- */
+/** Light bulb icon drawn via Canvas. Tint varies by ambient light category. */
 @Composable
 internal fun LightBulbIcon(
   category: String?,
   size: Dp,
   modifier: Modifier = Modifier,
 ) {
-  val tintColor = when (category?.uppercase()) {
-    "BRIGHT", "VERY_BRIGHT" -> Color(0xFFFFC107) // Amber/yellow for bright
-    "NORMAL" -> MaterialTheme.colorScheme.primary
-    "DIM" -> MaterialTheme.colorScheme.onSurfaceVariant
-    "DARK" -> MaterialTheme.colorScheme.outline
-    else -> MaterialTheme.colorScheme.onSurfaceVariant
-  }
+  val tintColor =
+    when (category?.uppercase()) {
+      "BRIGHT",
+      "VERY_BRIGHT" -> Color(0xFFFFC107) // Amber/yellow for bright
+      "NORMAL" -> MaterialTheme.colorScheme.primary
+      "DIM" -> MaterialTheme.colorScheme.onSurfaceVariant
+      "DARK" -> MaterialTheme.colorScheme.outline
+      else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
   val outlineColor = MaterialTheme.colorScheme.onSurface
 
-  Canvas(modifier = modifier.size(size)) {
-    drawLightBulb(tintColor, outlineColor)
-  }
+  Canvas(modifier = modifier.size(size)) { drawLightBulb(tintColor, outlineColor) }
 }
 
 private fun DrawScope.drawLightBulb(fillColor: Color, outlineColor: Color) {

@@ -22,6 +22,8 @@ public object PreferenceKeys {
   public val LAST_REVIEW_PROMPT_TIMESTAMP = longPreferencesKey("last_review_prompt_timestamp")
 
   /** Returns a dynamic key for per-tip seen state. */
-  public fun tipSeenKey(tipKey: String): androidx.datastore.preferences.core.Preferences.Key<Boolean> =
+  public fun tipSeenKey(
+    tipKey: String
+  ): androidx.datastore.preferences.core.Preferences.Key<Boolean> =
     booleanPreferencesKey("tip_seen_$tipKey")
 }

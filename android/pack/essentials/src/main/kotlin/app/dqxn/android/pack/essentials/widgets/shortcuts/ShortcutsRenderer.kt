@@ -92,8 +92,7 @@ public class ShortcutsRenderer @Inject constructor() : WidgetRenderer {
     settings: ImmutableMap<String, Any>,
     modifier: Modifier,
   ) {
-    @Suppress("UNUSED_VARIABLE")
-    val widgetData = LocalWidgetData.current
+    @Suppress("UNUSED_VARIABLE") val widgetData = LocalWidgetData.current
     val packageName = settings["packageName"] as? String
     val customDisplayName = settings["displayName"] as? String ?: ""
     val layoutMode =
@@ -116,8 +115,7 @@ public class ShortcutsRenderer @Inject constructor() : WidgetRenderer {
       }
 
     val resolvedName =
-      if (customDisplayName.isNotBlank()) customDisplayName
-      else appLabel ?: "Tap to configure"
+      if (customDisplayName.isNotBlank()) customDisplayName else appLabel ?: "Tap to configure"
 
     InfoCardLayout(
       modifier = modifier,

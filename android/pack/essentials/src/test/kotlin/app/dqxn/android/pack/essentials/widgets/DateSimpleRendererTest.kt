@@ -13,10 +13,30 @@ import org.junit.Test
 
 class DateSimpleRendererTest : WidgetRendererContractTest() {
   override fun createRenderer(): WidgetRenderer = DateSimpleRenderer()
+
   override fun createTestWidgetData(): WidgetData {
-    val zdt = ZonedDateTime.of(LocalDateTime.of(2026, 1, 15, 12, 0, 0), ZoneId.of("America/New_York"))
-    return WidgetData.Empty.withSlot(TimeSnapshot::class, TimeSnapshot(epochMillis = zdt.toInstant().toEpochMilli(), zoneId = "America/New_York", timestamp = zdt.toInstant().toEpochMilli()))
+    val zdt =
+      ZonedDateTime.of(LocalDateTime.of(2026, 1, 15, 12, 0, 0), ZoneId.of("America/New_York"))
+    return WidgetData.Empty.withSlot(
+      TimeSnapshot::class,
+      TimeSnapshot(
+        epochMillis = zdt.toInstant().toEpochMilli(),
+        zoneId = "America/New_York",
+        timestamp = zdt.toInstant().toEpochMilli()
+      )
+    )
   }
-  @Test fun `accessibility contains date`() { val d = DateSimpleRenderer().accessibilityDescription(createTestWidgetData()); assertThat(d).contains("January"); assertThat(d).contains("15"); assertThat(d).contains("2026") }
-  @Test fun `accessibility no data`() { assertThat(DateSimpleRenderer().accessibilityDescription(WidgetData.Empty)).contains("no data") }
+
+  @Test
+  fun `accessibility contains date`() {
+    val d = DateSimpleRenderer().accessibilityDescription(createTestWidgetData())
+    assertThat(d).contains("January")
+    assertThat(d).contains("15")
+    assertThat(d).contains("2026")
+  }
+
+  @Test
+  fun `accessibility no data`() {
+    assertThat(DateSimpleRenderer().accessibilityDescription(WidgetData.Empty)).contains("no data")
+  }
 }

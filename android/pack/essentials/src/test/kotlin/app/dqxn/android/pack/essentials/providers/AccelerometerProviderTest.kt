@@ -31,11 +31,12 @@ class AccelerometerProviderTest : DataProviderContractTest() {
       every { mgr.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) } returns accelerometerSensor
       every {
         mgr.registerListener(capture(listenerSlot), any<Sensor>(), any<Int>(), any<Int>())
-      } answers {
-        // Auto-fire a sensor event so contract tests that call provideState().first() succeed.
-        simulateSensorEvent(listenerSlot.captured, floatArrayOf(0.5f, 0.1f, 0.3f))
-        true
-      }
+      } answers
+        {
+          // Auto-fire a sensor event so contract tests that call provideState().first() succeed.
+          simulateSensorEvent(listenerSlot.captured, floatArrayOf(0.5f, 0.1f, 0.3f))
+          true
+        }
     }
 
   override fun createProvider(): DataProvider<*> = AccelerometerProvider(sensorManager)

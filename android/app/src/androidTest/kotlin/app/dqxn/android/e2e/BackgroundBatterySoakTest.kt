@@ -18,20 +18,19 @@ import org.junit.runner.RunWith
  *
  * NF37 requirement: near-zero background drain (< 1% per hour) without active BLE.
  *
- * Also verifies that sensor registrations are properly cleaned up when the app is backgrounded,
- * via `dumpsys sensorservice` inspection. This validates that `callbackFlow` `awaitClose` blocks
+ * Also verifies that sensor registrations are properly cleaned up when the app is backgrounded, via
+ * `dumpsys sensorservice` inspection. This validates that `callbackFlow` `awaitClose` blocks
  * properly unregister sensors when the lifecycle stops collecting.
  *
- * Meaningful battery delta requires a physical device -- emulator battery is virtual.
- * Per project policy: connected device tests are automated tests, not manual tests.
+ * Meaningful battery delta requires a physical device -- emulator battery is virtual. Per project
+ * policy: connected device tests are automated tests, not manual tests.
  */
 @LargeTest
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class BackgroundBatterySoakTest {
 
-  @get:Rule
-  val hiltRule = HiltAndroidRule(this)
+  @get:Rule val hiltRule = HiltAndroidRule(this)
 
   private val client = AgenticTestClient()
   private lateinit var device: UiDevice
@@ -43,8 +42,8 @@ class BackgroundBatterySoakTest {
   }
 
   /**
-   * Soak test: launch app, background it, wait 15 minutes, measure battery delta.
-   * Asserts < 1% hourly drain (NF37).
+   * Soak test: launch app, background it, wait 15 minutes, measure battery delta. Asserts < 1%
+   * hourly drain (NF37).
    */
   @Test
   fun backgroundBatterySoak() {
@@ -74,11 +73,11 @@ class BackgroundBatterySoakTest {
     val hourlyDrain = drainPercent * 4 // 15 min -> 1 hour extrapolation
 
     assertWithMessage(
-      "NF37: Background battery drain must be < ${MAX_HOURLY_DRAIN}%/hr. " +
-        "Measured: initial=$initialLevel%, final=$finalLevel%, 15min drain=${drainPercent}%, " +
-        "extrapolated hourly=${hourlyDrain}%. " +
-        "NOTE: Emulator battery is virtual -- meaningful results require physical device."
-    )
+        "NF37: Background battery drain must be < ${MAX_HOURLY_DRAIN}%/hr. " +
+          "Measured: initial=$initialLevel%, final=$finalLevel%, 15min drain=${drainPercent}%, " +
+          "extrapolated hourly=${hourlyDrain}%. " +
+          "NOTE: Emulator battery is virtual -- meaningful results require physical device."
+      )
       .that(hourlyDrain)
       .isLessThan(MAX_HOURLY_DRAIN)
   }
@@ -86,8 +85,8 @@ class BackgroundBatterySoakTest {
   /**
    * Verifies that no active sensor registrations remain from the app when backgrounded.
    *
-   * After pressing HOME and waiting for the lifecycle to stop, `dumpsys sensorservice` should
-   * show no active sensor connections from the app's package. This validates that
+   * After pressing HOME and waiting for the lifecycle to stop, `dumpsys sensorservice` should show
+   * no active sensor connections from the app's package. This validates that
    * `callbackFlow.awaitClose` properly unregisters all sensors.
    */
   @Test
@@ -95,11 +94,12 @@ class BackgroundBatterySoakTest {
     // Wait for app ready and add widgets that use sensors
     client.assertReady()
 
-    val sensorWidgets = listOf(
-      "essentials:compass",
-      "essentials:speedometer",
-      "essentials:ambient-light",
-    )
+    val sensorWidgets =
+      listOf(
+        "essentials:compass",
+        "essentials:speedometer",
+        "essentials:ambient-light",
+      )
     for (typeId in sensorWidgets) {
       client.send("add-widget", mapOf("typeId" to typeId))
     }
@@ -120,28 +120,25 @@ class BackgroundBatterySoakTest {
     Thread.sleep(SENSOR_UNREGISTER_WAIT_MS)
 
     // Check dumpsys sensorservice for active registrations from our package
-    val packageName = InstrumentationRegistry.getInstrumentation()
-      .targetContext.packageName
+    val packageName = InstrumentationRegistry.getInstrumentation().targetContext.packageName
     val sensorOutput = device.executeShellCommand("dumpsys sensorservice")
 
     // Parse for active connections from our package.
     // sensorservice output format includes "Connection " lines with package names.
-    val activeConnections = sensorOutput.lines()
-      .filter { it.contains(packageName) && it.contains("active") }
+    val activeConnections =
+      sensorOutput.lines().filter { it.contains(packageName) && it.contains("active") }
 
     assertWithMessage(
-      "No active sensor registrations should remain after backgrounding. " +
-        "Found ${activeConnections.size} active connections from $packageName. " +
-        "This indicates awaitClose is not properly unregistering sensors. " +
-        "Lines: ${activeConnections.take(5).joinToString("; ")}"
-    )
+        "No active sensor registrations should remain after backgrounding. " +
+          "Found ${activeConnections.size} active connections from $packageName. " +
+          "This indicates awaitClose is not properly unregistering sensors. " +
+          "Lines: ${activeConnections.take(5).joinToString("; ")}"
+      )
       .that(activeConnections)
       .isEmpty()
   }
 
-  /**
-   * Reads the current battery level percentage from `dumpsys battery`.
-   */
+  /** Reads the current battery level percentage from `dumpsys battery`. */
   private fun readBatteryLevel(): Int {
     val output = device.executeShellCommand("dumpsys battery")
     val levelLine = output.lines().firstOrNull { it.trim().startsWith("level:") }

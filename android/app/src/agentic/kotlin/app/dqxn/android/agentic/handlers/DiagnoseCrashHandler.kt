@@ -1,10 +1,10 @@
 package app.dqxn.android.agentic.handlers
 
+import app.dqxn.android.sdk.observability.crash.CrashEvidenceWriter
 import dev.agentic.android.runtime.AgenticCommand
 import dev.agentic.android.runtime.CommandHandler
 import dev.agentic.android.runtime.CommandParams
 import dev.agentic.android.runtime.CommandResult
-import app.dqxn.android.sdk.observability.crash.CrashEvidenceWriter
 import javax.inject.Inject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -28,8 +28,8 @@ constructor(
   override val aliases: List<String> = listOf("crash")
 
   override suspend fun execute(params: CommandParams, commandId: String): CommandResult {
-    val evidence = crashEvidenceWriter.readLastCrash()
-      ?: return CommandResult.Success("""{"hasCrash":false}""")
+    val evidence =
+      crashEvidenceWriter.readLastCrash() ?: return CommandResult.Success("""{"hasCrash":false}""")
 
     val json = buildJsonObject {
       put("hasCrash", true)

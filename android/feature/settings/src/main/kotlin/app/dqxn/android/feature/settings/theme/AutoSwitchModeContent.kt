@@ -34,8 +34,8 @@ private const val PREMIUM_ENTITLEMENT: String = "plus"
  * Auto-switch mode selector with entitlement gating.
  *
  * Displays all 5 [AutoSwitchMode] values as selectable rows with radio buttons.
- * [AutoSwitchMode.SOLAR_AUTO] and [AutoSwitchMode.ILLUMINANCE_AUTO] show lock icons
- * when the user lacks the [PREMIUM_ENTITLEMENT].
+ * [AutoSwitchMode.SOLAR_AUTO] and [AutoSwitchMode.ILLUMINANCE_AUTO] show lock icons when the user
+ * lacks the [PREMIUM_ENTITLEMENT].
  *
  * When [AutoSwitchMode.ILLUMINANCE_AUTO] is selected, shows [IlluminanceThresholdControl].
  */
@@ -49,11 +49,9 @@ public fun AutoSwitchModeContent(
   modifier: Modifier = Modifier,
 ) {
   val theme = LocalDashboardTheme.current
-  val modes: ImmutableList<AutoSwitchMode> =
-    remember { AutoSwitchMode.entries.toImmutableList() }
-  val hasPremium = remember(entitlementManager) {
-    entitlementManager.hasEntitlement(PREMIUM_ENTITLEMENT)
-  }
+  val modes: ImmutableList<AutoSwitchMode> = remember { AutoSwitchMode.entries.toImmutableList() }
+  val hasPremium =
+    remember(entitlementManager) { entitlementManager.hasEntitlement(PREMIUM_ENTITLEMENT) }
 
   Column(
     modifier = modifier.fillMaxWidth().testTag("auto_switch_mode_content"),
@@ -94,9 +92,7 @@ public fun AutoSwitchModeContent(
             imageVector = Icons.Filled.Lock,
             contentDescription = "Premium required",
             tint = theme.secondaryTextColor,
-            modifier =
-              Modifier.size(20.dp)
-                .testTag("lock_icon_${mode.name}"),
+            modifier = Modifier.size(20.dp).testTag("lock_icon_${mode.name}"),
           )
         }
       }

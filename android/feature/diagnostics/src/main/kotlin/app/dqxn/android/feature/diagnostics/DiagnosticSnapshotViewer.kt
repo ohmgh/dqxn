@@ -31,16 +31,14 @@ import androidx.compose.ui.unit.dp
 import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotDto
 import kotlinx.collections.immutable.ImmutableList
 
-/**
- * Snapshot filter types matching diagnostic pool categories plus ALL.
- */
+/** Snapshot filter types matching diagnostic pool categories plus ALL. */
 internal val SNAPSHOT_FILTER_TYPES: List<String> = listOf("ALL", "CRASH", "ANR", "ANOMALY", "PERF")
 
 /**
  * Browse diagnostic snapshots captured by [DiagnosticSnapshotCapture].
  *
- * Displays filter chips for type-based filtering and a scrollable list of snapshot rows.
- * Tapping a row expands it to show full snapshot details.
+ * Displays filter chips for type-based filtering and a scrollable list of snapshot rows. Tapping a
+ * row expands it to show full snapshot details.
  *
  * @param snapshots All available diagnostic snapshots, sorted newest first.
  */

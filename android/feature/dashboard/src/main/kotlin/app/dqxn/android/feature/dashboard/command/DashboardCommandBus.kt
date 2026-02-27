@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
- * Singleton-scoped command relay between [AgenticContentProvider] handlers (SingletonComponent)
- * and [DashboardViewModel] (ViewModelRetainedComponent).
+ * Singleton-scoped command relay between [AgenticContentProvider] handlers (SingletonComponent) and
+ * [DashboardViewModel] (ViewModelRetainedComponent).
  *
  * Uses [MutableSharedFlow] with [BufferOverflow.DROP_OLDEST] to ensure emission never suspends,
  * even when no collector is active. Commands are NOT replayed to late subscribers -- they are
@@ -18,10 +18,11 @@ import kotlinx.coroutines.flow.asSharedFlow
 @Singleton
 public class DashboardCommandBus @Inject constructor() {
 
-  private val _commands = MutableSharedFlow<DashboardCommand>(
-    extraBufferCapacity = 64,
-    onBufferOverflow = BufferOverflow.DROP_OLDEST,
-  )
+  private val _commands =
+    MutableSharedFlow<DashboardCommand>(
+      extraBufferCapacity = 64,
+      onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
 
   public val commands: SharedFlow<DashboardCommand> = _commands.asSharedFlow()
 

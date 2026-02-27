@@ -29,10 +29,11 @@ class ConfigurationBoundaryDetectorTest {
     every { windowLayoutInfo(any<Activity>()) } returns windowLayoutInfoFlow
   }
 
-  private val detector = ConfigurationBoundaryDetector(
-    windowInfoTracker = windowInfoTracker,
-    logger = NoOpLogger,
-  )
+  private val detector =
+    ConfigurationBoundaryDetector(
+      windowInfoTracker = windowInfoTracker,
+      logger = NoOpLogger,
+    )
 
   private val mockActivity: Activity = mockk(relaxed = true)
   private val mockResources: Resources = mockk(relaxed = true)
@@ -48,10 +49,14 @@ class ConfigurationBoundaryDetectorTest {
 
   @Test
   fun `foldable device emits fold boundary from FoldingFeature`() = runTest {
-    val foldBounds = android.graphics.Rect().apply { left = 0; top = 480; right = 1080; bottom = 500 }
-    val foldingFeature: FoldingFeature = mockk {
-      every { bounds } returns foldBounds
-    }
+    val foldBounds =
+      android.graphics.Rect().apply {
+        left = 0
+        top = 480
+        right = 1080
+        bottom = 500
+      }
+    val foldingFeature: FoldingFeature = mockk { every { bounds } returns foldBounds }
     val layoutInfo: WindowLayoutInfo = mockk {
       every { displayFeatures } returns listOf(foldingFeature)
     }
@@ -75,9 +80,7 @@ class ConfigurationBoundaryDetectorTest {
 
   @Test
   fun `non-foldable device emits alternate orientation boundary`() = runTest {
-    val layoutInfo: WindowLayoutInfo = mockk {
-      every { displayFeatures } returns emptyList()
-    }
+    val layoutInfo: WindowLayoutInfo = mockk { every { displayFeatures } returns emptyList() }
 
     mockConfiguration.orientation = Configuration.ORIENTATION_LANDSCAPE
     mockDisplayMetrics.widthPixels = 1920
@@ -101,9 +104,7 @@ class ConfigurationBoundaryDetectorTest {
 
   @Test
   fun `fixed orientation device emits empty boundaries`() = runTest {
-    val layoutInfo: WindowLayoutInfo = mockk {
-      every { displayFeatures } returns emptyList()
-    }
+    val layoutInfo: WindowLayoutInfo = mockk { every { displayFeatures } returns emptyList() }
 
     mockConfiguration.orientation = Configuration.ORIENTATION_UNDEFINED
     mockDisplayMetrics.widthPixels = 1920
@@ -122,11 +123,23 @@ class ConfigurationBoundaryDetectorTest {
 
   @Test
   fun `boundary updates on configuration change`() = runTest {
-    val foldBounds1 = android.graphics.Rect().apply { left = 0; top = 480; right = 1080; bottom = 500 }
+    val foldBounds1 =
+      android.graphics.Rect().apply {
+        left = 0
+        top = 480
+        right = 1080
+        bottom = 500
+      }
     val fold1: FoldingFeature = mockk { every { bounds } returns foldBounds1 }
     val layoutInfo1: WindowLayoutInfo = mockk { every { displayFeatures } returns listOf(fold1) }
 
-    val foldBounds2 = android.graphics.Rect().apply { left = 0; top = 960; right = 1080; bottom = 980 }
+    val foldBounds2 =
+      android.graphics.Rect().apply {
+        left = 0
+        top = 960
+        right = 1080
+        bottom = 980
+      }
     val fold2: FoldingFeature = mockk { every { bounds } returns foldBounds2 }
     val layoutInfo2: WindowLayoutInfo = mockk { every { displayFeatures } returns listOf(fold2) }
 

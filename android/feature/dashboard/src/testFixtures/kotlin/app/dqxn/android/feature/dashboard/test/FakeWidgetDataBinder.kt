@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 /**
  * Fake binder for testing that provides configurable [MutableStateFlow]s per widget.
  *
- * Tests can emit data directly into per-widget flows without the real binding pipeline.
- * Uses widget instanceId as the key.
+ * Tests can emit data directly into per-widget flows without the real binding pipeline. Uses widget
+ * instanceId as the key.
  */
 public class FakeWidgetDataBinder {
 

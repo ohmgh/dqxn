@@ -40,17 +40,14 @@ internal fun DateFormatSettingRow(
 
   Row(
     modifier =
-      modifier
-        .fillMaxWidth()
-        .defaultMinSize(minHeight = 76.dp)
-        .clickable {
-          onNavigate?.invoke(
-            SettingNavigation.ToDateFormatPicker(
-              settingKey = definition.key,
-              currentValue = currentValue,
-            )
+      modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp).clickable {
+        onNavigate?.invoke(
+          SettingNavigation.ToDateFormatPicker(
+            settingKey = definition.key,
+            currentValue = currentValue,
           )
-        },
+        )
+      },
     verticalAlignment = Alignment.CenterVertically,
   ) {
     SettingLabel(

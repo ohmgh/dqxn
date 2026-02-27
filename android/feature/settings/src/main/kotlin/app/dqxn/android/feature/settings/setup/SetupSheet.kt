@@ -47,11 +47,12 @@ import kotlinx.coroutines.launch
  * - Forward gating: only requirement types ([isRequirement]) block navigation; Setting/Info/
  *   Instruction types always satisfy
  * - **evaluationTrigger** counter pattern: [LifecycleResumeEffect] increments a counter on resume,
- *   forcing [LaunchedEffect] to re-evaluate permissions/services after returning from system settings
+ *   forcing [LaunchedEffect] to re-evaluate permissions/services after returning from system
+ *   settings
  * - **Two exclusive [BackHandler]s** (Pitfall 5): one for page-back (currentPage > 0), one for
  *   dismiss (currentPage == 0). Unification breaks exclusivity.
- * - Buttons are alpha-dimmed (50%) when gated but remain tappable (Pitfall 6 -- do NOT use
- *   `enabled = false`)
+ * - Buttons are alpha-dimmed (50%) when gated but remain tappable (Pitfall 6 -- do NOT use `enabled
+ *   = false`)
  *
  * Settings are loaded once via [produceState] from [ProviderSettingsStore.getAllSettings], mutated
  * in-memory, and written through immediately on change (no debounce, no transaction boundary).
@@ -63,7 +64,7 @@ fun SetupSheet(
   providerId: String,
   providerSettingsStore: ProviderSettingsStore,
   pairedDeviceStore: PairedDeviceStore,
-  evaluator: SetupEvaluatorImpl,
+  evaluator: app.dqxn.android.sdk.contracts.setup.SetupEvaluator,
   entitlementManager: EntitlementManager,
   onComplete: () -> Unit,
   onDismiss: () -> Unit,
@@ -75,9 +76,10 @@ fun SetupSheet(
 
   // --- Settings loading ---
   // One-shot load from store, then local in-memory mutations with immediate write-through.
-  val initialSettings by produceState<Map<String, Any?>>(emptyMap(), packId, providerId) {
-    value = providerSettingsStore.getAllSettings(packId, providerId).first()
-  }
+  val initialSettings by
+    produceState<Map<String, Any?>>(emptyMap(), packId, providerId) {
+      value = providerSettingsStore.getAllSettings(packId, providerId).first()
+    }
   val currentSettings = remember { mutableStateMapOf<String, Any?>() }
   LaunchedEffect(initialSettings) {
     if (initialSettings.isNotEmpty() && currentSettings.isEmpty()) {
@@ -86,12 +88,13 @@ fun SetupSheet(
   }
 
   // --- Paired devices snapshot for persistence-aware evaluation ---
-  val pairedDevices by produceState<ImmutableList<PairedDevice>>(
-    initialValue = persistentListOf(),
-    pairedDeviceStore,
-  ) {
-    pairedDeviceStore.devices.collect { value = it }
-  }
+  val pairedDevices by
+    produceState<ImmutableList<PairedDevice>>(
+      initialValue = persistentListOf(),
+      pairedDeviceStore,
+    ) {
+      pairedDeviceStore.devices.collect { value = it }
+    }
 
   // --- evaluationTrigger counter pattern ---
   // Without counter, LaunchedEffect won't re-run after permission grants because the
@@ -105,40 +108,40 @@ fun SetupSheet(
 
   var satisfiedDefinitions by remember { mutableStateOf(emptySet<String>()) }
   LaunchedEffect(providerId, evaluationTrigger) {
-    satisfiedDefinitions = evaluator.evaluateWithPersistence(
-      schema = setupSchema,
-      pairedDevices = pairedDevices,
-    ).filter { it.satisfied }.map { it.definitionId }.toSet()
+    satisfiedDefinitions =
+      (evaluator as SetupEvaluatorImpl)
+        .evaluateWithPersistence(
+          schema = setupSchema,
+          pairedDevices = pairedDevices,
+        )
+        .filter { it.satisfied }
+        .map { it.definitionId }
+        .toSet()
   }
 
   // --- Forward navigation gating ---
   // Only requirement types block; Setting/Info/Instruction always satisfy.
-  val isCurrentPageSatisfied = remember(currentPage, satisfiedDefinitions) {
-    if (currentPage >= totalPages) return@remember true
-    val page = setupSchema[currentPage]
-    page.definitions.all { definition ->
-      if (definition.isRequirement) {
-        definition.id in satisfiedDefinitions
-      } else {
-        true // Setting, Info, Instruction always satisfy
+  val isCurrentPageSatisfied =
+    remember(currentPage, satisfiedDefinitions) {
+      if (currentPage >= totalPages) return@remember true
+      val page = setupSchema[currentPage]
+      page.definitions.all { definition ->
+        if (definition.isRequirement) {
+          definition.id in satisfiedDefinitions
+        } else {
+          true // Setting, Info, Instruction always satisfy
+        }
       }
     }
-  }
 
   // --- Two exclusive BackHandlers (Pitfall 5) ---
   // Don't unify -- exclusivity is load-bearing. Android dispatches to the last-registered
   // enabled BackHandler, so ordering matters.
-  BackHandler(enabled = currentPage > 0) {
-    currentPage--
-  }
-  BackHandler(enabled = currentPage == 0) {
-    onDismiss()
-  }
+  BackHandler(enabled = currentPage > 0) { currentPage-- }
+  BackHandler(enabled = currentPage == 0) { onDismiss() }
 
   Column(
-    modifier = modifier
-      .fillMaxSize()
-      .testTag("setup_sheet"),
+    modifier = modifier.fillMaxSize().testTag("setup_sheet"),
   ) {
     // Page content with directional AnimatedContent transitions
     AnimatedContent(
@@ -177,9 +180,7 @@ fun SetupSheet(
   }
 }
 
-/**
- * Renders a single page of setup definitions in a scrollable column.
- */
+/** Renders a single page of setup definitions in a scrollable column. */
 @Composable
 private fun SetupPageContent(
   page: SetupPageDefinition,
@@ -193,31 +194,31 @@ private fun SetupPageContent(
   modifier: Modifier = Modifier,
 ) {
   Column(
-    modifier = modifier
-      .fillMaxSize()
-      .verticalScroll(rememberScrollState())
-      .padding(horizontal = DashboardSpacing.ScreenEdgePadding),
+    modifier =
+      modifier
+        .fillMaxSize()
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = DashboardSpacing.ScreenEdgePadding),
   ) {
     Spacer(modifier = Modifier.height(DashboardSpacing.SpaceM))
 
     page.definitions.forEach { definition ->
       SetupDefinitionRenderer(
         definition = definition,
-        result = SetupResult(
-          definitionId = definition.id,
-          satisfied = definition.id in satisfiedDefinitions,
-        ),
+        result =
+          SetupResult(
+            definitionId = definition.id,
+            satisfied = definition.id in satisfiedDefinitions,
+          ),
         currentSettings = currentSettings,
         entitlementManager = entitlementManager,
         onValueChanged = { key, value ->
           currentSettings[key] = value
           // Immediate write-through on Compose scope (no debounce)
-          writeScope.launch {
-            providerSettingsStore.setSetting(packId, providerId, key, value)
-          }
+          writeScope.launch { providerSettingsStore.setSetting(packId, providerId, key, value) }
         },
-        onPermissionRequest = { /* Permission requests handled by parent Activity */ },
-        onSystemSettingsOpen = { /* System settings intent handled by parent Activity */ },
+        onPermissionRequest = { /* Permission requests handled by parent Activity */},
+        onSystemSettingsOpen = { /* System settings intent handled by parent Activity */},
       )
 
       Spacer(modifier = Modifier.height(DashboardSpacing.ItemGap))

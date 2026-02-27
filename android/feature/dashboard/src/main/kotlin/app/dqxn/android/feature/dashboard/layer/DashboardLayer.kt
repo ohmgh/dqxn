@@ -18,10 +18,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import dev.agentic.android.semantics.SemanticsOwnerHolder
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.data.preferences.UserPreferencesRepository
-import app.dqxn.android.feature.dashboard.binding.WidgetSlot
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.EditState
@@ -34,8 +32,8 @@ import app.dqxn.android.feature.dashboard.grid.DragUpdate
 import app.dqxn.android.feature.dashboard.grid.ResizeUpdate
 import app.dqxn.android.feature.dashboard.grid.WidgetGestureHandler
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
+import dev.agentic.android.semantics.SemanticsOwnerHolder
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.flow.Flow
 
 /**
  * Root Layer 0 composable. Persists beneath all overlays (F1.13 dashboard-as-shell).
@@ -75,20 +73,19 @@ public fun DashboardLayer(
 
   // Register SemanticsOwner for agentic tree inspection (debug only)
   DisposableEffect(view) {
-    val semanticsOwner = try {
-      // Access the SemanticsOwner from the Compose view hierarchy
-      val field = view.javaClass.getDeclaredField("semanticsOwner")
-      field.isAccessible = true
-      field.get(view)
-    } catch (_: Exception) {
-      null
-    }
+    val semanticsOwner =
+      try {
+        // Access the SemanticsOwner from the Compose view hierarchy
+        val field = view.javaClass.getDeclaredField("semanticsOwner")
+        field.isAccessible = true
+        field.get(view)
+      } catch (_: Exception) {
+        null
+      }
     if (semanticsOwner != null) {
       semanticsOwnerHolder.register(semanticsOwner)
     }
-    onDispose {
-      semanticsOwnerHolder.unregister()
-    }
+    onDispose { semanticsOwnerHolder.unregister() }
   }
 
   // Orientation lock (F1.15)
@@ -96,11 +93,12 @@ public fun DashboardLayer(
   DisposableEffect(orientationLock) {
     val activity = context as? Activity
     if (activity != null) {
-      activity.requestedOrientation = when (orientationLock) {
-        "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        "portrait" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-        else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-      }
+      activity.requestedOrientation =
+        when (orientationLock) {
+          "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+          "portrait" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+          else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
     }
     onDispose {
       val act = context as? Activity
@@ -150,9 +148,7 @@ public fun DashboardLayer(
       }
     }
     lifecycleOwner.lifecycle.addObserver(observer)
-    onDispose {
-      lifecycleOwner.lifecycle.removeObserver(observer)
-    }
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
   }
 
   Box(modifier = modifier.fillMaxSize()) {

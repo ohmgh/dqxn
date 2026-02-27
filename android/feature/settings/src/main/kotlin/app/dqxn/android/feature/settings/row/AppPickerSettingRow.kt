@@ -44,17 +44,14 @@ internal fun AppPickerSettingRow(
 
   Row(
     modifier =
-      modifier
-        .fillMaxWidth()
-        .defaultMinSize(minHeight = 76.dp)
-        .clickable {
-          onNavigate?.invoke(
-            SettingNavigation.ToAppPicker(
-              settingKey = definition.key,
-              currentPackage = currentValue,
-            )
+      modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp).clickable {
+        onNavigate?.invoke(
+          SettingNavigation.ToAppPicker(
+            settingKey = definition.key,
+            currentPackage = currentValue,
           )
-        },
+        )
+      },
     verticalAlignment = Alignment.CenterVertically,
   ) {
     SettingLabel(

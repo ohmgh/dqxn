@@ -21,8 +21,11 @@ public class FakeSharedPreferences : SharedPreferences {
   }
 
   override fun getInt(key: String?, defValue: Int): Int = data[key] as? Int ?: defValue
+
   override fun getLong(key: String?, defValue: Long): Long = data[key] as? Long ?: defValue
+
   override fun getFloat(key: String?, defValue: Float): Float = data[key] as? Float ?: defValue
+
   override fun getBoolean(key: String?, defValue: Boolean): Boolean =
     data[key] as? Boolean ?: defValue
 
@@ -52,10 +55,7 @@ public class FakeSharedPreferences : SharedPreferences {
       return this
     }
 
-    override fun putStringSet(
-      key: String?,
-      values: MutableSet<String>?
-    ): SharedPreferences.Editor {
+    override fun putStringSet(key: String?, values: MutableSet<String>?): SharedPreferences.Editor {
       key?.let { edits[it] = values }
       return this
     }

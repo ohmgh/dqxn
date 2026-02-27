@@ -28,8 +28,7 @@ public class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
 
     WindowInsetsControllerCompat(window, window.decorView).apply {
-      systemBarsBehavior =
-        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+      systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
       isAppearanceLightStatusBars = false
       isAppearanceLightNavigationBars = false
     }

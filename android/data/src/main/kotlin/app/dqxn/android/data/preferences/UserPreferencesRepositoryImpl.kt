@@ -120,14 +120,11 @@ constructor(
 
   override val lastReviewPromptTimestamp: Flow<Long> =
     dataStore.data.map { prefs ->
-      prefs[PreferenceKeys.LAST_REVIEW_PROMPT_TIMESTAMP]
-        ?: DEFAULT_LAST_REVIEW_PROMPT_TIMESTAMP
+      prefs[PreferenceKeys.LAST_REVIEW_PROMPT_TIMESTAMP] ?: DEFAULT_LAST_REVIEW_PROMPT_TIMESTAMP
     }
 
   override suspend fun setLastReviewPromptTimestamp(timestamp: Long) {
-    dataStore.edit { prefs ->
-      prefs[PreferenceKeys.LAST_REVIEW_PROMPT_TIMESTAMP] = timestamp
-    }
+    dataStore.edit { prefs -> prefs[PreferenceKeys.LAST_REVIEW_PROMPT_TIMESTAMP] = timestamp }
   }
 
   override fun hasSeenTip(tipKey: String): Flow<Boolean> =

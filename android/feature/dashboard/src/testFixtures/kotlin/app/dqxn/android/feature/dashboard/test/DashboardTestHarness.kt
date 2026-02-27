@@ -56,25 +56,28 @@ public fun dashboardTest(
   }
 }
 
-/**
- * Test scope exposing coordinator state and convenience methods for dashboard tests.
- */
+/** Test scope exposing coordinator state and convenience methods for dashboard tests. */
 public class DashboardTestScope(
   private val harness: DashboardTestHarness,
 ) {
-  public val layoutCoordinator: LayoutCoordinator get() = harness.layoutCoordinator
-  public val safeModeManager: SafeModeManager get() = harness.safeModeManager
+  public val layoutCoordinator: LayoutCoordinator
+    get() = harness.layoutCoordinator
+
+  public val safeModeManager: SafeModeManager
+    get() = harness.safeModeManager
+
   public val widgetBindingCoordinator: WidgetBindingCoordinator
     get() = harness.widgetBindingCoordinator
 
-  public val fakeLayoutRepository: FakeLayoutRepository get() = harness.fakeLayoutRepository
+  public val fakeLayoutRepository: FakeLayoutRepository
+    get() = harness.fakeLayoutRepository
 
   public fun layoutState(): LayoutState = harness.layoutCoordinator.layoutState.value
+
   public fun safeMode(): Boolean = harness.safeModeManager.safeModeActive.value
 
   /** Convenience: returns the active bindings map from the binding coordinator. */
-  public fun activeBindings(): Map<String, Job> =
-    harness.widgetBindingCoordinator.activeBindings()
+  public fun activeBindings(): Map<String, Job> = harness.widgetBindingCoordinator.activeBindings()
 }
 
 /**
@@ -92,9 +95,7 @@ public class DashboardTestHarness(
 
   public val fakeLayoutRepository: FakeLayoutRepository = FakeLayoutRepository()
 
-  private val presetLoader: PresetLoader = mockk {
-    every { loadPreset(any()) } returns emptyList()
-  }
+  private val presetLoader: PresetLoader = mockk { every { loadPreset(any()) } returns emptyList() }
 
   public val gridPlacementEngine: GridPlacementEngine = GridPlacementEngine(logger = logger)
 
@@ -172,8 +173,8 @@ public class DashboardTestHarness(
    * Initialize coordinators. Must be called before accessing state.
    *
    * Creates a child [Job] on the [testScope] so forever-collecting flows share the same
-   * [TestCoroutineScheduler] (avoiding different-scheduler errors) while remaining cancellable
-   * via [close]. Call [close] before [runTest] exits to prevent [UncompletedCoroutinesError].
+   * [TestCoroutineScheduler] (avoiding different-scheduler errors) while remaining cancellable via
+   * [close]. Call [close] before [runTest] exits to prevent [UncompletedCoroutinesError].
    *
    * @param initScope Optional scope for the coordinator's forever-collecting flows. When omitted,
    *   creates a child scope of [testScope]. Used by [dashboardTest] DSL which manages its own

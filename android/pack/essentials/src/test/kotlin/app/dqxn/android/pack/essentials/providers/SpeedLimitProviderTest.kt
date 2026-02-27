@@ -8,7 +8,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
@@ -61,9 +60,7 @@ class SpeedLimitProviderTest : DataProviderContractTest() {
     val provider = SpeedLimitProvider(settingsStore)
 
     val snapshots = mutableListOf<app.dqxn.android.pack.essentials.snapshots.SpeedLimitSnapshot>()
-    val job = launch {
-      provider.provideState().take(2).toList(snapshots)
-    }
+    val job = launch { provider.provideState().take(2).toList(snapshots) }
 
     advanceUntilIdle()
     settingFlow.value = 100f

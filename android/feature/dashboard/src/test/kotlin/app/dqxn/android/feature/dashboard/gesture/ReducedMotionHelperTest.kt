@@ -17,9 +17,7 @@ import org.junit.jupiter.api.Test
 class ReducedMotionHelperTest {
 
   private val mockContentResolver = mockk<ContentResolver>()
-  private val mockContext = mockk<Context> {
-    every { contentResolver } returns mockContentResolver
-  }
+  private val mockContext = mockk<Context> { every { contentResolver } returns mockContentResolver }
 
   private lateinit var helper: ReducedMotionHelper
 

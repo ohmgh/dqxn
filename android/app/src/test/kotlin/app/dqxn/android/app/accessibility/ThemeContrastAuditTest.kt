@@ -2,7 +2,6 @@ package app.dqxn.android.app.accessibility
 
 import androidx.compose.ui.graphics.Color
 import app.dqxn.android.app.accessibility.WcagContrastChecker.alphaComposite
-import app.dqxn.android.app.accessibility.WcagContrastChecker.relativeLuminance
 import app.dqxn.android.core.design.theme.ThemeFileSchema
 import app.dqxn.android.sdk.ui.theme.MinimalistTheme
 import app.dqxn.android.sdk.ui.theme.SlateTheme
@@ -65,9 +64,7 @@ class ThemeContrastAuditTest {
     allThemes = themes
 
     // Sanity check: exactly 24 themes
-    assertWithMessage("Expected 24 themes (2 free + 22 premium)")
-      .that(allThemes.size)
-      .isEqualTo(24)
+    assertWithMessage("Expected 24 themes (2 free + 22 premium)").that(allThemes.size).isEqualTo(24)
   }
 
   // --- Contrast checks ---
@@ -88,9 +85,9 @@ class ThemeContrastAuditTest {
     }
 
     assertWithMessage(
-      "WCAG AA normal-text violations (primaryText vs background):\n" +
-        violations.joinToString("\n") { "  - $it" }
-    )
+        "WCAG AA normal-text violations (primaryText vs background):\n" +
+          violations.joinToString("\n") { "  - $it" }
+      )
       .that(violations)
       .isEmpty()
   }
@@ -124,9 +121,9 @@ class ThemeContrastAuditTest {
     }
 
     assertWithMessage(
-      "WCAG AA normal-text violations (primaryText vs widget background):\n" +
-        violations.joinToString("\n") { "  - $it" }
-    )
+        "WCAG AA normal-text violations (primaryText vs widget background):\n" +
+          violations.joinToString("\n") { "  - $it" }
+      )
       .that(violations)
       .isEmpty()
   }
@@ -147,9 +144,9 @@ class ThemeContrastAuditTest {
     }
 
     assertWithMessage(
-      "WCAG AA large-text violations (accent vs background):\n" +
-        violations.joinToString("\n") { "  - $it" }
-    )
+        "WCAG AA large-text violations (accent vs background):\n" +
+          violations.joinToString("\n") { "  - $it" }
+      )
       .that(violations)
       .isEmpty()
   }
@@ -236,8 +233,7 @@ class ThemeContrastAuditTest {
       primaryTextColor = WcagContrastChecker.parseHexColor(colors.primary),
       secondaryTextColor = WcagContrastChecker.parseHexColor(colors.secondary),
       accentColor = WcagContrastChecker.parseHexColor(colors.accent),
-      errorColor =
-        colors.error?.let { WcagContrastChecker.parseHexColor(it) } ?: Color(0xFFEF5350),
+      errorColor = colors.error?.let { WcagContrastChecker.parseHexColor(it) } ?: Color(0xFFEF5350),
       warningColor =
         colors.warning?.let { WcagContrastChecker.parseHexColor(it) } ?: Color(0xFFFFB74D),
       successColor =

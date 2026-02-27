@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,9 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import app.dqxn.android.core.design.token.CardSize
 import app.dqxn.android.core.design.token.DashboardSpacing
-import app.dqxn.android.core.design.token.DashboardTypography
 import app.dqxn.android.core.design.token.SemanticColors
-import app.dqxn.android.core.design.token.TextEmphasis
 import app.dqxn.android.sdk.contracts.settings.SettingDefinition
 import app.dqxn.android.sdk.contracts.setup.InfoStyle
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
@@ -51,8 +48,7 @@ internal fun InfoSettingRow(
 
   Card(
     shape = RoundedCornerShape(CardSize.MEDIUM.cornerRadius),
-    colors =
-      CardDefaults.cardColors(containerColor = tintColor.copy(alpha = 0.1f)),
+    colors = CardDefaults.cardColors(containerColor = tintColor.copy(alpha = 0.1f)),
     modifier = modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp),
   ) {
     Row(

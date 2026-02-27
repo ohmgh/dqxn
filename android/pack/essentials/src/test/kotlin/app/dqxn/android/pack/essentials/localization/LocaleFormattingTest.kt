@@ -130,25 +130,28 @@ class LocaleFormattingTest {
     val widgetsDir = findWidgetsDir()
     val violations = mutableListOf<String>()
 
-    widgetsDir.walkTopDown().filter { it.name.endsWith("Renderer.kt") }.forEach { file ->
-      val lines = file.readLines()
-      lines.forEachIndexed { index, line ->
-        val trimmed = line.trim()
-        if (trimmed.startsWith("//") || trimmed.startsWith("*")) return@forEachIndexed
+    widgetsDir
+      .walkTopDown()
+      .filter { it.name.endsWith("Renderer.kt") }
+      .forEach { file ->
+        val lines = file.readLines()
+        lines.forEachIndexed { index, line ->
+          val trimmed = line.trim()
+          if (trimmed.startsWith("//") || trimmed.startsWith("*")) return@forEachIndexed
 
-        // Flag non-locale String.format with numeric format specifiers
-        // (e.g., String.format("%.1f", value) without Locale parameter)
-        if (NON_LOCALE_FORMAT.containsMatchIn(line)) {
-          // Allow digit-only format patterns like "%02d" for hour/minute padding
-          // These produce identical output across all locales
-          val match = NON_LOCALE_FORMAT.find(line)!!.value
-          if (!DIGIT_ONLY_FORMAT.containsMatchIn(match)) {
-            val relativePath = file.name
-            violations.add("$relativePath:${index + 1}: $trimmed")
+          // Flag non-locale String.format with numeric format specifiers
+          // (e.g., String.format("%.1f", value) without Locale parameter)
+          if (NON_LOCALE_FORMAT.containsMatchIn(line)) {
+            // Allow digit-only format patterns like "%02d" for hour/minute padding
+            // These produce identical output across all locales
+            val match = NON_LOCALE_FORMAT.find(line)!!.value
+            if (!DIGIT_ONLY_FORMAT.containsMatchIn(match)) {
+              val relativePath = file.name
+              violations.add("$relativePath:${index + 1}: $trimmed")
+            }
           }
         }
       }
-    }
 
     assertWithMessage(
         "Renderers should not use non-locale String.format for numeric display.\n" +

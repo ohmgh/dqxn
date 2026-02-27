@@ -44,23 +44,28 @@ class DataProviderRegistryImplTest {
     override val firstEmissionTimeout: Duration = 5.seconds
     override val connectionState: Flow<Boolean> = flowOf(true)
     override val connectionErrorDescription: Flow<String?> = flowOf(null)
+
     override fun provideState(): Flow<TestSnapshot> = emptyFlow()
   }
 
   private fun fakeEntitlementManager(
     entitlements: Set<String> = setOf("free"),
-  ): EntitlementManager = object : EntitlementManager {
-    override fun hasEntitlement(id: String): Boolean = id in entitlements
-    override fun getActiveEntitlements(): Set<String> = entitlements
-    override val entitlementChanges: Flow<Set<String>> = MutableStateFlow(entitlements)
-  }
+  ): EntitlementManager =
+    object : EntitlementManager {
+      override fun hasEntitlement(id: String): Boolean = id in entitlements
+
+      override fun getActiveEntitlements(): Set<String> = entitlements
+
+      override val entitlementChanges: Flow<Set<String>> = MutableStateFlow(entitlements)
+    }
 
   @Test
   fun `getAll returns all providers`() {
-    val providers = setOf(
-      TestProvider("speed", DataTypes.SPEED),
-      TestProvider("battery", DataTypes.BATTERY),
-    )
+    val providers =
+      setOf(
+        TestProvider("speed", DataTypes.SPEED),
+        TestProvider("battery", DataTypes.BATTERY),
+      )
     val registry = DataProviderRegistryImpl(providers, fakeEntitlementManager(), logger)
 
     assertThat(registry.getAll()).hasSize(2)
@@ -72,9 +77,12 @@ class DataProviderRegistryImplTest {
     val simulated = TestProvider("sim-speed", DataTypes.SPEED, ProviderPriority.SIMULATED)
     val battery = TestProvider("battery", DataTypes.BATTERY)
 
-    val registry = DataProviderRegistryImpl(
-      setOf(simulated, hardware, battery), fakeEntitlementManager(), logger,
-    )
+    val registry =
+      DataProviderRegistryImpl(
+        setOf(simulated, hardware, battery),
+        fakeEntitlementManager(),
+        logger,
+      )
 
     val speedProviders = registry.findByDataType(DataTypes.SPEED)
     assertThat(speedProviders).hasSize(2)
@@ -85,11 +93,12 @@ class DataProviderRegistryImplTest {
 
   @Test
   fun `findByDataType returns empty for unknown type`() {
-    val registry = DataProviderRegistryImpl(
-      setOf(TestProvider("speed", DataTypes.SPEED)),
-      fakeEntitlementManager(),
-      logger,
-    )
+    val registry =
+      DataProviderRegistryImpl(
+        setOf(TestProvider("speed", DataTypes.SPEED)),
+        fakeEntitlementManager(),
+        logger,
+      )
 
     assertThat(registry.findByDataType("NONEXISTENT")).isEmpty()
   }
@@ -97,16 +106,19 @@ class DataProviderRegistryImplTest {
   @Test
   fun `getFiltered excludes providers requiring missing entitlements`() {
     val freeProvider = TestProvider("free-speed", DataTypes.SPEED)
-    val plusProvider = TestProvider(
-      "plus-speed", DataTypes.SPEED,
-      requiredAnyEntitlement = setOf("plus"),
-    )
+    val plusProvider =
+      TestProvider(
+        "plus-speed",
+        DataTypes.SPEED,
+        requiredAnyEntitlement = setOf("plus"),
+      )
 
-    val registry = DataProviderRegistryImpl(
-      setOf(freeProvider, plusProvider),
-      fakeEntitlementManager(setOf("free")),
-      logger,
-    )
+    val registry =
+      DataProviderRegistryImpl(
+        setOf(freeProvider, plusProvider),
+        fakeEntitlementManager(setOf("free")),
+        logger,
+      )
 
     val filtered = registry.getFiltered { it == "free" }
     assertThat(filtered).hasSize(1)
@@ -116,16 +128,19 @@ class DataProviderRegistryImplTest {
   @Test
   fun `availableProviders uses entitlementManager for filtering`() {
     val freeProvider = TestProvider("free-speed", DataTypes.SPEED)
-    val plusProvider = TestProvider(
-      "plus-speed", DataTypes.SPEED,
-      requiredAnyEntitlement = setOf("plus"),
-    )
+    val plusProvider =
+      TestProvider(
+        "plus-speed",
+        DataTypes.SPEED,
+        requiredAnyEntitlement = setOf("plus"),
+      )
 
-    val registry = DataProviderRegistryImpl(
-      setOf(freeProvider, plusProvider),
-      fakeEntitlementManager(setOf("free", "plus")),
-      logger,
-    )
+    val registry =
+      DataProviderRegistryImpl(
+        setOf(freeProvider, plusProvider),
+        fakeEntitlementManager(setOf("free", "plus")),
+        logger,
+      )
 
     val available = registry.availableProviders()
     assertThat(available).hasSize(2)
@@ -133,9 +148,12 @@ class DataProviderRegistryImplTest {
 
   @Test
   fun `empty provider set produces empty registry`() {
-    val registry = DataProviderRegistryImpl(
-      emptySet(), fakeEntitlementManager(), logger,
-    )
+    val registry =
+      DataProviderRegistryImpl(
+        emptySet(),
+        fakeEntitlementManager(),
+        logger,
+      )
 
     assertThat(registry.getAll()).isEmpty()
     assertThat(registry.findByDataType(DataTypes.SPEED)).isEmpty()

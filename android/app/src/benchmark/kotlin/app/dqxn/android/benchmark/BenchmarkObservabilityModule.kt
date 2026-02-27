@@ -25,24 +25,18 @@ import kotlinx.coroutines.SupervisorJob
  * Benchmark-only Hilt module providing observability bindings with release-appropriate
  * configuration for production-representative performance measurement.
  *
- * Mirrors [app.dqxn.android.release.ReleaseModule] (NoOpLogger, 128-entry ring buffer)
- * plus [CrashEvidenceWriter] needed by agentic diagnostic handlers.
+ * Mirrors [app.dqxn.android.release.ReleaseModule] (NoOpLogger, 128-entry ring buffer) plus
+ * [CrashEvidenceWriter] needed by agentic diagnostic handlers.
  */
 @Module
 @InstallIn(SingletonComponent::class)
 internal object BenchmarkObservabilityModule {
 
-  @Provides
-  @Singleton
-  fun provideDqxnLogger(): DqxnLogger = NoOpLogger
+  @Provides @Singleton fun provideDqxnLogger(): DqxnLogger = NoOpLogger
 
-  @Provides
-  @Singleton
-  fun provideMetricsCollector(): MetricsCollector = MetricsCollector()
+  @Provides @Singleton fun provideMetricsCollector(): MetricsCollector = MetricsCollector()
 
-  @Provides
-  @Singleton
-  fun provideRingBufferSink(): RingBufferSink = RingBufferSink(capacity = 128)
+  @Provides @Singleton fun provideRingBufferSink(): RingBufferSink = RingBufferSink(capacity = 128)
 
   @Provides
   @Singleton

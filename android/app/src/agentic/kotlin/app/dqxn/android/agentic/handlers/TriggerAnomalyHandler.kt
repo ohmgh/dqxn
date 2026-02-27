@@ -1,11 +1,11 @@
 package app.dqxn.android.agentic.handlers
 
+import app.dqxn.android.sdk.observability.diagnostic.AnomalyTrigger
+import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotCapture
 import dev.agentic.android.runtime.AgenticCommand
 import dev.agentic.android.runtime.CommandHandler
 import dev.agentic.android.runtime.CommandParams
 import dev.agentic.android.runtime.CommandResult
-import app.dqxn.android.sdk.observability.diagnostic.AnomalyTrigger
-import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotCapture
 import javax.inject.Inject
 
 /** Fires a diagnostic snapshot capture with a synthetic anomaly trigger for testing. */
@@ -27,10 +27,11 @@ constructor(
   override val aliases: List<String> = emptyList()
 
   override suspend fun execute(params: CommandParams, commandId: String): CommandResult {
-    val snapshot = diagnosticCapture.capture(
-      trigger = AnomalyTrigger.JankSpike(consecutiveFrames = 0),
-      agenticTraceId = commandId,
-    )
+    val snapshot =
+      diagnosticCapture.capture(
+        trigger = AnomalyTrigger.JankSpike(consecutiveFrames = 0),
+        agenticTraceId = commandId,
+      )
 
     return if (snapshot != null) {
       CommandResult.Success(

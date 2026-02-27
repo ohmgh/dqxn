@@ -86,8 +86,7 @@ private fun ProviderStatusRow(
 
   Row(
     modifier =
-      Modifier
-        .fillMaxWidth()
+      Modifier.fillMaxWidth()
         .clickable(onClick = onClick)
         .padding(horizontal = 16.dp, vertical = 12.dp)
         .testTag("provider_row_${status.providerId}"),
@@ -101,8 +100,7 @@ private fun ProviderStatusRow(
       // Connection state indicator dot
       Box(
         modifier =
-          Modifier
-            .size(10.dp)
+          Modifier.size(10.dp)
             .clip(CircleShape)
             .background(if (status.isConnected) Color.Green else Color.Red)
             .testTag("connection_indicator_${status.providerId}"),
@@ -114,11 +112,12 @@ private fun ProviderStatusRow(
           style = MaterialTheme.typography.bodyLarge,
         )
         Text(
-          text = if (status.errorDescription != null) {
-            status.errorDescription!!
-          } else {
-            formatElapsed(elapsed)
-          },
+          text =
+            if (status.errorDescription != null) {
+              status.errorDescription!!
+            } else {
+              formatElapsed(elapsed)
+            },
           style = MaterialTheme.typography.bodySmall,
           color =
             if (status.errorDescription != null) {
@@ -134,17 +133,13 @@ private fun ProviderStatusRow(
       Text(
         text = "\u26A0", // Warning sign
         color = Color(0xFFFFA000), // Amber
-        modifier =
-          Modifier
-            .testTag("staleness_indicator_${status.providerId}"),
+        modifier = Modifier.testTag("staleness_indicator_${status.providerId}"),
       )
     }
   }
 }
 
-/**
- * Formats elapsed milliseconds into a human-readable relative time string.
- */
+/** Formats elapsed milliseconds into a human-readable relative time string. */
 @Stable
 internal fun formatElapsed(elapsedMs: Long): String =
   when {

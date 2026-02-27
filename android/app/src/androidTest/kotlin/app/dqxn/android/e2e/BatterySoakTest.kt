@@ -18,10 +18,9 @@ import org.junit.runner.RunWith
  *
  * NF11 requirement: < 5% battery drain per hour with 12 widgets active on screen.
  *
- * Uses `dumpsys battery` for level measurement and the agentic framework to add widgets.
- * Meaningful battery delta requires a physical device -- emulator battery is virtual and
- * level won't change, causing the assertion to trivially pass. CI should run on physical
- * device when available.
+ * Uses `dumpsys battery` for level measurement and the agentic framework to add widgets. Meaningful
+ * battery delta requires a physical device -- emulator battery is virtual and level won't change,
+ * causing the assertion to trivially pass. CI should run on physical device when available.
  *
  * Per project policy: connected device tests are automated tests, not manual tests.
  */
@@ -30,8 +29,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class BatterySoakTest {
 
-  @get:Rule
-  val hiltRule = HiltAndroidRule(this)
+  @get:Rule val hiltRule = HiltAndroidRule(this)
 
   private val client = AgenticTestClient()
   private lateinit var device: UiDevice
@@ -52,20 +50,21 @@ class BatterySoakTest {
     client.assertReady()
 
     // Add 12 widgets via agentic commands -- mix of essentials widget types
-    val widgetTypes = listOf(
-      "essentials:clock",
-      "essentials:clock",
-      "essentials:speedometer",
-      "essentials:speedometer",
-      "essentials:battery",
-      "essentials:battery",
-      "essentials:compass",
-      "essentials:compass",
-      "essentials:date-simple",
-      "essentials:date-simple",
-      "essentials:ambient-light",
-      "essentials:ambient-light",
-    )
+    val widgetTypes =
+      listOf(
+        "essentials:clock",
+        "essentials:clock",
+        "essentials:speedometer",
+        "essentials:speedometer",
+        "essentials:battery",
+        "essentials:battery",
+        "essentials:compass",
+        "essentials:compass",
+        "essentials:date-simple",
+        "essentials:date-simple",
+        "essentials:ambient-light",
+        "essentials:ambient-light",
+      )
 
     for (typeId in widgetTypes) {
       client.send("add-widget", mapOf("typeId" to typeId))
@@ -97,18 +96,18 @@ class BatterySoakTest {
     val hourlyDrain = drainPercent * 2 // 30 min -> 1 hour extrapolation
 
     assertWithMessage(
-      "NF11: Screen-on battery drain with $WIDGET_COUNT widgets must be < ${MAX_HOURLY_DRAIN}%/hr. " +
-        "Measured: initial=$initialLevel%, final=$finalLevel%, 30min drain=${drainPercent}%, " +
-        "extrapolated hourly=${hourlyDrain}%. " +
-        "NOTE: Emulator battery is virtual -- meaningful results require physical device."
-    )
+        "NF11: Screen-on battery drain with $WIDGET_COUNT widgets must be < ${MAX_HOURLY_DRAIN}%/hr. " +
+          "Measured: initial=$initialLevel%, final=$finalLevel%, 30min drain=${drainPercent}%, " +
+          "extrapolated hourly=${hourlyDrain}%. " +
+          "NOTE: Emulator battery is virtual -- meaningful results require physical device."
+      )
       .that(hourlyDrain)
       .isLessThan(MAX_HOURLY_DRAIN)
   }
 
   /**
-   * Reads the current battery level percentage from `dumpsys battery`.
-   * Parses the "level: XX" line from the output.
+   * Reads the current battery level percentage from `dumpsys battery`. Parses the "level: XX" line
+   * from the output.
    */
   private fun readBatteryLevel(): Int {
     val output = device.executeShellCommand("dumpsys battery")

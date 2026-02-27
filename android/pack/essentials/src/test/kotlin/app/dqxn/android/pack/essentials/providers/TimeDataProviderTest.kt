@@ -19,10 +19,11 @@ import org.junit.jupiter.api.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class TimeDataProviderTest : DataProviderContractTest() {
 
-  private val mockContext: Context = mockk(relaxed = true) {
-    every { registerReceiver(any<BroadcastReceiver>(), any<IntentFilter>()) } returns null
-    every { unregisterReceiver(any()) } returns Unit
-  }
+  private val mockContext: Context =
+    mockk(relaxed = true) {
+      every { registerReceiver(any<BroadcastReceiver>(), any<IntentFilter>()) } returns null
+      every { unregisterReceiver(any()) } returns Unit
+    }
 
   override fun createProvider(): DataProvider<*> = TimeDataProvider(context = mockContext)
 

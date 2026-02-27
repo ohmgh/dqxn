@@ -15,7 +15,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 
 /**
- * Battery icon drawn via Canvas. Shows a battery outline with fill level and optional charging bolt.
+ * Battery icon drawn via Canvas. Shows a battery outline with fill level and optional charging
+ * bolt.
  */
 @Composable
 internal fun BatteryIcon(
@@ -24,12 +25,13 @@ internal fun BatteryIcon(
   size: Dp,
   modifier: Modifier = Modifier,
 ) {
-  val fillColor = when {
-    level == null -> MaterialTheme.colorScheme.onSurfaceVariant
-    level <= 15 -> MaterialTheme.colorScheme.error
-    level <= 30 -> Color(0xFFFF9800) // Amber warning
-    else -> MaterialTheme.colorScheme.primary
-  }
+  val fillColor =
+    when {
+      level == null -> MaterialTheme.colorScheme.onSurfaceVariant
+      level <= 15 -> MaterialTheme.colorScheme.error
+      level <= 30 -> Color(0xFFFF9800) // Amber warning
+      else -> MaterialTheme.colorScheme.primary
+    }
   val outlineColor = MaterialTheme.colorScheme.onSurface
   val chargingColor = MaterialTheme.colorScheme.tertiary
 
@@ -99,15 +101,16 @@ private fun DrawScope.drawChargingBolt(color: Color) {
   val boltWidth = size.width * 0.2f
   val boltHeight = size.height * 0.35f
 
-  val path = Path().apply {
-    // Lightning bolt shape
-    moveTo(cx + boltWidth * 0.1f, cy - boltHeight / 2f)
-    lineTo(cx - boltWidth * 0.5f, cy + boltHeight * 0.05f)
-    lineTo(cx, cy + boltHeight * 0.05f)
-    lineTo(cx - boltWidth * 0.1f, cy + boltHeight / 2f)
-    lineTo(cx + boltWidth * 0.5f, cy - boltHeight * 0.05f)
-    lineTo(cx, cy - boltHeight * 0.05f)
-    close()
-  }
+  val path =
+    Path().apply {
+      // Lightning bolt shape
+      moveTo(cx + boltWidth * 0.1f, cy - boltHeight / 2f)
+      lineTo(cx - boltWidth * 0.5f, cy + boltHeight * 0.05f)
+      lineTo(cx, cy + boltHeight * 0.05f)
+      lineTo(cx - boltWidth * 0.1f, cy + boltHeight / 2f)
+      lineTo(cx + boltWidth * 0.5f, cy - boltHeight * 0.05f)
+      lineTo(cx, cy - boltHeight * 0.05f)
+      close()
+    }
   drawPath(path, color)
 }

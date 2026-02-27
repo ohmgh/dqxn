@@ -13,6 +13,5 @@ import app.dqxn.android.sdk.contracts.notification.AlertResult
  */
 public class AlertSoundManager : AlertEmitter {
 
-  override suspend fun fire(profile: AlertProfile): AlertResult =
-    AlertResult.UNAVAILABLE
+  override suspend fun fire(profile: AlertProfile): AlertResult = AlertResult.UNAVAILABLE
 }

@@ -46,13 +46,11 @@ constructor(
 
   /** Rolling connection events from the ConnectionEventStore. */
   public val connectionEvents: StateFlow<ImmutableList<ConnectionEvent>> =
-    connectionEventStore
-      .events
-      .stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = persistentListOf(),
-      )
+    connectionEventStore.events.stateIn(
+      scope = viewModelScope,
+      started = SharingStarted.WhileSubscribed(5_000),
+      initialValue = persistentListOf(),
+    )
 
   /** Whether session recording is currently active. */
   public val isRecording: StateFlow<Boolean> = sessionRecorder.isRecording

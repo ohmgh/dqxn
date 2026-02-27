@@ -19,8 +19,8 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * All E2E tests share this client for issuing agentic commands and asserting results.
  *
- * The response-file protocol writes JSON to a temp file in cacheDir and returns the file path
- * in the Bundle. This avoids Binder transaction size limits.
+ * The response-file protocol writes JSON to a temp file in cacheDir and returns the file path in
+ * the Bundle. This avoids Binder transaction size limits.
  */
 public class AgenticTestClient {
 
@@ -38,21 +38,23 @@ public class AgenticTestClient {
    * @throws AssertionError if the response indicates an error status.
    */
   public fun send(command: String, params: Map<String, Any> = emptyMap()): JsonObject {
-    val paramsJson = if (params.isEmpty()) {
-      null
-    } else {
-      val jsonObject = JsonObject(
-        params.mapValues { (_, value) ->
-          when (value) {
-            is String -> JsonPrimitive(value)
-            is Number -> JsonPrimitive(value)
-            is Boolean -> JsonPrimitive(value)
-            else -> JsonPrimitive(value.toString())
-          }
-        }
-      )
-      jsonObject.toString()
-    }
+    val paramsJson =
+      if (params.isEmpty()) {
+        null
+      } else {
+        val jsonObject =
+          JsonObject(
+            params.mapValues { (_, value) ->
+              when (value) {
+                is String -> JsonPrimitive(value)
+                is Number -> JsonPrimitive(value)
+                is Boolean -> JsonPrimitive(value)
+                else -> JsonPrimitive(value.toString())
+              }
+            }
+          )
+        jsonObject.toString()
+      }
 
     val result: Bundle? = contentResolver.call(uri, command, paramsJson, null)
     checkNotNull(result) { "Null response from agentic command: $command" }
@@ -107,19 +109,20 @@ public class AgenticTestClient {
   }
 
   /**
-   * Asserts that a widget with the given typeId is rendered (appears in dump-health response
-   * with ACTIVE status).
+   * Asserts that a widget with the given typeId is rendered (appears in dump-health response with
+   * ACTIVE status).
    */
   public fun assertWidgetRendered(typeId: String, timeoutMs: Long = 5_000L) {
     val deadline = System.currentTimeMillis() + timeoutMs
     while (System.currentTimeMillis() < deadline) {
       val health = send("dump-health")
       val widgets = health["widgets"]?.jsonArray ?: continue
-      val found = widgets.any { widget ->
-        val widgetObj = widget.jsonObject
-        widgetObj["typeId"]?.jsonPrimitive?.content == typeId &&
-          widgetObj["status"]?.jsonPrimitive?.content == "ACTIVE"
-      }
+      val found =
+        widgets.any { widget ->
+          val widgetObj = widget.jsonObject
+          widgetObj["typeId"]?.jsonPrimitive?.content == typeId &&
+            widgetObj["status"]?.jsonPrimitive?.content == "ACTIVE"
+        }
       if (found) return
       Thread.sleep(500)
     }
@@ -130,10 +133,11 @@ public class AgenticTestClient {
     val segments = path.split(".")
     var current: JsonElement = root
     for (segment in segments) {
-      current = when (current) {
-        is JsonObject -> current.jsonObject[segment] ?: return null
-        else -> return null
-      }
+      current =
+        when (current) {
+          is JsonObject -> current.jsonObject[segment] ?: return null
+          else -> return null
+        }
     }
     return when (current) {
       is kotlinx.serialization.json.JsonArray -> current.jsonArray.toList()

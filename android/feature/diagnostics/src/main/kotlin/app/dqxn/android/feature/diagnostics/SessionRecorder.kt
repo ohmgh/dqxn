@@ -13,11 +13,11 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Ring-buffer session event recorder implementing [SessionEventEmitter].
  *
- * Events are only captured when [isRecording] is true. The buffer holds at most
- * [MAX_EVENTS] entries; overflow evicts the oldest events first.
+ * Events are only captured when [isRecording] is true. The buffer holds at most [MAX_EVENTS]
+ * entries; overflow evicts the oldest events first.
  *
- * Thread-safe: all buffer mutations are synchronized. [snapshot] returns an
- * immutable copy that does not block recording.
+ * Thread-safe: all buffer mutations are synchronized. [snapshot] returns an immutable copy that
+ * does not block recording.
  */
 @Singleton
 public class SessionRecorder @Inject constructor() : SessionEventEmitter {
@@ -51,12 +51,9 @@ public class SessionRecorder @Inject constructor() : SessionEventEmitter {
   }
 
   /** Return an immutable snapshot of all recorded events without blocking recording. */
-  public fun snapshot(): ImmutableList<SessionEvent> = synchronized(lock) {
-    buffer.toImmutableList()
-  }
+  public fun snapshot(): ImmutableList<SessionEvent> =
+    synchronized(lock) { buffer.toImmutableList() }
 
   /** Clear all recorded events. Does not affect recording state. */
-  public fun clear(): Unit = synchronized(lock) {
-    buffer.clear()
-  }
+  public fun clear(): Unit = synchronized(lock) { buffer.clear() }
 }

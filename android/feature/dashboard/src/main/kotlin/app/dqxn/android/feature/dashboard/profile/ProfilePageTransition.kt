@@ -43,10 +43,11 @@ public fun ProfilePageTransition(
 
   val activeIndex = profiles.indexOfFirst { it.id == activeProfileId }.coerceAtLeast(0)
 
-  val pagerState = rememberPagerState(
-    initialPage = activeIndex,
-    pageCount = { profiles.size },
-  )
+  val pagerState =
+    rememberPagerState(
+      initialPage = activeIndex,
+      pageCount = { profiles.size },
+    )
 
   // Sync pager to external profile changes (e.g., bottom bar tap)
   // NF39: when reduced motion is active, use instant scrollToPage instead of animated scroll

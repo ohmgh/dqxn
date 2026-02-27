@@ -17,8 +17,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Hilt integration test that validates all 3 packs (essentials, themes, demo) contribute to
- * Hilt multibinding sets correctly when loaded simultaneously.
+ * Hilt integration test that validates all 3 packs (essentials, themes, demo) contribute to Hilt
+ * multibinding sets correctly when loaded simultaneously.
  *
  * Uses Robolectric for JVM-based Hilt validation -- no device required. Verifies:
  * - All widget renderers resolve without binding conflicts
@@ -33,20 +33,15 @@ import org.robolectric.annotation.Config
 @Config(application = HiltTestApplication::class)
 class MultiPackHiltTest {
 
-  @get:Rule
-  val hiltRule = HiltAndroidRule(this)
+  @get:Rule val hiltRule = HiltAndroidRule(this)
 
-  @Inject
-  lateinit var widgetRenderers: Set<@JvmSuppressWildcards WidgetRenderer>
+  @Inject lateinit var widgetRenderers: Set<@JvmSuppressWildcards WidgetRenderer>
 
-  @Inject
-  lateinit var dataProviders: Set<@JvmSuppressWildcards DataProvider<*>>
+  @Inject lateinit var dataProviders: Set<@JvmSuppressWildcards DataProvider<*>>
 
-  @Inject
-  lateinit var themeProviders: Set<@JvmSuppressWildcards ThemeProvider>
+  @Inject lateinit var themeProviders: Set<@JvmSuppressWildcards ThemeProvider>
 
-  @Inject
-  lateinit var packManifests: Set<@JvmSuppressWildcards DashboardPackManifest>
+  @Inject lateinit var packManifests: Set<@JvmSuppressWildcards DashboardPackManifest>
 
   @Before
   fun setup() {

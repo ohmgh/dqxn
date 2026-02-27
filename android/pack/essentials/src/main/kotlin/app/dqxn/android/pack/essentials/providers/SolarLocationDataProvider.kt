@@ -29,14 +29,13 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 
 /**
  * Data provider for solar times using passive GPS location.
  *
- * Requires [Manifest.permission.ACCESS_COARSE_LOCATION] permission.
- * Uses [FusedLocationProviderClient] with [Priority.PRIORITY_PASSIVE] to piggyback
- * on other apps' GPS requests -- no additional battery drain.
+ * Requires [Manifest.permission.ACCESS_COARSE_LOCATION] permission. Uses
+ * [FusedLocationProviderClient] with [Priority.PRIORITY_PASSIVE] to piggyback on other apps' GPS
+ * requests -- no additional battery drain.
  *
  * Recalculates sunrise/sunset on each location update (interval: 30 minutes).
  */
@@ -46,7 +45,9 @@ import kotlinx.coroutines.flow.map
   description = "Sunrise and sunset times based on GPS location",
 )
 @Singleton
-public class SolarLocationDataProvider @Inject constructor(
+public class SolarLocationDataProvider
+@Inject
+constructor(
   @param:ApplicationContext private val context: Context,
   private val fusedClient: FusedLocationProviderClient,
 ) : DataProvider<SolarSnapshot> {
@@ -59,32 +60,36 @@ public class SolarLocationDataProvider @Inject constructor(
   override val snapshotType: KClass<SolarSnapshot> = SolarSnapshot::class
   override val requiredAnyEntitlement: Set<String>? = null
 
-  override val schema: DataSchema = DataSchema(
-    fields = listOf(
-      DataFieldSpec(name = "sunriseEpochMillis", typeId = "long"),
-      DataFieldSpec(name = "sunsetEpochMillis", typeId = "long"),
-      DataFieldSpec(name = "solarNoonEpochMillis", typeId = "long"),
-      DataFieldSpec(name = "isDaytime", typeId = "boolean"),
-      DataFieldSpec(name = "sourceMode", typeId = "string"),
-    ),
-    stalenessThresholdMs = 3_600_000L, // 1 hour
-  )
-
-  override val setupSchema: List<SetupPageDefinition> = listOf(
-    SetupPageDefinition(
-      id = "permissions",
-      title = "Permissions",
-      description = "Location access enables accurate sunrise and sunset times for your area",
-      definitions = listOf(
-        SetupDefinition.RuntimePermission(
-          id = "location",
-          label = "Location Access",
-          description = "Required for accurate sunrise/sunset times based on your location",
-          permissions = listOf(Manifest.permission.ACCESS_COARSE_LOCATION),
+  override val schema: DataSchema =
+    DataSchema(
+      fields =
+        listOf(
+          DataFieldSpec(name = "sunriseEpochMillis", typeId = "long"),
+          DataFieldSpec(name = "sunsetEpochMillis", typeId = "long"),
+          DataFieldSpec(name = "solarNoonEpochMillis", typeId = "long"),
+          DataFieldSpec(name = "isDaytime", typeId = "boolean"),
+          DataFieldSpec(name = "sourceMode", typeId = "string"),
         ),
+      stalenessThresholdMs = 3_600_000L, // 1 hour
+    )
+
+  override val setupSchema: List<SetupPageDefinition> =
+    listOf(
+      SetupPageDefinition(
+        id = "permissions",
+        title = "Permissions",
+        description = "Location access enables accurate sunrise and sunset times for your area",
+        definitions =
+          listOf(
+            SetupDefinition.RuntimePermission(
+              id = "location",
+              label = "Location Access",
+              description = "Required for accurate sunrise/sunset times based on your location",
+              permissions = listOf(Manifest.permission.ACCESS_COARSE_LOCATION),
+            ),
+          ),
       ),
-    ),
-  )
+    )
 
   override val subscriberTimeout: kotlin.time.Duration = 30.seconds
   override val firstEmissionTimeout: kotlin.time.Duration = 5.minutes
@@ -94,31 +99,38 @@ public class SolarLocationDataProvider @Inject constructor(
 
   @SuppressLint("MissingPermission")
   override fun provideState(): Flow<SolarSnapshot> = callbackFlow {
-    val locationRequest = LocationRequest.Builder(
-      Priority.PRIORITY_PASSIVE,
-      30 * 60 * 1000L, // 30 minutes interval
-    ).build()
+    val locationRequest =
+      LocationRequest.Builder(
+          Priority.PRIORITY_PASSIVE,
+          30 * 60 * 1000L, // 30 minutes interval
+        )
+        .build()
 
-    val callback = object : LocationCallback() {
-      override fun onLocationResult(result: LocationResult) {
-        val location = result.lastLocation ?: return
-        val zoneId = ZoneId.systemDefault()
-        val date = LocalDate.now(zoneId)
-        val solar = SolarCalculator.calculate(
-          location.latitude, location.longitude, date, zoneId,
-        )
-        trySend(
-          SolarSnapshot(
-            sunriseEpochMillis = solar.sunriseEpochMillis,
-            sunsetEpochMillis = solar.sunsetEpochMillis,
-            solarNoonEpochMillis = solar.solarNoonEpochMillis,
-            isDaytime = solar.isDaytime,
-            sourceMode = "location",
-            timestamp = System.currentTimeMillis(),
-          ),
-        )
+    val callback =
+      object : LocationCallback() {
+        override fun onLocationResult(result: LocationResult) {
+          val location = result.lastLocation ?: return
+          val zoneId = ZoneId.systemDefault()
+          val date = LocalDate.now(zoneId)
+          val solar =
+            SolarCalculator.calculate(
+              location.latitude,
+              location.longitude,
+              date,
+              zoneId,
+            )
+          trySend(
+            SolarSnapshot(
+              sunriseEpochMillis = solar.sunriseEpochMillis,
+              sunsetEpochMillis = solar.sunsetEpochMillis,
+              solarNoonEpochMillis = solar.solarNoonEpochMillis,
+              isDaytime = solar.isDaytime,
+              sourceMode = "location",
+              timestamp = System.currentTimeMillis(),
+            ),
+          )
+        }
       }
-    }
 
     fusedClient.requestLocationUpdates(
       locationRequest,

@@ -5,8 +5,8 @@ import androidx.compose.runtime.Immutable
 /**
  * Continuous drag gesture state for [MutableStateFlow] (latest-value-wins).
  *
- * Offsets are in pixels for direct use with `graphicsLayer { translationX / translationY }`.
- * Null flow value means no drag is in progress.
+ * Offsets are in pixels for direct use with `graphicsLayer { translationX / translationY }`. Null
+ * flow value means no drag is in progress.
  */
 @Immutable
 public data class DragUpdate(

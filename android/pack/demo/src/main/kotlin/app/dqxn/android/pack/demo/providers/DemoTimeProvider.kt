@@ -19,8 +19,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 
 /**
- * Deterministic time provider for demo mode. Emits [TimeSnapshot] every 1 second with a fixed
- * base epoch advancing by 1 second per tick. Zero randomness -- same tick always produces the same
+ * Deterministic time provider for demo mode. Emits [TimeSnapshot] every 1 second with a fixed base
+ * epoch advancing by 1 second per tick. Zero randomness -- same tick always produces the same
  * output.
  */
 @DashboardDataProvider(

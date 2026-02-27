@@ -90,8 +90,7 @@ constructor(
               SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
               SensorManager.getOrientation(rotationMatrix, orientation)
 
-              val bearing =
-                (Math.toDegrees(orientation[0].toDouble()).toFloat() + 360f) % 360f
+              val bearing = (Math.toDegrees(orientation[0].toDouble()).toFloat() + 360f) % 360f
               val pitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
               val roll = Math.toDegrees(orientation[2].toDouble()).toFloat()
 

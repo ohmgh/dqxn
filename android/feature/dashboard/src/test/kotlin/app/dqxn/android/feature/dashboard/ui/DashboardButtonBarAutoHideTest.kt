@@ -42,7 +42,8 @@ class DashboardButtonBarAutoHideTest {
       widgetBackgroundBrush = Brush.verticalGradient(listOf(Color.DarkGray, Color.Black)),
     )
 
-  private val profiles = persistentListOf(ProfileInfo(id = "default", displayName = "Main", isDefault = true))
+  private val profiles =
+    persistentListOf(ProfileInfo(id = "default", displayName = "Main", isDefault = true))
 
   @Test
   fun `bar is visible when isVisible is true`() {

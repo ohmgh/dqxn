@@ -1,9 +1,7 @@
 package app.dqxn.android.feature.dashboard
 
 import androidx.lifecycle.SavedStateHandle
-import dev.agentic.android.semantics.SemanticsOwnerHolder
 import app.dqxn.android.data.device.PairedDeviceStore
-import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
 import app.dqxn.android.data.preferences.UserPreferencesRepository
@@ -20,22 +18,20 @@ import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
 import app.dqxn.android.feature.dashboard.grid.BlankSpaceGestureHandler
 import app.dqxn.android.feature.dashboard.grid.WidgetGestureHandler
 import app.dqxn.android.feature.dashboard.test.TestWidgetFactory.testWidget
-import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
+import app.dqxn.android.sdk.contracts.setup.SetupEvaluator
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
 import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
-import app.dqxn.android.sdk.observability.crash.ErrorContext
 import app.dqxn.android.sdk.observability.crash.ErrorReporter
 import app.dqxn.android.sdk.observability.log.NoOpLogger
 import app.dqxn.android.sdk.observability.session.SessionEventEmitter
 import com.google.common.truth.Truth.assertThat
+import dev.agentic.android.semantics.SemanticsOwnerHolder
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -70,14 +66,12 @@ class DashboardViewModelTest {
   }
 
   private fun createMocks(): Mocks {
-    val layoutCoordinator: LayoutCoordinator = mockk(relaxed = true) {
-      every { layoutState } returns MutableStateFlow(LayoutState())
-    }
+    val layoutCoordinator: LayoutCoordinator =
+      mockk(relaxed = true) { every { layoutState } returns MutableStateFlow(LayoutState()) }
     val editModeCoordinator: EditModeCoordinator = mockk(relaxed = true)
     val themeCoordinator: ThemeCoordinator = mockk(relaxed = true)
-    val widgetBindingCoordinator: WidgetBindingCoordinator = mockk(relaxed = true) {
-      every { activeBindings() } returns emptyMap()
-    }
+    val widgetBindingCoordinator: WidgetBindingCoordinator =
+      mockk(relaxed = true) { every { activeBindings() } returns emptyMap() }
     val notificationCoordinator: NotificationCoordinator = mockk(relaxed = true)
     val profileCoordinator: ProfileCoordinator = mockk(relaxed = true)
     val widgetRegistry: WidgetRegistry = mockk(relaxed = true)
@@ -89,7 +83,7 @@ class DashboardViewModelTest {
     val dataProviderRegistry: DataProviderRegistry = mockk(relaxed = true)
     val providerSettingsStore: ProviderSettingsStore = mockk(relaxed = true)
     val entitlementManager: EntitlementManager = mockk(relaxed = true)
-    val setupEvaluator: SetupEvaluatorImpl = mockk(relaxed = true)
+    val setupEvaluator: SetupEvaluator = mockk(relaxed = true)
     val pairedDeviceStore: PairedDeviceStore = mockk(relaxed = true)
 
     return Mocks(
@@ -247,9 +241,10 @@ class DashboardViewModelTest {
   fun `slow command logged as warning`() = runTest {
     val mocks = createMocks()
     // Make handleSetTheme take 1.5s (above 1s threshold)
-    coEvery { mocks.themeCoordinator.handleSetTheme(any()) } coAnswers {
-      kotlinx.coroutines.delay(1500)
-    }
+    coEvery { mocks.themeCoordinator.handleSetTheme(any()) } coAnswers
+      {
+        kotlinx.coroutines.delay(1500)
+      }
     val vm = createViewModel(mocks)
 
     vm.dispatch(DashboardCommand.SetTheme("slow-theme"))
@@ -264,31 +259,32 @@ class DashboardViewModelTest {
   fun `command dispatched through bus routes to coordinator`() = runTest {
     val mocks = createMocks()
     val bus = DashboardCommandBus()
-    val vm = DashboardViewModel(
-      layoutCoordinator = mocks.layoutCoordinator,
-      editModeCoordinator = mocks.editModeCoordinator,
-      themeCoordinator = mocks.themeCoordinator,
-      widgetBindingCoordinator = mocks.widgetBindingCoordinator,
-      notificationCoordinator = mocks.notificationCoordinator,
-      profileCoordinator = mocks.profileCoordinator,
-      widgetRegistry = mocks.widgetRegistry,
-      reducedMotionHelper = mocks.reducedMotionHelper,
-      widgetGestureHandler = mocks.widgetGestureHandler,
-      blankSpaceGestureHandler = mocks.blankSpaceGestureHandler,
-      semanticsOwnerHolder = mocks.semanticsOwnerHolder,
-      userPreferencesRepository = mocks.userPreferencesRepository,
-      dataProviderRegistry = mocks.dataProviderRegistry,
-      providerSettingsStore = mocks.providerSettingsStore,
-      entitlementManager = mocks.entitlementManager,
-      setupEvaluator = mocks.setupEvaluator,
-      pairedDeviceStore = mocks.pairedDeviceStore,
-      builtInThemes = mockk(relaxed = true),
-      savedStateHandle = SavedStateHandle(),
-      logger = logger,
-      errorReporter = errorReporter,
-      commandBus = bus,
-      sessionEventEmitter = sessionEventEmitter,
-    )
+    val vm =
+      DashboardViewModel(
+        layoutCoordinator = mocks.layoutCoordinator,
+        editModeCoordinator = mocks.editModeCoordinator,
+        themeCoordinator = mocks.themeCoordinator,
+        widgetBindingCoordinator = mocks.widgetBindingCoordinator,
+        notificationCoordinator = mocks.notificationCoordinator,
+        profileCoordinator = mocks.profileCoordinator,
+        widgetRegistry = mocks.widgetRegistry,
+        reducedMotionHelper = mocks.reducedMotionHelper,
+        widgetGestureHandler = mocks.widgetGestureHandler,
+        blankSpaceGestureHandler = mocks.blankSpaceGestureHandler,
+        semanticsOwnerHolder = mocks.semanticsOwnerHolder,
+        userPreferencesRepository = mocks.userPreferencesRepository,
+        dataProviderRegistry = mocks.dataProviderRegistry,
+        providerSettingsStore = mocks.providerSettingsStore,
+        entitlementManager = mocks.entitlementManager,
+        setupEvaluator = mocks.setupEvaluator,
+        pairedDeviceStore = mocks.pairedDeviceStore,
+        builtInThemes = mockk(relaxed = true),
+        savedStateHandle = SavedStateHandle(),
+        logger = logger,
+        errorReporter = errorReporter,
+        commandBus = bus,
+        sessionEventEmitter = sessionEventEmitter,
+      )
 
     // Let ViewModel init coroutines start (bus collector, command loop, etc.)
     advanceUntilIdle()
@@ -305,24 +301,25 @@ class DashboardViewModelTest {
     val vm = createViewModel(mocks)
     val widget = testWidget()
 
-    val commands = listOf(
-      DashboardCommand.AddWidget(widget),
-      DashboardCommand.RemoveWidget("w1"),
-      DashboardCommand.MoveWidget("w1", GridPosition(1, 1)),
-      DashboardCommand.ResizeWidget("w1", GridSize(4, 4)),
-      DashboardCommand.FocusWidget("w1"),
-      DashboardCommand.EnterEditMode,
-      DashboardCommand.ExitEditMode,
-      DashboardCommand.SetTheme("dark"),
-      DashboardCommand.PreviewTheme(null),
-      DashboardCommand.CycleThemeMode,
-      DashboardCommand.WidgetCrash("w1", "essentials:clock", RuntimeException("boom")),
-      DashboardCommand.SwitchProfile("p1"),
-      DashboardCommand.CreateProfile("Work"),
-      DashboardCommand.DeleteProfile("p2"),
-      DashboardCommand.ResetLayout,
-      DashboardCommand.ToggleStatusBar,
-    )
+    val commands =
+      listOf(
+        DashboardCommand.AddWidget(widget),
+        DashboardCommand.RemoveWidget("w1"),
+        DashboardCommand.MoveWidget("w1", GridPosition(1, 1)),
+        DashboardCommand.ResizeWidget("w1", GridSize(4, 4)),
+        DashboardCommand.FocusWidget("w1"),
+        DashboardCommand.EnterEditMode,
+        DashboardCommand.ExitEditMode,
+        DashboardCommand.SetTheme("dark"),
+        DashboardCommand.PreviewTheme(null),
+        DashboardCommand.CycleThemeMode,
+        DashboardCommand.WidgetCrash("w1", "essentials:clock", RuntimeException("boom")),
+        DashboardCommand.SwitchProfile("p1"),
+        DashboardCommand.CreateProfile("Work"),
+        DashboardCommand.DeleteProfile("p2"),
+        DashboardCommand.ResetLayout,
+        DashboardCommand.ToggleStatusBar,
+      )
 
     for (command in commands) {
       vm.dispatch(command)
@@ -349,7 +346,7 @@ class DashboardViewModelTest {
     val dataProviderRegistry: DataProviderRegistry,
     val providerSettingsStore: ProviderSettingsStore,
     val entitlementManager: EntitlementManager,
-    val setupEvaluator: SetupEvaluatorImpl,
+    val setupEvaluator: SetupEvaluator,
     val pairedDeviceStore: PairedDeviceStore,
   )
 }

@@ -27,8 +27,8 @@ private val KEY_LUX_VALUES: FloatArray = floatArrayOf(1f, 10f, 100f, 1000f, 1000
 /**
  * Custom Canvas composable displaying a logarithmic lux meter for illuminance threshold.
  *
- * Uses [luxToPosition]/[positionToLux] from LuxMapping.kt for logarithmic scaling.
- * Supports tap and drag gestures to adjust the threshold.
+ * Uses [luxToPosition]/[positionToLux] from LuxMapping.kt for logarithmic scaling. Supports tap and
+ * drag gestures to adjust the threshold.
  */
 @Composable
 public fun IlluminanceThresholdControl(

@@ -20,8 +20,8 @@ import kotlinx.coroutines.flow.flowOf
 
 /**
  * Deterministic speed provider for demo mode. Emits [SpeedSnapshot] every 200ms with a triangle
- * wave pattern: ramp up to 140 km/h over 24 ticks, then ramp down over 24 ticks. Zero randomness
- * -- same tick always produces the same output.
+ * wave pattern: ramp up to 140 km/h over 24 ticks, then ramp down over 24 ticks. Zero randomness --
+ * same tick always produces the same output.
  */
 @DashboardDataProvider(
   localId = "demo-speed",

@@ -32,8 +32,7 @@ public fun GradientTypeSelector(
   modifier: Modifier = Modifier,
 ) {
   val theme = LocalDashboardTheme.current
-  val types: ImmutableList<GradientType> =
-    remember { GradientType.entries.toImmutableList() }
+  val types: ImmutableList<GradientType> = remember { GradientType.entries.toImmutableList() }
 
   LazyRow(
     modifier = modifier.fillMaxWidth().testTag("gradient_type_selector"),

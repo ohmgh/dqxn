@@ -25,16 +25,15 @@ import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
 import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
-import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.launch
 
 /**
  * Widget feature settings tab.
  *
  * Loads current settings from [ProviderSettingsStore.getAllSettings] via
- * [collectAsStateWithLifecycle] (Layer 1 -- overlay lifecycle). Renders [WidgetRenderer.settingsSchema]
- * items through [SettingRowDispatcher]. Value changes write through to
- * [ProviderSettingsStore.setSetting] immediately.
+ * [collectAsStateWithLifecycle] (Layer 1 -- overlay lifecycle). Renders
+ * [WidgetRenderer.settingsSchema] items through [SettingRowDispatcher]. Value changes write through
+ * to [ProviderSettingsStore.setSetting] immediately.
  */
 @Composable
 internal fun FeatureSettingsContent(
@@ -54,9 +53,11 @@ internal fun FeatureSettingsContent(
   val providerId = widgetSpec.typeId.substringAfter(':')
 
   val currentSettings by
-    providerSettingsStore.getAllSettings(packId, providerId).collectAsStateWithLifecycle(
-      initialValue = kotlinx.collections.immutable.persistentMapOf(),
-    )
+    providerSettingsStore
+      .getAllSettings(packId, providerId)
+      .collectAsStateWithLifecycle(
+        initialValue = kotlinx.collections.immutable.persistentMapOf(),
+      )
 
   val scope = rememberCoroutineScope()
 
@@ -76,9 +77,7 @@ internal fun FeatureSettingsContent(
         entitlementManager = entitlementManager,
         theme = theme,
         onValueChanged = { key, value ->
-          scope.launch {
-            providerSettingsStore.setSetting(packId, providerId, key, value)
-          }
+          scope.launch { providerSettingsStore.setSetting(packId, providerId, key, value) }
         },
         onNavigate = onNavigate,
         modifier = Modifier.fillMaxWidth(),

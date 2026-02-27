@@ -18,15 +18,15 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
 
 /**
- * Integration verification test for the essentials pack. Instantiates all 13 widget renderers
- * and verifies their inventory, typeId format, and metadata consistency.
+ * Integration verification test for the essentials pack. Instantiates all 13 widget renderers and
+ * verifies their inventory, typeId format, and metadata consistency.
  *
- * This test serves as the Phase 8 compile-time gate: if any renderer constructor fails,
- * typeId is malformed, or the pack inventory changes unexpectedly, these assertions catch it.
+ * This test serves as the Phase 8 compile-time gate: if any renderer constructor fails, typeId is
+ * malformed, or the pack inventory changes unexpectedly, these assertions catch it.
  *
- * Note: KSP-generated EssentialsGeneratedManifest is not tested here because the debugUnitTest
- * KSP variant produces an empty manifest (test sources contain no @DashboardWidget annotations).
- * The KSP manifest is verified indirectly -- if KSP processing fails, the main compilation fails
+ * Note: KSP-generated EssentialsGeneratedManifest is not tested here because the debugUnitTest KSP
+ * variant produces an empty manifest (test sources contain no @DashboardWidget annotations). The
+ * KSP manifest is verified indirectly -- if KSP processing fails, the main compilation fails
  * (compileDebugKotlin gate).
  */
 class PackCompileVerificationTest {

@@ -19,23 +19,21 @@ import org.junit.jupiter.api.Test
 @Tag("fast")
 class DashboardHapticsTest {
 
-  private val mockVibrator = mockk<Vibrator>(relaxed = true) {
-    every { hasVibrator() } returns true
-  }
+  private val mockVibrator =
+    mockk<Vibrator>(relaxed = true) { every { hasVibrator() } returns true }
 
-  private val mockVibratorManager = mockk<VibratorManager> {
-    every { defaultVibrator } returns mockVibrator
-  }
+  private val mockVibratorManager =
+    mockk<VibratorManager> { every { defaultVibrator } returns mockVibrator }
 
-  private val mockContext = mockk<Context>(relaxed = true) {
-    every { getSystemService(Context.VIBRATOR_MANAGER_SERVICE) } returns mockVibratorManager
-    @Suppress("DEPRECATION")
-    every { getSystemService(Context.VIBRATOR_SERVICE) } returns mockVibrator
-  }
+  private val mockContext =
+    mockk<Context>(relaxed = true) {
+      every { getSystemService(Context.VIBRATOR_MANAGER_SERVICE) } returns mockVibratorManager
+      @Suppress("DEPRECATION")
+      every { getSystemService(Context.VIBRATOR_SERVICE) } returns mockVibrator
+    }
 
-  private val mockReducedMotionHelper = mockk<ReducedMotionHelper> {
-    every { isReducedMotion } returns false
-  }
+  private val mockReducedMotionHelper =
+    mockk<ReducedMotionHelper> { every { isReducedMotion } returns false }
 
   private val stubEffect = mockk<VibrationEffect>()
 

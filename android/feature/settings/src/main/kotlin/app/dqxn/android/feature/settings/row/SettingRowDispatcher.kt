@@ -59,7 +59,6 @@ public fun SettingRowDispatcher(
           onValueChanged = onValueChanged,
           modifier = modifier,
         )
-
       is SettingDefinition.EnumSetting<*> ->
         EnumSettingRow(
           definition = definition as SettingDefinition.EnumSetting<Nothing>,
@@ -68,7 +67,6 @@ public fun SettingRowDispatcher(
           onValueChanged = onValueChanged,
           modifier = modifier,
         )
-
       is SettingDefinition.IntSetting ->
         IntSettingRow(
           definition = definition,
@@ -78,7 +76,6 @@ public fun SettingRowDispatcher(
           onValueChanged = onValueChanged,
           modifier = modifier,
         )
-
       is SettingDefinition.FloatSetting ->
         FloatSettingRow(
           definition = definition,
@@ -87,7 +84,6 @@ public fun SettingRowDispatcher(
           onValueChanged = onValueChanged,
           modifier = modifier,
         )
-
       is SettingDefinition.StringSetting ->
         StringSettingRow(
           definition = definition,
@@ -96,14 +92,12 @@ public fun SettingRowDispatcher(
           onValueChanged = onValueChanged,
           modifier = modifier,
         )
-
       is SettingDefinition.InfoSetting ->
         InfoSettingRow(
           definition = definition,
           theme = theme,
           modifier = modifier,
         )
-
       is SettingDefinition.InstructionSetting ->
         InstructionSettingRow(
           definition = definition,
@@ -111,7 +105,6 @@ public fun SettingRowDispatcher(
           onNavigate = onNavigate,
           modifier = modifier,
         )
-
       is SettingDefinition.AppPickerSetting ->
         AppPickerSettingRow(
           definition = definition,
@@ -120,7 +113,6 @@ public fun SettingRowDispatcher(
           onNavigate = onNavigate,
           modifier = modifier,
         )
-
       is SettingDefinition.DateFormatSetting ->
         DateFormatSettingRow(
           definition = definition,
@@ -129,7 +121,6 @@ public fun SettingRowDispatcher(
           onNavigate = onNavigate,
           modifier = modifier,
         )
-
       is SettingDefinition.TimezoneSetting ->
         TimezoneSettingRow(
           definition = definition,
@@ -138,7 +129,6 @@ public fun SettingRowDispatcher(
           onNavigate = onNavigate,
           modifier = modifier,
         )
-
       is SettingDefinition.SoundPickerSetting ->
         SoundPickerSettingRow(
           definition = definition,
@@ -147,7 +137,6 @@ public fun SettingRowDispatcher(
           onSoundPickerRequested = onSoundPickerRequested ?: {},
           modifier = modifier,
         )
-
       is SettingDefinition.UriSetting ->
         UriSettingRow(
           definition = definition,

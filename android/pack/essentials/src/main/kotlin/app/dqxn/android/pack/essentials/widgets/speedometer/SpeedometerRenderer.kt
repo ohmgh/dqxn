@@ -151,10 +151,8 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
   ) {
     val widgetData = LocalWidgetData.current
     val speed by remember { derivedStateOf { widgetData.snapshot<SpeedSnapshot>() } }
-    val acceleration by
-      remember { derivedStateOf { widgetData.snapshot<AccelerationSnapshot>() } }
-    val speedLimit by
-      remember { derivedStateOf { widgetData.snapshot<SpeedLimitSnapshot>() } }
+    val acceleration by remember { derivedStateOf { widgetData.snapshot<AccelerationSnapshot>() } }
+    val speedLimit by remember { derivedStateOf { widgetData.snapshot<SpeedLimitSnapshot>() } }
 
     val currentSpeedMps = speed?.speedMps ?: 0f
     val currentSpeedKph = currentSpeedMps * MPS_TO_KPH
@@ -251,8 +249,7 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
           val segmentSweep = ARC_SWEEP / ACCEL_SEGMENT_COUNT
           val segmentGap = 2f
           val fillCount = abs(accelSegments)
-          val segmentColor =
-            if (accelSegments > 0) COLOR_ACCEL_POSITIVE else COLOR_ACCEL_NEGATIVE
+          val segmentColor = if (accelSegments > 0) COLOR_ACCEL_POSITIVE else COLOR_ACCEL_NEGATIVE
 
           for (i in 0 until fillCount) {
             val segStart = ARC_START_ANGLE + i * segmentSweep + segmentGap / 2
@@ -262,8 +259,7 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
               startAngle = segStart,
               sweepAngle = segSweep,
               useCenter = false,
-              topLeft =
-                Offset(centerX - accelRadius, centerY - accelRadius),
+              topLeft = Offset(centerX - accelRadius, centerY - accelRadius),
               size = Size(accelRadius * 2, accelRadius * 2),
               style = Stroke(width = strokeWidthPx * 0.6f, cap = StrokeCap.Butt),
             )
@@ -281,16 +277,13 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
           val tickLen = if (isMajor) majorTickLen else minorTickLen
           val radAngle = Math.toRadians(angle.toDouble())
 
-          val startX =
-            centerX + (tickRadius - tickLen) * cos(radAngle).toFloat()
-          val startY =
-            centerY + (tickRadius - tickLen) * sin(radAngle).toFloat()
+          val startX = centerX + (tickRadius - tickLen) * cos(radAngle).toFloat()
+          val startY = centerY + (tickRadius - tickLen) * sin(radAngle).toFloat()
           val endX = centerX + tickRadius * cos(radAngle).toFloat()
           val endY = centerY + tickRadius * sin(radAngle).toFloat()
 
           drawLine(
-            color =
-              if (isMajor) Color.White else Color.White.copy(alpha = 0.5f),
+            color = if (isMajor) Color.White else Color.White.copy(alpha = 0.5f),
             start = Offset(startX, startY),
             end = Offset(endX, endY),
             strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx(),
@@ -321,8 +314,7 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
       if (isAmber || isRed) {
         val warningColor = if (isRed) Color.Red else COLOR_AMBER
         Canvas(
-          modifier =
-            Modifier.align(Alignment.TopEnd).padding(8.dp).requiredSize(24.dp),
+          modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).requiredSize(24.dp),
         ) {
           val trianglePath =
             Path().apply {
@@ -389,8 +381,8 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
     val COLOR_ACCEL_NEGATIVE = Color(0xFFEF5350)
 
     /**
-     * Auto-scaling gauge maximum using stepped thresholds. Each threshold covers a speed range;
-     * the next threshold kicks in when the current max is exceeded.
+     * Auto-scaling gauge maximum using stepped thresholds. Each threshold covers a speed range; the
+     * next threshold kicks in when the current max is exceeded.
      */
     fun computeGaugeMax(speedKph: Float): Float =
       when {
@@ -408,8 +400,8 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
     }
 
     /**
-     * Computes the number of acceleration segments to fill (out of 12). Positive acceleration
-     * fills positive segments; negative fills negative segments.
+     * Computes the number of acceleration segments to fill (out of 12). Positive acceleration fills
+     * positive segments; negative fills negative segments.
      */
     fun computeAccelerationSegments(acceleration: Float, maxAcceleration: Float): Int {
       if (maxAcceleration <= 0f) return 0
@@ -448,7 +440,10 @@ private fun detectSpeedUnitLabel(): String {
       }
     }
   return when (country.uppercase()) {
-    "US", "GB", "MM", "LR" -> "mph"
+    "US",
+    "GB",
+    "MM",
+    "LR" -> "mph"
     else -> "km/h"
   }
 }

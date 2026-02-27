@@ -193,7 +193,12 @@ private fun DrawScope.drawCardinalLabels(centerX: Float, centerY: Float, radius:
       val angleRad = (deg - 90f) * PI.toFloat() / 180f
       val x = centerX + labelRadius * cos(angleRad)
       val y = centerY + labelRadius * sin(angleRad)
-      canvas.nativeCanvas.drawText(label, x, y + paint.textSize / 3f, if (label == "N") nPaint else paint)
+      canvas.nativeCanvas.drawText(
+        label,
+        x,
+        y + paint.textSize / 3f,
+        if (label == "N") nPaint else paint
+      )
     }
   }
 }

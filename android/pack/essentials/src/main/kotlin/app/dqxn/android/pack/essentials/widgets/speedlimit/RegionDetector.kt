@@ -18,15 +18,36 @@ internal object RegionDetector {
   /** Countries using miles per hour. */
   val MPH_COUNTRIES: Set<String> =
     setOf(
-      "US", "GB", "VG", "VI", "AS", "GU", "PR", // US territories, UK
-      "BS", "BZ", "AG", "WS", "KN", "LC", "GD", "VC", // Caribbean
-      "GI", "SH", // British overseas territories
+      "US",
+      "GB",
+      "VG",
+      "VI",
+      "AS",
+      "GU",
+      "PR", // US territories, UK
+      "BS",
+      "BZ",
+      "AG",
+      "WS",
+      "KN",
+      "LC",
+      "GD",
+      "VC", // Caribbean
+      "GI",
+      "SH", // British overseas territories
     )
 
   /** Detect user's region code from timezone, falling back to locale, then "US". */
   fun detectRegion(): String {
-    TIMEZONE_MAP[TimeZone.getDefault().id]?.let { return it }
-    Locale.getDefault().country.takeIf { it.isNotEmpty() }?.let { return it }
+    TIMEZONE_MAP[TimeZone.getDefault().id]?.let {
+      return it
+    }
+    Locale.getDefault()
+      .country
+      .takeIf { it.isNotEmpty() }
+      ?.let {
+        return it
+      }
     return FALLBACK_REGION
   }
 

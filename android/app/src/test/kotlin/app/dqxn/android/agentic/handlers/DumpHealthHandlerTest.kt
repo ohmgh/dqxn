@@ -1,10 +1,10 @@
 package app.dqxn.android.agentic.handlers
 
-import dev.agentic.android.runtime.CommandParams
-import dev.agentic.android.runtime.CommandResult
 import app.dqxn.android.sdk.observability.health.WidgetHealthMonitor
 import app.dqxn.android.sdk.observability.log.NoOpLogger
 import com.google.common.truth.Truth.assertThat
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,18 +18,20 @@ import org.junit.jupiter.api.Test
 @Tag("fast")
 class DumpHealthHandlerTest {
 
-  private val healthMonitor = WidgetHealthMonitor(
-    logger = NoOpLogger,
-    scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
-  )
+  private val healthMonitor =
+    WidgetHealthMonitor(
+      logger = NoOpLogger,
+      scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
+    )
   private val handler = DumpHealthHandler(healthMonitor)
 
   @Test
   fun `returns valid JSON when no widgets present`() = runTest {
-    val result = handler.execute(
-      CommandParams(traceId = "test-trace"),
-      "test-cmd",
-    )
+    val result =
+      handler.execute(
+        CommandParams(traceId = "test-trace"),
+        "test-cmd",
+      )
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
     val data = (result as CommandResult.Success).data
@@ -51,10 +53,11 @@ class DumpHealthHandlerTest {
   fun `returns widget data when widgets are tracked`() = runTest {
     healthMonitor.reportData("widget-1", "essentials:clock")
 
-    val result = handler.execute(
-      CommandParams(traceId = "test-trace"),
-      "test-cmd",
-    )
+    val result =
+      handler.execute(
+        CommandParams(traceId = "test-trace"),
+        "test-cmd",
+      )
 
     val data = (result as CommandResult.Success).data
     val json = Json.parseToJsonElement(data).jsonObject

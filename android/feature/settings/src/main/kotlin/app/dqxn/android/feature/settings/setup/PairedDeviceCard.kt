@@ -52,40 +52,44 @@ internal fun PairedDeviceCard(
   var forgettingMac by remember { mutableStateOf<String?>(null) }
 
   val isForgetting = forgettingMac == device.macAddress
-  val borderColor = when {
-    isForgetting -> SemanticColors.Error
-    isConnected -> theme.accentColor
-    else -> theme.secondaryTextColor.copy(alpha = 0.3f)
-  }
+  val borderColor =
+    when {
+      isForgetting -> SemanticColors.Error
+      isConnected -> theme.accentColor
+      else -> theme.secondaryTextColor.copy(alpha = 0.3f)
+    }
 
   Card(
     shape = RoundedCornerShape(CardSize.SMALL.cornerRadius),
     border = BorderStroke(1.dp, borderColor),
-    colors = CardDefaults.cardColors(
-      containerColor = if (isForgetting) {
-        SemanticColors.Error.copy(alpha = 0.05f)
-      } else {
-        theme.widgetBorderColor.copy(alpha = 0.03f)
-      },
-    ),
+    colors =
+      CardDefaults.cardColors(
+        containerColor =
+          if (isForgetting) {
+            SemanticColors.Error.copy(alpha = 0.05f)
+          } else {
+            theme.widgetBorderColor.copy(alpha = 0.03f)
+          },
+      ),
     modifier = Modifier.fillMaxWidth(),
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
-      modifier = Modifier
-        .fillMaxWidth()
-        .defaultMinSize(minHeight = 56.dp)
-        .padding(
-          horizontal = DashboardSpacing.CardInternalPadding,
-          vertical = DashboardSpacing.SpaceXS,
-        ),
+      modifier =
+        Modifier.fillMaxWidth()
+          .defaultMinSize(minHeight = 56.dp)
+          .padding(
+            horizontal = DashboardSpacing.CardInternalPadding,
+            vertical = DashboardSpacing.SpaceXS,
+          ),
     ) {
       Icon(
-        imageVector = if (isConnected) {
-          Icons.Filled.BluetoothConnected
-        } else {
-          Icons.Filled.BluetoothDisabled
-        },
+        imageVector =
+          if (isConnected) {
+            Icons.Filled.BluetoothConnected
+          } else {
+            Icons.Filled.BluetoothDisabled
+          },
         contentDescription = if (isConnected) "Connected" else "Disconnected",
         tint = if (isConnected) theme.accentColor else theme.secondaryTextColor,
         modifier = Modifier.size(20.dp),
@@ -95,19 +99,18 @@ internal fun PairedDeviceCard(
         text = device.name,
         style = DashboardTypography.label,
         color = theme.primaryTextColor,
-        modifier = Modifier
-          .weight(1f)
-          .padding(start = DashboardSpacing.IconTextGap),
+        modifier = Modifier.weight(1f).padding(start = DashboardSpacing.IconTextGap),
       )
 
       Text(
         text = if (isConnected) "Connected" else "Disconnected",
         style = DashboardTypography.caption,
-        color = if (isConnected) {
-          theme.accentColor
-        } else {
-          theme.primaryTextColor.copy(alpha = TextEmphasis.Disabled)
-        },
+        color =
+          if (isConnected) {
+            theme.accentColor
+          } else {
+            theme.primaryTextColor.copy(alpha = TextEmphasis.Disabled)
+          },
         modifier = Modifier.padding(end = DashboardSpacing.SpaceXS),
       )
 

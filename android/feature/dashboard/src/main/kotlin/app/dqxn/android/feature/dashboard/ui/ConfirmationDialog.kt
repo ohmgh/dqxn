@@ -55,14 +55,15 @@ public fun ConfirmationDialog(
   ) {
     // Scrim layer
     Box(
-      modifier = modifier
-        .fillMaxSize()
-        .background(Color.Black.copy(alpha = 0.5f))
-        .clickable(
-          indication = null,
-          interactionSource = remember { MutableInteractionSource() },
-          onClick = onDismiss,
-        ),
+      modifier =
+        modifier
+          .fillMaxSize()
+          .background(Color.Black.copy(alpha = 0.5f))
+          .clickable(
+            indication = null,
+            interactionSource = remember { MutableInteractionSource() },
+            onClick = onDismiss,
+          ),
       contentAlignment = Alignment.Center,
     ) {
       // Dialog card with DashboardMotion animations
@@ -72,16 +73,16 @@ public fun ConfirmationDialog(
         exit = DashboardMotion.dialogExit,
       ) {
         Column(
-          modifier = Modifier
-            .fillMaxWidth(0.85f)
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .clickable(
-              indication = null,
-              interactionSource = remember { MutableInteractionSource() },
-              onClick = {}, // Consume click to prevent scrim dismiss
-            )
-            .padding(24.dp),
+          modifier =
+            Modifier.fillMaxWidth(0.85f)
+              .clip(RoundedCornerShape(24.dp))
+              .background(MaterialTheme.colorScheme.surface)
+              .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = {}, // Consume click to prevent scrim dismiss
+              )
+              .padding(24.dp),
         ) {
           Text(
             text = title,
@@ -99,13 +100,9 @@ public fun ConfirmationDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
           ) {
-            TextButton(onClick = onDismiss) {
-              Text(text = dismissLabel)
-            }
+            TextButton(onClick = onDismiss) { Text(text = dismissLabel) }
             Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = onConfirm) {
-              Text(text = confirmLabel)
-            }
+            Button(onClick = onConfirm) { Text(text = confirmLabel) }
           }
         }
       }

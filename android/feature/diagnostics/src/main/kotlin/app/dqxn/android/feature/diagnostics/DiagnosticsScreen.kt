@@ -59,7 +59,7 @@ public fun DiagnosticsScreen(
     ProviderHealthDashboard(
       statuses = providerStatuses.values.toList().toImmutableList(),
       currentTimeMs = System.currentTimeMillis(),
-      onProviderClick = { /* Detail navigation handled in future */ },
+      onProviderClick = { /* Detail navigation handled in future */},
     )
 
     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))

@@ -4,10 +4,10 @@ import android.app.Application
 import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.sdk.analytics.AnalyticsTracker
 import app.dqxn.android.sdk.observability.crash.CrashEvidenceWriter
-import dagger.hilt.android.HiltAndroidApp
-import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -25,6 +25,7 @@ public class DqxnApplication : Application() {
   @InstallIn(SingletonComponent::class)
   internal interface AnalyticsConsentEntryPoint {
     fun analyticsTracker(): AnalyticsTracker
+
     fun userPreferencesRepository(): UserPreferencesRepository
   }
 
@@ -35,16 +36,17 @@ public class DqxnApplication : Application() {
   }
 
   /**
-   * NF-P3: Read persisted analytics consent and apply to AnalyticsTracker before any
-   * other initialization that might trigger tracking (e.g., SessionLifecycleTracker).
+   * NF-P3: Read persisted analytics consent and apply to AnalyticsTracker before any other
+   * initialization that might trigger tracking (e.g., SessionLifecycleTracker).
    *
    * Uses runBlocking because this MUST complete before any tracking call fires.
-   * Application.onCreate() runs on the main thread before any UI frame is drawn,
-   * and the DataStore preferences read is fast (small file). A coroutine that races
-   * with SessionLifecycleTracker.onSessionStart() would create a consent gap.
+   * Application.onCreate() runs on the main thread before any UI frame is drawn, and the DataStore
+   * preferences read is fast (small file). A coroutine that races with
+   * SessionLifecycleTracker.onSessionStart() would create a consent gap.
    */
   private fun initializeAnalyticsConsent() {
-    val entryPoint = EntryPointAccessors.fromApplication(this, AnalyticsConsentEntryPoint::class.java)
+    val entryPoint =
+      EntryPointAccessors.fromApplication(this, AnalyticsConsentEntryPoint::class.java)
     val tracker = entryPoint.analyticsTracker()
     val prefsRepo = entryPoint.userPreferencesRepository()
     runBlocking {
@@ -54,8 +56,7 @@ public class DqxnApplication : Application() {
   }
 
   private fun installCrashHandler() {
-    val entryPoint =
-      EntryPointAccessors.fromApplication(this, CrashEntryPoint::class.java)
+    val entryPoint = EntryPointAccessors.fromApplication(this, CrashEntryPoint::class.java)
     val crashRecovery = entryPoint.crashRecovery()
 
     // CrashEvidenceWriter persists last-crash evidence via SharedPreferences.

@@ -49,9 +49,9 @@ class ShortcutsRendererTest : WidgetRendererContractTest() {
   fun `settings schema includes StringSetting with key displayName`() {
     val renderer = ShortcutsRenderer()
     val stringSetting =
-      renderer.settingsSchema
-        .filterIsInstance<SettingDefinition.StringSetting>()
-        .filter { it.key == "displayName" }
+      renderer.settingsSchema.filterIsInstance<SettingDefinition.StringSetting>().filter {
+        it.key == "displayName"
+      }
     assertThat(stringSetting).hasSize(1)
   }
 

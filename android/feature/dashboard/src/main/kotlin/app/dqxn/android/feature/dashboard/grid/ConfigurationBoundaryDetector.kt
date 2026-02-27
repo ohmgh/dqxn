@@ -23,8 +23,8 @@ import kotlinx.coroutines.launch
 /**
  * A configuration boundary representing a viewport rectangle for a display configuration.
  *
- * Used for no-straddle snap enforcement (F1.27) and edit-mode boundary visualization (F1.26).
- * On foldable devices this represents the fold area; on non-foldable devices it represents the
+ * Used for no-straddle snap enforcement (F1.27) and edit-mode boundary visualization (F1.26). On
+ * foldable devices this represents the fold area; on non-foldable devices it represents the
  * alternate-orientation viewport.
  */
 @Immutable
@@ -59,8 +59,7 @@ constructor(
   public fun observe(activity: Activity, scope: CoroutineScope) {
     scope.launch {
       windowInfoTracker.windowLayoutInfo(activity).collect { layoutInfo ->
-        val foldingFeatures =
-          layoutInfo.displayFeatures.filterIsInstance<FoldingFeature>()
+        val foldingFeatures = layoutInfo.displayFeatures.filterIsInstance<FoldingFeature>()
 
         val newBoundaries =
           if (foldingFeatures.isNotEmpty()) {

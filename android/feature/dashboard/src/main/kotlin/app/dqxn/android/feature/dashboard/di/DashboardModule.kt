@@ -34,11 +34,15 @@ public abstract class DashboardModule {
 
   @Binds
   @Singleton
-  internal abstract fun bindDataProviderRegistry(impl: DataProviderRegistryImpl): DataProviderRegistry
+  internal abstract fun bindDataProviderRegistry(
+    impl: DataProviderRegistryImpl
+  ): DataProviderRegistry
 
   @Binds
   @Singleton
-  internal abstract fun bindProviderStatusProvider(impl: ProviderStatusBridge): ProviderStatusProvider
+  internal abstract fun bindProviderStatusProvider(
+    impl: ProviderStatusBridge
+  ): ProviderStatusProvider
 
   public companion object {
 

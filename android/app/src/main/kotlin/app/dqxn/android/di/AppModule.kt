@@ -32,39 +32,32 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 public abstract class AppModule {
 
-  @Multibinds
-  internal abstract fun widgetRenderers(): Set<WidgetRenderer>
+  @Multibinds internal abstract fun widgetRenderers(): Set<WidgetRenderer>
 
-  @Multibinds
-  internal abstract fun dataProviders(): Set<@JvmSuppressWildcards DataProvider<*>>
+  @Multibinds internal abstract fun dataProviders(): Set<@JvmSuppressWildcards DataProvider<*>>
 
-  @Multibinds
-  internal abstract fun themeProviders(): Set<ThemeProvider>
+  @Multibinds internal abstract fun themeProviders(): Set<ThemeProvider>
 
-  @Multibinds
-  internal abstract fun dataProviderInterceptors(): Set<DataProviderInterceptor>
+  @Multibinds internal abstract fun dataProviderInterceptors(): Set<DataProviderInterceptor>
 
-  @Multibinds
-  internal abstract fun packManifests(): Set<DashboardPackManifest>
+  @Multibinds internal abstract fun packManifests(): Set<DashboardPackManifest>
 
   public companion object {
 
-    @Provides
-    @Singleton
-    public fun provideAlertEmitter(): AlertEmitter = AlertSoundManager()
+    @Provides @Singleton public fun provideAlertEmitter(): AlertEmitter = AlertSoundManager()
 
     @Provides
     @Singleton
     public fun provideCrashRecovery(
       @ApplicationContext context: Context,
-    ): CrashRecovery = CrashRecovery(
-      context.getSharedPreferences("crash_recovery", Context.MODE_PRIVATE),
-    )
+    ): CrashRecovery =
+      CrashRecovery(
+        context.getSharedPreferences("crash_recovery", Context.MODE_PRIVATE),
+      )
 
     @Provides
     @Singleton
-    public fun provideEntitlementManager(): EntitlementManager =
-      StubEntitlementManager()
+    public fun provideEntitlementManager(): EntitlementManager = StubEntitlementManager()
 
     @Provides
     @Singleton
@@ -78,9 +71,7 @@ public abstract class AppModule {
       @ApplicationContext context: Context,
     ): LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-    @Provides
-    @Singleton
-    public fun provideErrorReporter(): ErrorReporter = NoOpErrorReporter
+    @Provides @Singleton public fun provideErrorReporter(): ErrorReporter = NoOpErrorReporter
 
     @Provides
     @Singleton
@@ -90,8 +81,7 @@ public abstract class AppModule {
     @Singleton
     public fun provideSharedPreferences(
       @ApplicationContext context: Context,
-    ): SharedPreferences =
-      context.getSharedPreferences("dqxn_prefs", Context.MODE_PRIVATE)
+    ): SharedPreferences = context.getSharedPreferences("dqxn_prefs", Context.MODE_PRIVATE)
 
     @Provides
     @Singleton
@@ -104,6 +94,5 @@ public abstract class AppModule {
     public fun provideReviewManager(
       @ApplicationContext context: Context,
     ): ReviewManager = ReviewManagerFactory.create(context)
-
   }
 }

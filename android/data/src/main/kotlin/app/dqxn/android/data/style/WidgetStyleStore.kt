@@ -15,7 +15,9 @@ public interface WidgetStyleStore {
   /** Remove the style override, reverting to [WidgetStyle.Default]. */
   public suspend fun removeStyle(instanceId: String)
 
-  /** Observe all stored style overrides, keyed by widget instance ID. Used by data export (NF-P5). */
+  /**
+   * Observe all stored style overrides, keyed by widget instance ID. Used by data export (NF-P5).
+   */
   public fun getAllStyles(): Flow<Map<String, WidgetStyle>>
 
   /** Remove all style overrides. Used by "Delete All Data" (F14.4). */

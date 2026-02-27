@@ -58,8 +58,8 @@ import kotlinx.coroutines.launch
 internal const val MAX_CUSTOM_THEMES: Int = 12
 
 /**
- * Theme browser composable with 2-page HorizontalPager, free-first ordering, preview lifecycle,
- * and clone capability.
+ * Theme browser composable with 2-page HorizontalPager, free-first ordering, preview lifecycle, and
+ * clone capability.
  *
  * Key behaviors (from replication advisory section 3):
  * - **3-column grid**: [GridCells.Fixed] with 3 columns, 4 rows visible.
@@ -99,27 +99,24 @@ public fun ThemeSelector(
   val theme = LocalDashboardTheme.current
 
   // -- Filter by isDark, then sort: free first, then custom, then premium (F4.13) --
-  val filteredThemes = remember(allThemes, isDark) {
-    allThemes.filter { it.isDark == isDark }
-  }
+  val filteredThemes = remember(allThemes, isDark) { allThemes.filter { it.isDark == isDark } }
   val sortedThemes = remember(filteredThemes) { sortThemes(filteredThemes.toImmutableList()) }
 
   // -- Split into built-in vs custom for 2-page pager --
-  val builtInThemes = remember(sortedThemes) {
-    sortedThemes.filter { !it.themeId.startsWith("custom_") }
-  }
-  val customThemes = remember(sortedThemes) {
-    sortedThemes.filter { it.themeId.startsWith("custom_") }
-  }
+  val builtInThemes =
+    remember(sortedThemes) { sortedThemes.filter { !it.themeId.startsWith("custom_") } }
+  val customThemes =
+    remember(sortedThemes) { sortedThemes.filter { it.themeId.startsWith("custom_") } }
 
   // -- Pager state and coroutine scope --
   val pagerState = rememberPagerState(initialPage = 0) { 2 }
   val scope = rememberCoroutineScope()
 
   // -- Entitlement revocation: clear preview if previewing a revoked theme (F4.10) --
-  val currentEntitlements by entitlementManager.entitlementChanges.collectAsState(
-    initial = entitlementManager.getActiveEntitlements()
-  )
+  val currentEntitlements by
+    entitlementManager.entitlementChanges.collectAsState(
+      initial = entitlementManager.getActiveEntitlements()
+    )
   LaunchedEffect(currentEntitlements, previewTheme) {
     if (previewTheme != null) {
       val required = previewTheme.requiredAnyEntitlement
@@ -154,42 +151,44 @@ public fun ThemeSelector(
         modifier = Modifier.fillMaxSize().testTag("theme_pager"),
       ) { page ->
         when (page) {
-          0 -> ThemeGrid(
-            themes = builtInThemes,
-            previewTheme = previewTheme,
-            entitlementManager = entitlementManager,
-            customThemeCount = customThemeCount,
-            onTap = onPreviewTheme,
-            onLongPress = { themeItem ->
-              if (customThemeCount < MAX_CUSTOM_THEMES) onCloneToCustom(themeItem)
-              else onShowToast("Maximum $MAX_CUSTOM_THEMES custom themes reached")
-            },
-            onApply = { themeItem, hasAccess ->
-              if (hasAccess) onApplyTheme(themeItem.themeId)
-              else onShowToast("Upgrade required to apply this theme")
-            },
-            accentColor = theme.accentColor,
-            textColor = theme.primaryTextColor,
-            highlightColor = theme.highlightColor,
-            modifier = Modifier.testTag("theme_page_builtin"),
-          )
-          1 -> ThemeGrid(
-            themes = customThemes,
-            previewTheme = previewTheme,
-            entitlementManager = entitlementManager,
-            customThemeCount = customThemeCount,
-            onTap = onPreviewTheme,
-            onLongPress = { /* no clone for custom themes */ },
-            onApply = { themeItem, _ -> onApplyTheme(themeItem.themeId) },
-            accentColor = theme.accentColor,
-            textColor = theme.primaryTextColor,
-            highlightColor = theme.highlightColor,
-            isCustomPage = true,
-            onEdit = onOpenStudio,
-            onDelete = { themeItem -> onDeleteCustom(themeItem.themeId) },
-            onCreateNew = onCreateNewTheme,
-            modifier = Modifier.testTag("theme_page_custom"),
-          )
+          0 ->
+            ThemeGrid(
+              themes = builtInThemes,
+              previewTheme = previewTheme,
+              entitlementManager = entitlementManager,
+              customThemeCount = customThemeCount,
+              onTap = onPreviewTheme,
+              onLongPress = { themeItem ->
+                if (customThemeCount < MAX_CUSTOM_THEMES) onCloneToCustom(themeItem)
+                else onShowToast("Maximum $MAX_CUSTOM_THEMES custom themes reached")
+              },
+              onApply = { themeItem, hasAccess ->
+                if (hasAccess) onApplyTheme(themeItem.themeId)
+                else onShowToast("Upgrade required to apply this theme")
+              },
+              accentColor = theme.accentColor,
+              textColor = theme.primaryTextColor,
+              highlightColor = theme.highlightColor,
+              modifier = Modifier.testTag("theme_page_builtin"),
+            )
+          1 ->
+            ThemeGrid(
+              themes = customThemes,
+              previewTheme = previewTheme,
+              entitlementManager = entitlementManager,
+              customThemeCount = customThemeCount,
+              onTap = onPreviewTheme,
+              onLongPress = { /* no clone for custom themes */},
+              onApply = { themeItem, _ -> onApplyTheme(themeItem.themeId) },
+              accentColor = theme.accentColor,
+              textColor = theme.primaryTextColor,
+              highlightColor = theme.highlightColor,
+              isCustomPage = true,
+              onEdit = onOpenStudio,
+              onDelete = { themeItem -> onDeleteCustom(themeItem.themeId) },
+              onCreateNew = onCreateNewTheme,
+              modifier = Modifier.testTag("theme_page_custom"),
+            )
         }
       }
     }
@@ -276,17 +275,21 @@ private fun ThemeGrid(
         onTap = { onTap(themeItem) },
         onLongPress = { onLongPress(themeItem) },
         onApply = { onApply(themeItem, hasAccess) },
-        onEdit = if (isCustomPage && onEdit != null) { { onEdit(themeItem) } } else null,
-        onDelete = if (isCustomPage && onDelete != null) { { onDelete(themeItem) } } else null,
+        onEdit =
+          if (isCustomPage && onEdit != null) {
+            { onEdit(themeItem) }
+          } else null,
+        onDelete =
+          if (isCustomPage && onDelete != null) {
+            { onDelete(themeItem) }
+          } else null,
         textColor = textColor,
         highlightColor = highlightColor,
       )
     }
 
     if (isCustomPage && onCreateNew != null) {
-      item {
-        CreateThemeButton(accentColor = accentColor, onClick = onCreateNew)
-      }
+      item { CreateThemeButton(accentColor = accentColor, onClick = onCreateNew) }
     }
   }
 }
@@ -295,8 +298,8 @@ private fun ThemeGrid(
  * Individual theme card in the grid.
  *
  * Shows gradient background via [DashboardThemeDefinition.backgroundBrush], 4 color-dot swatches,
- * and star icon overlay for gated themes. Selection border uses [highlightColor].
- * Edit/delete actions for custom themes.
+ * and star icon overlay for gated themes. Selection border uses [highlightColor]. Edit/delete
+ * actions for custom themes.
  */
 @Composable
 private fun ThemeCard(
@@ -436,7 +439,6 @@ private fun CreateThemeButton(
 
 /**
  * Sorts themes into free-first ordering: free -> custom -> premium (F4.13).
- *
  * - Free: no [requiredAnyEntitlement] and not a custom theme.
  * - Custom: [themeId] starts with "custom_".
  * - Premium: has [requiredAnyEntitlement] and not custom.

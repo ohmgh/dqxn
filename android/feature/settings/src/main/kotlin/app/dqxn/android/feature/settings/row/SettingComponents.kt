@@ -6,9 +6,7 @@ import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -17,7 +15,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -42,7 +39,8 @@ internal fun SettingLabel(
   modifier: Modifier = Modifier,
 ) {
   Column(
-    modifier = modifier.defaultMinSize(minHeight = 76.dp).padding(vertical = DashboardSpacing.SpaceXS),
+    modifier =
+      modifier.defaultMinSize(minHeight = 76.dp).padding(vertical = DashboardSpacing.SpaceXS),
     verticalArrangement = Arrangement.Center,
   ) {
     Text(
@@ -116,7 +114,8 @@ internal fun PreviewSelectionCard(
   modifier: Modifier = Modifier,
   content: @Composable () -> Unit,
 ) {
-  val borderColor = if (isSelected) theme.accentColor else theme.widgetBorderColor.copy(alpha = 0.3f)
+  val borderColor =
+    if (isSelected) theme.accentColor else theme.widgetBorderColor.copy(alpha = 0.3f)
   val borderWidth = if (isSelected) 2.dp else 1.dp
   Card(
     onClick = onClick,
@@ -156,16 +155,16 @@ internal fun formatGmtOffset(zoneId: String): String {
 
 /**
  * Executes an [InstructionAction] by launching the appropriate Android intent.
- *
  * - [InstructionAction.OpenUrl]: Opens the URL via ACTION_VIEW.
  * - [InstructionAction.LaunchApp]: Launches the app via package manager launch intent.
  */
 internal fun executeInstructionAction(context: Context, action: InstructionAction) {
   when (action) {
     is InstructionAction.OpenUrl -> {
-      val intent = Intent(Intent.ACTION_VIEW, Uri.parse(action.url)).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-      }
+      val intent =
+        Intent(Intent.ACTION_VIEW, Uri.parse(action.url)).apply {
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
       context.startActivity(intent)
     }
     is InstructionAction.LaunchApp -> {
@@ -176,9 +175,7 @@ internal fun executeInstructionAction(context: Context, action: InstructionActio
       }
     }
     is InstructionAction.OpenSystemSettings -> {
-      val intent = Intent(action.settingsAction).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-      }
+      val intent = Intent(action.settingsAction).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
       context.startActivity(intent)
     }
   }

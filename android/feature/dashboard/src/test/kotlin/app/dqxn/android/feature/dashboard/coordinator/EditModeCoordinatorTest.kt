@@ -41,12 +41,11 @@ class EditModeCoordinatorTest {
     every { boundaries } returns MutableStateFlow(persistentListOf())
   }
   private val showStatusBarFlow = MutableStateFlow(false)
-  private val userPreferencesRepository: UserPreferencesRepository = mockk(relaxed = true) {
-    every { showStatusBar } returns showStatusBarFlow
-    coEvery { setShowStatusBar(any()) } coAnswers {
-      showStatusBarFlow.value = firstArg()
+  private val userPreferencesRepository: UserPreferencesRepository =
+    mockk(relaxed = true) {
+      every { showStatusBar } returns showStatusBarFlow
+      coEvery { setShowStatusBar(any()) } coAnswers { showStatusBarFlow.value = firstArg() }
     }
-  }
   private lateinit var layoutCoordinator: LayoutCoordinator
   private lateinit var coordinator: EditModeCoordinator
   private lateinit var fakeRepo: FakeLayoutRepository
@@ -55,22 +54,24 @@ class EditModeCoordinatorTest {
   fun setup() {
     showStatusBarFlow.value = false
     fakeRepo = FakeLayoutRepository()
-    layoutCoordinator = LayoutCoordinator(
-      layoutRepository = fakeRepo,
-      presetLoader = mockk(relaxed = true),
-      gridPlacementEngine = gridPlacementEngine,
-      configurationBoundaryDetector = boundaryDetector,
-      ioDispatcher = StandardTestDispatcher(),
-      logger = logger,
-    )
-    coordinator = EditModeCoordinator(
-      layoutCoordinator = layoutCoordinator,
-      gridPlacementEngine = gridPlacementEngine,
-      haptics = haptics,
-      reducedMotionHelper = reducedMotionHelper,
-      userPreferencesRepository = userPreferencesRepository,
-      logger = logger,
-    )
+    layoutCoordinator =
+      LayoutCoordinator(
+        layoutRepository = fakeRepo,
+        presetLoader = mockk(relaxed = true),
+        gridPlacementEngine = gridPlacementEngine,
+        configurationBoundaryDetector = boundaryDetector,
+        ioDispatcher = StandardTestDispatcher(),
+        logger = logger,
+      )
+    coordinator =
+      EditModeCoordinator(
+        layoutCoordinator = layoutCoordinator,
+        gridPlacementEngine = gridPlacementEngine,
+        haptics = haptics,
+        reducedMotionHelper = reducedMotionHelper,
+        userPreferencesRepository = userPreferencesRepository,
+        logger = logger,
+      )
   }
 
   // -- Edit mode --
@@ -148,22 +149,24 @@ class EditModeCoordinatorTest {
   fun `endDrag snaps to grid and commits position`() = runTest {
     // Recreate LayoutCoordinator with test scheduler-linked dispatcher
     fakeRepo = FakeLayoutRepository()
-    layoutCoordinator = LayoutCoordinator(
-      layoutRepository = fakeRepo,
-      presetLoader = mockk(relaxed = true),
-      gridPlacementEngine = gridPlacementEngine,
-      configurationBoundaryDetector = boundaryDetector,
-      ioDispatcher = StandardTestDispatcher(testScheduler),
-      logger = logger,
-    )
-    coordinator = EditModeCoordinator(
-      layoutCoordinator = layoutCoordinator,
-      gridPlacementEngine = gridPlacementEngine,
-      haptics = haptics,
-      reducedMotionHelper = reducedMotionHelper,
-      userPreferencesRepository = userPreferencesRepository,
-      logger = logger,
-    )
+    layoutCoordinator =
+      LayoutCoordinator(
+        layoutRepository = fakeRepo,
+        presetLoader = mockk(relaxed = true),
+        gridPlacementEngine = gridPlacementEngine,
+        configurationBoundaryDetector = boundaryDetector,
+        ioDispatcher = StandardTestDispatcher(testScheduler),
+        logger = logger,
+      )
+    coordinator =
+      EditModeCoordinator(
+        layoutCoordinator = layoutCoordinator,
+        gridPlacementEngine = gridPlacementEngine,
+        haptics = haptics,
+        reducedMotionHelper = reducedMotionHelper,
+        userPreferencesRepository = userPreferencesRepository,
+        logger = logger,
+      )
 
     // Place a widget in the layout first
     val widget = testWidget(instanceId = "w1", col = 2, row = 2)
@@ -200,22 +203,24 @@ class EditModeCoordinatorTest {
   fun `endDrag with no-straddle violation snaps to boundary`() = runTest {
     // Recreate LayoutCoordinator with test scheduler-linked dispatcher
     fakeRepo = FakeLayoutRepository()
-    layoutCoordinator = LayoutCoordinator(
-      layoutRepository = fakeRepo,
-      presetLoader = mockk(relaxed = true),
-      gridPlacementEngine = gridPlacementEngine,
-      configurationBoundaryDetector = boundaryDetector,
-      ioDispatcher = StandardTestDispatcher(testScheduler),
-      logger = logger,
-    )
-    coordinator = EditModeCoordinator(
-      layoutCoordinator = layoutCoordinator,
-      gridPlacementEngine = gridPlacementEngine,
-      haptics = haptics,
-      reducedMotionHelper = reducedMotionHelper,
-      userPreferencesRepository = userPreferencesRepository,
-      logger = logger,
-    )
+    layoutCoordinator =
+      LayoutCoordinator(
+        layoutRepository = fakeRepo,
+        presetLoader = mockk(relaxed = true),
+        gridPlacementEngine = gridPlacementEngine,
+        configurationBoundaryDetector = boundaryDetector,
+        ioDispatcher = StandardTestDispatcher(testScheduler),
+        logger = logger,
+      )
+    coordinator =
+      EditModeCoordinator(
+        layoutCoordinator = layoutCoordinator,
+        gridPlacementEngine = gridPlacementEngine,
+        haptics = haptics,
+        reducedMotionHelper = reducedMotionHelper,
+        userPreferencesRepository = userPreferencesRepository,
+        logger = logger,
+      )
 
     val widget = testWidget(instanceId = "w1", col = 0, row = 0, widthUnits = 4, heightUnits = 4)
     fakeRepo.setWidgets(listOf(widget))
@@ -312,9 +317,10 @@ class EditModeCoordinatorTest {
 
   @Test
   fun `updateResize enforces aspect ratio`() {
-    val widgetSpec = mockk<app.dqxn.android.sdk.contracts.widget.WidgetSpec> {
-      every { aspectRatio } returns 1.0f // Square widget
-    }
+    val widgetSpec =
+      mockk<app.dqxn.android.sdk.contracts.widget.WidgetSpec> {
+        every { aspectRatio } returns 1.0f // Square widget
+      }
 
     coordinator.startResize(
       widgetId = "w1",

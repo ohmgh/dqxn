@@ -12,7 +12,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,17 +29,18 @@ class NotificationCoordinatorTest {
   private val safeModeActive = MutableStateFlow(false)
   private val storageIsLow = MutableStateFlow(false)
 
-  private val safeModeManager: SafeModeManager = mockk(relaxed = true) {
-    every { safeModeActive } returns this@NotificationCoordinatorTest.safeModeActive
-  }
+  private val safeModeManager: SafeModeManager =
+    mockk(relaxed = true) {
+      every { safeModeActive } returns this@NotificationCoordinatorTest.safeModeActive
+    }
 
-  private val storageMonitor: StorageMonitor = mockk(relaxed = true) {
-    every { isLow } returns this@NotificationCoordinatorTest.storageIsLow
-  }
+  private val storageMonitor: StorageMonitor =
+    mockk(relaxed = true) { every { isLow } returns this@NotificationCoordinatorTest.storageIsLow }
 
-  private val alertEmitter: AlertEmitter = mockk(relaxed = true) {
-    coEvery { fire(any()) } returns app.dqxn.android.sdk.contracts.notification.AlertResult.PLAYED
-  }
+  private val alertEmitter: AlertEmitter =
+    mockk(relaxed = true) {
+      coEvery { fire(any()) } returns app.dqxn.android.sdk.contracts.notification.AlertResult.PLAYED
+    }
 
   private fun createCoordinator(): NotificationCoordinator =
     NotificationCoordinator(
@@ -203,12 +203,13 @@ class NotificationCoordinatorTest {
     coordinator.initialize(this + initJob)
     testScheduler.runCurrent()
 
-    val toast = InAppNotification.Toast(
-      id = "test_toast",
-      priority = NotificationPriority.NORMAL,
-      timestamp = System.currentTimeMillis(),
-      message = "Test toast",
-    )
+    val toast =
+      InAppNotification.Toast(
+        id = "test_toast",
+        priority = NotificationPriority.NORMAL,
+        timestamp = System.currentTimeMillis(),
+        message = "Test toast",
+      )
 
     coordinator.showToast(toast)
 
@@ -224,29 +225,28 @@ class NotificationCoordinatorTest {
   }
 
   @Test
-  fun `connection status disconnect shows NORMAL banner connect dismisses`() =
-    runTest {
-      val coordinator = createCoordinator()
-      val initJob = Job(coroutineContext[Job])
-      coordinator.initialize(this + initJob)
-      testScheduler.runCurrent()
+  fun `connection status disconnect shows NORMAL banner connect dismisses`() = runTest {
+    val coordinator = createCoordinator()
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
-      // Disconnect
-      coordinator.emitConnectionStatus("OBD2 Scanner", connected = false)
+    // Disconnect
+    coordinator.emitConnectionStatus("OBD2 Scanner", connected = false)
 
-      var banners = coordinator.activeBanners.value
-      assertThat(banners).hasSize(1)
-      assertThat(banners.first().priority).isEqualTo(NotificationPriority.NORMAL)
-      assertThat(banners.first().message).contains("OBD2 Scanner")
+    var banners = coordinator.activeBanners.value
+    assertThat(banners).hasSize(1)
+    assertThat(banners.first().priority).isEqualTo(NotificationPriority.NORMAL)
+    assertThat(banners.first().message).contains("OBD2 Scanner")
 
-      // Reconnect
-      coordinator.emitConnectionStatus("OBD2 Scanner", connected = true)
+    // Reconnect
+    coordinator.emitConnectionStatus("OBD2 Scanner", connected = true)
 
-      banners = coordinator.activeBanners.value
-      assertThat(banners).isEmpty()
+    banners = coordinator.activeBanners.value
+    assertThat(banners).isEmpty()
 
-      initJob.cancel()
-    }
+    initJob.cancel()
+  }
 
   @Test
   fun `safe mode banner has VIBRATE alert profile`() = runTest {
@@ -266,21 +266,20 @@ class NotificationCoordinatorTest {
   }
 
   @Test
-  fun `clearLayoutSaveFailure dismisses the save failure banner`() =
-    runTest {
-      val coordinator = createCoordinator()
-      val initJob = Job(coroutineContext[Job])
-      coordinator.initialize(this + initJob)
-      testScheduler.runCurrent()
+  fun `clearLayoutSaveFailure dismisses the save failure banner`() = runTest {
+    val coordinator = createCoordinator()
+    val initJob = Job(coroutineContext[Job])
+    coordinator.initialize(this + initJob)
+    testScheduler.runCurrent()
 
-      coordinator.reportLayoutSaveFailure()
-      assertThat(coordinator.activeBanners.value).hasSize(1)
+    coordinator.reportLayoutSaveFailure()
+    assertThat(coordinator.activeBanners.value).hasSize(1)
 
-      coordinator.clearLayoutSaveFailure()
-      assertThat(coordinator.activeBanners.value).isEmpty()
+    coordinator.clearLayoutSaveFailure()
+    assertThat(coordinator.activeBanners.value).isEmpty()
 
-      initJob.cancel()
-    }
+    initJob.cancel()
+  }
 
   @Test
   fun `safe mode banner triggers alertEmitter fire with VIBRATE profile`() = runTest {

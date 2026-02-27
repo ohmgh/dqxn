@@ -78,9 +78,7 @@ constructor(
     scope.launch {
       withContext(ioDispatcher) {
         layoutRepository.getActiveProfileWidgets().collect { widgets ->
-          _layoutState.update { state ->
-            state.copy(widgets = widgets, isLoading = false)
-          }
+          _layoutState.update { state -> state.copy(widgets = widgets, isLoading = false) }
           logger.debug(TAG) { "Layout loaded: ${widgets.size} widgets" }
         }
       }
@@ -195,9 +193,7 @@ constructor(
     val existingWidgets = _layoutState.value.widgets.toList()
     val presetWidgets = withContext(ioDispatcher) { presetLoader.loadPreset() }
 
-    _layoutState.update { state ->
-      state.copy(widgets = presetWidgets.toImmutableList())
-    }
+    _layoutState.update { state -> state.copy(widgets = presetWidgets.toImmutableList()) }
 
     // Persist: remove old widgets, then add preset widgets
     withContext(ioDispatcher) {

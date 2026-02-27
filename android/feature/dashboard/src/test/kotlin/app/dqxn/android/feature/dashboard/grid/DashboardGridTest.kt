@@ -9,10 +9,8 @@ import app.dqxn.android.sdk.ui.widget.GridConstants
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -26,15 +24,16 @@ import org.junit.jupiter.api.Test
 @Tag("fast")
 class DashboardGridTest {
 
-  private val defaultStyle = WidgetStyle(
-    backgroundStyle = BackgroundStyle.NONE,
-    opacity = 1f,
-    showBorder = false,
-    hasGlowEffect = false,
-    cornerRadiusPercent = 0,
-    rimSizePercent = 0,
-    zLayer = 0,
-  )
+  private val defaultStyle =
+    WidgetStyle(
+      backgroundStyle = BackgroundStyle.NONE,
+      opacity = 1f,
+      showBorder = false,
+      hasGlowEffect = false,
+      cornerRadiusPercent = 0,
+      rimSizePercent = 0,
+      zLayer = 0,
+    )
 
   private fun widget(
     id: String,
@@ -43,36 +42,39 @@ class DashboardGridTest {
     width: Int = 2,
     height: Int = 2,
     zIndex: Int = 0,
-  ): DashboardWidgetInstance = DashboardWidgetInstance(
-    instanceId = id,
-    typeId = "essentials:test",
-    position = GridPosition(col = col, row = row),
-    size = GridSize(widthUnits = width, heightUnits = height),
-    style = defaultStyle,
-    settings = persistentMapOf(),
-    dataSourceBindings = persistentMapOf(),
-    zIndex = zIndex,
-  )
+  ): DashboardWidgetInstance =
+    DashboardWidgetInstance(
+      instanceId = id,
+      typeId = "essentials:test",
+      position = GridPosition(col = col, row = row),
+      size = GridSize(widthUnits = width, heightUnits = height),
+      style = defaultStyle,
+      settings = persistentMapOf(),
+      dataSourceBindings = persistentMapOf(),
+      zIndex = zIndex,
+    )
 
   @Test
   fun `viewport culling filters out off-screen widgets`() {
     val viewportCols = 10
     val viewportRows = 8
 
-    val widgets = listOf(
-      widget("w1", col = 0, row = 0), // visible (top-left)
-      widget("w2", col = 5, row = 3), // visible (center)
-      widget("w3", col = 8, row = 6), // visible (near edge)
-      widget("w4", col = 12, row = 0), // OFF-SCREEN: col >= viewportCols
-      widget("w5", col = 0, row = 10), // OFF-SCREEN: row >= viewportRows
-    )
+    val widgets =
+      listOf(
+        widget("w1", col = 0, row = 0), // visible (top-left)
+        widget("w2", col = 5, row = 3), // visible (center)
+        widget("w3", col = 8, row = 6), // visible (near edge)
+        widget("w4", col = 12, row = 0), // OFF-SCREEN: col >= viewportCols
+        widget("w5", col = 0, row = 10), // OFF-SCREEN: row >= viewportRows
+      )
 
-    val visible = widgets.filter { widget ->
-      widget.position.col < viewportCols &&
-        widget.position.row < viewportRows &&
-        widget.position.col + widget.size.widthUnits > 0 &&
-        widget.position.row + widget.size.heightUnits > 0
-    }
+    val visible =
+      widgets.filter { widget ->
+        widget.position.col < viewportCols &&
+          widget.position.row < viewportRows &&
+          widget.position.col + widget.size.widthUnits > 0 &&
+          widget.position.row + widget.size.heightUnits > 0
+      }
 
     assertThat(visible).hasSize(3)
     assertThat(visible.map { it.instanceId }).containsExactly("w1", "w2", "w3")
@@ -80,11 +82,12 @@ class DashboardGridTest {
 
   @Test
   fun `widget z-index ordering correct`() {
-    val widgets = listOf(
-      widget("low", col = 0, row = 0, zIndex = 1),
-      widget("high", col = 2, row = 0, zIndex = 5),
-      widget("medium", col = 4, row = 0, zIndex = 3),
-    )
+    val widgets =
+      listOf(
+        widget("low", col = 0, row = 0, zIndex = 1),
+        widget("high", col = 2, row = 0, zIndex = 5),
+        widget("medium", col = 4, row = 0, zIndex = 3),
+      )
 
     val sorted = widgets.sortedBy { it.zIndex }
     assertThat(sorted.map { it.instanceId }).containsExactly("low", "medium", "high").inOrder()
@@ -121,10 +124,11 @@ class DashboardGridTest {
   @Test
   fun `widget straddling fold boundary snapped to nearest side`() {
     // Fold boundary at col 10 (horizontal fold line: left=0, top=0, right=10, bottom=20)
-    val boundary = ConfigurationBoundary(
-      name = "fold",
-      rect = androidx.compose.ui.unit.IntRect(left = 0, top = 0, right = 10, bottom = 20),
-    )
+    val boundary =
+      ConfigurationBoundary(
+        name = "fold",
+        rect = androidx.compose.ui.unit.IntRect(left = 0, top = 0, right = 10, bottom = 20),
+      )
 
     // Widget at col=8, width=4 -> straddles right edge (8+4=12 > 10)
     val position = GridPosition(col = 8, row = 2)
@@ -139,10 +143,11 @@ class DashboardGridTest {
 
   @Test
   fun `widget fully within one fold region is not relocated`() {
-    val boundary = ConfigurationBoundary(
-      name = "fold",
-      rect = androidx.compose.ui.unit.IntRect(left = 0, top = 0, right = 10, bottom = 20),
-    )
+    val boundary =
+      ConfigurationBoundary(
+        name = "fold",
+        rect = androidx.compose.ui.unit.IntRect(left = 0, top = 0, right = 10, bottom = 20),
+      )
 
     // Widget fully inside boundary: col=2, width=4 -> 2+4=6 < 10
     val position = GridPosition(col = 2, row = 3)
@@ -161,9 +166,10 @@ class DashboardGridTest {
     every { detector.boundaries } returns boundaryFlow
 
     // Simulate boundary change
-    val newBoundaries = persistentListOf(
-      ConfigurationBoundary("fold", androidx.compose.ui.unit.IntRect(0, 0, 10, 20)),
-    )
+    val newBoundaries =
+      persistentListOf(
+        ConfigurationBoundary("fold", androidx.compose.ui.unit.IntRect(0, 0, 10, 20)),
+      )
     boundaryFlow.value = newBoundaries
 
     // Verify the boundary flow emits new boundaries
@@ -173,20 +179,23 @@ class DashboardGridTest {
 
   @Test
   fun `no-straddle enforced during drag - snap preview respects fold boundary`() {
-    val boundary = ConfigurationBoundary(
-      name = "fold",
-      rect = androidx.compose.ui.unit.IntRect(left = 0, top = 0, right = 10, bottom = 20),
-    )
+    val boundary =
+      ConfigurationBoundary(
+        name = "fold",
+        rect = androidx.compose.ui.unit.IntRect(left = 0, top = 0, right = 10, bottom = 20),
+      )
 
     // Simulate drag ending at pixel position that maps to a straddling grid position
     val gridUnitPx = 32f
 
     // Snap pixel (9 * 32, 2 * 32) -> raw col = 9, raw row = 2
-    val snappedPosition = gridPlacementEngine.snapToGrid(9f * gridUnitPx, 2f * gridUnitPx, gridUnitPx)
+    val snappedPosition =
+      gridPlacementEngine.snapToGrid(9f * gridUnitPx, 2f * gridUnitPx, gridUnitPx)
 
     // Now enforce no-straddle with the fold boundary
     val size = GridSize(widthUnits = 4, heightUnits = 2)
-    val finalPosition = gridPlacementEngine.enforceNoStraddle(snappedPosition, size, listOf(boundary))
+    val finalPosition =
+      gridPlacementEngine.enforceNoStraddle(snappedPosition, size, listOf(boundary))
 
     // Widget should NOT straddle the boundary at col=10
     val widgetRight = finalPosition.col + size.widthUnits

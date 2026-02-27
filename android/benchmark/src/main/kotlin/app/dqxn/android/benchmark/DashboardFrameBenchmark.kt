@@ -13,25 +13,24 @@ import org.junit.runner.RunWith
 /**
  * Frame timing benchmarks measuring dashboard rendering performance.
  *
- * Steady-state gate: P95 frame time < 16.67ms with 12 active widgets (NF10).
- * Edit mode: measures enter/exit transition + wiggle animation frame timing.
+ * Steady-state gate: P95 frame time < 16.67ms with 12 active widgets (NF10). Edit mode: measures
+ * enter/exit transition + wiggle animation frame timing.
  *
- * Widget population uses the agentic ContentProvider (available in debug + benchmark builds).
- * The `add-widget` handler validates typeId against registered WidgetRenderer set
- * and dispatches DashboardCommand.AddWidget through the command bus.
+ * Widget population uses the agentic ContentProvider (available in debug + benchmark builds). The
+ * `add-widget` handler validates typeId against registered WidgetRenderer set and dispatches
+ * DashboardCommand.AddWidget through the command bus.
  *
  * Run on a connected device: `./gradlew :benchmark:connectedBenchmarkAndroidTest`
  */
 @RunWith(AndroidJUnit4::class)
 public class DashboardFrameBenchmark {
 
-  @get:Rule
-  public val rule: MacrobenchmarkRule = MacrobenchmarkRule()
+  @get:Rule public val rule: MacrobenchmarkRule = MacrobenchmarkRule()
 
   /**
-   * Steady-state frame timing with 12 active widgets rendering simultaneously.
-   * Populates widgets via agentic ContentProvider, then soaks for 5 seconds
-   * while demo pack data flows through all widget render nodes.
+   * Steady-state frame timing with 12 active widgets rendering simultaneously. Populates widgets
+   * via agentic ContentProvider, then soaks for 5 seconds while demo pack data flows through all
+   * widget render nodes.
    */
   @Test
   public fun steadyState12Widgets() {
@@ -54,8 +53,8 @@ public class DashboardFrameBenchmark {
   }
 
   /**
-   * Edit mode cycle: enter edit mode (wiggle animations) then exit.
-   * Measures frame timing during transition animations.
+   * Edit mode cycle: enter edit mode (wiggle animations) then exit. Measures frame timing during
+   * transition animations.
    */
   @Test
   public fun editModeCycle() {
@@ -85,9 +84,9 @@ public class DashboardFrameBenchmark {
   }
 
   /**
-   * Populates 12 widgets via the agentic ContentProvider's add-widget handler.
-   * Uses available essentials widget types, duplicating if fewer than 12 are registered.
-   * Available in debug and benchmark builds (AgenticContentProvider registered in both).
+   * Populates 12 widgets via the agentic ContentProvider's add-widget handler. Uses available
+   * essentials widget types, duplicating if fewer than 12 are registered. Available in debug and
+   * benchmark builds (AgenticContentProvider registered in both).
    */
   private fun MacrobenchmarkScope.populateWidgets() {
     val widgetTypes =

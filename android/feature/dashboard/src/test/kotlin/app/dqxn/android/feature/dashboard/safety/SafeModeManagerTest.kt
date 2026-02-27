@@ -18,11 +18,12 @@ class SafeModeManagerTest {
   @BeforeEach
   fun setUp() {
     fakePrefs = FakeSharedPreferences()
-    manager = SafeModeManager(
-      prefs = fakePrefs,
-      logger = NoOpLogger,
-      clock = testClock,
-    )
+    manager =
+      SafeModeManager(
+        prefs = fakePrefs,
+        logger = NoOpLogger,
+        clock = testClock,
+      )
   }
 
   @Test
@@ -106,11 +107,12 @@ class SafeModeManagerTest {
     manager.reportCrash("w4", "t4")
 
     // Simulate process death by creating a new SafeModeManager with the same prefs and clock
-    val restoredManager = SafeModeManager(
-      prefs = fakePrefs,
-      logger = NoOpLogger,
-      clock = testClock,
-    )
+    val restoredManager =
+      SafeModeManager(
+        prefs = fakePrefs,
+        logger = NoOpLogger,
+        clock = testClock,
+      )
 
     // Should still be in safe mode after "restart"
     assertThat(restoredManager.safeModeActive.value).isTrue()

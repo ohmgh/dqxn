@@ -25,10 +25,11 @@ class ProviderHealthDashboardTest {
   fun `renders provider list with statuses`() {
     val statuses =
       listOf(
-        providerStatus("gps", "GPS Speed", isConnected = true, lastUpdate = now - 2_000),
-        providerStatus("accel", "Accelerometer", isConnected = true, lastUpdate = now - 5_000),
-        providerStatus("battery", "Battery", isConnected = false, lastUpdate = now - 8_000),
-      ).toImmutableList()
+          providerStatus("gps", "GPS Speed", isConnected = true, lastUpdate = now - 2_000),
+          providerStatus("accel", "Accelerometer", isConnected = true, lastUpdate = now - 5_000),
+          providerStatus("battery", "Battery", isConnected = false, lastUpdate = now - 8_000),
+        )
+        .toImmutableList()
 
     composeTestRule.setContent {
       ProviderHealthDashboard(
@@ -86,10 +87,14 @@ class ProviderHealthDashboardTest {
       )
     }
 
-    composeTestRule.onNodeWithTag("connection_indicator_gps", useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule
+      .onNodeWithTag("connection_indicator_gps", useUnmergedTree = true)
+      .assertIsDisplayed()
     composeTestRule.onNodeWithTag("provider_row_gps", useUnmergedTree = true).assertIsDisplayed()
     // No staleness indicator for fresh provider
-    composeTestRule.onNodeWithTag("staleness_indicator_gps", useUnmergedTree = true).assertDoesNotExist()
+    composeTestRule
+      .onNodeWithTag("staleness_indicator_gps", useUnmergedTree = true)
+      .assertDoesNotExist()
   }
 
   @Test

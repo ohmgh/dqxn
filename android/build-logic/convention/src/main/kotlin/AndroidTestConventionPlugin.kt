@@ -32,6 +32,7 @@ class AndroidTestConventionPlugin : Plugin<Project> {
       // Configure all Test tasks with JUnit Platform and structured output
       tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+        failOnNoDiscoveredTests.set(false)
         reports.junitXml.outputLocation.set(layout.buildDirectory.dir("test-results/${name}"))
       }
 

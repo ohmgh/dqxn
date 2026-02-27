@@ -47,34 +47,34 @@ public class ClockDigitalRenderer @Inject constructor() : WidgetRenderer {
   override val priority: Int = 100
   override val requiredAnyEntitlement: Set<String>? = null
 
-  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> =
-    setOf(TimeSnapshot::class)
+  override val compatibleSnapshots: Set<KClass<out DataSnapshot>> = setOf(TimeSnapshot::class)
 
-  override val settingsSchema: List<SettingDefinition<*>> = listOf(
-    SettingDefinition.BooleanSetting(
-      key = "showSeconds",
-      label = "Show Seconds",
-      description = "Display seconds alongside hours and minutes",
-      default = false,
-    ),
-    SettingDefinition.BooleanSetting(
-      key = "use24HourFormat",
-      label = "24-Hour Format",
-      description = "Use 24-hour time format instead of 12-hour AM/PM",
-      default = true,
-    ),
-    SettingDefinition.BooleanSetting(
-      key = "showLeadingZero",
-      label = "Show Leading Zero",
-      description = "Display leading zero for single-digit hours",
-      default = true,
-    ),
-    SettingDefinition.TimezoneSetting(
-      key = "timezoneId",
-      label = "Timezone",
-      description = "Override the system timezone",
-    ),
-  )
+  override val settingsSchema: List<SettingDefinition<*>> =
+    listOf(
+      SettingDefinition.BooleanSetting(
+        key = "showSeconds",
+        label = "Show Seconds",
+        description = "Display seconds alongside hours and minutes",
+        default = false,
+      ),
+      SettingDefinition.BooleanSetting(
+        key = "use24HourFormat",
+        label = "24-Hour Format",
+        description = "Use 24-hour time format instead of 12-hour AM/PM",
+        default = true,
+      ),
+      SettingDefinition.BooleanSetting(
+        key = "showLeadingZero",
+        label = "Show Leading Zero",
+        description = "Display leading zero for single-digit hours",
+        default = true,
+      ),
+      SettingDefinition.TimezoneSetting(
+        key = "timezoneId",
+        label = "Timezone",
+        description = "Override the system timezone",
+      ),
+    )
 
   override fun getDefaults(context: WidgetContext): WidgetDefaults =
     WidgetDefaults(
@@ -85,8 +85,8 @@ public class ClockDigitalRenderer @Inject constructor() : WidgetRenderer {
     )
 
   /**
-   * Returns defaults with width adjusted for seconds display.
-   * When showSeconds is enabled, width increases by 2 units.
+   * Returns defaults with width adjusted for seconds display. When showSeconds is enabled, width
+   * increases by 2 units.
    */
   internal fun getDefaultsWithSettings(
     context: WidgetContext,
@@ -159,9 +159,7 @@ public class ClockDigitalRenderer @Inject constructor() : WidgetRenderer {
     return formatAccessibilityTime(snapshot, use24Hour = true, showSeconds = false)
   }
 
-  /**
-   * Returns a formatted accessibility description for the given snapshot and settings.
-   */
+  /** Returns a formatted accessibility description for the given snapshot and settings. */
   internal fun accessibilityDescriptionWithSettings(
     data: WidgetData,
     settings: Map<String, Any?>,
@@ -176,7 +174,10 @@ public class ClockDigitalRenderer @Inject constructor() : WidgetRenderer {
 
   private data class TimeDisplay(val mainTime: String, val suffix: String)
 
-  private fun extractTime(snapshot: TimeSnapshot, settings: ImmutableMap<String, Any>): TimeDisplay {
+  private fun extractTime(
+    snapshot: TimeSnapshot,
+    settings: ImmutableMap<String, Any>
+  ): TimeDisplay {
     val use24Hour = settings["use24HourFormat"] as? Boolean ?: true
     val showSeconds = settings["showSeconds"] as? Boolean ?: false
     val showLeadingZero = settings["showLeadingZero"] as? Boolean ?: true
@@ -185,25 +186,29 @@ public class ClockDigitalRenderer @Inject constructor() : WidgetRenderer {
     val zoneId = resolveZone(timezoneIdStr, snapshot.zoneId)
     val zonedTime = Instant.ofEpochMilli(snapshot.epochMillis).atZone(zoneId)
 
-    val hour = if (use24Hour) zonedTime.hour else {
-      val h = zonedTime.hour % 12
-      if (h == 0) 12 else h
-    }
+    val hour =
+      if (use24Hour) zonedTime.hour
+      else {
+        val h = zonedTime.hour % 12
+        if (h == 0) 12 else h
+      }
     val minute = zonedTime.minute
     val second = zonedTime.second
 
     val hourStr = if (showLeadingZero) "%02d".format(hour) else "$hour"
-    val mainTime = if (showSeconds) {
-      "$hourStr:%02d:%02d".format(minute, second)
-    } else {
-      "$hourStr:%02d".format(minute)
-    }
+    val mainTime =
+      if (showSeconds) {
+        "$hourStr:%02d:%02d".format(minute, second)
+      } else {
+        "$hourStr:%02d".format(minute)
+      }
 
-    val suffix = if (!use24Hour) {
-      if (zonedTime.hour < 12) "AM" else "PM"
-    } else {
-      ""
-    }
+    val suffix =
+      if (!use24Hour) {
+        if (zonedTime.hour < 12) "AM" else "PM"
+      } else {
+        ""
+      }
 
     return TimeDisplay(mainTime, suffix)
   }
@@ -223,12 +228,13 @@ public class ClockDigitalRenderer @Inject constructor() : WidgetRenderer {
     ): String {
       val zoneId = ZoneId.of(snapshot.zoneId)
       val zonedTime = Instant.ofEpochMilli(snapshot.epochMillis).atZone(zoneId)
-      val pattern = when {
-        use24Hour && showSeconds -> "HH:mm:ss"
-        use24Hour -> "HH:mm"
-        showSeconds -> "h:mm:ss a"
-        else -> "h:mm a"
-      }
+      val pattern =
+        when {
+          use24Hour && showSeconds -> "HH:mm:ss"
+          use24Hour -> "HH:mm"
+          showSeconds -> "h:mm:ss a"
+          else -> "h:mm a"
+        }
       val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
       return zonedTime.format(formatter)
     }

@@ -26,14 +26,14 @@ import kotlinx.coroutines.launch
 /**
  * Coordinates in-app notification display: banners (persistent) and toasts (brief).
  *
- * Banners are condition-keyed (NOT UUID-keyed) to prevent flicker on re-derivation per pitfall 4
- * in research. Each banner has a stable [String] key derived from its condition source. When the
+ * Banners are condition-keyed (NOT UUID-keyed) to prevent flicker on re-derivation per pitfall 4 in
+ * research. Each banner has a stable [String] key derived from its condition source. When the
  * coordinator is re-created (process death), it re-observes singleton state flows which re-emit
  * current values. [StateFlow] already provides distinct-until-changed semantics via structural
  * equality, preventing duplicate banner show/dismiss cycles.
  *
- * Notification priority ordering: CRITICAL > HIGH > NORMAL > LOW. Banners are sorted by priority
- * in [activeBanners].
+ * Notification priority ordering: CRITICAL > HIGH > NORMAL > LOW. Banners are sorted by priority in
+ * [activeBanners].
  */
 public class NotificationCoordinator
 @Inject
@@ -56,8 +56,8 @@ constructor(
     _activeBanners.asStateFlow()
 
   /**
-   * Toast channel: single-consumer, exactly-once delivery. Buffered to prevent loss when
-   * consumer is temporarily suspended.
+   * Toast channel: single-consumer, exactly-once delivery. Buffered to prevent loss when consumer
+   * is temporarily suspended.
    */
   public val toasts: Channel<InAppNotification.Toast> = Channel(capacity = Channel.BUFFERED)
 
@@ -79,40 +79,38 @@ constructor(
     // Observe safe mode state (CRITICAL banner)
     // StateFlow already guarantees distinctUntilChanged semantics via structural equality.
     scope.launch {
-      safeModeManager.safeModeActive
-        .collect { isActive ->
-          if (isActive) {
-            showBanner(
-              id = BANNER_SAFE_MODE,
-              priority = NotificationPriority.CRITICAL,
-              title = "Safe Mode",
-              message = "App recovered from repeated crashes. Reset to fix.",
-              dismissible = false,
-              alertProfile = AlertProfile(mode = AlertMode.VIBRATE),
-            )
-          } else {
-            dismissBanner(BANNER_SAFE_MODE)
-          }
+      safeModeManager.safeModeActive.collect { isActive ->
+        if (isActive) {
+          showBanner(
+            id = BANNER_SAFE_MODE,
+            priority = NotificationPriority.CRITICAL,
+            title = "Safe Mode",
+            message = "App recovered from repeated crashes. Reset to fix.",
+            dismissible = false,
+            alertProfile = AlertProfile(mode = AlertMode.VIBRATE),
+          )
+        } else {
+          dismissBanner(BANNER_SAFE_MODE)
         }
+      }
     }
 
     // Observe low storage state (HIGH banner, NF41)
     // StateFlow already guarantees distinctUntilChanged semantics.
     scope.launch {
-      storageMonitor.isLow
-        .collect { isLow ->
-          if (isLow) {
-            showBanner(
-              id = BANNER_LOW_STORAGE,
-              priority = NotificationPriority.HIGH,
-              title = "Low Storage",
-              message = "Storage is running low. Free up space to save changes.",
-              dismissible = true,
-            )
-          } else {
-            dismissBanner(BANNER_LOW_STORAGE)
-          }
+      storageMonitor.isLow.collect { isLow ->
+        if (isLow) {
+          showBanner(
+            id = BANNER_LOW_STORAGE,
+            priority = NotificationPriority.HIGH,
+            title = "Low Storage",
+            message = "Storage is running low. Free up space to save changes.",
+            dismissible = true,
+          )
+        } else {
+          dismissBanner(BANNER_LOW_STORAGE)
         }
+      }
     }
 
     logger.info(TAG) { "NotificationCoordinator initialized" }
@@ -131,19 +129,21 @@ constructor(
     title: String,
     message: String,
     dismissible: Boolean = true,
-    actions: ImmutableList<app.dqxn.android.sdk.contracts.notification.NotificationAction> = persistentListOf(),
+    actions: ImmutableList<app.dqxn.android.sdk.contracts.notification.NotificationAction> =
+      persistentListOf(),
     alertProfile: AlertProfile? = null,
   ) {
-    val banner = InAppNotification.Banner(
-      id = id,
-      priority = priority,
-      timestamp = System.currentTimeMillis(),
-      alertProfile = alertProfile,
-      title = title,
-      message = message,
-      actions = actions,
-      dismissible = dismissible,
-    )
+    val banner =
+      InAppNotification.Banner(
+        id = id,
+        priority = priority,
+        timestamp = System.currentTimeMillis(),
+        alertProfile = alertProfile,
+        title = title,
+        message = message,
+        actions = actions,
+        dismissible = dismissible,
+      )
 
     synchronized(bannerMap) {
       bannerMap[id] = banner
@@ -153,9 +153,7 @@ constructor(
     // Fire alert side-effect (F9.2, F9.3, F9.4) when an alert profile is configured.
     // alertEmitter.fire() is a suspend function, so we launch on the coordinator scope.
     if (alertProfile != null && ::coordinatorScope.isInitialized) {
-      coordinatorScope.launch {
-        alertEmitter.fire(alertProfile)
-      }
+      coordinatorScope.launch { alertEmitter.fire(alertProfile) }
     }
 
     logger.debug(TAG) { "Banner shown: $id ($priority)" }
@@ -171,9 +169,7 @@ constructor(
     }
   }
 
-  /**
-   * Show a toast notification. Sends to [toasts] channel for exactly-once consumption.
-   */
+  /** Show a toast notification. Sends to [toasts] channel for exactly-once consumption. */
   public fun showToast(toast: InAppNotification.Toast) {
     toasts.trySend(toast)
     logger.debug(TAG) { "Toast queued: ${toast.id}" }
@@ -222,11 +218,11 @@ constructor(
     dismissBanner(BANNER_LAYOUT_SAVE_FAILED)
   }
 
-  /** Sort banners by priority and update the state flow. Must be called with [bannerMap] lock held. */
+  /**
+   * Sort banners by priority and update the state flow. Must be called with [bannerMap] lock held.
+   */
   private fun refreshBannerState() {
-    _activeBanners.value = bannerMap.values
-      .sortedBy { it.priority.ordinal }
-      .toImmutableList()
+    _activeBanners.value = bannerMap.values.sortedBy { it.priority.ordinal }.toImmutableList()
   }
 
   internal companion object {

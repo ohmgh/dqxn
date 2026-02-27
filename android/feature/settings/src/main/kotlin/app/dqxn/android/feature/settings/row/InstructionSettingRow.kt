@@ -28,8 +28,8 @@ import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 /**
  * Instruction setting row with step number badge, description, and optional action button.
  *
- * Per Pitfall 7 (dual execution): [executeInstructionAction] fires locally AND calls
- * [onNavigate] with [SettingNavigation.OnInstructionAction] so the parent can track verification.
+ * Per Pitfall 7 (dual execution): [executeInstructionAction] fires locally AND calls [onNavigate]
+ * with [SettingNavigation.OnInstructionAction] so the parent can track verification.
  *
  * Step badge renders as accent color circle with white number text.
  */
@@ -50,10 +50,7 @@ internal fun InstructionSettingRow(
     if (definition.stepNumber > 0) {
       Box(
         contentAlignment = Alignment.Center,
-        modifier =
-          Modifier
-            .size(32.dp)
-            .background(color = theme.accentColor, shape = CircleShape),
+        modifier = Modifier.size(32.dp).background(color = theme.accentColor, shape = CircleShape),
       ) {
         Text(
           text = definition.stepNumber.toString(),
@@ -65,8 +62,7 @@ internal fun InstructionSettingRow(
 
     Column(
       modifier =
-        Modifier
-          .weight(1f)
+        Modifier.weight(1f)
           .padding(
             start = if (definition.stepNumber > 0) DashboardSpacing.SpaceS else 0.dp,
           ),

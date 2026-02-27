@@ -46,25 +46,29 @@ constructor(
     val centerRow = viewportRows / 2
 
     // Generate candidate positions sorted by distance from center (center-biased)
-    val candidates = buildList {
-      for (row in 0 until viewportRows) {
-        for (col in 0 until viewportCols) {
-          if (col + widgetSize.widthUnits <= viewportCols &&
-            row + widgetSize.heightUnits <= viewportRows
-          ) {
-            add(GridPosition(col, row))
+    val candidates =
+      buildList {
+          for (row in 0 until viewportRows) {
+            for (col in 0 until viewportCols) {
+              if (
+                col + widgetSize.widthUnits <= viewportCols &&
+                  row + widgetSize.heightUnits <= viewportRows
+              ) {
+                add(GridPosition(col, row))
+              }
+            }
           }
         }
-      }
-    }.sortedBy { pos ->
-      val dc = abs(pos.col + widgetSize.widthUnits / 2 - centerCol)
-      val dr = abs(pos.row + widgetSize.heightUnits / 2 - centerRow)
-      dc + dr // Manhattan distance from center
-    }
+        .sortedBy { pos ->
+          val dc = abs(pos.col + widgetSize.widthUnits / 2 - centerCol)
+          val dr = abs(pos.row + widgetSize.heightUnits / 2 - centerRow)
+          dc + dr // Manhattan distance from center
+        }
 
     for (candidate in candidates) {
-      if (!hasOverlap(candidate, widgetSize, existingWidgets) &&
-        !straddlesBoundary(candidate, widgetSize, configBoundaries)
+      if (
+        !hasOverlap(candidate, widgetSize, existingWidgets) &&
+          !straddlesBoundary(candidate, widgetSize, configBoundaries)
       ) {
         logger.debug(TAG) { "Optimal position found: ($candidate)" }
         return candidate

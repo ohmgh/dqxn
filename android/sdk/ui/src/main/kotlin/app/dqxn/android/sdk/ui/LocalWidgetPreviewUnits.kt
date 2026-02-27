@@ -20,5 +20,8 @@ public data class PreviewGridSize(
  *
  * Value is `null` when no resize is in progress.
  */
-public val LocalWidgetPreviewUnits: androidx.compose.runtime.ProvidableCompositionLocal<PreviewGridSize?> =
-  compositionLocalOf { null }
+public val LocalWidgetPreviewUnits:
+  androidx.compose.runtime.ProvidableCompositionLocal<PreviewGridSize?> =
+  compositionLocalOf {
+    null
+  }

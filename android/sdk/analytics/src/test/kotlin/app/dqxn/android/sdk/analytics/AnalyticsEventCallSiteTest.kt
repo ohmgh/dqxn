@@ -9,9 +9,8 @@ import org.junit.jupiter.api.Test
 
 class AnalyticsEventCallSiteTest {
 
-  private val tracker = mockk<AnalyticsTracker>(relaxed = true).also {
-    every { it.isEnabled() } returns true
-  }
+  private val tracker =
+    mockk<AnalyticsTracker>(relaxed = true).also { every { it.isEnabled() } returns true }
 
   @Test
   fun `trackWidgetAdd fires WidgetAdded event with correct typeId`() {
@@ -67,11 +66,12 @@ class AnalyticsEventCallSiteTest {
     // When disabled, track should be called but the underlying implementation no-ops.
     // With a mock, we verify the call sites still delegate to track() -- the tracker
     // itself is responsible for suppression. Verify extension functions don't skip.
-    every { gatedTracker.track(any()) } answers {
-      // Simulate consent gate: if !isEnabled, don't dispatch
-      if (!gatedTracker.isEnabled()) return@answers
-      error("Should not reach here when disabled")
-    }
+    every { gatedTracker.track(any()) } answers
+      {
+        // Simulate consent gate: if !isEnabled, don't dispatch
+        if (!gatedTracker.isEnabled()) return@answers
+        error("Should not reach here when disabled")
+      }
 
     gatedTracker.trackWidgetAdd("essentials:clock")
     gatedTracker.trackThemeChange("midnight", isDark = false)
@@ -112,15 +112,16 @@ class AnalyticsEventCallSiteTest {
     assertThat(upsellKeys).doesNotContain("user_id")
 
     // SessionEnd contains quality metrics, no PII.
-    val sessionEnd = AnalyticsEvent.SessionEnd(
-      durationMs = 60_000,
-      widgetCount = 5,
-      editCount = 2,
-      jankPercent = 1.0f,
-      peakThermalLevel = "NORMAL",
-      widgetRenderFailures = 0,
-      providerErrors = 0,
-    )
+    val sessionEnd =
+      AnalyticsEvent.SessionEnd(
+        durationMs = 60_000,
+        widgetCount = 5,
+        editCount = 2,
+        jankPercent = 1.0f,
+        peakThermalLevel = "NORMAL",
+        widgetRenderFailures = 0,
+        providerErrors = 0,
+      )
     val sessionKeys = sessionEnd.params.keys
     assertThat(sessionKeys).doesNotContain("email")
     assertThat(sessionKeys).doesNotContain("name")
@@ -130,11 +131,12 @@ class AnalyticsEventCallSiteTest {
 
   @Test
   fun `UpsellTrigger constants are distinct`() {
-    val triggers = setOf(
-      UpsellTrigger.THEME_PREVIEW,
-      UpsellTrigger.WIDGET_PICKER,
-      UpsellTrigger.SETTINGS,
-    )
+    val triggers =
+      setOf(
+        UpsellTrigger.THEME_PREVIEW,
+        UpsellTrigger.WIDGET_PICKER,
+        UpsellTrigger.SETTINGS,
+      )
     // If any constants were duplicated, the set would have fewer than 3 elements.
     assertThat(triggers).hasSize(3)
     assertThat(UpsellTrigger.THEME_PREVIEW).isNotEqualTo(UpsellTrigger.WIDGET_PICKER)
