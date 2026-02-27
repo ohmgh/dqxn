@@ -476,6 +476,28 @@ Plans:
 
 ---
 
+## Phase 14: UI Visual & Interactive Parity
+
+**Goal:** Restore UI visual and interactive parity with the old codebase after migration. Fix broken typography, spacing, animations, graphical assets, OverlayNavHost sheets, theme/widget preview states, bottom bar, and splash screen — adapted to the new architecture.
+
+**Requirements:** F1.8, F1.9, F1.11, F1.20, F1.21, F1.29, F2.5, F2.18, F3.14, F4.6, F11.7
+
+**Success Criteria:**
+1. Typography scale, spacing tokens, and font rendering match old codebase visual baseline
+2. All animations (edit mode wiggle, widget add/remove, page transitions, sheet transitions) implemented with correct timing curves
+3. OverlayNavHost sheets present/dismiss correctly with proper scrim and gesture handling
+4. Theme preview and widget preview states render live with correct revert-on-cancel behavior
+5. Bottom bar auto-hide, reveal, and layout-float behavior matches specification
+6. Splash screen renders correctly with proper transition to dashboard
+7. All graphical assets (icons, backgrounds, decorative elements) render at correct density
+8. All verifications automated (zero manual tests)
+
+**Plans:** 0 plans
+
+**Depends on:** Phase 13
+
+---
+
 ## Dependency Graph
 
 ```mermaid
@@ -498,6 +520,7 @@ graph TD
     P9 --> P13[Phase 13: E2E + Launch Polish]
     P11 --> P13
     P12 --> P13
+    P13 --> P14[Phase 14: UI Visual & Interactive Parity]
 ```
 
 Phases 3+4 concurrent after Phase 2. Phase 6 gates on-device work (depends on Phases 3, 4, 5 — Phase 3 is a direct dependency, not just transitive through 5). Phase 8 is the architecture validation gate and spawns three parallel streams: Phase 10 (settings/setup — unblocks sg-erp2), Phase 12 (CI/benchmarks — no UI dependency), and Phase 9 (depends on both Phase 8 directly for snapshot types and Phase 10 for SetupSheet). Phase 11 (theme UI, diagnostics, onboarding) follows Phase 10 and runs concurrent with Phase 9. Phase 13 is the convergence point.
