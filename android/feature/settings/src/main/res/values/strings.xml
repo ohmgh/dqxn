@@ -50,7 +50,7 @@
   <string name="main_settings_delete_all_description">Remove all settings, layouts, paired devices, and analytics data</string>
 
   <!-- About App Banner -->
-  <string name="about_app_tagline">Life is a dash. Make it beautiful.</string>
+  <string name="about_app_tagline">\"Life is a dash. Make it beautiful.\"</string>
   <string name="about_app_attribution">-- The Dashing Dachshund</string>
 
   <!-- MainSettings new rows -->

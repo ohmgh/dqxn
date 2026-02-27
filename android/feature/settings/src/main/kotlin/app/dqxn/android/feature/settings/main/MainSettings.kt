@@ -1,5 +1,6 @@
 package app.dqxn.android.feature.settings.main
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,14 +8,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,9 +39,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -240,40 +246,63 @@ private fun AboutAppBanner(
   theme: DashboardThemeDefinition,
   modifier: Modifier = Modifier,
 ) {
-  Column(
+  Row(
     modifier =
       modifier
         .fillMaxWidth()
-        .padding(vertical = DashboardSpacing.SpaceL)
+        .height(112.dp)
+        .padding(vertical = DashboardSpacing.SpaceS)
         .testTag("about_app_banner"),
-    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.Center,
   ) {
-    Box(
+    Image(
+      painter = painterResource(id = R.drawable.dqxn_logo_cyber_dog),
+      contentDescription = "DQXN Cyber-Dog",
+      modifier = Modifier.fillMaxHeight(),
+      contentScale = ContentScale.FillHeight,
+      alignment = Alignment.CenterStart,
+    )
+
+    Spacer(modifier = Modifier.width(DashboardSpacing.SpaceS))
+
+    Column(
       modifier =
-        Modifier.size(64.dp).clip(CircleShape).background(theme.accentColor.copy(alpha = 0.15f)),
-      contentAlignment = Alignment.Center,
+        Modifier.fillMaxHeight()
+          .padding(top = DashboardSpacing.SpaceM, bottom = DashboardSpacing.SpaceXS),
+      verticalArrangement = Arrangement.Center,
     ) {
-      Text(text = "D", style = DashboardTypography.title, color = theme.accentColor)
-    }
-    Spacer(modifier = Modifier.height(DashboardSpacing.SpaceS))
-    Text(
-      text = stringResource(R.string.about_app_tagline),
-      style = DashboardTypography.description,
-      color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
-    )
-    Text(
-      text = stringResource(R.string.about_app_attribution),
-      style = DashboardTypography.caption,
-      color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
-    )
-    Spacer(modifier = Modifier.height(DashboardSpacing.SpaceXS))
-    Text(text = "DQXN", style = DashboardTypography.sectionHeader, color = theme.primaryTextColor)
-    if (versionName.isNotEmpty()) {
       Text(
-        text = versionName,
-        style = DashboardTypography.caption,
-        color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
+        text = stringResource(R.string.about_app_tagline),
+        style =
+          DashboardTypography.title.copy(
+            fontWeight = FontWeight.Normal,
+            fontStyle = FontStyle.Italic,
+          ),
+        color = theme.accentColor,
       )
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(
+        text = stringResource(R.string.about_app_attribution),
+        style = DashboardTypography.buttonLabel,
+        color = theme.secondaryTextColor,
+      )
+      Spacer(modifier = Modifier.height(DashboardSpacing.SpaceXXS))
+      Row(verticalAlignment = Alignment.Bottom) {
+        Text(
+          text = "DQXN",
+          style = DashboardTypography.caption,
+          color = theme.primaryTextColor,
+        )
+        Spacer(modifier = Modifier.width(DashboardSpacing.SpaceXXS))
+        if (versionName.isNotEmpty()) {
+          Text(
+            text = versionName,
+            style = DashboardTypography.caption,
+            color = theme.secondaryTextColor,
+          )
+        }
+      }
     }
   }
 }

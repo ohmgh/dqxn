@@ -4,11 +4,11 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 /**
- * Integration tests verifying all 10 OverlayNavHost routes have correct definitions and transitions.
+ * Integration tests verifying all 11 OverlayNavHost routes have correct definitions and transitions.
  *
  * These tests validate route configuration at the Kotlin level without requiring a full Compose
  * test rule, covering:
- * - Route uniqueness (all 10 routes have distinct qualified names)
+ * - Route uniqueness (all 11 routes have distinct qualified names)
  * - AutoSwitchModeRoute for theme mode selection
  * - ThemeSelector popEnter uses fadeIn not previewEnter (replication advisory section 4)
  * - ThemeStudioRoute carries optional themeId parameter
@@ -24,7 +24,7 @@ class OverlayNavHostRouteTest {
   // -----------------------------------------------------------------------
 
   @Test
-  fun `all 10 routes have distinct qualified names`() {
+  fun `all 11 routes have distinct qualified names`() {
     val routeNames =
       listOf(
         EmptyRoute::class.qualifiedName,
@@ -37,13 +37,14 @@ class OverlayNavHostRouteTest {
         ThemeStudioRoute::class.qualifiedName,
         DiagnosticsRoute::class.qualifiedName,
         OnboardingRoute::class.qualifiedName,
+        PackBrowserRoute::class.qualifiedName,
       )
 
     // All non-null
     routeNames.forEach { name -> assertThat(name).isNotNull() }
 
     // All distinct
-    assertThat(routeNames.toSet()).hasSize(10)
+    assertThat(routeNames.toSet()).hasSize(11)
   }
 
   @Test
@@ -61,6 +62,7 @@ class OverlayNavHostRouteTest {
         ThemeStudioRoute::class,
         DiagnosticsRoute::class,
         OnboardingRoute::class,
+        PackBrowserRoute::class,
       )
 
     routes.forEach { route -> assertThat(route.qualifiedName).startsWith(expectedPackage) }
@@ -112,8 +114,8 @@ class OverlayNavHostRouteTest {
   // -----------------------------------------------------------------------
 
   @Test
-  fun `hub-type routes are WidgetPicker, Setup, Diagnostics, Onboarding`() {
-    // Hub-type routes use DashboardMotion.hubEnter/hubExit for all 4 transition params
+  fun `hub-type routes are WidgetPicker, Setup, Diagnostics, Onboarding, PackBrowser`() {
+    // Hub-type routes use DashboardMotion.hubEnter/hubExit (PackBrowser uses source-varying variant)
     // This test documents the categorization -- actual transition verification is in Compose tests
     val hubRoutes =
       listOf(
@@ -121,9 +123,10 @@ class OverlayNavHostRouteTest {
         SetupRoute::class.qualifiedName,
         DiagnosticsRoute::class.qualifiedName,
         OnboardingRoute::class.qualifiedName,
+        PackBrowserRoute::class.qualifiedName,
       )
 
-    assertThat(hubRoutes).hasSize(4)
+    assertThat(hubRoutes).hasSize(5)
     hubRoutes.forEach { name -> assertThat(name).isNotNull() }
   }
 
@@ -201,5 +204,6 @@ class OverlayNavHostRouteTest {
     assertThat(AutoSwitchModeRoute).isSameInstanceAs(AutoSwitchModeRoute)
     assertThat(DiagnosticsRoute).isSameInstanceAs(DiagnosticsRoute)
     assertThat(OnboardingRoute).isSameInstanceAs(OnboardingRoute)
+    assertThat(PackBrowserRoute).isSameInstanceAs(PackBrowserRoute)
   }
 }

@@ -63,7 +63,7 @@ class MainSettingsTest {
   @Test
   fun `about app banner shows tagline`() {
     renderMainSettings()
-    composeTestRule.onNodeWithText("Life is a dash. Make it beautiful.").assertExists()
+    composeTestRule.onNodeWithText("\"Life is a dash. Make it beautiful.\"").assertExists()
   }
 
   @Test

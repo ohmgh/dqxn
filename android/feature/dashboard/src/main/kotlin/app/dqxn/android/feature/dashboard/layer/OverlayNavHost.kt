@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,11 +24,15 @@ import app.dqxn.android.feature.dashboard.coordinator.ThemeCoordinator
 import app.dqxn.android.feature.diagnostics.DiagnosticsScreen
 import app.dqxn.android.feature.onboarding.FirstRunFlow
 import app.dqxn.android.feature.onboarding.OnboardingViewModel
+import app.dqxn.android.feature.settings.PackBrowserContent
+import app.dqxn.android.feature.settings.R as SettingsR
 import app.dqxn.android.feature.settings.WidgetPicker
 import app.dqxn.android.feature.settings.main.MainSettings
 import app.dqxn.android.feature.settings.main.MainSettingsViewModel
 import app.dqxn.android.sdk.contracts.setup.SetupEvaluator
 import app.dqxn.android.feature.settings.setup.SetupSheet
+import app.dqxn.android.feature.settings.overlay.OverlayScaffold
+import app.dqxn.android.feature.settings.overlay.OverlayType
 import app.dqxn.android.feature.settings.theme.AutoSwitchModeContent
 import app.dqxn.android.feature.settings.theme.ThemeSelector
 import app.dqxn.android.feature.settings.theme.ThemeStudio
@@ -43,7 +48,7 @@ import kotlinx.coroutines.launch
 /**
  * Layer 1 navigation scaffold for overlay UI.
  *
- * Route table: 10 type-safe routes via `@Serializable` route classes in [OverlayRoutes.kt]:
+ * Route table: 11 type-safe routes via `@Serializable` route classes in [OverlayRoutes.kt]:
  * - [EmptyRoute] -- no overlay (Layer 0 visible)
  * - [WidgetPickerRoute] -- widget selection grid, hub transitions
  * - [SettingsRoute] -- main settings, source-varying transitions
@@ -54,6 +59,7 @@ import kotlinx.coroutines.launch
  * - [ThemeStudioRoute] -- custom theme editor, preview transitions, popEnter=fadeIn(150ms)
  * - [DiagnosticsRoute] -- diagnostics hub, hub transitions
  * - [OnboardingRoute] -- first-run onboarding, hub transitions
+ * - [PackBrowserRoute] -- pack browser, source-varying hub transitions
  *
  * **Source-varying transitions (replication advisory section 4):**
  * - Settings exit to ThemeSelector: fadeOut(100ms) not previewExit
@@ -124,6 +130,7 @@ public fun OverlayNavHost(
           target.contains(AUTO_SWITCH_MODE_ROUTE_PATTERN) -> fadeOut(tween(100))
           target.contains(DIAGNOSTICS_ROUTE_PATTERN) -> ExitTransition.None
           target.contains(ONBOARDING_ROUTE_PATTERN) -> ExitTransition.None
+          target.contains(PACK_BROWSER_ROUTE_PATTERN) -> ExitTransition.None
           else -> DashboardMotion.previewExit
         }
       },
@@ -134,6 +141,7 @@ public fun OverlayNavHost(
           source.contains(AUTO_SWITCH_MODE_ROUTE_PATTERN) -> fadeIn(tween(150))
           source.contains(DIAGNOSTICS_ROUTE_PATTERN) -> EnterTransition.None
           source.contains(ONBOARDING_ROUTE_PATTERN) -> EnterTransition.None
+          source.contains(PACK_BROWSER_ROUTE_PATTERN) -> EnterTransition.None
           else -> DashboardMotion.previewEnter
         }
       },
@@ -181,7 +189,7 @@ public fun OverlayNavHost(
             navController.navigate(ThemeSelectorRoute(isDark = true))
           },
           onNavigateToDashPacks = {
-            // Pack browser navigation -- future
+            navController.navigate(PackBrowserRoute)
           },
           onNavigateToDiagnostics = { navController.navigate(DiagnosticsRoute) },
           onResetDash = { onCommand(DashboardCommand.ResetLayout) },
@@ -217,7 +225,7 @@ public fun OverlayNavHost(
             navController.navigate(SetupRoute(providerId = providerId))
           },
           onNavigateToPackBrowser = { _ ->
-            // Pack browser -- future
+            navController.navigate(PackBrowserRoute)
           },
         )
       }
@@ -261,15 +269,21 @@ public fun OverlayNavHost(
         previewFraction = 0.15f,
         onDismiss = { navController.popBackStack() },
       ) {
-        AutoSwitchModeContent(
-          selectedMode = themeState.autoSwitchMode,
-          illuminanceThreshold = themeState.illuminanceThreshold,
-          entitlementManager = entitlementManager,
-          onModeSelected = { mode -> onCommand(DashboardCommand.SetAutoSwitchMode(mode)) },
-          onIlluminanceThresholdChanged = { threshold ->
-            onCommand(DashboardCommand.SetIlluminanceThreshold(threshold))
-          },
-        )
+        OverlayScaffold(
+          title = stringResource(SettingsR.string.main_settings_theme_mode),
+          overlayType = OverlayType.Preview,
+          onClose = { navController.popBackStack() },
+        ) {
+          AutoSwitchModeContent(
+            selectedMode = themeState.autoSwitchMode,
+            illuminanceThreshold = themeState.illuminanceThreshold,
+            entitlementManager = entitlementManager,
+            onModeSelected = { mode -> onCommand(DashboardCommand.SetAutoSwitchMode(mode)) },
+            onIlluminanceThresholdChanged = { threshold ->
+              onCommand(DashboardCommand.SetIlluminanceThreshold(threshold))
+            },
+          )
+        }
       }
     }
 
@@ -376,6 +390,37 @@ public fun OverlayNavHost(
       }
     }
 
+    // Pack browser -- source-varying hub transitions
+    // PackBrowserContent wraps itself in OverlayScaffold(Hub), no PreviewOverlay needed
+    // Enter from Settings: horizontal slide-in; default: fade
+    composable<PackBrowserRoute>(
+      enterTransition = {
+        val source = initialState.destination.route ?: ""
+        when {
+          source.contains(SETTINGS_ROUTE_PATTERN) -> DashboardMotion.packBrowserEnterFromSettings
+          else -> DashboardMotion.packBrowserEnterDefault
+        }
+      },
+      exitTransition = { DashboardMotion.hubExit },
+      popEnterTransition = { DashboardMotion.hubEnter },
+      popExitTransition = {
+        val target = targetState.destination.route ?: ""
+        when {
+          target.contains(SETTINGS_ROUTE_PATTERN) -> DashboardMotion.packBrowserPopExitToSettings
+          else -> DashboardMotion.packBrowserPopExitDefault
+        }
+      },
+    ) {
+      PackBrowserContent(
+        widgetRegistry = widgetRegistry,
+        entitlementManager = entitlementManager,
+        onSelectPack = { _ ->
+          // Pack detail navigation -- future
+        },
+        onDismiss = { navController.popBackStack() },
+      )
+    }
+
     // Diagnostics -- hub transition (scale + fade)
     composable<DiagnosticsRoute>(
       enterTransition = { DashboardMotion.hubEnter },
@@ -423,3 +468,5 @@ private val THEME_STUDIO_ROUTE_PATTERN = ThemeStudioRoute::class.qualifiedName!!
 private val AUTO_SWITCH_MODE_ROUTE_PATTERN = AutoSwitchModeRoute::class.qualifiedName!!
 private val DIAGNOSTICS_ROUTE_PATTERN = DiagnosticsRoute::class.qualifiedName!!
 private val ONBOARDING_ROUTE_PATTERN = OnboardingRoute::class.qualifiedName!!
+private val PACK_BROWSER_ROUTE_PATTERN = PackBrowserRoute::class.qualifiedName!!
+private val SETTINGS_ROUTE_PATTERN = SettingsRoute::class.qualifiedName!!

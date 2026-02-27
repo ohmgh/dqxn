@@ -78,3 +78,12 @@ import kotlinx.serialization.Serializable
  * [hasCompletedOnboarding] is false.
  */
 @Serializable public data object OnboardingRoute
+
+/**
+ * Pack browser overlay -- hub-type transitions with source-varying enter/popExit.
+ *
+ * Displays installed packs, widget counts, and entitlement status. [PackBrowserContent] wraps
+ * itself in [OverlayScaffold(Hub)] so no [PreviewOverlay] is needed. Enter from Settings uses
+ * horizontal slide-in; default uses fade.
+ */
+@Serializable public data object PackBrowserRoute
