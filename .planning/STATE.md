@@ -1,13 +1,28 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+current_plan: 06 complete, next plan pending
+status: unknown
+stopped_at: Completed 14-06-PLAN.md (ThemeSelector rework to 3-col HorizontalPager)
+last_updated: "2026-02-27T06:15:45.706Z"
+progress:
+  total_phases: 15
+  completed_phases: 14
+  total_plans: 110
+  completed_plans: 98
+---
+
 # Project State
 
 ## Current Position
 
-- **Phase:** 13 — E2E Integration + Launch Polish (8/8 plans)
-- **Current Plan:** Not started
+- **Phase:** 14 — UI Visual & Interactive Parity (1/13 plans)
+- **Current Plan:** 06 complete, next plan pending
 - **Milestone:** V1 Launch
-- **Next action:** All 13 phases complete
-- **Last session:** 2026-02-25T12:52:38.981Z
-- **Stopped at:** Completed 13-08-PLAN.md (NF-P3 consent enforcement gap closure)
+- **Next action:** Continue Phase 14 plans (12 remaining)
+- **Last session:** 2026-02-27T06:15:45.634Z
+- **Stopped at:** Completed 14-06-PLAN.md (ThemeSelector rework to 3-col HorizontalPager)
 
 ## Progress
 
@@ -27,6 +42,7 @@
 | 11. Theme UI + Diagnostics + Onboarding | Complete (11/11 plans) | SessionEventEmitter + SessionRecorder + ProviderStatusBridge + ThemeStudio + ThemeSelector + ColorConversion + OnboardingViewModel + FirstRunFlow + ProgressiveTip + DiagnosticsViewModel + 5 diagnostic composables + 15 UI tests + Theme editing composables + OverlayNavHost 9 routes wired + source-varying transitions + NfD1 disclaimer + first-run onboarding navigation + analytics event call sites + SessionLifecycleTracker with F12.7 quality metrics + ThemeStudioRoute gap closure + toast connection |
 | 12. CI Gates + Benchmarking | Complete (6/6 plans) | All plans complete -- baseline profile infra, CI gate scripts, benchmark test classes, benchmark parser + orchestrator + Kover, pitest (incompatible, documented), gap closure (release DI + baselineprofile 1.5.0-alpha03 + benchmark release targeting) |
 | 13. E2E Integration + Launch Polish | Complete (8/8 plans) | All plans complete -- Play In-App Update + Review APIs + HardcodedText lint gate + locale formatting + GDPR data export + consent flow + analytics reset + multi-pack Hilt binding + chaos correlation E2E + offline E2E + WCAG AA contrast audit + TalkBack semantics + font scale tests + battery soak + sensor lifecycle + NF-P3 consent enforcement gap closure |
+| 14. UI Visual & Interactive Parity | In Progress (1/13 plans) | ThemeSelector rework complete (3-col HorizontalPager, gradient backgrounds, color dots, star icons, isDark filtering, timeout removed) |
 
 ## Decisions
 
@@ -150,6 +166,12 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 - [Phase 13-05]: Robolectric + @Config(application = HiltTestApplication::class) for MultiPackHiltTest -- JVM-based Hilt validation without device
 - [Phase 13-05]: AgenticTestClient created in Wave 1 (plan 13-05) so Wave 2 plan 13-04 can reuse it
 - [Phase 13-05]: Condition polling via awaitCondition() over Thread.sleep for deterministic E2E assertions
+
+### Phase 14 Decisions
+
+- [Phase 14-06]: OverlayNavHost ThemeSelector call already updated by plan 14-04 Rule 3 fix -- no additional OverlayNavHost changes needed
+- [Phase 14-06]: Source-level test assertions (File.readText) for layout invariants over Compose UI-level assertions -- more reliable for verifying code structure
+- [Phase 14-06]: readThemeSelectorSource uses user.dir-relative path -- module-scoped test working directory
 
 ### Phase 1 Decisions
 
@@ -414,6 +436,7 @@ Key decisions accumulated during architecture phase — full table in `DECISIONS
 | Phase 13 P07 | 3min | 2 tasks | 4 files |
 | Phase 13 P04 | 4min | 2 tasks | 3 files |
 | Phase 13 P08 | 3min | 2 tasks | 4 files |
+| Phase 14 P06 | 35min | 2 tasks | 2 files |
 
 ## Context
 

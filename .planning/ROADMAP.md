@@ -501,7 +501,7 @@ Plans:
 - [ ] 14-03-PLAN.md — Wave 1: Canvas corner brackets + drag lift scale + grid snap overlay (F1.11, F1.20)
 - [ ] 14-04-PLAN.md — Wave 1: Widget status overlay parity: themed, per-type, tappable (F2.5, F3.14, F11.7)
 - [ ] 14-05-PLAN.md — Wave 1: PreviewOverlay dashboard-peek pattern for overlay sheets (F4.6)
-- [ ] 14-06-PLAN.md — Wave 1: ThemeSelector 4-col HorizontalPager rework + remove preview timeout (F4.6)
+- [x] 14-06-PLAN.md — Wave 1: ThemeSelector 3-col HorizontalPager rework + remove preview timeout (F4.6)
 - [ ] 14-09-PLAN.md — Wave 1: Settings UI full parity (icons, descriptions, About banner, item order, theme routing fix) (F1.9, F4.6)
 - [ ] 14-10-PLAN.md — Wave 1: Widget picker adaptive multi-column staggered grid
 - [ ] 14-13-PLAN.md — Wave 1: Design token wiring verification (source-scanning tests for MaterialTheme elimination)
