@@ -20,7 +20,6 @@ class DesignTokenWiringTest {
    * Files with legitimate MaterialTheme usage pending migration by other Phase 14 plans.
    * - ConfirmationDialog.kt -- used by widget delete/reset flows, migrated by plan 14-07
    * - WidgetErrorFallback.kt -- widget crash fallback UI, migrated by plan 14-04
-   * - DashboardButtonBar.kt -- bottom bar styling, migrated by plan 14-02
    * - CriticalBannerHost.kt -- thermal/critical banner UI, migrated by plan 14-05
    * - NotificationBannerHost.kt -- notification banner UI, migrated by plan 14-05
    * - WidgetStatusOverlay.kt -- widget status overlays, migrated by plan 14-04
@@ -29,7 +28,6 @@ class DesignTokenWiringTest {
     setOf(
       "ConfirmationDialog.kt",
       "WidgetErrorFallback.kt",
-      "DashboardButtonBar.kt",
       "CriticalBannerHost.kt",
       "NotificationBannerHost.kt",
       "WidgetStatusOverlay.kt",

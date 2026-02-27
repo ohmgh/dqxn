@@ -2,8 +2,10 @@ package app.dqxn.android.feature.settings.overlay
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -13,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
@@ -34,7 +37,7 @@ public enum class OverlayType {
   Confirmation,
 }
 
-/** Compact screen width threshold. Below this, no width constraint is applied. */
+/** Compact screen width threshold. Below this, no width constraint is applied (except Hub). */
 private val COMPACT_MAX_WIDTH: Dp = 600.dp
 
 /** Maximum content width per overlay type on medium+ screens. */
@@ -52,26 +55,24 @@ internal fun OverlayType.maxWidthDp(): Dp = when (this) {
  * - [OverlayType.Preview]: Top corners rounded (16dp top, 0dp bottom).
  * - [OverlayType.Confirmation]: All corners rounded (16dp all sides).
  *
- * On medium+ screens (>= 600dp), overlay width is constrained:
- * - [OverlayType.Hub]: max 480dp, centered.
- * - [OverlayType.Preview]: max 520dp, bottom-anchored.
- * - [OverlayType.Confirmation]: max 400dp, centered.
+ * Width constraints:
+ * - [OverlayType.Hub]: Always constrained to max 480dp (content screens benefit from constrained
+ *   line length regardless of screen size).
+ * - [OverlayType.Preview]/[OverlayType.Confirmation]: Constrained only on medium+ screens (>=600dp).
  *
- * On compact screens (< 600dp), no width constraint is applied.
+ * Sheet edge visibility: Preview and Confirmation types get a 1dp border and a semi-transparent
+ * darkening overlay to visually separate from the dashboard canvas behind.
  *
- * Background color from [LocalDashboardTheme]. Internal padding from
- * [DashboardSpacing.ScreenEdgePadding]. Animation via [DashboardMotion.sheetEnter] /
- * [DashboardMotion.sheetExit].
- *
- * Close button meets 76dp minimum touch target (F10.4).
+ * Back button meets 76dp minimum touch target (F10.4).
  */
 @Composable
 public fun OverlayScaffold(
   title: String,
   overlayType: OverlayType,
-  onClose: () -> Unit,
+  onBack: () -> Unit,
   modifier: Modifier = Modifier,
   visible: Boolean = true,
+  actions: @Composable RowScope.() -> Unit = {},
   content: @Composable () -> Unit,
 ) {
   val theme = LocalDashboardTheme.current
@@ -94,26 +95,40 @@ public fun OverlayScaffold(
         OverlayType.Confirmation -> Alignment.Center
       },
     ) {
-      val contentModifier = if (isCompact) {
-        modifier
-      } else {
-        val baseModifier = modifier.widthIn(max = overlayType.maxWidthDp())
-        if (overlayType == OverlayType.Hub) {
-          baseModifier.fillMaxHeight()
-        } else {
-          baseModifier
+      val contentModifier = when {
+        // Hub: always width-constrained (content screens benefit from constrained line length)
+        overlayType == OverlayType.Hub -> {
+          modifier.widthIn(max = overlayType.maxWidthDp()).fillMaxHeight()
         }
+        isCompact -> modifier
+        else -> modifier.widthIn(max = overlayType.maxWidthDp())
+      }
+
+      // Edge visibility: border on Preview/Confirmation types
+      val borderModifier = when (overlayType) {
+        OverlayType.Preview, OverlayType.Confirmation ->
+          Modifier.border(1.dp, theme.widgetBorderColor.copy(alpha = 0.3f), shape)
+        else -> Modifier
       }
 
       Column(
         modifier =
           contentModifier
             .testTag("overlay_scaffold_${overlayType.name.lowercase()}")
+            .then(borderModifier)
             .clip(shape)
             .background(theme.backgroundBrush, shape)
+            // Edge visibility: semi-transparent darkening overlay for Preview/Confirmation
+            .then(
+              when (overlayType) {
+                OverlayType.Preview, OverlayType.Confirmation ->
+                  Modifier.background(Color.Black.copy(alpha = 0.12f))
+                else -> Modifier
+              }
+            )
             .padding(DashboardSpacing.ScreenEdgePadding),
       ) {
-        OverlayTitleBar(title = title, onClose = onClose)
+        OverlayTitleBar(title = title, onBack = onBack, actions = actions)
         content()
       }
     }

@@ -96,7 +96,7 @@ class ThemeSelectorTest {
           onDeleteCustom = {},
           onCreateNewTheme = {},
           onShowToast = {},
-          onClose = {},
+          onBack = {},
         )
       }
     }
@@ -126,7 +126,7 @@ class ThemeSelectorTest {
           onDeleteCustom = {},
           onCreateNewTheme = {},
           onShowToast = {},
-          onClose = {},
+          onBack = {},
         )
       }
     }
@@ -165,7 +165,7 @@ class ThemeSelectorTest {
             onDeleteCustom = {},
             onCreateNewTheme = {},
             onShowToast = {},
-            onClose = {},
+            onBack = {},
           )
         }
       }
@@ -203,7 +203,7 @@ class ThemeSelectorTest {
           onDeleteCustom = {},
           onCreateNewTheme = {},
           onShowToast = {},
-          onClose = {},
+          onBack = {},
         )
       }
     }
@@ -288,7 +288,7 @@ class ThemeSelectorTest {
           onDeleteCustom = {},
           onCreateNewTheme = {},
           onShowToast = {},
-          onClose = {},
+          onBack = {},
         )
       }
     }
@@ -318,7 +318,7 @@ class ThemeSelectorTest {
           onDeleteCustom = {},
           onCreateNewTheme = {},
           onShowToast = {},
-          onClose = {},
+          onBack = {},
         )
       }
     }
@@ -331,30 +331,13 @@ class ThemeSelectorTest {
   }
 
   @Test
-  fun `page icons exist`() {
-    composeTestRule.setContent {
-      CompositionLocalProvider(LocalDashboardTheme provides containerTheme) {
-        ThemeSelector(
-          allThemes = persistentListOf(freeTheme1),
-          isDark = true,
-          previewTheme = null,
-          customThemeCount = 0,
-          entitlementManager = freeEntitlementManager,
-          onPreviewTheme = {},
-          onApplyTheme = {},
-          onClearPreview = {},
-          onCloneToCustom = {},
-          onOpenStudio = {},
-          onDeleteCustom = {},
-          onCreateNewTheme = {},
-          onShowToast = {},
-          onClose = {},
-        )
-      }
-    }
-
-    composeTestRule.onNodeWithTag("theme_page_icon_builtin", useUnmergedTree = true).assertExists()
-    composeTestRule.onNodeWithTag("theme_page_icon_custom", useUnmergedTree = true).assertExists()
+  fun `pager icons in title bar verified in source`() {
+    // Pager icons moved from body to OverlayScaffold actions slot (title bar right edge).
+    // Verify via source that the actions lambda contains Palette and Add icons.
+    val content = readThemeSelectorSource()
+    assertThat(content).contains("actions = {")
+    assertThat(content).contains("Icons.Filled.Palette")
+    assertThat(content).contains("Icons.Filled.Add")
   }
 
   // --- Helpers ---

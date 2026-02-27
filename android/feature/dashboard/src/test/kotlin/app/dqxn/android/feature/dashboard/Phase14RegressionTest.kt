@@ -44,14 +44,15 @@ class Phase14RegressionTest {
         )
         assertThat(profileTransitionFile.exists()).isTrue()
 
-        val buttonBarFile = File(
+        // Profile switching is swipe-based via ProfilePageTransition (not bottom bar icons)
+        val screenFile = File(
             moduleDir,
-            "src/main/kotlin/app/dqxn/android/feature/dashboard/ui/DashboardButtonBar.kt"
+            "src/main/kotlin/app/dqxn/android/feature/dashboard/DashboardScreen.kt"
         )
-        assertThat(buttonBarFile.exists()).isTrue()
-        val barContent = buttonBarFile.readText()
-        assertThat(barContent).contains("onProfileClick")
-        assertThat(barContent).contains("profile_")
+        assertThat(screenFile.exists()).isTrue()
+        val screenContent = screenFile.readText()
+        assertThat(screenContent).contains("ProfilePageTransition")
+        assertThat(screenContent).contains("SwitchProfile")
     }
 
     @Test

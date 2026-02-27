@@ -272,7 +272,7 @@ public fun OverlayNavHost(
         OverlayScaffold(
           title = stringResource(SettingsR.string.main_settings_theme_mode),
           overlayType = OverlayType.Preview,
-          onClose = { navController.popBackStack() },
+          onBack = { navController.popBackStack() },
         ) {
           AutoSwitchModeContent(
             selectedMode = themeState.autoSwitchMode,
@@ -351,7 +351,7 @@ public fun OverlayNavHost(
             navController.navigate(ThemeStudioRoute(themeId = null))
           },
           onShowToast = onShowToast,
-          onClose = { navController.popBackStack() },
+          onBack = { navController.popBackStack() },
         )
       }
     }
@@ -413,6 +413,8 @@ public fun OverlayNavHost(
     ) {
       PackBrowserContent(
         widgetRegistry = widgetRegistry,
+        dataProviderRegistry = dataProviderRegistry,
+        allThemes = allThemes,
         entitlementManager = entitlementManager,
         onSelectPack = { _ ->
           // Pack detail navigation -- future

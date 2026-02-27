@@ -80,8 +80,8 @@ public fun DashboardScreen(
   val dragState by viewModel.editModeCoordinator.dragState.collectAsState()
   val resizeState by viewModel.editModeCoordinator.resizeState.collectAsState()
 
-  // Auto-hide bottom bar state (F1.9)
-  var isBarVisible by remember { mutableStateOf(true) }
+  // Auto-hide bottom bar state (F1.9) -- starts hidden (old pattern)
+  var isBarVisible by remember { mutableStateOf(false) }
   var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
   // Auto-hide timer: hides after 3s if not in edit mode
@@ -184,7 +184,7 @@ public fun DashboardScreen(
         },
       )
 
-      // Layer 0.8: Bottom bar (floats over canvas, tap to reveal when hidden)
+      // Layer 0.8: Bottom bar (floats over canvas, tap toggles in view mode)
       Box(
         modifier =
           Modifier.fillMaxSize()
@@ -192,9 +192,13 @@ public fun DashboardScreen(
               indication = null,
               interactionSource = remember { MutableInteractionSource() },
               onClick = {
-                if (!isBarVisible) {
+                if (editState.isEditMode) {
+                  // Tap canvas in edit mode: exit edit mode
+                  onCommand(DashboardCommand.ExitEditMode)
+                } else {
+                  // Tap canvas in view mode: toggle bar visibility
                   lastInteractionTime = System.currentTimeMillis()
-                  isBarVisible = true
+                  isBarVisible = !isBarVisible
                 }
               },
             ),
@@ -202,11 +206,8 @@ public fun DashboardScreen(
       ) {
         DashboardButtonBar(
           isEditMode = editState.isEditMode,
-          profiles = profileState.profiles,
-          activeProfileId = profileState.activeProfileId,
           isVisible = isBarVisible,
           onSettingsClick = { navController.navigate(SettingsRoute) },
-          onProfileClick = { profileId -> onCommand(DashboardCommand.SwitchProfile(profileId)) },
           onAddWidgetClick = { navController.navigate(WidgetPickerRoute) },
           onEditModeToggle = {
             if (editState.isEditMode) {
@@ -215,7 +216,6 @@ public fun DashboardScreen(
               onCommand(DashboardCommand.EnterEditMode)
             }
           },
-          onThemeToggle = { onCommand(DashboardCommand.CycleThemeMode) },
           onInteraction = {
             lastInteractionTime = System.currentTimeMillis()
             isBarVisible = true

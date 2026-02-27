@@ -57,7 +57,7 @@ public fun WidgetSettingsSheet(
   OverlayScaffold(
     title = widgetSpec?.displayName ?: widgetTypeId,
     overlayType = OverlayType.Preview,
-    onClose = onDismiss,
+    onBack = onDismiss,
     modifier = modifier.fillMaxSize(),
   ) {
     WidgetSettingsTabPager(

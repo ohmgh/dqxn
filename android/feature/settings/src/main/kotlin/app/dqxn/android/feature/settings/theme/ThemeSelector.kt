@@ -6,14 +6,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -42,9 +45,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.dqxn.android.core.design.token.CardSize
+import app.dqxn.android.core.design.token.DashboardSpacing
 import app.dqxn.android.core.design.token.DashboardTypography
+import app.dqxn.android.core.design.token.TextEmphasis
 import app.dqxn.android.feature.settings.overlay.OverlayScaffold
 import app.dqxn.android.feature.settings.overlay.OverlayType
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
@@ -66,7 +72,7 @@ internal const val MAX_CUSTOM_THEMES: Int = 12
  * - **2-page pager**: Page 0 = built-in themes (Native), Page 1 = custom themes.
  * - **Gradient backgrounds**: Theme cards show [DashboardThemeDefinition.backgroundBrush].
  * - **Color-dot swatches**: 4 x 8dp circles (primaryTextColor, secondaryTextColor, accentColor,
- *   highlightColor).
+ *   highlightColor) inside gradient at bottom-left.
  * - **Star icon**: Premium themes show [Icons.Filled.Star] overlay (not lock).
  * - **Selection border**: Uses [DashboardThemeDefinition.highlightColor] (not accentColor).
  * - **Aspect ratio 2f**: Theme card swatch uses 2:1 aspect ratio.
@@ -75,6 +81,7 @@ internal const val MAX_CUSTOM_THEMES: Int = 12
  * - **Clone built-in to custom**: Long-press on built-in triggers [onCloneToCustom] (F4.12).
  * - **Dual cleanup**: [DisposableEffect] ensures preview is cleared on disposal.
  * - **isDark filtering**: Only themes matching [isDark] parameter are displayed.
+ * - **Pager icons in title bar**: Palette + Add icons as trailing actions in OverlayScaffold.
  *
  * Callback-based API -- ThemeSelector does NOT call ThemeCoordinator directly.
  */
@@ -93,7 +100,7 @@ public fun ThemeSelector(
   onDeleteCustom: (String) -> Unit,
   onCreateNewTheme: () -> Unit,
   onShowToast: (String) -> Unit,
-  onClose: () -> Unit,
+  onBack: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val theme = LocalDashboardTheme.current
@@ -133,22 +140,47 @@ public fun ThemeSelector(
   OverlayScaffold(
     title = if (isDark) "Dark Themes" else "Light Themes",
     overlayType = OverlayType.Preview,
-    onClose = onClose,
+    onBack = onBack,
+    actions = {
+      IconButton(onClick = { scope.launch { pagerState.animateScrollToPage(0) } }) {
+        Icon(
+          imageVector = Icons.Filled.Palette,
+          contentDescription = "Built-in themes",
+          tint = if (pagerState.currentPage == 0) theme.highlightColor
+                 else theme.secondaryTextColor.copy(alpha = TextEmphasis.Medium),
+          modifier = Modifier.size(24.dp),
+        )
+      }
+      IconButton(onClick = { scope.launch { pagerState.animateScrollToPage(1) } }) {
+        Icon(
+          imageVector = Icons.Filled.Add,
+          contentDescription = "Custom themes",
+          tint = if (pagerState.currentPage == 1) theme.highlightColor
+                 else theme.secondaryTextColor.copy(alpha = TextEmphasis.Medium),
+          modifier = Modifier.size(24.dp),
+        )
+      }
+      Spacer(Modifier.width(4.dp))
+    },
     modifier = modifier.testTag("theme_selector"),
   ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-      // -- Title bar page icons: Palette (page 0) + Add (page 1) --
-      ThemePageIcons(
-        currentPage = pagerState.currentPage,
-        onNavigateToPage = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
-        accentColor = theme.accentColor,
-        inactiveColor = theme.secondaryTextColor,
-      )
+    // -- Computed height for pager based on grid dimensions --
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+      val columns = 3
+      val horizontalPadding = DashboardSpacing.ScreenEdgePadding
+      val itemSpacing = DashboardSpacing.InGroupGap
+      val bottomPadding = DashboardSpacing.SpaceL
+      val rows = 4
+      val itemAspectRatio = 2f
 
-      // -- 2-page HorizontalPager --
+      val availableWidth = maxWidth - (horizontalPadding * 2) - (itemSpacing * (columns - 1))
+      val itemWidth = availableWidth / columns
+      val itemHeight = itemWidth / itemAspectRatio
+      val totalHeight = (itemHeight * rows) + (itemSpacing * (rows - 1)) + bottomPadding
+
       HorizontalPager(
         state = pagerState,
-        modifier = Modifier.fillMaxSize().testTag("theme_pager"),
+        modifier = Modifier.fillMaxWidth().height(totalHeight).testTag("theme_pager"),
       ) { page ->
         when (page) {
           0 ->
@@ -166,10 +198,8 @@ public fun ThemeSelector(
                 if (hasAccess) onApplyTheme(themeItem.themeId)
                 else onShowToast("Upgrade required to apply this theme")
               },
-              accentColor = theme.accentColor,
-              textColor = theme.primaryTextColor,
               highlightColor = theme.highlightColor,
-              modifier = Modifier.testTag("theme_page_builtin"),
+              modifier = Modifier.fillMaxWidth().height(totalHeight).testTag("theme_page_builtin"),
             )
           1 ->
             ThemeGrid(
@@ -180,52 +210,15 @@ public fun ThemeSelector(
               onTap = onPreviewTheme,
               onLongPress = { /* no clone for custom themes */},
               onApply = { themeItem, _ -> onApplyTheme(themeItem.themeId) },
-              accentColor = theme.accentColor,
-              textColor = theme.primaryTextColor,
               highlightColor = theme.highlightColor,
               isCustomPage = true,
               onEdit = onOpenStudio,
               onDelete = { themeItem -> onDeleteCustom(themeItem.themeId) },
               onCreateNew = onCreateNewTheme,
-              modifier = Modifier.testTag("theme_page_custom"),
+              modifier = Modifier.fillMaxWidth().height(totalHeight).testTag("theme_page_custom"),
             )
         }
       }
-    }
-  }
-}
-
-/**
- * Title bar page indicator icons: Palette (page 0) + Add (page 1).
- *
- * Active page icon uses [accentColor]; inactive uses [inactiveColor].
- */
-@Composable
-private fun ThemePageIcons(
-  currentPage: Int,
-  onNavigateToPage: (Int) -> Unit,
-  accentColor: Color,
-  inactiveColor: Color,
-) {
-  Row(
-    modifier = Modifier.fillMaxWidth().testTag("theme_page_icons"),
-    horizontalArrangement = Arrangement.Center,
-  ) {
-    IconButton(onClick = { onNavigateToPage(0) }) {
-      Icon(
-        imageVector = Icons.Filled.Palette,
-        contentDescription = "Built-in themes",
-        tint = if (currentPage == 0) accentColor else inactiveColor,
-        modifier = Modifier.testTag("theme_page_icon_builtin"),
-      )
-    }
-    IconButton(onClick = { onNavigateToPage(1) }) {
-      Icon(
-        imageVector = Icons.Filled.Add,
-        contentDescription = "Custom themes",
-        tint = if (currentPage == 1) accentColor else inactiveColor,
-        modifier = Modifier.testTag("theme_page_icon_custom"),
-      )
     }
   }
 }
@@ -244,8 +237,6 @@ private fun ThemeGrid(
   onTap: (DashboardThemeDefinition) -> Unit,
   onLongPress: (DashboardThemeDefinition) -> Unit,
   onApply: (DashboardThemeDefinition, Boolean) -> Unit,
-  accentColor: Color,
-  textColor: Color,
   highlightColor: Color,
   modifier: Modifier = Modifier,
   isCustomPage: Boolean = false,
@@ -255,10 +246,14 @@ private fun ThemeGrid(
 ) {
   LazyVerticalGrid(
     columns = GridCells.Fixed(3),
-    contentPadding = PaddingValues(8.dp),
-    horizontalArrangement = Arrangement.spacedBy(8.dp),
-    verticalArrangement = Arrangement.spacedBy(8.dp),
-    modifier = modifier.fillMaxSize(),
+    contentPadding = PaddingValues(
+      start = DashboardSpacing.ScreenEdgePadding,
+      end = DashboardSpacing.ScreenEdgePadding,
+      bottom = DashboardSpacing.SpaceL,
+    ),
+    horizontalArrangement = Arrangement.spacedBy(DashboardSpacing.InGroupGap),
+    verticalArrangement = Arrangement.spacedBy(DashboardSpacing.InGroupGap),
+    modifier = modifier,
   ) {
     items(themes, key = { it.themeId }) { themeItem ->
       val isSelected = previewTheme?.themeId == themeItem.themeId
@@ -283,13 +278,17 @@ private fun ThemeGrid(
           if (isCustomPage && onDelete != null) {
             { onDelete(themeItem) }
           } else null,
-        textColor = textColor,
         highlightColor = highlightColor,
       )
     }
 
     if (isCustomPage && onCreateNew != null) {
-      item { CreateThemeButton(accentColor = accentColor, onClick = onCreateNew) }
+      item {
+        CreateThemeButton(
+          accentColor = highlightColor,
+          onClick = onCreateNew,
+        )
+      }
     }
   }
 }
@@ -297,9 +296,8 @@ private fun ThemeGrid(
 /**
  * Individual theme card in the grid.
  *
- * Shows gradient background via [DashboardThemeDefinition.backgroundBrush], 4 color-dot swatches,
- * and star icon overlay for gated themes. Selection border uses [highlightColor]. Edit/delete
- * actions for custom themes.
+ * Name, color dots, and star icon are all inside the gradient Box at BottomStart (old pattern).
+ * Selection border uses [highlightColor]. Edit/delete overlaid at top-right for custom themes.
  */
 @Composable
 private fun ThemeCard(
@@ -313,13 +311,12 @@ private fun ThemeCard(
   onApply: () -> Unit,
   onEdit: (() -> Unit)?,
   onDelete: (() -> Unit)?,
-  textColor: Color,
   highlightColor: Color,
 ) {
   val borderColor = if (isSelected) highlightColor else Color.Transparent
   val cornerShape = RoundedCornerShape(CardSize.SMALL.cornerRadius)
 
-  Column(
+  Box(
     modifier =
       Modifier.testTag("theme_card_${theme.themeId}")
         .clip(cornerShape)
@@ -328,11 +325,9 @@ private fun ThemeCard(
           onClick = onTap,
           onLongClick = onLongPress,
           onDoubleClick = onApply,
-        )
-        .padding(4.dp),
-    horizontalAlignment = Alignment.CenterHorizontally,
+        ),
   ) {
-    // Gradient background swatch
+    // Gradient background swatch with content inside at BottomStart
     Box(
       modifier =
         Modifier.fillMaxWidth()
@@ -340,53 +335,66 @@ private fun ThemeCard(
           .clip(cornerShape)
           .background(theme.backgroundBrush)
           .testTag("theme_swatch_${theme.themeId}"),
+      contentAlignment = Alignment.BottomStart,
     ) {
-      // Star icon overlay for premium themes (NOT lock)
-      if (isGated) {
-        Icon(
-          imageVector = Icons.Filled.Star,
-          contentDescription = "Premium",
-          tint = Color.White.copy(alpha = 0.8f),
-          modifier =
-            Modifier.align(Alignment.TopEnd)
-              .padding(4.dp)
-              .size(14.dp)
-              .testTag("theme_star_${theme.themeId}"),
-        )
+      // Name + dots at bottom-left, star at trailing edge
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(DashboardSpacing.InGroupGap),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom,
+      ) {
+        Column {
+          // Theme name (bold, old pattern)
+          Text(
+            text = theme.displayName,
+            style = DashboardTypography.caption.copy(fontWeight = FontWeight.Bold),
+            color = theme.primaryTextColor,
+            maxLines = 1,
+            modifier = Modifier.testTag("theme_name_${theme.themeId}"),
+          )
+          Spacer(modifier = Modifier.height(DashboardSpacing.SpaceXXS))
+          // 4 color-dot swatches (8dp circles, 3dp spacing -- old pattern)
+          Row(
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            modifier = Modifier.testTag("theme_dots_${theme.themeId}"),
+          ) {
+            ColorDot(color = theme.primaryTextColor)
+            ColorDot(color = theme.secondaryTextColor)
+            ColorDot(color = theme.accentColor)
+            ColorDot(color = theme.highlightColor)
+          }
+        }
+
+        // Star icon for premium themes (trailing, bottom-aligned)
+        if (isGated) {
+          Icon(
+            imageVector = Icons.Filled.Star,
+            contentDescription = "Premium",
+            tint = theme.accentColor.copy(alpha = 0.7f),
+            modifier =
+              Modifier.size(14.dp)
+                .testTag("theme_star_${theme.themeId}"),
+          )
+        }
       }
     }
 
-    // Theme name
-    Text(
-      text = theme.displayName,
-      style = DashboardTypography.caption,
-      color = textColor,
-      maxLines = 1,
-      modifier = Modifier.testTag("theme_name_${theme.themeId}"),
-    )
-
-    // 4 color-dot swatches (8dp circles)
-    Row(
-      horizontalArrangement = Arrangement.spacedBy(4.dp),
-      modifier = Modifier.padding(top = 2.dp).testTag("theme_dots_${theme.themeId}"),
-    ) {
-      ColorDot(color = theme.primaryTextColor)
-      ColorDot(color = theme.secondaryTextColor)
-      ColorDot(color = theme.accentColor)
-      ColorDot(color = theme.highlightColor)
-    }
-
-    // Edit/delete row for custom themes
+    // Edit/delete overlay for custom themes (top-right corner)
     if (isCustom && onEdit != null && onDelete != null) {
       Row(
-        modifier = Modifier.testTag("theme_custom_actions_${theme.themeId}"),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+          .align(Alignment.TopEnd)
+          .padding(2.dp)
+          .testTag("theme_custom_actions_${theme.themeId}"),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
       ) {
         IconButton(onClick = onEdit, modifier = Modifier.size(24.dp)) {
           Icon(
             imageVector = Icons.Filled.Edit,
             contentDescription = "Edit",
-            tint = textColor.copy(alpha = 0.7f),
+            tint = theme.primaryTextColor.copy(alpha = 0.7f),
             modifier = Modifier.size(16.dp),
           )
         }
@@ -394,7 +402,7 @@ private fun ThemeCard(
           Icon(
             imageVector = Icons.Filled.Delete,
             contentDescription = "Delete",
-            tint = textColor.copy(alpha = 0.7f),
+            tint = theme.primaryTextColor.copy(alpha = 0.7f),
             modifier = Modifier.size(16.dp),
           )
         }

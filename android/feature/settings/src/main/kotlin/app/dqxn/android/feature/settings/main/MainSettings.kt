@@ -109,7 +109,7 @@ public fun MainSettings(
     OverlayScaffold(
       title = stringResource(R.string.main_settings_title),
       overlayType = OverlayType.Hub,
-      onClose = onClose,
+      onBack = onClose,
     ) {
       Column(
         modifier =

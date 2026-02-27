@@ -90,7 +90,7 @@ public fun ThemeStudio(
   OverlayScaffold(
     title = "Theme Studio",
     overlayType = OverlayType.Preview,
-    onClose = onClose,
+    onBack = onClose,
     modifier = modifier.testTag("theme_studio"),
   ) {
     Column(

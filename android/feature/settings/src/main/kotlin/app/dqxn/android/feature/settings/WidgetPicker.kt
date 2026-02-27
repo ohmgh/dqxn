@@ -170,7 +170,7 @@ public fun WidgetPicker(
   OverlayScaffold(
     title = stringResource(R.string.widget_picker_title),
     overlayType = OverlayType.Hub,
-    onClose = onDismiss,
+    onBack = onDismiss,
     modifier = modifier.fillMaxSize(),
   ) {
     LazyVerticalStaggeredGrid(

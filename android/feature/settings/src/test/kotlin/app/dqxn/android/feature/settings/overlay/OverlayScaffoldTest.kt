@@ -46,7 +46,7 @@ class OverlayScaffoldTest {
         OverlayScaffold(
           title = "Hub Title",
           overlayType = OverlayType.Hub,
-          onClose = {},
+          onBack = {},
         ) {
           Text("Hub content")
         }
@@ -64,7 +64,7 @@ class OverlayScaffoldTest {
         OverlayScaffold(
           title = "Preview Title",
           overlayType = OverlayType.Preview,
-          onClose = {},
+          onBack = {},
         ) {
           Text("Preview content")
         }
@@ -82,7 +82,7 @@ class OverlayScaffoldTest {
         OverlayScaffold(
           title = "Confirm Title",
           overlayType = OverlayType.Confirmation,
-          onClose = {},
+          onBack = {},
         ) {
           Text("Confirm content")
         }
@@ -96,20 +96,20 @@ class OverlayScaffoldTest {
   // --- Touch target sizing ---
 
   @Test
-  fun `close button meets 76dp minimum touch target`() {
+  fun `back button meets 76dp minimum touch target`() {
     composeTestRule.setContent {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         OverlayScaffold(
           title = "Touch Target Test",
           overlayType = OverlayType.Hub,
-          onClose = {},
+          onBack = {},
         ) {
           Text("content")
         }
       }
     }
     composeTestRule
-      .onNodeWithTag("overlay_close_button")
+      .onNodeWithTag("overlay_back_button")
       .assertWidthIsAtLeast(76.dp)
       .assertHeightIsAtLeast(76.dp)
   }
@@ -123,7 +123,7 @@ class OverlayScaffoldTest {
         OverlayScaffold(
           title = "Settings",
           overlayType = OverlayType.Preview,
-          onClose = {},
+          onBack = {},
         ) {
           Text("body")
         }
@@ -141,7 +141,7 @@ class OverlayScaffoldTest {
         OverlayScaffold(
           title = "Content Slot Test",
           overlayType = OverlayType.Confirmation,
-          onClose = {},
+          onBack = {},
         ) {
           Text("test content")
         }
@@ -150,24 +150,24 @@ class OverlayScaffoldTest {
     composeTestRule.onNodeWithText("test content").assertIsDisplayed()
   }
 
-  // --- Close callback ---
+  // --- Back callback ---
 
   @Test
-  fun `close button invokes onClose callback`() {
-    var closed = false
+  fun `back button invokes onBack callback`() {
+    var backed = false
     composeTestRule.setContent {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         OverlayScaffold(
-          title = "Close Test",
+          title = "Back Test",
           overlayType = OverlayType.Hub,
-          onClose = { closed = true },
+          onBack = { backed = true },
         ) {
           Text("closeable")
         }
       }
     }
-    composeTestRule.onNodeWithTag("overlay_close_button").performClick()
-    assertThat(closed).isTrue()
+    composeTestRule.onNodeWithTag("overlay_back_button").performClick()
+    assertThat(backed).isTrue()
   }
 
   // --- All overlay types render distinct scaffolds ---

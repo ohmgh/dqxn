@@ -61,7 +61,7 @@ class OverlayScaffoldAdaptiveTest {
     assertThat(content).contains("public fun OverlayScaffold(")
     assertThat(content).contains("title: String")
     assertThat(content).contains("overlayType: OverlayType")
-    assertThat(content).contains("onClose: () -> Unit")
+    assertThat(content).contains("onBack: () -> Unit")
     assertThat(content).contains("visible: Boolean")
     assertThat(content).contains("content: @Composable () -> Unit")
   }
