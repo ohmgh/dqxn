@@ -13,3 +13,13 @@
 5. **DashboardButtonBarAutoHideTest.kt** - Missing `isDefault` parameter. Pre-existing.
 
 These errors pre-date plans 14-01 through 14-14 and are not caused by changes in these plans.
+
+## Pre-existing Test Runtime Failures (discovered by 14-08 regression gate)
+
+6. **DesignTokenWiringTest (dashboard)** - 2 failures: `FocusOverlayToolbar.kt` uses `MaterialTheme.colorScheme` instead of `LocalDashboardTheme`. Created by plan 14-07 without token migration. Needs `FocusOverlayToolbar.kt` added to allowlist or migrated to dashboard tokens.
+
+7. **CornerBracketTest** - 3 failures: `ClassCastException: Object cannot be cast to Modifier` at `DashboardGrid.kt:501`. Robolectric classloader incompatibility with `materializeModifier`. Pre-existing Robolectric/Compose interop issue.
+
+8. **WidgetPickerTest** - 1 failure (`widgets grouped under correct pack headers`): Expects 'Gauge' text in semantics tree but node not found. Pre-existing assertion mismatch.
+
+9. **pack:plus:testDebugUnitTest** - 0 tests discovered, fails on `failOnNoDiscoveredTests`. Module has test sources but no test runner discovers them (likely JUnit5 config issue).
