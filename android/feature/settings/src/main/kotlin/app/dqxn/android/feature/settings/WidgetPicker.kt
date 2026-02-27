@@ -86,12 +86,10 @@ private fun deriveHardwareRequirement(
   return when {
     names.any { name ->
       name.contains("Speed", ignoreCase = true) ||
-        (name.contains("Solar", ignoreCase = true) &&
-          !name.contains("Timezone", ignoreCase = true))
+        (name.contains("Solar", ignoreCase = true) && !name.contains("Timezone", ignoreCase = true))
     } -> HardwareRequirement.GPS
     names.any { name ->
-      name.contains("Ble", ignoreCase = true) ||
-        name.contains("Bluetooth", ignoreCase = true)
+      name.contains("Ble", ignoreCase = true) || name.contains("Bluetooth", ignoreCase = true)
     } -> HardwareRequirement.BLUETOOTH
     else -> HardwareRequirement.NONE
   }
