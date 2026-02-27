@@ -9,6 +9,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -57,8 +58,10 @@ class TalkBackAccessibilityTest {
     // Navigation rows -- each has visible text label
     val navigationRows =
       listOf(
-        "main_settings_theme_mode" to "Theme Mode",
         "main_settings_dash_packs" to "Dash Packs",
+        "main_settings_theme_mode" to "Theme Mode",
+        "main_settings_light_theme" to "Light Theme",
+        "main_settings_dark_theme" to "Dark Theme",
         "main_settings_diagnostics" to "Diagnostics",
       )
     for ((tag, label) in navigationRows) {
@@ -96,27 +99,23 @@ class TalkBackAccessibilityTest {
 
     // Collect all nodes with click actions in the settings content
     // Expected interactive elements:
-    //   3 navigation rows + 3 toggle rows (row-level click) + 3 switch controls + 1 delete button
-    //   = 10 total
+    //   5 navigation rows + 3 toggle rows (row-level click) + 3 switch controls + 1 delete button
+    //   + 1 reset dash row = 13+ total
     // Plus the close button in the OverlayScaffold header
     val allClickable = composeTestRule.onAllNodes(hasClickAction()).fetchSemanticsNodes()
 
-    // There must be at least 7 distinct interactive elements (rows + delete button)
+    // There must be at least 9 distinct interactive elements (rows + delete button + reset)
     // Actual count is higher due to Switch widgets being independently clickable
-    assertThat(allClickable.size).isAtLeast(7)
+    assertThat(allClickable.size).isAtLeast(9)
   }
 
   @Test
   fun `section headers have text content`() {
     renderMainSettings()
 
-    val sectionHeaders =
-      listOf("APPEARANCE", "BEHAVIOR", "DATA & PRIVACY", "DANGER ZONE")
-
-    for (header in sectionHeaders) {
-      scrollTo(header)
-      composeTestRule.onNodeWithText(header).assertIsDisplayed()
-    }
+    // Only "Advanced" section header remains after restructure to flat list layout
+    scrollTo("ADVANCED")
+    composeTestRule.onNodeWithText("ADVANCED").assertIsDisplayed()
   }
 
   @Test
@@ -163,9 +162,7 @@ class TalkBackAccessibilityTest {
   private fun scrollToTag(tag: String) {
     composeTestRule
       .onNodeWithTag("main_settings_content")
-      .performScrollToNode(
-        androidx.compose.ui.test.hasTestTag(tag)
-      )
+      .performScrollToNode(hasTestTag(tag))
     composeTestRule.waitForIdle()
   }
 
@@ -178,8 +175,11 @@ class TalkBackAccessibilityTest {
     onSetKeepScreenOn: (Boolean) -> Unit = {},
     onDeleteAllData: () -> Unit = {},
     onNavigateToThemeMode: () -> Unit = {},
+    onNavigateToLightTheme: () -> Unit = {},
+    onNavigateToDarkTheme: () -> Unit = {},
     onNavigateToDashPacks: () -> Unit = {},
     onNavigateToDiagnostics: () -> Unit = {},
+    onResetDash: () -> Unit = {},
     onClose: () -> Unit = {},
   ) {
     composeTestRule.setContent {
@@ -193,8 +193,11 @@ class TalkBackAccessibilityTest {
           onSetKeepScreenOn = onSetKeepScreenOn,
           onDeleteAllData = onDeleteAllData,
           onNavigateToThemeMode = onNavigateToThemeMode,
+          onNavigateToLightTheme = onNavigateToLightTheme,
+          onNavigateToDarkTheme = onNavigateToDarkTheme,
           onNavigateToDashPacks = onNavigateToDashPacks,
           onNavigateToDiagnostics = onNavigateToDiagnostics,
+          onResetDash = onResetDash,
           onClose = onClose,
         )
       }

@@ -47,13 +47,10 @@ class FontScaleTest {
       widgetBackgroundBrush = Brush.verticalGradient(listOf(Color.DarkGray, Color.Black)),
     )
 
-  /** All section headers and key text elements that must remain visible at any font scale. */
+  /** All key text elements that must remain visible at any font scale. */
   private val expectedTextNodes =
     listOf(
-      "APPEARANCE",
-      "BEHAVIOR",
-      "DATA & PRIVACY",
-      "DANGER ZONE",
+      "ADVANCED",
       "Theme Mode",
       "Show Status Bar",
       "Keep Screen On",
@@ -115,8 +112,11 @@ class FontScaleTest {
           onSetKeepScreenOn = {},
           onDeleteAllData = {},
           onNavigateToThemeMode = {},
+          onNavigateToLightTheme = {},
+          onNavigateToDarkTheme = {},
           onNavigateToDashPacks = {},
           onNavigateToDiagnostics = {},
+          onResetDash = {},
           onClose = {},
         )
       }

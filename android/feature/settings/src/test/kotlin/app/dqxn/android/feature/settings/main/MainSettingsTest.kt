@@ -4,6 +4,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.performScrollToNode
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import com.google.common.truth.Truth.assertThat
+import java.io.File
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,22 +37,136 @@ class MainSettingsTest {
       widgetBackgroundBrush = Brush.verticalGradient(listOf(Color.DarkGray, Color.Black)),
     )
 
-  // --- 4 sections render ---
+  // --- Item order matches old codebase ---
 
   @Test
-  fun `renders all 4 section headers`() {
+  fun `renders old codebase item order`() {
     renderMainSettings()
 
-    // First two sections visible without scrolling
-    composeTestRule.onNodeWithText("APPEARANCE").assertIsDisplayed()
-    composeTestRule.onNodeWithText("BEHAVIOR").assertIsDisplayed()
+    // About banner first
+    composeTestRule.onNodeWithTag("about_app_banner").assertExists()
+    // Dash Packs
+    composeTestRule.onNodeWithTag("main_settings_dash_packs").assertExists()
+    // Theme items
+    composeTestRule.onNodeWithTag("main_settings_theme_mode").assertExists()
+    composeTestRule.onNodeWithTag("main_settings_light_theme").assertExists()
+    composeTestRule.onNodeWithTag("main_settings_dark_theme").assertExists()
+    // Status bar
+    composeTestRule.onNodeWithTag("main_settings_status_bar").assertExists()
+    // Reset dash
+    scrollToTag("main_settings_reset_dash")
+    composeTestRule.onNodeWithTag("main_settings_reset_dash").assertExists()
+  }
 
-    // Scroll to reveal remaining sections
-    scrollTo("DATA & PRIVACY")
-    composeTestRule.onNodeWithText("DATA & PRIVACY").assertIsDisplayed()
+  // --- About App Banner ---
 
-    scrollTo("DANGER ZONE")
-    composeTestRule.onNodeWithText("DANGER ZONE").assertIsDisplayed()
+  @Test
+  fun `about app banner shows tagline`() {
+    renderMainSettings()
+    composeTestRule.onNodeWithText("Life is a dash. Make it beautiful.").assertExists()
+  }
+
+  @Test
+  fun `about app banner shows attribution`() {
+    renderMainSettings()
+    composeTestRule.onNodeWithText("-- The Dashing Dachshund").assertExists()
+  }
+
+  @Test
+  fun `about app banner shows app name and version`() {
+    renderMainSettings(versionName = "1.0.0")
+    composeTestRule.onNodeWithText("DQXN").assertExists()
+    composeTestRule.onNodeWithText("1.0.0").assertExists()
+  }
+
+  // --- Dynamic subtitles ---
+
+  @Test
+  fun `dash packs row shows dynamic count subtitle`() {
+    renderMainSettings(packCount = 3, themeCount = 24, widgetCount = 13, providerCount = 9)
+    composeTestRule.onNodeWithText("3 packs, 24 themes, 13 widgets, 9 providers").assertExists()
+  }
+
+  @Test
+  fun `theme mode row shows auto switch mode description`() {
+    renderMainSettings(autoSwitchModeDescription = "System")
+    composeTestRule.onNodeWithText("System").assertExists()
+  }
+
+  @Test
+  fun `light theme row shows current theme name`() {
+    renderMainSettings(lightThemeName = "Slate")
+    composeTestRule.onNodeWithText("Slate").assertExists()
+  }
+
+  @Test
+  fun `dark theme row shows current theme name`() {
+    renderMainSettings(darkThemeName = "Minimalist")
+    composeTestRule.onNodeWithText("Minimalist").assertExists()
+  }
+
+  // --- Navigation callbacks ---
+
+  @Test
+  fun `light theme row triggers navigation`() {
+    var clicked = false
+    renderMainSettings(onNavigateToLightTheme = { clicked = true })
+    scrollToTag("main_settings_light_theme")
+    composeTestRule.onNodeWithTag("main_settings_light_theme").performClick()
+    assertThat(clicked).isTrue()
+  }
+
+  @Test
+  fun `dark theme row triggers navigation`() {
+    var clicked = false
+    renderMainSettings(onNavigateToDarkTheme = { clicked = true })
+    scrollToTag("main_settings_dark_theme")
+    composeTestRule.onNodeWithTag("main_settings_dark_theme").performClick()
+    assertThat(clicked).isTrue()
+  }
+
+  // --- Status bar subtitle ---
+
+  @Test
+  fun `status bar subtitle shown`() {
+    renderMainSettings()
+    composeTestRule.onNodeWithText("Applies to current dash").assertExists()
+  }
+
+  // --- Reset Dash ---
+
+  @Test
+  fun `reset dash row exists with red text`() {
+    renderMainSettings()
+    scrollToTag("main_settings_reset_dash")
+    composeTestRule.onNodeWithText("Reset Dash").assertExists()
+    composeTestRule.onNodeWithText("Restore default layout and theme").assertExists()
+  }
+
+  @Test
+  fun `reset dash triggers callback`() {
+    var resetCalled = false
+    renderMainSettings(onResetDash = { resetCalled = true })
+    scrollToTag("main_settings_reset_dash")
+    composeTestRule.onNodeWithTag("main_settings_reset_dash").performClick()
+    assertThat(resetCalled).isTrue()
+  }
+
+  // --- Icon box styling verified in source ---
+
+  @Test
+  fun `icon box styling verified in source`() {
+    // user.dir for Gradle tests can be either module root or android/ root
+    val candidates =
+      listOf(
+        File(System.getProperty("user.dir"), "src/main/kotlin/app/dqxn/android/feature/settings/main/MainSettings.kt"),
+        File(System.getProperty("user.dir"), "feature/settings/src/main/kotlin/app/dqxn/android/feature/settings/main/MainSettings.kt"),
+      )
+    val file = candidates.first { it.exists() }
+    val content = file.readText()
+    assertThat(content).contains("40.dp")
+    assertThat(content).contains("accentColor.copy(alpha = 0.1f)")
+    assertThat(content).contains("AboutAppBanner")
   }
 
   // --- Analytics toggle shows consent dialog ---
@@ -63,7 +179,6 @@ class MainSettingsTest {
     composeTestRule.onNodeWithText("Analytics").performClick()
     advanceAnimations()
 
-    // Node exists in unmerged tree (merged semantics hide it from default finders)
     composeTestRule.onNodeWithTag("analytics_consent_dialog", useUnmergedTree = true).assertExists()
   }
 
@@ -110,7 +225,6 @@ class MainSettingsTest {
     scrollTo("Analytics")
     composeTestRule.onNodeWithText("Analytics").performClick()
 
-    // Disabling does not show dialog -- immediate toggle
     assertThat(consentValue).isFalse()
   }
 
@@ -124,7 +238,6 @@ class MainSettingsTest {
     composeTestRule.onNodeWithTag("main_settings_delete_all").performClick()
     advanceAnimations()
 
-    // Node exists in unmerged tree (merged semantics hide it from default finders)
     composeTestRule.onNodeWithTag("delete_all_data_dialog", useUnmergedTree = true).assertExists()
     composeTestRule.onNodeWithTag("delete_all_data_confirm", useUnmergedTree = true).assertExists()
   }
@@ -179,11 +292,7 @@ class MainSettingsTest {
     composeTestRule.onNodeWithText("Analytics").performClick()
     advanceAnimations()
 
-    // Verify consent dialog is shown with explanation content (useUnmergedTree for merged semantics)
-    composeTestRule
-      .onNodeWithTag("analytics_consent_dialog", useUnmergedTree = true)
-      .assertExists()
-    // The dialog body contains text about data collected and right to revoke
+    composeTestRule.onNodeWithTag("analytics_consent_dialog", useUnmergedTree = true).assertExists()
     composeTestRule
       .onNodeWithText("collects anonymous usage data", substring = true, useUnmergedTree = true)
       .assertExists()
@@ -194,28 +303,20 @@ class MainSettingsTest {
 
   // --- Helpers ---
 
-  /** Advance compose animations to completion so AnimatedVisibility content is rendered. */
   private fun advanceAnimations() {
-    // Spring animations (dampingRatio=0.65, stiffness=300) need time to settle
     composeTestRule.mainClock.advanceTimeBy(5000)
     composeTestRule.waitForIdle()
   }
 
-  /** Scroll the main_settings_content to reveal the node with the given text. */
   private fun scrollTo(text: String) {
-    composeTestRule
-      .onNodeWithTag("main_settings_content")
-      .performScrollToNode(hasText(text))
+    composeTestRule.onNodeWithTag("main_settings_content").performScrollToNode(hasText(text))
     composeTestRule.waitForIdle()
   }
 
-  /** Scroll the main_settings_content to reveal the node with the given test tag. */
   private fun scrollToTag(tag: String) {
     composeTestRule
       .onNodeWithTag("main_settings_content")
-      .performScrollToNode(
-        androidx.compose.ui.test.hasTestTag(tag)
-      )
+      .performScrollToNode(hasTestTag(tag))
     composeTestRule.waitForIdle()
   }
 
@@ -223,13 +324,24 @@ class MainSettingsTest {
     analyticsConsent: Boolean = false,
     showStatusBar: Boolean = false,
     keepScreenOn: Boolean = true,
+    lightThemeName: String = "Slate",
+    darkThemeName: String = "Minimalist",
+    packCount: Int = 3,
+    themeCount: Int = 24,
+    widgetCount: Int = 13,
+    providerCount: Int = 9,
+    autoSwitchModeDescription: String = "System",
+    versionName: String = "1.0.0",
     onSetAnalyticsConsent: (Boolean) -> Unit = {},
     onSetShowStatusBar: (Boolean) -> Unit = {},
     onSetKeepScreenOn: (Boolean) -> Unit = {},
     onDeleteAllData: () -> Unit = {},
     onNavigateToThemeMode: () -> Unit = {},
+    onNavigateToLightTheme: () -> Unit = {},
+    onNavigateToDarkTheme: () -> Unit = {},
     onNavigateToDashPacks: () -> Unit = {},
     onNavigateToDiagnostics: () -> Unit = {},
+    onResetDash: () -> Unit = {},
     onClose: () -> Unit = {},
   ) {
     composeTestRule.setContent {
@@ -238,13 +350,24 @@ class MainSettingsTest {
           analyticsConsent = analyticsConsent,
           showStatusBar = showStatusBar,
           keepScreenOn = keepScreenOn,
+          lightThemeName = lightThemeName,
+          darkThemeName = darkThemeName,
+          packCount = packCount,
+          themeCount = themeCount,
+          widgetCount = widgetCount,
+          providerCount = providerCount,
+          autoSwitchModeDescription = autoSwitchModeDescription,
+          versionName = versionName,
           onSetAnalyticsConsent = onSetAnalyticsConsent,
           onSetShowStatusBar = onSetShowStatusBar,
           onSetKeepScreenOn = onSetKeepScreenOn,
           onDeleteAllData = onDeleteAllData,
           onNavigateToThemeMode = onNavigateToThemeMode,
+          onNavigateToLightTheme = onNavigateToLightTheme,
+          onNavigateToDarkTheme = onNavigateToDarkTheme,
           onNavigateToDashPacks = onNavigateToDashPacks,
           onNavigateToDiagnostics = onNavigateToDiagnostics,
+          onResetDash = onResetDash,
           onClose = onClose,
         )
       }

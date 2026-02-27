@@ -4,13 +4,15 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 /**
- * Integration tests verifying all 9 OverlayNavHost routes have correct definitions and transitions.
+ * Integration tests verifying all 10 OverlayNavHost routes have correct definitions and transitions.
  *
  * These tests validate route configuration at the Kotlin level without requiring a full Compose
  * test rule, covering:
- * - Route uniqueness (all 9 routes have distinct qualified names)
+ * - Route uniqueness (all 10 routes have distinct qualified names)
+ * - AutoSwitchModeRoute for theme mode selection
  * - ThemeSelector popEnter uses fadeIn not previewEnter (replication advisory section 4)
  * - ThemeStudioRoute carries optional themeId parameter
+ * - ThemeSelectorRoute carries isDark parameter for light/dark filtering
  * - Diagnostics and Onboarding use hub transitions
  * - Settings source-varying transitions use correct route pattern matching
  * - First-run flow triggers on hasCompletedOnboarding=false
@@ -22,46 +24,46 @@ class OverlayNavHostRouteTest {
   // -----------------------------------------------------------------------
 
   @Test
-  fun `all 9 routes have distinct qualified names`() {
-    val routeNames = listOf(
-      EmptyRoute::class.qualifiedName,
-      WidgetPickerRoute::class.qualifiedName,
-      SettingsRoute::class.qualifiedName,
-      WidgetSettingsRoute::class.qualifiedName,
-      SetupRoute::class.qualifiedName,
-      ThemeSelectorRoute::class.qualifiedName,
-      ThemeStudioRoute::class.qualifiedName,
-      DiagnosticsRoute::class.qualifiedName,
-      OnboardingRoute::class.qualifiedName,
-    )
+  fun `all 10 routes have distinct qualified names`() {
+    val routeNames =
+      listOf(
+        EmptyRoute::class.qualifiedName,
+        WidgetPickerRoute::class.qualifiedName,
+        SettingsRoute::class.qualifiedName,
+        WidgetSettingsRoute::class.qualifiedName,
+        SetupRoute::class.qualifiedName,
+        AutoSwitchModeRoute::class.qualifiedName,
+        ThemeSelectorRoute::class.qualifiedName,
+        ThemeStudioRoute::class.qualifiedName,
+        DiagnosticsRoute::class.qualifiedName,
+        OnboardingRoute::class.qualifiedName,
+      )
 
     // All non-null
-    routeNames.forEach { name ->
-      assertThat(name).isNotNull()
-    }
+    routeNames.forEach { name -> assertThat(name).isNotNull() }
 
     // All distinct
-    assertThat(routeNames.toSet()).hasSize(9)
+    assertThat(routeNames.toSet()).hasSize(10)
   }
 
   @Test
   fun `all route qualified names are under the layer package`() {
     val expectedPackage = "app.dqxn.android.feature.dashboard.layer"
-    val routes = listOf(
-      EmptyRoute::class,
-      WidgetPickerRoute::class,
-      SettingsRoute::class,
-      WidgetSettingsRoute::class,
-      SetupRoute::class,
-      ThemeSelectorRoute::class,
-      ThemeStudioRoute::class,
-      DiagnosticsRoute::class,
-      OnboardingRoute::class,
-    )
+    val routes =
+      listOf(
+        EmptyRoute::class,
+        WidgetPickerRoute::class,
+        SettingsRoute::class,
+        WidgetSettingsRoute::class,
+        SetupRoute::class,
+        AutoSwitchModeRoute::class,
+        ThemeSelectorRoute::class,
+        ThemeStudioRoute::class,
+        DiagnosticsRoute::class,
+        OnboardingRoute::class,
+      )
 
-    routes.forEach { route ->
-      assertThat(route.qualifiedName).startsWith(expectedPackage)
-    }
+    routes.forEach { route -> assertThat(route.qualifiedName).startsWith(expectedPackage) }
   }
 
   // -----------------------------------------------------------------------
@@ -76,6 +78,15 @@ class OverlayNavHostRouteTest {
     assertThat(themeSelectorPattern).isNotEqualTo(settingsPattern)
     assertThat(themeSelectorPattern).contains("ThemeSelectorRoute")
     assertThat(settingsPattern).contains("SettingsRoute")
+  }
+
+  @Test
+  fun `auto_switch_mode route pattern is distinguishable from settings`() {
+    val autoSwitchPattern = AutoSwitchModeRoute::class.qualifiedName!!
+    val settingsPattern = SettingsRoute::class.qualifiedName!!
+
+    assertThat(autoSwitchPattern).isNotEqualTo(settingsPattern)
+    assertThat(autoSwitchPattern).contains("AutoSwitchModeRoute")
   }
 
   @Test
@@ -104,28 +115,31 @@ class OverlayNavHostRouteTest {
   fun `hub-type routes are WidgetPicker, Setup, Diagnostics, Onboarding`() {
     // Hub-type routes use DashboardMotion.hubEnter/hubExit for all 4 transition params
     // This test documents the categorization -- actual transition verification is in Compose tests
-    val hubRoutes = listOf(
-      WidgetPickerRoute::class.qualifiedName,
-      SetupRoute::class.qualifiedName,
-      DiagnosticsRoute::class.qualifiedName,
-      OnboardingRoute::class.qualifiedName,
-    )
+    val hubRoutes =
+      listOf(
+        WidgetPickerRoute::class.qualifiedName,
+        SetupRoute::class.qualifiedName,
+        DiagnosticsRoute::class.qualifiedName,
+        OnboardingRoute::class.qualifiedName,
+      )
 
     assertThat(hubRoutes).hasSize(4)
     hubRoutes.forEach { name -> assertThat(name).isNotNull() }
   }
 
   @Test
-  fun `preview-type routes are Settings, WidgetSettings, ThemeSelector, ThemeStudio`() {
+  fun `preview-type routes are Settings, WidgetSettings, AutoSwitchMode, ThemeSelector, ThemeStudio`() {
     // Preview-type routes use DashboardMotion.previewEnter/previewExit (with variations)
-    val previewRoutes = listOf(
-      SettingsRoute::class.qualifiedName,
-      WidgetSettingsRoute::class.qualifiedName,
-      ThemeSelectorRoute::class.qualifiedName,
-      ThemeStudioRoute::class.qualifiedName,
-    )
+    val previewRoutes =
+      listOf(
+        SettingsRoute::class.qualifiedName,
+        WidgetSettingsRoute::class.qualifiedName,
+        AutoSwitchModeRoute::class.qualifiedName,
+        ThemeSelectorRoute::class.qualifiedName,
+        ThemeStudioRoute::class.qualifiedName,
+      )
 
-    assertThat(previewRoutes).hasSize(4)
+    assertThat(previewRoutes).hasSize(5)
     previewRoutes.forEach { name -> assertThat(name).isNotNull() }
   }
 
@@ -155,6 +169,19 @@ class OverlayNavHostRouteTest {
   }
 
   @Test
+  fun `ThemeSelectorRoute carries isDark parameter`() {
+    val darkRoute = ThemeSelectorRoute(isDark = true)
+    assertThat(darkRoute.isDark).isTrue()
+
+    val lightRoute = ThemeSelectorRoute(isDark = false)
+    assertThat(lightRoute.isDark).isFalse()
+
+    // Default is false
+    val defaultRoute = ThemeSelectorRoute()
+    assertThat(defaultRoute.isDark).isFalse()
+  }
+
+  @Test
   fun `theme_studio route pattern is distinguishable from theme_selector`() {
     val studioPattern = ThemeStudioRoute::class.qualifiedName!!
     val selectorPattern = ThemeSelectorRoute::class.qualifiedName!!
@@ -167,10 +194,11 @@ class OverlayNavHostRouteTest {
   @Test
   fun `data object routes are singletons`() {
     // Verify data objects are reference-equal (singleton pattern)
+    // ThemeSelectorRoute is now a data class, not included here
     assertThat(EmptyRoute).isSameInstanceAs(EmptyRoute)
     assertThat(WidgetPickerRoute).isSameInstanceAs(WidgetPickerRoute)
     assertThat(SettingsRoute).isSameInstanceAs(SettingsRoute)
-    assertThat(ThemeSelectorRoute).isSameInstanceAs(ThemeSelectorRoute)
+    assertThat(AutoSwitchModeRoute).isSameInstanceAs(AutoSwitchModeRoute)
     assertThat(DiagnosticsRoute).isSameInstanceAs(DiagnosticsRoute)
     assertThat(OnboardingRoute).isSameInstanceAs(OnboardingRoute)
   }
