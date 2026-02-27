@@ -95,22 +95,21 @@ constructor(
 
   /**
    * Simulate free user toggle callback, non-null only when using a stub entitlement manager.
-   * Uses runtime method invocation to avoid compile-time coupling to `:app` module.
+   * Uses Java reflection to avoid compile-time coupling to `:app` module's StubEntitlementManager.
    */
   val simulateFreeUserToggle: ((Boolean) -> Unit)? = run {
     val mgr = entitlementManager
-    val klass = mgr::class
-    val grantMethod = klass.members.firstOrNull { it.name == "simulateGrant" }
-    val revokeMethod = klass.members.firstOrNull { it.name == "simulateRevocation" }
-    val resetMethod = klass.members.firstOrNull { it.name == "reset" }
-    if (grantMethod != null && revokeMethod != null && resetMethod != null) {
+    val javaClass = mgr.javaClass
+    val grantMethod = try { javaClass.getMethod("simulateGrant", String::class.java) } catch (_: NoSuchMethodException) { null }
+    val revokeMethod = try { javaClass.getMethod("simulateRevocation", String::class.java) } catch (_: NoSuchMethodException) { null }
+    if (grantMethod != null && revokeMethod != null) {
       { isFreeUser: Boolean ->
         if (isFreeUser) {
-          revokeMethod.call(mgr, "themes")
-          revokeMethod.call(mgr, "plus")
+          revokeMethod.invoke(mgr, "themes")
+          revokeMethod.invoke(mgr, "plus")
         } else {
-          grantMethod.call(mgr, "themes")
-          grantMethod.call(mgr, "plus")
+          grantMethod.invoke(mgr, "themes")
+          grantMethod.invoke(mgr, "plus")
         }
       }
     } else {

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -52,29 +53,32 @@ public fun DiagnosticsScreen(
           .verticalScroll(rememberScrollState())
           .testTag("diagnostics_screen"),
     ) {
-      // Provider health
+      // Provider health — bounded height so LazyColumn gets finite constraints
       ProviderHealthDashboard(
         statuses = providerStatuses.values.toList().toImmutableList(),
         currentTimeMs = System.currentTimeMillis(),
         onProviderClick = { /* Detail navigation handled in future */},
+        modifier = Modifier.heightIn(max = 300.dp),
       )
 
       HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-      // Session recording
+      // Session recording — bounded height so LazyColumn gets finite constraints
       SessionRecorderViewer(
         isRecording = isRecording,
         events = viewModel.getSessionSnapshot(),
         maxEvents = SessionRecorder.MAX_EVENTS,
         onToggleRecording = viewModel::toggleRecording,
         onClear = viewModel::clearSessionEvents,
+        modifier = Modifier.heightIn(max = 400.dp),
       )
 
       HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-      // Diagnostic snapshots
+      // Diagnostic snapshots — bounded height so LazyColumn gets finite constraints
       DiagnosticSnapshotViewer(
         snapshots = viewModel.snapshotCapture.recentSnapshots().toImmutableList(),
+        modifier = Modifier.heightIn(max = 400.dp),
       )
 
       HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
