@@ -141,6 +141,13 @@ public fun WidgetSlot(
       if (overlayState != WidgetRenderState.Ready && !isConnectionError) {
         WidgetStatusOverlay(
           renderState = overlayState,
+          cornerRadiusDp = 12f, // CardSize.MEDIUM
+          onSetupTap = {
+            onCommand(DashboardCommand.OpenWidgetSettings(widget.instanceId))
+          },
+          onEntitlementTap = {
+            onCommand(DashboardCommand.OpenWidgetSettings(widget.instanceId))
+          },
         )
       }
     }

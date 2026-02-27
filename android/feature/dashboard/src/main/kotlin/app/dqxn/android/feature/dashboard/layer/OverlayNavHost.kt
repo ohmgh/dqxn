@@ -26,8 +26,11 @@ import app.dqxn.android.feature.onboarding.OnboardingViewModel
 import app.dqxn.android.feature.settings.WidgetPicker
 import app.dqxn.android.feature.settings.main.MainSettings
 import app.dqxn.android.feature.settings.main.MainSettingsViewModel
+import app.dqxn.android.feature.settings.overlay.OverlayScaffold
+import app.dqxn.android.feature.settings.overlay.OverlayType
 import app.dqxn.android.feature.settings.setup.SetupEvaluatorImpl
 import app.dqxn.android.feature.settings.setup.SetupSheet
+import app.dqxn.android.feature.settings.theme.AutoSwitchModeContent
 import app.dqxn.android.feature.settings.theme.ThemeSelector
 import app.dqxn.android.feature.settings.theme.ThemeStudio
 import app.dqxn.android.feature.settings.widget.WidgetSettingsSheet
@@ -42,12 +45,13 @@ import kotlinx.coroutines.launch
 /**
  * Layer 1 navigation scaffold for overlay UI.
  *
- * Route table: 9 type-safe routes via `@Serializable` route classes in [OverlayRoutes.kt]:
+ * Route table: 10 type-safe routes via `@Serializable` route classes in [OverlayRoutes.kt]:
  * - [EmptyRoute] -- no overlay (Layer 0 visible)
  * - [WidgetPickerRoute] -- widget selection grid, hub transitions
  * - [SettingsRoute] -- main settings, source-varying transitions
  * - [WidgetSettingsRoute] -- per-widget settings, preview transitions with None exit/popEnter
  * - [SetupRoute] -- provider setup wizard, hub transitions
+ * - [AutoSwitchModeRoute] -- auto-switch mode selector, preview transitions
  * - [ThemeSelectorRoute] -- theme browser, preview transitions, popEnter=fadeIn(150ms)
  * - [ThemeStudioRoute] -- custom theme editor, preview transitions, popEnter=fadeIn(150ms)
  * - [DiagnosticsRoute] -- diagnostics hub, hub transitions
@@ -121,6 +125,7 @@ public fun OverlayNavHost(
         val target = targetState.destination.route ?: ""
         when {
           target.contains(THEME_SELECTOR_ROUTE_PATTERN) -> fadeOut(tween(100))
+          target.contains(AUTO_SWITCH_MODE_ROUTE_PATTERN) -> fadeOut(tween(100))
           target.contains(DIAGNOSTICS_ROUTE_PATTERN) -> ExitTransition.None
           target.contains(ONBOARDING_ROUTE_PATTERN) -> ExitTransition.None
           else -> DashboardMotion.previewExit
@@ -130,6 +135,7 @@ public fun OverlayNavHost(
         val source = initialState.destination.route ?: ""
         when {
           source.contains(THEME_SELECTOR_ROUTE_PATTERN) -> fadeIn(tween(150))
+          source.contains(AUTO_SWITCH_MODE_ROUTE_PATTERN) -> fadeIn(tween(150))
           source.contains(DIAGNOSTICS_ROUTE_PATTERN) -> EnterTransition.None
           source.contains(ONBOARDING_ROUTE_PATTERN) -> EnterTransition.None
           else -> DashboardMotion.previewEnter
@@ -144,30 +150,35 @@ public fun OverlayNavHost(
       val showStatusBar by mainSettingsViewModel.showStatusBar.collectAsState()
       val keepScreenOn by mainSettingsViewModel.keepScreenOn.collectAsState()
 
-      MainSettings(
-        analyticsConsent = analyticsConsent,
-        showStatusBar = showStatusBar,
-        keepScreenOn = keepScreenOn,
-        onSetAnalyticsConsent = mainSettingsViewModel::setAnalyticsConsent,
-        onSetShowStatusBar = mainSettingsViewModel::setShowStatusBar,
-        onSetKeepScreenOn = mainSettingsViewModel::setKeepScreenOn,
-        onDeleteAllData = mainSettingsViewModel::deleteAllData,
-        onNavigateToThemeMode = {
-          // Caller-managed preview: set preview theme BEFORE navigating to ThemeSelector
-          val darkTheme = themeCoordinator.themeState.value.darkTheme
-          onCommand(DashboardCommand.PreviewTheme(darkTheme))
-          navController.navigate(ThemeSelectorRoute)
-        },
-        onNavigateToDashPacks = {
-          // Pack browser navigation -- future
-        },
-        onNavigateToDiagnostics = {
-          navController.navigate(DiagnosticsRoute)
-        },
-        onClose = {
-          navController.popBackStack(EmptyRoute, inclusive = false)
-        },
-      )
+      PreviewOverlay(
+        previewFraction = 0.15f,
+        onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
+      ) {
+        MainSettings(
+          analyticsConsent = analyticsConsent,
+          showStatusBar = showStatusBar,
+          keepScreenOn = keepScreenOn,
+          onSetAnalyticsConsent = mainSettingsViewModel::setAnalyticsConsent,
+          onSetShowStatusBar = mainSettingsViewModel::setShowStatusBar,
+          onSetKeepScreenOn = mainSettingsViewModel::setKeepScreenOn,
+          onDeleteAllData = mainSettingsViewModel::deleteAllData,
+          onNavigateToThemeMode = {
+            // Caller-managed preview: set preview theme BEFORE navigating to ThemeSelector
+            val darkTheme = themeCoordinator.themeState.value.darkTheme
+            onCommand(DashboardCommand.PreviewTheme(darkTheme))
+            navController.navigate(ThemeSelectorRoute)
+          },
+          onNavigateToDashPacks = {
+            // Pack browser navigation -- future
+          },
+          onNavigateToDiagnostics = {
+            navController.navigate(DiagnosticsRoute)
+          },
+          onClose = {
+            navController.popBackStack(EmptyRoute, inclusive = false)
+          },
+        )
+      }
     }
 
     // Widget settings -- ExitTransition.None / EnterTransition.None per advisory section 2
@@ -179,25 +190,30 @@ public fun OverlayNavHost(
     ) { backStackEntry ->
       val route = backStackEntry.toRoute<WidgetSettingsRoute>()
 
-      WidgetSettingsSheet(
-        widgetTypeId = route.widgetId,
-        widgetRegistry = widgetRegistry,
-        dataProviderRegistry = dataProviderRegistry,
-        providerSettingsStore = providerSettingsStore,
-        entitlementManager = entitlementManager,
-        onDismiss = {
-          navController.popBackStack(EmptyRoute, inclusive = false)
-        },
-        onNavigate = { _ ->
-          // Sub-navigation for pickers -- Phase 11
-        },
-        onNavigateToSetup = { providerId ->
-          navController.navigate(SetupRoute(providerId = providerId))
-        },
-        onNavigateToPackBrowser = { _ ->
-          // Pack browser -- future
-        },
-      )
+      PreviewOverlay(
+        previewFraction = 0.38f,
+        onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
+      ) {
+        WidgetSettingsSheet(
+          widgetTypeId = route.widgetId,
+          widgetRegistry = widgetRegistry,
+          dataProviderRegistry = dataProviderRegistry,
+          providerSettingsStore = providerSettingsStore,
+          entitlementManager = entitlementManager,
+          onDismiss = {
+            navController.popBackStack(EmptyRoute, inclusive = false)
+          },
+          onNavigate = { _ ->
+            // Sub-navigation for pickers -- Phase 11
+          },
+          onNavigateToSetup = { providerId ->
+            navController.navigate(SetupRoute(providerId = providerId))
+          },
+          onNavigateToPackBrowser = { _ ->
+            // Pack browser -- future
+          },
+        )
+      }
     }
 
     // Setup wizard -- hub transition (scale + fade)
@@ -254,42 +270,55 @@ public fun OverlayNavHost(
     ) {
       val themeState by themeCoordinator.themeState.collectAsState()
 
-      ThemeSelector(
-        allThemes = allThemes,
-        previewTheme = themeState.previewTheme,
-        customThemeCount = customThemeCount,
-        entitlementManager = entitlementManager,
-        onPreviewTheme = { theme ->
-          onCommand(DashboardCommand.PreviewTheme(theme))
-        },
-        onApplyTheme = { themeId ->
-          onCommand(DashboardCommand.SetTheme(themeId))
-        },
-        onClearPreview = {
+      PreviewOverlay(
+        previewFraction = 0.15f,
+        onDismiss = {
           onCommand(DashboardCommand.PreviewTheme(null))
-        },
-        onCloneToCustom = { sourceTheme ->
-          // Clone: navigate to ThemeStudio. ThemeStudio uses existingTheme param
-          // to create a copy with a new custom ID.
-          onCommand(DashboardCommand.PreviewTheme(sourceTheme))
-          navController.navigate(ThemeStudioRoute(themeId = sourceTheme.themeId))
-        },
-        onOpenStudio = { existingTheme ->
-          // Edit: navigate to ThemeStudio with the existing custom theme
-          onCommand(DashboardCommand.PreviewTheme(existingTheme))
-          navController.navigate(ThemeStudioRoute(themeId = existingTheme.themeId))
-        },
-        onDeleteCustom = { themeId ->
-          // Delete: clear preview first (advisory section 3 delete-while-previewing fix),
-          // then dispatch delete command
-          onCommand(DashboardCommand.PreviewTheme(null))
-          onCommand(DashboardCommand.DeleteCustomTheme(themeId))
-        },
-        onShowToast = onShowToast,
-        onClose = {
           navController.popBackStack()
         },
-      )
+      ) {
+        ThemeSelector(
+          allThemes = allThemes,
+          isDark = themeState.currentTheme.isDark,
+          previewTheme = themeState.previewTheme,
+          customThemeCount = customThemeCount,
+          entitlementManager = entitlementManager,
+          onPreviewTheme = { theme ->
+            onCommand(DashboardCommand.PreviewTheme(theme))
+          },
+          onApplyTheme = { themeId ->
+            onCommand(DashboardCommand.SetTheme(themeId))
+          },
+          onClearPreview = {
+            onCommand(DashboardCommand.PreviewTheme(null))
+          },
+          onCloneToCustom = { sourceTheme ->
+            // Clone: navigate to ThemeStudio. ThemeStudio uses existingTheme param
+            // to create a copy with a new custom ID.
+            onCommand(DashboardCommand.PreviewTheme(sourceTheme))
+            navController.navigate(ThemeStudioRoute(themeId = sourceTheme.themeId))
+          },
+          onOpenStudio = { existingTheme ->
+            // Edit: navigate to ThemeStudio with the existing custom theme
+            onCommand(DashboardCommand.PreviewTheme(existingTheme))
+            navController.navigate(ThemeStudioRoute(themeId = existingTheme.themeId))
+          },
+          onDeleteCustom = { themeId ->
+            // Delete: clear preview first (advisory section 3 delete-while-previewing fix),
+            // then dispatch delete command
+            onCommand(DashboardCommand.PreviewTheme(null))
+            onCommand(DashboardCommand.DeleteCustomTheme(themeId))
+          },
+          onCreateNewTheme = {
+            // Navigate to ThemeStudio for new theme creation
+            navController.navigate(ThemeStudioRoute(themeId = null))
+          },
+          onShowToast = onShowToast,
+          onClose = {
+            navController.popBackStack()
+          },
+        )
+      }
     }
 
     // Theme studio -- preview transitions (sub-screen of ThemeSelector)
@@ -303,19 +332,27 @@ public fun OverlayNavHost(
       val route = backStackEntry.toRoute<ThemeStudioRoute>()
       val existingTheme = allThemes.firstOrNull { it.themeId == route.themeId }
 
-      ThemeStudio(
-        existingTheme = existingTheme,
-        customThemeCount = customThemeCount,
-        onAutoSave = { theme -> onCommand(DashboardCommand.SaveCustomTheme(theme)) },
-        onDelete = { themeId ->
-          // Delete-while-previewing: clear preview BEFORE delete (advisory section 3)
+      PreviewOverlay(
+        previewFraction = 0.15f,
+        onDismiss = {
           onCommand(DashboardCommand.PreviewTheme(null))
-          onCommand(DashboardCommand.DeleteCustomTheme(themeId))
           navController.popBackStack()
         },
-        onClearPreview = { onCommand(DashboardCommand.PreviewTheme(null)) },
-        onClose = { navController.popBackStack() },
-      )
+      ) {
+        ThemeStudio(
+          existingTheme = existingTheme,
+          customThemeCount = customThemeCount,
+          onAutoSave = { theme -> onCommand(DashboardCommand.SaveCustomTheme(theme)) },
+          onDelete = { themeId ->
+            // Delete-while-previewing: clear preview BEFORE delete (advisory section 3)
+            onCommand(DashboardCommand.PreviewTheme(null))
+            onCommand(DashboardCommand.DeleteCustomTheme(themeId))
+            navController.popBackStack()
+          },
+          onClearPreview = { onCommand(DashboardCommand.PreviewTheme(null)) },
+          onClose = { navController.popBackStack() },
+        )
+      }
     }
 
     // Diagnostics -- hub transition (scale + fade)
@@ -364,5 +401,6 @@ public fun OverlayNavHost(
  */
 private val THEME_SELECTOR_ROUTE_PATTERN = ThemeSelectorRoute::class.qualifiedName!!
 private val THEME_STUDIO_ROUTE_PATTERN = ThemeStudioRoute::class.qualifiedName!!
+private val AUTO_SWITCH_MODE_ROUTE_PATTERN = AutoSwitchModeRoute::class.qualifiedName!!
 private val DIAGNOSTICS_ROUTE_PATTERN = DiagnosticsRoute::class.qualifiedName!!
 private val ONBOARDING_ROUTE_PATTERN = OnboardingRoute::class.qualifiedName!!

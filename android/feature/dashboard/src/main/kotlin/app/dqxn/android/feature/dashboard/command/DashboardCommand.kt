@@ -3,6 +3,7 @@ package app.dqxn.android.feature.dashboard.command
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
+import app.dqxn.android.sdk.contracts.theme.AutoSwitchMode
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 
 /**
@@ -43,6 +44,12 @@ public sealed interface DashboardCommand {
 
   public data class FocusWidget(
     val widgetId: String?,
+    override val traceId: String? = null,
+  ) : DashboardCommand
+
+  /** Navigate to the widget settings/setup screen for the given widget. */
+  public data class OpenWidgetSettings(
+    val widgetId: String,
     override val traceId: String? = null,
   ) : DashboardCommand
 
@@ -106,6 +113,16 @@ public sealed interface DashboardCommand {
 
   public data class DeleteCustomTheme(
     val themeId: String,
+    override val traceId: String? = null,
+  ) : DashboardCommand
+
+  public data class SetAutoSwitchMode(
+    val mode: AutoSwitchMode,
+    override val traceId: String? = null,
+  ) : DashboardCommand
+
+  public data class SetIlluminanceThreshold(
+    val threshold: Float,
     override val traceId: String? = null,
   ) : DashboardCommand
 }

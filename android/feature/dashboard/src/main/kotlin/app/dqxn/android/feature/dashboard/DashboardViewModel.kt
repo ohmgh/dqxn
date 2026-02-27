@@ -189,6 +189,11 @@ constructor(
           recordSessionEvent(EventType.TAP, "widgetId=${command.widgetId}")
         }
       }
+      is DashboardCommand.OpenWidgetSettings -> {
+        // TODO: Route to widget settings overlay/route. Downstream phases wire actual navigation.
+        logger.info(TAG) { "OpenWidgetSettings: widgetId=${command.widgetId}" }
+        recordSessionEvent(EventType.TAP, "widgetSettings=${command.widgetId}")
+      }
       is DashboardCommand.EnterEditMode -> {
         editModeCoordinator.enterEditMode()
         recordSessionEvent(EventType.EDIT_MODE_ENTER, "")
@@ -235,6 +240,12 @@ constructor(
         }
         recordSessionEvent(EventType.THEME_CHANGE, "deleteCustom=${command.themeId}")
       }
+      is DashboardCommand.SetAutoSwitchMode -> {
+        themeCoordinator.handleSetAutoSwitchMode(command.mode)
+        recordSessionEvent(EventType.THEME_CHANGE, "autoSwitchMode=${command.mode}")
+      }
+      is DashboardCommand.SetIlluminanceThreshold ->
+        themeCoordinator.handleSetIlluminanceThreshold(command.threshold)
     }
   }
 
