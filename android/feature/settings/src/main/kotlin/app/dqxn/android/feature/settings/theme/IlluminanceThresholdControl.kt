@@ -3,130 +3,166 @@ package app.dqxn.android.feature.settings.theme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.dqxn.android.core.design.token.DashboardSpacing
 import app.dqxn.android.core.design.token.DashboardTypography
+import app.dqxn.android.feature.settings.R
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 
-/** Key lux values to display as dashed reference lines on the scale. */
-private val KEY_LUX_VALUES: FloatArray = floatArrayOf(1f, 10f, 100f, 1000f, 10000f)
+/** Edge padding in pixels for indicator line calculations. */
+private const val EDGE_PAD_PX: Float = 4f
 
 /**
- * Custom Canvas composable displaying a logarithmic lux meter for illuminance threshold.
+ * Custom illuminance threshold control with a dark→light gradient bar and flanking moon/sun icons.
  *
  * Uses [luxToPosition]/[positionToLux] from LuxMapping.kt for logarithmic scaling. Supports tap and
- * drag gestures to adjust the threshold.
+ * drag gestures to adjust the threshold. Optionally shows a current-lux indicator.
+ *
+ * @param threshold Current threshold in lux.
+ * @param onThresholdChanged Callback when threshold changes.
+ * @param theme Active dashboard theme.
+ * @param enabled Whether the control is interactive. When false, alpha is reduced and gestures ignored.
+ * @param currentLux Optional current ambient lux reading. When non-null, a solid indicator line is drawn.
+ * @param modifier Modifier for the container.
  */
 @Composable
 public fun IlluminanceThresholdControl(
   threshold: Float,
   onThresholdChanged: (Float) -> Unit,
   theme: DashboardThemeDefinition,
+  enabled: Boolean = true,
+  currentLux: Float? = null,
   modifier: Modifier = Modifier,
 ) {
   val position = remember(threshold) { luxToPosition(threshold) }
-  val displayLux = remember(threshold) { threshold.toInt().coerceIn(1, 10000) }
+  val displayLux = remember(threshold) { threshold.toInt().coerceIn(1, MAX_LUX.toInt()) }
+  val alpha = if (enabled) 1f else DashboardThemeDefinition.EMPHASIS_LOW
+
+  val darkColor = remember(theme.secondaryTextColor, alpha) {
+    adjustLightness(theme.secondaryTextColor, 0.15f).copy(alpha = alpha)
+  }
+  val lightColor = remember(theme.secondaryTextColor, alpha) {
+    adjustLightness(theme.secondaryTextColor, 0.75f).copy(alpha = alpha)
+  }
+  val thresholdLineColor = remember(theme.highlightColor, alpha) {
+    theme.highlightColor.copy(alpha = alpha)
+  }
+  val currentLuxLineColor = remember(theme.accentColor, alpha) {
+    theme.accentColor.copy(alpha = alpha)
+  }
 
   Column(
     modifier = modifier.fillMaxWidth().testTag("illuminance_control"),
-    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.spacedBy(DashboardSpacing.SpaceXS),
   ) {
-    // -- Current lux value above thumb --
     Text(
-      text = "$displayLux lux",
+      text = stringResource(R.string.illuminance_switch_dark_below, displayLux),
       style = DashboardTypography.caption,
-      color = theme.primaryTextColor,
-      modifier = Modifier.padding(bottom = 4.dp).testTag("illuminance_lux_label"),
+      color = theme.primaryTextColor.copy(alpha = alpha),
+      modifier = Modifier.testTag("illuminance_label"),
     )
 
-    // -- Logarithmic scale canvas --
-    Canvas(
-      modifier =
-        Modifier.fillMaxWidth()
-          .height(48.dp)
-          .testTag("illuminance_canvas")
-          .pointerInput(Unit) {
-            detectTapGestures { offset ->
-              val newPosition = (offset.x / size.width).coerceIn(0f, 1f)
-              onThresholdChanged(positionToLux(newPosition))
-            }
-          }
-          .pointerInput(Unit) {
-            detectDragGestures { change, _ ->
-              change.consume()
-              val newPosition = (change.position.x / size.width).coerceIn(0f, 1f)
-              onThresholdChanged(positionToLux(newPosition))
-            }
-          },
+    Row(
+      horizontalArrangement = Arrangement.spacedBy(DashboardSpacing.SpaceXS),
+      verticalAlignment = Alignment.CenterVertically,
     ) {
-      drawLuxScale(
-        position = position,
-        accentColor = theme.accentColor,
-        lineColor = theme.secondaryTextColor,
-        textColor = theme.primaryTextColor,
+      Icon(
+        imageVector = Icons.Filled.DarkMode,
+        contentDescription = stringResource(R.string.illuminance_content_desc_dark),
+        tint = theme.secondaryTextColor.copy(alpha = alpha),
+        modifier = Modifier.size(20.dp).testTag("illuminance_moon"),
+      )
+
+      Box(
+        modifier =
+          Modifier.weight(1f)
+            .height(32.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+            .testTag("illuminance_canvas"),
+      ) {
+        Canvas(
+          modifier =
+            Modifier.matchParentSize()
+              .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectTapGestures { offset ->
+                  val fraction =
+                    ((offset.x - EDGE_PAD_PX) / (size.width - 2 * EDGE_PAD_PX)).coerceIn(0f, 1f)
+                  onThresholdChanged(positionToLux(fraction))
+                }
+              }
+              .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectDragGestures { change, _ ->
+                  change.consume()
+                  val fraction =
+                    ((change.position.x - EDGE_PAD_PX) / (size.width - 2 * EDGE_PAD_PX))
+                      .coerceIn(0f, 1f)
+                  onThresholdChanged(positionToLux(fraction))
+                }
+              },
+        ) {
+          val w = size.width
+          val h = size.height
+          val usableWidth = w - 2 * EDGE_PAD_PX
+
+          // 1. Dark→light gradient background
+          drawRect(brush = Brush.horizontalGradient(listOf(darkColor, lightColor)))
+
+          // 2. Current lux solid vertical line
+          if (currentLux != null) {
+            val currentPos = luxToPosition(currentLux)
+            val cx = EDGE_PAD_PX + currentPos * usableWidth
+            drawLine(
+              color = currentLuxLineColor,
+              start = Offset(cx, 0f),
+              end = Offset(cx, h),
+              strokeWidth = 2.dp.toPx(),
+            )
+          }
+
+          // 3. Threshold dashed vertical line
+          val tx = EDGE_PAD_PX + position * usableWidth
+          drawLine(
+            color = thresholdLineColor,
+            start = Offset(tx, 0f),
+            end = Offset(tx, h),
+            strokeWidth = 2.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()), 0f),
+          )
+        }
+      }
+
+      Icon(
+        imageVector = Icons.Filled.LightMode,
+        contentDescription = stringResource(R.string.illuminance_content_desc_bright),
+        tint = theme.secondaryTextColor.copy(alpha = alpha),
+        modifier = Modifier.size(20.dp).testTag("illuminance_sun"),
       )
     }
   }
-}
-
-/** Draws the logarithmic lux scale with dashed reference lines and thumb indicator. */
-private fun DrawScope.drawLuxScale(
-  position: Float,
-  accentColor: androidx.compose.ui.graphics.Color,
-  lineColor: androidx.compose.ui.graphics.Color,
-  textColor: androidx.compose.ui.graphics.Color,
-) {
-  val width = size.width
-  val height = size.height
-  val centerY = height / 2f
-  val dashEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f)
-
-  // -- Track line --
-  drawLine(
-    color = lineColor.copy(alpha = 0.3f),
-    start = Offset(0f, centerY),
-    end = Offset(width, centerY),
-    strokeWidth = 2f,
-  )
-
-  // -- Dashed reference lines at key lux values --
-  for (lux in KEY_LUX_VALUES) {
-    val x = luxToPosition(lux) * width
-    drawLine(
-      color = lineColor.copy(alpha = 0.2f),
-      start = Offset(x, centerY - 12f),
-      end = Offset(x, centerY + 12f),
-      strokeWidth = 1f,
-      pathEffect = dashEffect,
-    )
-  }
-
-  // -- Active track (left of thumb) --
-  val thumbX = position * width
-  drawLine(
-    color = accentColor,
-    start = Offset(0f, centerY),
-    end = Offset(thumbX, centerY),
-    strokeWidth = 3f,
-  )
-
-  // -- Thumb circle --
-  drawCircle(
-    color = accentColor,
-    radius = 10f,
-    center = Offset(thumbX, centerY),
-  )
 }

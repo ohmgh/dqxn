@@ -3,8 +3,8 @@ package app.dqxn.android.feature.settings.theme
 import kotlin.math.log10
 import kotlin.math.pow
 
-/** Maximum lux value for the mapping range. */
-internal const val MAX_LUX: Float = 10_000f
+/** Maximum lux value for the mapping range. Indoor/ambient threshold — 500 lux covers all practical switching points. */
+internal const val MAX_LUX: Float = 500f
 
 /** Minimum lux value to avoid log(0). */
 internal const val MIN_LUX: Float = 1f

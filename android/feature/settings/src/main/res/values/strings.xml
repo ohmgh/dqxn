@@ -77,4 +77,22 @@
   <string name="pack_browser_widgets_count">%d widgets</string>
   <string name="pack_browser_accessible">Accessible</string>
   <string name="pack_browser_locked">Locked</string>
+
+  <!-- AutoSwitchModeContent -->
+  <string name="auto_switch_mode_light">Light</string>
+  <string name="auto_switch_mode_dark">Dark</string>
+  <string name="auto_switch_mode_system">System</string>
+  <string name="auto_switch_mode_solar">Solar</string>
+  <string name="auto_switch_mode_illuminance">Illuminance</string>
+  <string name="auto_switch_desc_light">Always use light theme</string>
+  <string name="auto_switch_desc_dark">Always use dark theme</string>
+  <string name="auto_switch_desc_system">Match Android system dark mode</string>
+  <string name="auto_switch_desc_solar">Automatically switch at sunrise and sunset</string>
+  <string name="auto_switch_desc_illuminance">Automatically switch based on environment brightness</string>
+  <string name="auto_switch_themes_pack_required">Themes Pack required</string>
+
+  <!-- IlluminanceThresholdControl -->
+  <string name="illuminance_switch_dark_below">Switch to dark below %d lux</string>
+  <string name="illuminance_content_desc_dark">Dark</string>
+  <string name="illuminance_content_desc_bright">Bright</string>
 </resources>

@@ -89,6 +89,17 @@ internal fun hslToColor(hsl: FloatArray): Color {
   return Color(r, g, b)
 }
 
+/**
+ * Returns a copy of [color] with its HSL lightness replaced by [targetLightness].
+ *
+ * Preserves hue, saturation, and alpha. [targetLightness] is clamped to [0, 1].
+ */
+internal fun adjustLightness(color: Color, targetLightness: Float): Color {
+  val hsl = colorToHsl(color)
+  hsl[2] = targetLightness.coerceIn(0f, 1f)
+  return hslToColor(hsl).copy(alpha = color.alpha)
+}
+
 /** Converts a [Color] to hex string in #AARRGGBB format. */
 internal fun colorToHex(color: Color): String {
   val a = (color.alpha * 255f).roundToInt().coerceIn(0, 255)

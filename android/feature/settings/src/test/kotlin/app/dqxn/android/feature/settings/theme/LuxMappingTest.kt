@@ -46,7 +46,7 @@ internal class LuxMappingTest {
 
     @Test
     fun `monotonically increasing`() {
-      val luxValues = listOf(1f, 10f, 100f, 1000f, 10_000f)
+      val luxValues = listOf(1f, 10f, 100f, 500f)
       val positions = luxValues.map { luxToPosition(it) }
       for (i in 0 until positions.size - 1) {
         assertWithMessage("${luxValues[i]} < ${luxValues[i + 1]}")
@@ -69,7 +69,7 @@ internal class LuxMappingTest {
     @Test
     fun `position 1 maps to MAX_LUX`() {
       val lux = positionToLux(1f)
-      assertWithMessage("position 1.0 lux").that(lux).isWithin(1f).of(MAX_LUX)
+      assertWithMessage("position 1.0 lux").that(lux).isWithin(1f).of(500f)
     }
 
     @Test
@@ -91,7 +91,7 @@ internal class LuxMappingTest {
 
     @Test
     fun `positionToLux of luxToPosition round-trips within 1 percent`() {
-      val luxValues = listOf(1f, 10f, 100f, 500f, 1000f, 5000f, 10_000f)
+      val luxValues = listOf(1f, 10f, 50f, 100f, 250f, 500f)
 
       for (lux in luxValues) {
         val position = luxToPosition(lux)
