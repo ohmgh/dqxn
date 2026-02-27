@@ -160,6 +160,7 @@ constructor(
         AutoSwitchMode.ILLUMINANCE_AUTO -> AutoSwitchMode.LIGHT
       }
 
+    themeAutoSwitchEngine.setAutoSwitchModeEagerly(nextMode)
     _themeState.update { it.copy(autoSwitchMode = nextMode) }
     userPreferencesRepository.setAutoSwitchMode(nextMode)
 
@@ -168,6 +169,7 @@ constructor(
 
   /** Sets the auto-switch mode directly. Called from the AutoSwitchMode selector overlay. */
   public suspend fun handleSetAutoSwitchMode(mode: AutoSwitchMode) {
+    themeAutoSwitchEngine.setAutoSwitchModeEagerly(mode)
     _themeState.update { it.copy(autoSwitchMode = mode) }
     userPreferencesRepository.setAutoSwitchMode(mode)
     logger.info(LogTags.THEME) { "Auto-switch mode set: $mode" }
@@ -175,6 +177,7 @@ constructor(
 
   /** Sets the illuminance threshold for ILLUMINANCE_AUTO mode. */
   public suspend fun handleSetIlluminanceThreshold(threshold: Float) {
+    themeAutoSwitchEngine.setIlluminanceThresholdEagerly(threshold)
     _themeState.update { it.copy(illuminanceThreshold = threshold) }
     userPreferencesRepository.setIlluminanceThreshold(threshold)
     logger.info(LogTags.THEME) { "Illuminance threshold set: $threshold" }

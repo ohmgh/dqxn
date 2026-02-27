@@ -11,6 +11,7 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -207,8 +208,45 @@ class ThemeCoordinatorTest {
         coordinator.handleCycleThemeMode()
         assertThat(coordinator.themeState.value.autoSwitchMode).isEqualTo(AutoSwitchMode.SYSTEM)
 
-        // Verify each cycle persisted to repository
+        // Verify each cycle persisted to repository and eagerly set on engine
         coVerify(exactly = 5) { mockPrefsRepo.setAutoSwitchMode(any()) }
+        verify(exactly = 5) { mockEngine.setAutoSwitchModeEagerly(any()) }
+      }
+  }
+
+  @Nested
+  @DisplayName("handleSetAutoSwitchMode")
+  inner class HandleSetAutoSwitchMode {
+
+    @Test
+    fun `calls engine eagerly and persists to repository`() =
+      runTest(testDispatcher) {
+        coordinator.initialize(testScope)
+        advance()
+
+        coordinator.handleSetAutoSwitchMode(AutoSwitchMode.DARK)
+
+        verify { mockEngine.setAutoSwitchModeEagerly(AutoSwitchMode.DARK) }
+        coVerify { mockPrefsRepo.setAutoSwitchMode(AutoSwitchMode.DARK) }
+        assertThat(coordinator.themeState.value.autoSwitchMode).isEqualTo(AutoSwitchMode.DARK)
+      }
+  }
+
+  @Nested
+  @DisplayName("handleSetIlluminanceThreshold")
+  inner class HandleSetIlluminanceThreshold {
+
+    @Test
+    fun `calls engine eagerly and persists to repository`() =
+      runTest(testDispatcher) {
+        coordinator.initialize(testScope)
+        advance()
+
+        coordinator.handleSetIlluminanceThreshold(42f)
+
+        verify { mockEngine.setIlluminanceThresholdEagerly(42f) }
+        coVerify { mockPrefsRepo.setIlluminanceThreshold(42f) }
+        assertThat(coordinator.themeState.value.illuminanceThreshold).isEqualTo(42f)
       }
   }
 

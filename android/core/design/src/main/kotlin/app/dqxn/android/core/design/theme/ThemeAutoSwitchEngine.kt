@@ -100,6 +100,16 @@ constructor(
     logger.info(LogTags.THEME) { "Solar daytime sensor bound to ThemeAutoSwitchEngine" }
   }
 
+  /** Eagerly updates the auto-switch mode in-memory, bypassing DataStore latency. */
+  public fun setAutoSwitchModeEagerly(mode: AutoSwitchMode) {
+    _autoSwitchMode.value = mode
+  }
+
+  /** Eagerly updates the illuminance threshold in-memory, bypassing DataStore latency. */
+  public fun setIlluminanceThresholdEagerly(threshold: Float) {
+    _illuminanceThreshold.value = threshold
+  }
+
   /**
    * Whether dark mode is currently active, based on the selected [AutoSwitchMode] and available
    * sensor inputs. Falls back to system dark mode when sensor inputs are unbound.

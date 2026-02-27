@@ -262,6 +262,43 @@ class ThemeAutoSwitchEngineTest {
       // Default mode is SYSTEM, system is light -> not dark
       assertThat(engine.isDarkActive.value).isFalse()
     }
+
+    @Test
+    fun `setAutoSwitchModeEagerly updates isDarkActive immediately`() {
+      engine.setAutoSwitchModeEagerly(AutoSwitchMode.DARK)
+      advance()
+
+      assertThat(engine.isDarkActive.value).isTrue()
+
+      engine.setAutoSwitchModeEagerly(AutoSwitchMode.LIGHT)
+      advance()
+
+      assertThat(engine.isDarkActive.value).isFalse()
+    }
+
+    @Test
+    fun `setIlluminanceThresholdEagerly updates isDarkActive when in ILLUMINANCE_AUTO`() {
+      val modeFlow = MutableStateFlow(AutoSwitchMode.ILLUMINANCE_AUTO)
+      engine.bindPreferences(
+        autoSwitchMode = modeFlow,
+        lightThemeId = MutableStateFlow("minimalist"),
+        darkThemeId = MutableStateFlow("slate"),
+        illuminanceThreshold = MutableStateFlow(200f),
+      )
+
+      val luxFlow = MutableStateFlow(150f)
+      engine.bindIlluminance(luxFlow)
+      advance()
+
+      // 150 < 200 -> dark
+      assertThat(engine.isDarkActive.value).isTrue()
+
+      engine.setIlluminanceThresholdEagerly(100f)
+      advance()
+
+      // 150 > 100 -> light
+      assertThat(engine.isDarkActive.value).isFalse()
+    }
   }
 
   @Nested
