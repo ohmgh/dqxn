@@ -1,13 +1,6 @@
 package app.dqxn.android.feature.dashboard.ui
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -20,15 +13,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,14 +29,15 @@ import androidx.compose.ui.unit.dp
 import app.dqxn.android.core.design.motion.DashboardMotion
 import app.dqxn.android.core.design.token.DashboardSpacing
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
-import kotlinx.coroutines.delay
 
 /**
  * Auto-hiding bottom bar floating over the dashboard canvas (F1.9).
  *
  * Contents:
  * - Settings FAB (left)
- * - Edit FAB (view mode) / Add Widget FAB (edit mode) with animated swap (right)
+ * - Add Widget FAB (right, always visible)
+ *
+ * No edit button — long-press empty space enters edit mode via [BlankSpaceGestureHandler].
  *
  * Transparent background, 120dp height, buttons at bottom. FABs are 56dp accent-colored circles.
  * Auto-hides after [AUTO_HIDE_DELAY_MS] inactivity via [LaunchedEffect] + [delay].
@@ -55,11 +45,9 @@ import kotlinx.coroutines.delay
  */
 @Composable
 public fun DashboardButtonBar(
-  isEditMode: Boolean,
   isVisible: Boolean,
   onSettingsClick: () -> Unit,
   onAddWidgetClick: () -> Unit,
-  onEditModeToggle: () -> Unit,
   onInteraction: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -119,63 +107,28 @@ public fun DashboardButtonBar(
           )
         }
 
-        // Edit FAB (view mode) ↔ Add Widget FAB (edit mode) with animated swap
-        AnimatedContent(
-          targetState = isEditMode,
-          transitionSpec = {
-            val enterSpec = spring<Float>(dampingRatio = 0.65f, stiffness = 300f)
-            (scaleIn(enterSpec) + fadeIn(enterSpec))
-              .togetherWith(scaleOut(enterSpec) + fadeOut(enterSpec))
+        // Add Widget FAB (right, always visible)
+        FloatingActionButton(
+          onClick = {
+            onInteraction()
+            onAddWidgetClick()
           },
-          label = "edit_add_swap",
-        ) { inEditMode ->
-          if (inEditMode) {
-            FloatingActionButton(
-              onClick = {
-                onInteraction()
-                onAddWidgetClick()
-              },
-              modifier =
-                Modifier.size(56.dp).testTag("add_widget_button").semantics {
-                  contentDescription = "Add widget"
-                },
-              shape = CircleShape,
-              containerColor = accentColor,
-              contentColor = accentContentColor,
-              elevation =
-                androidx.compose.material3.FloatingActionButtonDefaults.elevation(
-                  defaultElevation = 6.dp,
-                ),
-            ) {
-              Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = "Add widget",
-              )
-            }
-          } else {
-            FloatingActionButton(
-              onClick = {
-                onInteraction()
-                onEditModeToggle()
-              },
-              modifier =
-                Modifier.size(56.dp).testTag("edit_mode_toggle").semantics {
-                  contentDescription = "Enter edit mode"
-                },
-              shape = CircleShape,
-              containerColor = accentColor,
-              contentColor = accentContentColor,
-              elevation =
-                androidx.compose.material3.FloatingActionButtonDefaults.elevation(
-                  defaultElevation = 6.dp,
-                ),
-            ) {
-              Icon(
-                imageVector = Icons.Filled.Edit,
-                contentDescription = "Enter edit mode",
-              )
-            }
-          }
+          modifier =
+            Modifier.size(56.dp).testTag("add_widget_button").semantics {
+              contentDescription = "Add widget"
+            },
+          shape = CircleShape,
+          containerColor = accentColor,
+          contentColor = accentContentColor,
+          elevation =
+            androidx.compose.material3.FloatingActionButtonDefaults.elevation(
+              defaultElevation = 6.dp,
+            ),
+        ) {
+          Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = "Add widget",
+          )
         }
       }
     }

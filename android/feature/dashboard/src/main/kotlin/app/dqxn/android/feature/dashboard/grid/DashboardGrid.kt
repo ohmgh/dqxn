@@ -27,7 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
@@ -42,6 +45,7 @@ import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.EditState
 import app.dqxn.android.feature.dashboard.gesture.ReducedMotionHelper
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
+import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import app.dqxn.android.sdk.ui.widget.GridConstants
 import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableList
@@ -292,6 +296,8 @@ public fun DashboardGrid(
 
               // Corner brackets for edit mode (F1.11)
               if (isEditMode && bracketStrokeWidth > 0f) {
+                val bracketColor = LocalDashboardTheme.current.accentColor
+
                 Canvas(
                   modifier =
                     Modifier.matchParentSize()
@@ -307,64 +313,64 @@ public fun DashboardGrid(
                       .testTag("bracket_${widget.instanceId}"),
                 ) {
                   val strokePx = bracketStrokeWidth.dp.toPx()
-                  val bracketLength = 16.dp.toPx()
-                  val color = Color.White
+                  val bracketLengthPx = 32.dp.toPx()
+                  val cornerRadiusPx = bracketLengthPx / 4f // 8dp arc
+                  val legLength = bracketLengthPx / 2f - cornerRadiusPx // 8dp straight
+                  val arcDiameter = cornerRadiusPx * 2f
+                  val color = bracketColor
+                  val cap = StrokeCap.Round
 
-                  // Top-left corner
-                  drawLine(
-                    color,
-                    Offset(0f, strokePx / 2),
-                    Offset(bracketLength, strokePx / 2),
-                    strokePx,
+                  // Top-left corner: arc + legs
+                  drawArc(
+                    color = color,
+                    startAngle = 180f,
+                    sweepAngle = 90f,
+                    useCenter = false,
+                    topLeft = Offset(0f, 0f),
+                    size = Size(arcDiameter, arcDiameter),
+                    style = Stroke(width = strokePx, cap = cap),
                   )
-                  drawLine(
-                    color,
-                    Offset(strokePx / 2, 0f),
-                    Offset(strokePx / 2, bracketLength),
-                    strokePx,
-                  )
+                  drawLine(color, Offset(cornerRadiusPx, 0f), Offset(cornerRadiusPx + legLength, 0f), strokePx, cap)
+                  drawLine(color, Offset(0f, cornerRadiusPx), Offset(0f, cornerRadiusPx + legLength), strokePx, cap)
 
-                  // Top-right corner
-                  drawLine(
-                    color,
-                    Offset(size.width - bracketLength, strokePx / 2),
-                    Offset(size.width, strokePx / 2),
-                    strokePx,
+                  // Top-right corner: arc + legs
+                  drawArc(
+                    color = color,
+                    startAngle = 270f,
+                    sweepAngle = 90f,
+                    useCenter = false,
+                    topLeft = Offset(size.width - arcDiameter, 0f),
+                    size = Size(arcDiameter, arcDiameter),
+                    style = Stroke(width = strokePx, cap = cap),
                   )
-                  drawLine(
-                    color,
-                    Offset(size.width - strokePx / 2, 0f),
-                    Offset(size.width - strokePx / 2, bracketLength),
-                    strokePx,
-                  )
+                  drawLine(color, Offset(size.width - cornerRadiusPx - legLength, 0f), Offset(size.width - cornerRadiusPx, 0f), strokePx, cap)
+                  drawLine(color, Offset(size.width, cornerRadiusPx), Offset(size.width, cornerRadiusPx + legLength), strokePx, cap)
 
-                  // Bottom-left corner
-                  drawLine(
-                    color,
-                    Offset(0f, size.height - strokePx / 2),
-                    Offset(bracketLength, size.height - strokePx / 2),
-                    strokePx,
+                  // Bottom-left corner: arc + legs
+                  drawArc(
+                    color = color,
+                    startAngle = 90f,
+                    sweepAngle = 90f,
+                    useCenter = false,
+                    topLeft = Offset(0f, size.height - arcDiameter),
+                    size = Size(arcDiameter, arcDiameter),
+                    style = Stroke(width = strokePx, cap = cap),
                   )
-                  drawLine(
-                    color,
-                    Offset(strokePx / 2, size.height - bracketLength),
-                    Offset(strokePx / 2, size.height),
-                    strokePx,
-                  )
+                  drawLine(color, Offset(cornerRadiusPx, size.height), Offset(cornerRadiusPx + legLength, size.height), strokePx, cap)
+                  drawLine(color, Offset(0f, size.height - cornerRadiusPx - legLength), Offset(0f, size.height - cornerRadiusPx), strokePx, cap)
 
-                  // Bottom-right corner
-                  drawLine(
-                    color,
-                    Offset(size.width - bracketLength, size.height - strokePx / 2),
-                    Offset(size.width, size.height - strokePx / 2),
-                    strokePx,
+                  // Bottom-right corner: arc + legs
+                  drawArc(
+                    color = color,
+                    startAngle = 0f,
+                    sweepAngle = 90f,
+                    useCenter = false,
+                    topLeft = Offset(size.width - arcDiameter, size.height - arcDiameter),
+                    size = Size(arcDiameter, arcDiameter),
+                    style = Stroke(width = strokePx, cap = cap),
                   )
-                  drawLine(
-                    color,
-                    Offset(size.width - strokePx / 2, size.height - bracketLength),
-                    Offset(size.width - strokePx / 2, size.height),
-                    strokePx,
-                  )
+                  drawLine(color, Offset(size.width - cornerRadiusPx - legLength, size.height), Offset(size.width - cornerRadiusPx, size.height), strokePx, cap)
+                  drawLine(color, Offset(size.width, size.height - cornerRadiusPx - legLength), Offset(size.width, size.height - cornerRadiusPx), strokePx, cap)
                 }
               }
             }

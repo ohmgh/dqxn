@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import app.dqxn.android.feature.settings.overlay.OverlayScaffold
+import app.dqxn.android.feature.settings.overlay.OverlayType
 import kotlinx.collections.immutable.toImmutableList
 
 /**
@@ -40,53 +40,51 @@ public fun DiagnosticsScreen(
   val providerStatuses by viewModel.providerStatuses.collectAsState()
   val isRecording by viewModel.isRecording.collectAsState()
 
-  Column(
-    modifier =
-      modifier
-        .fillMaxSize()
-        .verticalScroll(rememberScrollState())
-        .padding(16.dp)
-        .testTag("diagnostics_screen"),
+  OverlayScaffold(
+    title = "Diagnostics",
+    overlayType = OverlayType.Hub,
+    onBack = onClose,
+    modifier = modifier,
   ) {
-    Text(
-      text = "Diagnostics",
-      style = MaterialTheme.typography.headlineMedium,
-    )
+    Column(
+      modifier =
+        Modifier.fillMaxSize()
+          .verticalScroll(rememberScrollState())
+          .testTag("diagnostics_screen"),
+    ) {
+      // Provider health
+      ProviderHealthDashboard(
+        statuses = providerStatuses.values.toList().toImmutableList(),
+        currentTimeMs = System.currentTimeMillis(),
+        onProviderClick = { /* Detail navigation handled in future */},
+      )
 
-    Spacer(modifier = Modifier.height(16.dp))
+      HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-    // Provider health
-    ProviderHealthDashboard(
-      statuses = providerStatuses.values.toList().toImmutableList(),
-      currentTimeMs = System.currentTimeMillis(),
-      onProviderClick = { /* Detail navigation handled in future */},
-    )
+      // Session recording
+      SessionRecorderViewer(
+        isRecording = isRecording,
+        events = viewModel.getSessionSnapshot(),
+        maxEvents = SessionRecorder.MAX_EVENTS,
+        onToggleRecording = viewModel::toggleRecording,
+        onClear = viewModel::clearSessionEvents,
+      )
 
-    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+      HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-    // Session recording
-    SessionRecorderViewer(
-      isRecording = isRecording,
-      events = viewModel.getSessionSnapshot(),
-      maxEvents = SessionRecorder.MAX_EVENTS,
-      onToggleRecording = viewModel::toggleRecording,
-      onClear = viewModel::clearSessionEvents,
-    )
+      // Diagnostic snapshots
+      DiagnosticSnapshotViewer(
+        snapshots = viewModel.snapshotCapture.recentSnapshots().toImmutableList(),
+      )
 
-    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+      HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-    // Diagnostic snapshots
-    DiagnosticSnapshotViewer(
-      snapshots = viewModel.snapshotCapture.recentSnapshots().toImmutableList(),
-    )
+      // Observability metrics
+      ObservabilityDashboard(
+        metricsSnapshot = viewModel.metricsCollector.snapshot(),
+      )
 
-    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-    // Observability metrics
-    ObservabilityDashboard(
-      metricsSnapshot = viewModel.metricsCollector.snapshot(),
-    )
-
-    Spacer(modifier = Modifier.height(24.dp))
+      Spacer(modifier = Modifier.height(24.dp))
+    }
   }
 }

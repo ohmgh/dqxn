@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -37,10 +36,7 @@ public enum class OverlayType {
   Confirmation,
 }
 
-/** Compact screen width threshold. Below this, no width constraint is applied (except Hub). */
-private val COMPACT_MAX_WIDTH: Dp = 600.dp
-
-/** Maximum content width per overlay type on medium+ screens. */
+/** Maximum content width per overlay type. */
 internal fun OverlayType.maxWidthDp(): Dp = when (this) {
   OverlayType.Hub -> 480.dp
   OverlayType.Preview -> 520.dp
@@ -56,9 +52,8 @@ internal fun OverlayType.maxWidthDp(): Dp = when (this) {
  * - [OverlayType.Confirmation]: All corners rounded (16dp all sides).
  *
  * Width constraints:
- * - [OverlayType.Hub]: Always constrained to max 480dp (content screens benefit from constrained
- *   line length regardless of screen size).
- * - [OverlayType.Preview]/[OverlayType.Confirmation]: Constrained only on medium+ screens (>=600dp).
+ * - All overlay types constrained via [OverlayType.maxWidthDp] regardless of screen size.
+ * - [OverlayType.Hub]: 480dp. [OverlayType.Preview]: 520dp. [OverlayType.Confirmation]: 400dp.
  *
  * Sheet edge visibility: Preview and Confirmation types get a 1dp border and a semi-transparent
  * darkening overlay to visually separate from the dashboard canvas behind.
@@ -79,9 +74,6 @@ public fun OverlayScaffold(
   val cornerRadius = CardSize.LARGE.cornerRadius
   val shape = overlayType.toShape(cornerRadius)
 
-  val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-  val isCompact = screenWidth < COMPACT_MAX_WIDTH
-
   AnimatedVisibility(
     visible = visible,
     enter = DashboardMotion.sheetEnter,
@@ -95,14 +87,13 @@ public fun OverlayScaffold(
         OverlayType.Confirmation -> Alignment.Center
       },
     ) {
-      val contentModifier = when {
-        // Hub: always width-constrained (content screens benefit from constrained line length)
-        overlayType == OverlayType.Hub -> {
-          modifier.widthIn(max = overlayType.maxWidthDp()).fillMaxHeight()
-        }
-        isCompact -> modifier
-        else -> modifier.widthIn(max = overlayType.maxWidthDp())
-      }
+      val contentModifier = Modifier
+        .widthIn(max = overlayType.maxWidthDp())
+        .then(when (overlayType) {
+          OverlayType.Hub -> Modifier.fillMaxHeight()
+          else -> Modifier
+        })
+        .then(modifier)
 
       // Edge visibility: border on Preview/Confirmation types
       val borderModifier = when (overlayType) {

@@ -85,6 +85,7 @@ public fun OverlayNavHost(
   customThemeCount: Int,
   onCommand: (DashboardCommand) -> Unit,
   onShowToast: (String) -> Unit,
+  onSimulateFreeUser: ((Boolean) -> Unit)? = null,
   modifier: Modifier = Modifier,
 ) {
   NavHost(
@@ -420,6 +421,7 @@ public fun OverlayNavHost(
           // Pack detail navigation -- future
         },
         onDismiss = { navController.popBackStack() },
+        onSimulateFreeUser = onSimulateFreeUser,
       )
     }
 

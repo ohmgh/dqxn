@@ -78,6 +78,7 @@ class SessionEventEmissionTest {
       setupEvaluator = mockk(relaxed = true),
       pairedDeviceStore = mockk(relaxed = true),
       builtInThemes = mockk(relaxed = true),
+      themeProviders = emptySet(),
       savedStateHandle = SavedStateHandle(),
       logger = logger,
       errorReporter = mockk(relaxed = true),

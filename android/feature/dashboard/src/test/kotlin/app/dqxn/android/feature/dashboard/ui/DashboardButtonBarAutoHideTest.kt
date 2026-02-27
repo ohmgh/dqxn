@@ -14,13 +14,12 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Robolectric Compose tests for [DashboardButtonBar] visibility, settings FAB semantics, and
- * Edit/Add animated swap.
+ * Robolectric Compose tests for [DashboardButtonBar] visibility and button semantics.
  *
  * Tests verify:
  * - Bar visible/hidden based on isVisible prop
  * - Settings button has correct test tag (FAB styling)
- * - Edit FAB shown in view mode, Add Widget FAB shown in edit mode (AnimatedContent swap)
+ * - Add Widget FAB always present when bar is visible
  */
 @RunWith(RobolectricTestRunner::class)
 class DashboardButtonBarAutoHideTest {
@@ -44,11 +43,9 @@ class DashboardButtonBarAutoHideTest {
     composeTestRule.setContent {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         DashboardButtonBar(
-          isEditMode = false,
           isVisible = true,
           onSettingsClick = {},
           onAddWidgetClick = {},
-          onEditModeToggle = {},
           onInteraction = {},
         )
       }
@@ -62,11 +59,9 @@ class DashboardButtonBarAutoHideTest {
     composeTestRule.setContent {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         DashboardButtonBar(
-          isEditMode = false,
           isVisible = false,
           onSettingsClick = {},
           onAddWidgetClick = {},
-          onEditModeToggle = {},
           onInteraction = {},
         )
       }
@@ -80,11 +75,9 @@ class DashboardButtonBarAutoHideTest {
     composeTestRule.setContent {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         DashboardButtonBar(
-          isEditMode = false,
           isVisible = true,
           onSettingsClick = {},
           onAddWidgetClick = {},
-          onEditModeToggle = {},
           onInteraction = {},
         )
       }
@@ -94,42 +87,18 @@ class DashboardButtonBarAutoHideTest {
   }
 
   @Test
-  fun `add widget FAB appears in edit mode`() {
+  fun `add widget FAB always present when visible`() {
     composeTestRule.setContent {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         DashboardButtonBar(
-          isEditMode = true,
           isVisible = true,
           onSettingsClick = {},
           onAddWidgetClick = {},
-          onEditModeToggle = {},
           onInteraction = {},
         )
       }
     }
-
-    // AnimatedContent: advance past animation
-    composeTestRule.mainClock.advanceTimeBy(500)
-    composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithTag("add_widget_button", useUnmergedTree = true).assertExists()
-  }
-
-  @Test
-  fun `edit mode toggle FAB shown in view mode`() {
-    composeTestRule.setContent {
-      CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
-        DashboardButtonBar(
-          isEditMode = false,
-          isVisible = true,
-          onSettingsClick = {},
-          onAddWidgetClick = {},
-          onEditModeToggle = {},
-          onInteraction = {},
-        )
-      }
-    }
-
-    composeTestRule.onNodeWithTag("edit_mode_toggle", useUnmergedTree = true).assertExists()
   }
 }

@@ -10,7 +10,7 @@ import app.dqxn.android.sdk.observability.health.ProviderStatusProvider
 import app.dqxn.android.sdk.observability.metrics.MetricsCollector
 import app.dqxn.android.sdk.observability.session.SessionEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
-import jakarta.inject.Inject
+import javax.inject.Inject
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.SharingStarted

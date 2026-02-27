@@ -205,17 +205,9 @@ public fun DashboardScreen(
         contentAlignment = Alignment.BottomCenter,
       ) {
         DashboardButtonBar(
-          isEditMode = editState.isEditMode,
           isVisible = isBarVisible,
           onSettingsClick = { navController.navigate(SettingsRoute) },
           onAddWidgetClick = { navController.navigate(WidgetPickerRoute) },
-          onEditModeToggle = {
-            if (editState.isEditMode) {
-              onCommand(DashboardCommand.ExitEditMode)
-            } else {
-              onCommand(DashboardCommand.EnterEditMode)
-            }
-          },
           onInteraction = {
             lastInteractionTime = System.currentTimeMillis()
             isBarVisible = true
@@ -234,7 +226,7 @@ public fun DashboardScreen(
         pairedDeviceStore = viewModel.pairedDeviceStore,
         mainSettingsViewModel = mainSettingsViewModel,
         themeCoordinator = viewModel.themeCoordinator,
-        allThemes = viewModel.builtInThemes.freeThemes,
+        allThemes = viewModel.allThemes,
         customThemeCount = 0, // Custom theme count tracking -- future
         onCommand = onCommand,
         onShowToast = { message ->
@@ -248,6 +240,7 @@ public fun DashboardScreen(
             ),
           )
         },
+        onSimulateFreeUser = viewModel.simulateFreeUserToggle,
       )
 
       // Layer 1.5: Critical banners (safe mode -- above all overlays)

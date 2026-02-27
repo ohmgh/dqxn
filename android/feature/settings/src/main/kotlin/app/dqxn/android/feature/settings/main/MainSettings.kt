@@ -173,7 +173,7 @@ public fun MainSettings(
 
         SectionDivider(theme = theme)
 
-        // 4. Show Status Bar (toggle, no icon)
+        // 4. Show Status Bar + Keep Screen On
         ToggleRow(
           label = stringResource(R.string.main_settings_status_bar),
           subtitle = stringResource(R.string.main_settings_status_bar_subtitle),
@@ -182,17 +182,6 @@ public fun MainSettings(
           theme = theme,
           testTag = "main_settings_status_bar",
         )
-
-        SectionDivider(theme = theme)
-
-        // 5. Reset Dash (red text, no icon)
-        ResetDashRow(theme = theme, onClick = onResetDash)
-
-        SectionDivider(theme = theme)
-
-        // --- Advanced (not in old codebase, kept for requirement compliance) ---
-        SectionHeader(title = "Advanced", theme = theme)
-
         ToggleRow(
           label = stringResource(R.string.main_settings_keep_screen_on),
           checked = keepScreenOn,
@@ -200,6 +189,10 @@ public fun MainSettings(
           theme = theme,
           testTag = "main_settings_keep_screen_on",
         )
+
+        SectionDivider(theme = theme)
+
+        // 5. Analytics + Diagnostics
         AnalyticsToggleRow(
           checked = analyticsConsent,
           onToggle = { enabled ->
@@ -213,6 +206,11 @@ public fun MainSettings(
           onClick = onNavigateToDiagnostics,
           testTag = "main_settings_diagnostics",
         )
+
+        SectionDivider(theme = theme)
+
+        // 6. Destructive actions
+        ResetDashRow(theme = theme, onClick = onResetDash)
         DeleteAllDataButton(theme = theme, onClick = { showDeleteDialog = true })
 
         Spacer(modifier = Modifier.height(DashboardSpacing.SpaceXL))
@@ -391,20 +389,6 @@ private fun ResetDashRow(
       )
     }
   }
-}
-
-@Composable
-private fun SectionHeader(
-  title: String,
-  theme: DashboardThemeDefinition,
-  modifier: Modifier = Modifier,
-) {
-  Text(
-    text = title.uppercase(),
-    style = DashboardTypography.sectionHeader,
-    color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
-    modifier = modifier.testTag("section_header_$title"),
-  )
 }
 
 @Composable

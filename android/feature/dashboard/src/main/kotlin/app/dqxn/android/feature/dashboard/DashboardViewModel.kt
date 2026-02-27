@@ -22,8 +22,10 @@ import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
 import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
+import app.dqxn.android.sdk.contracts.theme.ThemeProvider
 import app.dqxn.android.sdk.observability.crash.ErrorReporter
 import app.dqxn.android.sdk.observability.log.DqxnLogger
+import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 import app.dqxn.android.sdk.observability.log.LogTag
 import app.dqxn.android.sdk.observability.log.info
 import app.dqxn.android.sdk.observability.log.warn
@@ -34,6 +36,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.agentic.android.semantics.SemanticsOwnerHolder
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -71,6 +75,7 @@ constructor(
   val setupEvaluator: SetupEvaluator,
   val pairedDeviceStore: PairedDeviceStore,
   val builtInThemes: BuiltInThemes,
+  private val themeProviders: Set<@JvmSuppressWildcards ThemeProvider>,
   private val savedStateHandle: SavedStateHandle,
   private val logger: DqxnLogger,
   private val errorReporter: ErrorReporter,
@@ -79,6 +84,39 @@ constructor(
 ) : ViewModel() {
 
   private val commandChannel = Channel<DashboardCommand>(capacity = 64)
+
+  /** All themes: free built-in themes first, then pack-provided themes. */
+  val allThemes: ImmutableList<DashboardThemeDefinition> = run {
+    val packThemes = themeProviders
+      .flatMap { provider -> provider.getThemes() }
+      .filterIsInstance<DashboardThemeDefinition>()
+    (builtInThemes.freeThemes + packThemes).toImmutableList()
+  }
+
+  /**
+   * Simulate free user toggle callback, non-null only when using a stub entitlement manager.
+   * Uses runtime method invocation to avoid compile-time coupling to `:app` module.
+   */
+  val simulateFreeUserToggle: ((Boolean) -> Unit)? = run {
+    val mgr = entitlementManager
+    val klass = mgr::class
+    val grantMethod = klass.members.firstOrNull { it.name == "simulateGrant" }
+    val revokeMethod = klass.members.firstOrNull { it.name == "simulateRevocation" }
+    val resetMethod = klass.members.firstOrNull { it.name == "reset" }
+    if (grantMethod != null && revokeMethod != null && resetMethod != null) {
+      { isFreeUser: Boolean ->
+        if (isFreeUser) {
+          revokeMethod.call(mgr, "themes")
+          revokeMethod.call(mgr, "plus")
+        } else {
+          grantMethod.call(mgr, "themes")
+          grantMethod.call(mgr, "plus")
+        }
+      }
+    } else {
+      null
+    }
+  }
 
   init {
     // Initialize all coordinators with viewModelScope

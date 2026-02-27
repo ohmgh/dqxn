@@ -26,9 +26,14 @@ import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +69,7 @@ public fun PackBrowserContent(
   entitlementManager: EntitlementManager,
   onSelectPack: (String) -> Unit,
   onDismiss: () -> Unit,
+  onSimulateFreeUser: ((Boolean) -> Unit)? = null,
   modifier: Modifier = Modifier,
 ) {
   val theme = LocalDashboardTheme.current
@@ -78,7 +84,9 @@ public fun PackBrowserContent(
       val themesByPack = allThemes.filter { it.packId != null }.groupBy { it.packId!! }
 
       val allPackIds =
-        (widgetsByPack.keys + providersByPack.keys + themesByPack.keys).sorted()
+        (widgetsByPack.keys + providersByPack.keys + themesByPack.keys)
+          .distinct()
+          .sortedWith(compareBy<String> { packPriority(it) }.thenBy { it })
 
       allPackIds.map { packId ->
         val widgets = widgetsByPack[packId].orEmpty()
@@ -115,7 +123,7 @@ public fun PackBrowserContent(
     title = stringResource(R.string.pack_browser_title),
     overlayType = OverlayType.Hub,
     onBack = onDismiss,
-    modifier = modifier.fillMaxSize(),
+    modifier = modifier,
   ) {
     Column(
       modifier =
@@ -127,6 +135,16 @@ public fun PackBrowserContent(
           packInfo = packInfo,
           theme = theme,
           onSelect = { onSelectPack(packInfo.packId) },
+        )
+      }
+
+      // Debug: Simulate Free User toggle
+      if (onSimulateFreeUser != null) {
+        SimulateFreeUserCard(
+          isFreeUser = !entitlementManager.hasEntitlement("themes") &&
+            !entitlementManager.hasEntitlement("plus"),
+          onToggle = onSimulateFreeUser,
+          theme = theme,
         )
       }
     }
@@ -314,12 +332,74 @@ private fun getPackIcon(packId: String): ImageVector = when (packId) {
   else -> Icons.Default.Dashboard
 }
 
+private fun packPriority(packId: String): Int = when (packId) {
+  "essentials" -> 0
+  "plus" -> 1
+  "themes" -> 2
+  "demo" -> 3
+  else -> 4
+}
+
 private fun getPackDescription(packId: String): String = when (packId) {
   "essentials" -> "Core widgets and data providers"
   "plus" -> "Premium widgets and features"
   "themes" -> "Additional theme packs"
   "demo" -> "Demo and development tools"
   else -> "Dashboard pack"
+}
+
+@Composable
+private fun SimulateFreeUserCard(
+  isFreeUser: Boolean,
+  onToggle: (Boolean) -> Unit,
+  theme: DashboardThemeDefinition,
+  modifier: Modifier = Modifier,
+) {
+  val shape = RoundedCornerShape(CardSize.LARGE.cornerRadius)
+
+  Card(
+    modifier = modifier.fillMaxWidth().testTag("simulate_free_user_card"),
+    shape = shape,
+    border = androidx.compose.foundation.BorderStroke(1.dp, theme.widgetBorderColor.copy(alpha = 0.3f)),
+    colors = CardDefaults.cardColors(
+      containerColor = theme.widgetBorderColor.copy(alpha = 0.15f),
+    ),
+  ) {
+    Row(
+      modifier = Modifier.padding(DashboardSpacing.CardInternalPadding).fillMaxWidth(),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Icon(
+        imageVector = Icons.Default.BugReport,
+        contentDescription = null,
+        tint = theme.accentColor,
+        modifier = Modifier.size(32.dp),
+      )
+      Spacer(modifier = Modifier.size(DashboardSpacing.SpaceS))
+      Column(modifier = Modifier.weight(1f)) {
+        Text(
+          text = "Simulate Free User",
+          style = DashboardTypography.itemTitle,
+          color = theme.primaryTextColor,
+        )
+        Text(
+          text = "Revokes themes, plus entitlements",
+          style = DashboardTypography.description,
+          color = theme.secondaryTextColor,
+        )
+      }
+      Switch(
+        checked = isFreeUser,
+        onCheckedChange = onToggle,
+        colors = SwitchDefaults.colors(
+          checkedThumbColor = theme.accentColor,
+          checkedTrackColor = theme.accentColor.copy(alpha = 0.3f),
+          uncheckedThumbColor = theme.secondaryTextColor,
+          uncheckedTrackColor = theme.secondaryTextColor.copy(alpha = 0.1f),
+        ),
+      )
+    }
+  }
 }
 
 private data class PackInfo(

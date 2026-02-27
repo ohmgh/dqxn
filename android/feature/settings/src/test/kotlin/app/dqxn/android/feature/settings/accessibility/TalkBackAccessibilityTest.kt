@@ -113,9 +113,10 @@ class TalkBackAccessibilityTest {
   fun `section headers have text content`() {
     renderMainSettings()
 
-    // Only "Advanced" section header remains after restructure to flat list layout
-    scrollTo("ADVANCED")
-    composeTestRule.onNodeWithText("ADVANCED").assertIsDisplayed()
+    // Settings uses SectionDivider between groups, no text section headers.
+    // Verify key group items are present instead.
+    scrollTo("Theme Mode")
+    composeTestRule.onNodeWithText("Theme Mode").assertIsDisplayed()
   }
 
   @Test

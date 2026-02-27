@@ -42,16 +42,10 @@ class OverlayScaffoldAdaptiveTest {
   }
 
   @Test
-  fun `compact threshold is 600dp`() {
+  fun `all overlay types are width constrained`() {
     val content = overlayScaffoldSource()
-    assertThat(content).contains("600.dp")
-  }
-
-  @Test
-  fun `compact screens have no width constraint`() {
-    val content = overlayScaffoldSource()
-    // Verify the isCompact check gates the width constraint
-    assertThat(content).contains("isCompact")
+    // All overlay types constrained regardless of screen size (no isCompact check)
+    assertThat(content).contains("widthIn(max = overlayType.maxWidthDp())")
   }
 
   @Test

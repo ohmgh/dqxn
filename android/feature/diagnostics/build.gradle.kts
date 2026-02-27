@@ -5,6 +5,7 @@ android { namespace = "app.dqxn.android.feature.diagnostics" }
 dependencies {
   implementation(project(":core:design"))
   implementation(project(":data"))
+  implementation(project(":feature:settings"))
   implementation(project(":sdk:analytics"))
 
   testImplementation(libs.compose.ui.test.junit4)

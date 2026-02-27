@@ -6,19 +6,24 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -29,8 +34,11 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 /**
  * Overlay toolbar rendered above a focused widget in edit mode (F1.8).
  *
- * Contains delete and settings action buttons with press-scale animation:
+ * Contains delete and settings action buttons as accent-colored FABs with press-scale animation:
  * 0.85f spring(DampingRatioMediumBouncy, StiffnessMedium) on press.
+ *
+ * Each button: 56dp touch target containing 40dp visual circle, accent container color,
+ * luminance-computed B/W content color, 6dp elevation.
  *
  * Positioned above the widget by the caller (DashboardGrid), not self-positioning.
  * Must have the highest z-index in the grid to avoid clipping behind adjacent widgets.
@@ -51,7 +59,7 @@ internal fun FocusOverlayToolbar(
     ) {
         // Delete button
         ActionButton(
-            icon = Icons.Filled.Close,
+            icon = Icons.Filled.Delete,
             description = "Delete widget",
             testTag = "focus_delete_$widgetId",
             onClick = onDelete,
@@ -87,27 +95,37 @@ private fun ActionButton(
     )
 
     val theme = LocalDashboardTheme.current
+    val accentColor = theme.accentColor
+    val contentColor = if (accentColor.luminance() > 0.5f) Color.Black else Color.White
 
-    FilledIconButton(
-        onClick = onClick,
+    // 56dp touch target wrapping a 40dp visual FAB
+    Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(56.dp)
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
             }
             .testTag(testTag)
             .semantics { contentDescription = description },
-        colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = theme.primaryTextColor.copy(alpha = 0.15f),
-            contentColor = theme.primaryTextColor,
-        ),
-        interactionSource = interactionSource,
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = description,
-            modifier = Modifier.size(20.dp),
-        )
+        FloatingActionButton(
+            onClick = onClick,
+            modifier = Modifier.size(40.dp),
+            shape = CircleShape,
+            containerColor = accentColor,
+            contentColor = contentColor,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+            ),
+            interactionSource = interactionSource,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = description,
+                modifier = Modifier.size(22.dp),
+            )
+        }
     }
 }

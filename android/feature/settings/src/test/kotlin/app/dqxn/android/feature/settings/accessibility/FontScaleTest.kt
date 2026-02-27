@@ -50,7 +50,6 @@ class FontScaleTest {
   /** All key text elements that must remain visible at any font scale. */
   private val expectedTextNodes =
     listOf(
-      "ADVANCED",
       "Theme Mode",
       "Show Status Bar",
       "Keep Screen On",
