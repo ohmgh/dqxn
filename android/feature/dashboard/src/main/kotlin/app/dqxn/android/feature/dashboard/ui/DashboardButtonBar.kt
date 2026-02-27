@@ -17,13 +17,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,10 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.dqxn.android.core.design.motion.DashboardMotion
 import app.dqxn.android.feature.dashboard.coordinator.ProfileInfo
+import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.delay
 
@@ -72,36 +75,43 @@ public fun DashboardButtonBar(
     modifier = modifier.testTag("bottom_bar"),
   ) {
     Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(76.dp)
-        .background(
-          MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
-          RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-        )
-        .clickable(
-          indication = null,
-          interactionSource = remember { MutableInteractionSource() },
-          onClick = onInteraction,
-        ),
+      modifier =
+        Modifier.fillMaxWidth()
+          .height(76.dp)
+          .background(
+            MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
+            RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+          )
+          .clickable(
+            indication = null,
+            interactionSource = remember { MutableInteractionSource() },
+            onClick = onInteraction,
+          ),
       horizontalArrangement = Arrangement.SpaceEvenly,
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      // Settings button (always visible)
-      IconButton(
+      // Settings button (accent-colored FAB)
+      val theme = LocalDashboardTheme.current
+      val accentColor = theme.accentColor
+      val accentContentColor =
+        if (accentColor.luminance() > 0.5f) Color.Black else Color.White
+
+      FloatingActionButton(
         onClick = {
           onInteraction()
           onSettingsClick()
         },
-        modifier = Modifier
-          .size(76.dp)
-          .testTag("settings_button")
-          .semantics { contentDescription = "Settings" },
+        modifier =
+          Modifier.size(56.dp).testTag("settings_button").semantics {
+            contentDescription = "Settings"
+          },
+        shape = CircleShape,
+        containerColor = accentColor,
+        contentColor = accentContentColor,
       ) {
         Icon(
           imageVector = Icons.Filled.Settings,
           contentDescription = "Settings",
-          tint = MaterialTheme.colorScheme.onSurface,
         )
       }
 
@@ -114,33 +124,34 @@ public fun DashboardButtonBar(
               onInteraction()
               onProfileClick(profile.id)
             },
-            modifier = Modifier
-              .size(76.dp)
-              .testTag("profile_${profile.id}")
-              .semantics { contentDescription = "Profile: ${profile.displayName}" },
+            modifier =
+              Modifier.size(76.dp).testTag("profile_${profile.id}").semantics {
+                contentDescription = "Profile: ${profile.displayName}"
+              },
           ) {
             Box(
-              modifier = Modifier
-                .size(if (isActive) 36.dp else 28.dp)
-                .clip(CircleShape)
-                .background(
-                  if (isActive) {
-                    MaterialTheme.colorScheme.primary
-                  } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                  },
-                ),
+              modifier =
+                Modifier.size(if (isActive) 36.dp else 28.dp)
+                  .clip(CircleShape)
+                  .background(
+                    if (isActive) {
+                      MaterialTheme.colorScheme.primary
+                    } else {
+                      MaterialTheme.colorScheme.surfaceVariant
+                    },
+                  ),
               contentAlignment = Alignment.Center,
             ) {
               val initial = profile.displayName.firstOrNull()?.uppercase() ?: "?"
               androidx.compose.material3.Text(
                 text = initial,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isActive) {
-                  MaterialTheme.colorScheme.onPrimary
-                } else {
-                  MaterialTheme.colorScheme.onSurfaceVariant
-                },
+                color =
+                  if (isActive) {
+                    MaterialTheme.colorScheme.onPrimary
+                  } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                  },
               )
             }
           }
@@ -153,19 +164,20 @@ public fun DashboardButtonBar(
           onInteraction()
           onEditModeToggle()
         },
-        modifier = Modifier
-          .size(76.dp)
-          .testTag("edit_mode_toggle")
-          .semantics { contentDescription = if (isEditMode) "Exit edit mode" else "Enter edit mode" },
+        modifier =
+          Modifier.size(76.dp).testTag("edit_mode_toggle").semantics {
+            contentDescription = if (isEditMode) "Exit edit mode" else "Enter edit mode"
+          },
       ) {
         Icon(
           imageVector = Icons.Filled.Edit,
           contentDescription = if (isEditMode) "Exit edit mode" else "Enter edit mode",
-          tint = if (isEditMode) {
-            MaterialTheme.colorScheme.primary
-          } else {
-            MaterialTheme.colorScheme.onSurface
-          },
+          tint =
+            if (isEditMode) {
+              MaterialTheme.colorScheme.primary
+            } else {
+              MaterialTheme.colorScheme.onSurface
+            },
         )
       }
 
@@ -176,10 +188,10 @@ public fun DashboardButtonBar(
             onInteraction()
             onAddWidgetClick()
           },
-          modifier = Modifier
-            .size(76.dp)
-            .testTag("add_widget_button")
-            .semantics { contentDescription = "Add widget" },
+          modifier =
+            Modifier.size(76.dp).testTag("add_widget_button").semantics {
+              contentDescription = "Add widget"
+            },
         ) {
           Icon(
             imageVector = Icons.Filled.Add,
@@ -195,9 +207,7 @@ public fun DashboardButtonBar(
           onInteraction()
           onThemeToggle()
         },
-        modifier = Modifier
-          .size(76.dp)
-          .semantics { contentDescription = "Cycle theme mode" },
+        modifier = Modifier.size(76.dp).semantics { contentDescription = "Cycle theme mode" },
       ) {
         Icon(
           imageVector = Icons.Filled.LightMode,
