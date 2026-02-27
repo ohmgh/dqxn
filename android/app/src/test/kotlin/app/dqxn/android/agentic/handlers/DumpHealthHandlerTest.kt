@@ -1,7 +1,7 @@
 package app.dqxn.android.agentic.handlers
 
-import app.dqxn.android.core.agentic.CommandParams
-import app.dqxn.android.core.agentic.CommandResult
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
 import app.dqxn.android.sdk.observability.health.WidgetHealthMonitor
 import app.dqxn.android.sdk.observability.log.NoOpLogger
 import com.google.common.truth.Truth.assertThat

@@ -1,9 +1,9 @@
 package app.dqxn.android.agentic.handlers
 
-import app.dqxn.android.core.agentic.CommandParams
-import app.dqxn.android.core.agentic.CommandResult
-import app.dqxn.android.core.agentic.chaos.ChaosProviderInterceptor
-import app.dqxn.android.sdk.contracts.fault.ProviderFault
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
+import app.dqxn.android.agentic.chaos.ChaosProviderInterceptor
+import dev.agentic.android.chaos.Fault
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -35,7 +35,7 @@ class ChaosInjectHandlerTest {
     assertThat(json["providerId"]?.jsonPrimitive?.content).isEqualTo("test-provider")
     assertThat(json["fault"]?.jsonPrimitive?.content).isEqualTo("kill")
 
-    assertThat(interceptor.getActiveFaults()["test-provider"]).isEqualTo(ProviderFault.Kill)
+    assertThat(interceptor.activeFaults()["test-provider"]).isEqualTo(Fault.Kill)
   }
 
   @Test
@@ -50,9 +50,9 @@ class ChaosInjectHandlerTest {
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
 
-    val fault = interceptor.getActiveFaults()["test-provider"]
-    assertThat(fault).isInstanceOf(ProviderFault.Delay::class.java)
-    assertThat((fault as ProviderFault.Delay).delayMs).isEqualTo(500L)
+    val fault = interceptor.activeFaults()["test-provider"]
+    assertThat(fault).isInstanceOf(Fault.Delay::class.java)
+    assertThat((fault as Fault.Delay).delayMs).isEqualTo(500L)
   }
 
   @Test
@@ -72,9 +72,9 @@ class ChaosInjectHandlerTest {
 
     assertThat(result).isInstanceOf(CommandResult.Success::class.java)
 
-    val fault = interceptor.getActiveFaults()["test-provider"]
-    assertThat(fault).isInstanceOf(ProviderFault.Flap::class.java)
-    val flap = fault as ProviderFault.Flap
+    val fault = interceptor.activeFaults()["test-provider"]
+    assertThat(fault).isInstanceOf(Fault.Flap::class.java)
+    val flap = fault as Fault.Flap
     assertThat(flap.onMillis).isEqualTo(1000L)
     assertThat(flap.offMillis).isEqualTo(3000L)
   }
@@ -136,7 +136,7 @@ class ChaosInjectHandlerTest {
       "cmd-1",
     )
 
-    assertThat(interceptor.getActiveFaults()["test-provider"]).isEqualTo(ProviderFault.Stall)
+    assertThat(interceptor.activeFaults()["test-provider"]).isEqualTo(Fault.Stall)
   }
 
   @Test
@@ -149,8 +149,8 @@ class ChaosInjectHandlerTest {
       "cmd-1",
     )
 
-    val fault = interceptor.getActiveFaults()["test-provider"]
-    assertThat(fault).isInstanceOf(ProviderFault.Error::class.java)
+    val fault = interceptor.activeFaults()["test-provider"]
+    assertThat(fault).isInstanceOf(Fault.Error::class.java)
   }
 
   @Test

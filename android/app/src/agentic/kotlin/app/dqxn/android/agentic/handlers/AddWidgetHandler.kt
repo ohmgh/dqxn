@@ -1,10 +1,10 @@
 package app.dqxn.android.agentic.handlers
 
-import app.dqxn.android.core.agentic.AgenticCommand
-import app.dqxn.android.core.agentic.CommandHandler
-import app.dqxn.android.core.agentic.CommandParams
-import app.dqxn.android.core.agentic.CommandResult
-import app.dqxn.android.core.agentic.getString
+import dev.agentic.android.runtime.AgenticCommand
+import dev.agentic.android.runtime.CommandHandler
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
+import dev.agentic.android.runtime.getString
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize

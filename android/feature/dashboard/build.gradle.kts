@@ -10,7 +10,7 @@ android {
 }
 
 dependencies {
-  implementation(project(":core:agentic"))
+  implementation("dev.agentic.android:semantics")
   implementation(project(":core:design"))
   implementation(project(":core:thermal"))
   implementation(project(":data"))

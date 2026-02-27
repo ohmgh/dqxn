@@ -47,8 +47,12 @@ dependencies {
   implementation(project(":core:firebase"))
   implementation(project(":core:thermal"))
   implementation(project(":core:design"))
-  debugImplementation(project(":core:agentic"))
-  add("benchmarkImplementation", project(":core:agentic"))
+  debugImplementation("dev.agentic.android:runtime")
+  debugImplementation("dev.agentic.android:semantics")
+  debugImplementation("dev.agentic.android:chaos")
+  add("benchmarkImplementation", "dev.agentic.android:runtime")
+  add("benchmarkImplementation", "dev.agentic.android:semantics")
+  add("benchmarkImplementation", "dev.agentic.android:chaos")
 
   // Data layer
   implementation(project(":data"))
@@ -75,8 +79,8 @@ dependencies {
   implementation(libs.play.review.ktx)
 
   // KSP: agentic command processor (generates AgenticHiltModule for debug + benchmark)
-  add("kspDebug", project(":codegen:agentic"))
-  add("kspBenchmark", project(":codegen:agentic"))
+  add("kspDebug", "dev.agentic.android:codegen")
+  add("kspBenchmark", "dev.agentic.android:codegen")
 
   // Baseline Profile
   implementation(libs.profileinstaller)
@@ -84,6 +88,7 @@ dependencies {
 
   // Hilt testing (Robolectric + @HiltAndroidTest)
   testImplementation(libs.hilt.testing)
+  testImplementation("dev.agentic.android:testing")
   kspTest(libs.hilt.compiler)
 
   // AndroidX Test (instrumented tests)

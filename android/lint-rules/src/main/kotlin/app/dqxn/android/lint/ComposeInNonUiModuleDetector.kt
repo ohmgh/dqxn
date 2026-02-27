@@ -16,7 +16,7 @@ import org.jetbrains.uast.UImportStatement
  * Detects Compose imports in modules that should not have the Compose compiler.
  *
  * Non-UI modules: sdk.contracts, sdk.common, sdk.observability, sdk.analytics, core.thermal,
- * core.firebase, core.agentic, data.
+ * core.firebase, data.
  *
  * Exception: sdk.contracts may use @Composable, @Immutable, @Stable from compose.runtime via
  * compileOnly -- these specific imports are allowed.
@@ -85,7 +85,6 @@ class ComposeInNonUiModuleDetector : Detector(), SourceCodeScanner {
         "app.dqxn.android.sdk.analytics",
         "app.dqxn.android.core.thermal",
         "app.dqxn.android.core.firebase",
-        "app.dqxn.android.core.agentic",
         "app.dqxn.android.data",
       )
 
@@ -112,7 +111,7 @@ class ComposeInNonUiModuleDetector : Detector(), SourceCodeScanner {
           "This module does not have the Compose compiler enabled. " +
             "Compose UI code belongs in modules with the `dqxn.android.compose` or `dqxn.pack` plugin. " +
             "Non-UI modules: :sdk:contracts (limited runtime annotations only), :sdk:common, " +
-            ":sdk:observability, :sdk:analytics, :core:thermal, :core:firebase, :core:agentic, :data.",
+            ":sdk:observability, :sdk:analytics, :core:thermal, :core:firebase, :data.",
         category = Category.CORRECTNESS,
         priority = 8,
         severity = Severity.ERROR,

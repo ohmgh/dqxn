@@ -1,18 +1,18 @@
 package app.dqxn.android.agentic.handlers
 
-import app.dqxn.android.core.agentic.AgenticCommand
-import app.dqxn.android.core.agentic.CommandHandler
-import app.dqxn.android.core.agentic.CommandParams
-import app.dqxn.android.core.agentic.CommandResult
-import app.dqxn.android.core.agentic.getString
-import app.dqxn.android.core.agentic.chaos.ChaosProviderInterceptor
-import app.dqxn.android.sdk.contracts.fault.ProviderFault
+import dev.agentic.android.runtime.AgenticCommand
+import dev.agentic.android.runtime.CommandHandler
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
+import dev.agentic.android.runtime.getString
+import dev.agentic.android.chaos.Fault
+import dev.agentic.android.chaos.FaultInjector
 import javax.inject.Inject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * Injects a single fault into a specific provider via [ChaosProviderInterceptor], independent
+ * Injects a single fault into a specific provider via [FaultInjector], independent
  * of any [ChaosEngine] session. Useful for targeted manual fault injection.
  *
  * Params: `providerId` (required), `fault` (required: "kill", "stall", "delay", "error", "flap"),
@@ -26,7 +26,7 @@ import kotlinx.serialization.json.put
 internal class ChaosInjectHandler
 @Inject
 constructor(
-  private val interceptor: ChaosProviderInterceptor,
+  private val injector: FaultInjector,
 ) : CommandHandler {
 
   override val name: String = "chaos-inject"
@@ -48,17 +48,17 @@ constructor(
       )
 
     val fault = when (faultName.lowercase()) {
-      "kill" -> ProviderFault.Kill
-      "stall" -> ProviderFault.Stall
+      "kill" -> Fault.Kill
+      "stall" -> Fault.Stall
       "delay" -> {
         val delayMs = params.getString("delayMs")?.toLongOrNull() ?: 1000L
-        ProviderFault.Delay(delayMs)
+        Fault.Delay(delayMs)
       }
-      "error" -> ProviderFault.Error(RuntimeException("Chaos injected error"))
+      "error" -> Fault.Error(RuntimeException("Chaos injected error"))
       "flap" -> {
         val onMs = params.getString("onMs")?.toLongOrNull() ?: 2000L
         val offMs = params.getString("offMs")?.toLongOrNull() ?: 2000L
-        ProviderFault.Flap(onMillis = onMs, offMillis = offMs)
+        Fault.Flap(onMillis = onMs, offMillis = offMs)
       }
       else -> return CommandResult.Error(
         message = "Unknown fault type: $faultName. Valid: kill, stall, delay, error, flap",
@@ -66,9 +66,9 @@ constructor(
       )
     }
 
-    interceptor.injectFault(providerId, fault)
+    injector.inject(providerId, fault)
 
-    val activeFaults = interceptor.getActiveFaults()
+    val activeFaults = injector.activeFaults()
     val json = buildJsonObject {
       put("injected", true)
       put("providerId", providerId)

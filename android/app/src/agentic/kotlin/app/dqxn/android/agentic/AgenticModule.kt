@@ -1,8 +1,9 @@
 package app.dqxn.android.agentic
 
-import app.dqxn.android.core.agentic.CommandHandler
-import app.dqxn.android.core.agentic.chaos.ChaosProviderInterceptor
+import dev.agentic.android.runtime.CommandHandler
+import app.dqxn.android.agentic.chaos.ChaosProviderInterceptor
 import app.dqxn.android.sdk.contracts.provider.DataProviderInterceptor
+import dev.agentic.android.chaos.FaultInjector
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -32,4 +33,9 @@ internal abstract class AgenticModule {
   abstract fun bindChaosInterceptor(
     interceptor: ChaosProviderInterceptor,
   ): DataProviderInterceptor
+
+  @Binds
+  abstract fun bindFaultInjector(
+    interceptor: ChaosProviderInterceptor,
+  ): FaultInjector
 }

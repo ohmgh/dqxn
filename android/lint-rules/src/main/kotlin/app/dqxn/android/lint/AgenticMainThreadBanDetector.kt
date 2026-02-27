@@ -45,14 +45,15 @@ class AgenticMainThreadBanDetector : Detector(), SourceCodeScanner {
 
   companion object {
     private fun isAgenticModule(packageName: String): Boolean =
-      packageName.startsWith("app.dqxn.android.core.agentic")
+      packageName.startsWith("dev.agentic.android") ||
+        packageName.startsWith("app.dqxn.android.agentic")
 
     val ISSUE: Issue =
       Issue.create(
         id = "AgenticMainThreadBan",
         briefDescription = "Main dispatcher in agentic handler",
         explanation =
-          "Dispatchers.Main is banned in agentic command handlers (:core:agentic module). " +
+          "Dispatchers.Main is banned in agentic command handlers (dev.agentic.android + app.dqxn.android.agentic). " +
             "Agentic commands are debug/diagnostic operations that should never dispatch to the main thread. " +
             "Use Dispatchers.Default for CPU work or Dispatchers.IO for I/O operations.",
         category = Category.PERFORMANCE,

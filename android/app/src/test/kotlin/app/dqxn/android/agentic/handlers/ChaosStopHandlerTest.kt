@@ -1,9 +1,10 @@
 package app.dqxn.android.agentic.handlers
 
-import app.dqxn.android.core.agentic.CommandParams
-import app.dqxn.android.core.agentic.CommandResult
-import app.dqxn.android.core.agentic.chaos.ChaosEngine
-import app.dqxn.android.core.agentic.chaos.ChaosProviderInterceptor
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
+import dev.agentic.android.chaos.ChaosEngine
+import dev.agentic.android.chaos.ChaosProfileRegistry
+import app.dqxn.android.agentic.chaos.ChaosProviderInterceptor
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -16,7 +17,7 @@ import org.junit.jupiter.api.Test
 class ChaosStopHandlerTest {
 
   private val interceptor = ChaosProviderInterceptor()
-  private val engine = ChaosEngine(interceptor)
+  private val engine = ChaosEngine(interceptor, ChaosProfileRegistry())
   private val handler = ChaosStopHandler(engine)
 
   @Test

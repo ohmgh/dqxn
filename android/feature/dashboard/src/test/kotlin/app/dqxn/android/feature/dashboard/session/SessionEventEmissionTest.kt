@@ -1,7 +1,7 @@
 package app.dqxn.android.feature.dashboard.session
 
 import androidx.lifecycle.SavedStateHandle
-import app.dqxn.android.core.agentic.SemanticsOwnerHolder
+import dev.agentic.android.semantics.SemanticsOwnerHolder
 import app.dqxn.android.data.device.PairedDeviceStore
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize

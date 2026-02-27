@@ -1,13 +1,13 @@
-package app.dqxn.android.core.agentic.chaos
+package app.dqxn.android.agentic.chaos
 
 import app.cash.turbine.test
-import app.dqxn.android.sdk.contracts.fault.ProviderFault
 import app.dqxn.android.sdk.contracts.provider.DataProvider
 import app.dqxn.android.sdk.contracts.provider.DataSchema
 import app.dqxn.android.sdk.contracts.provider.DataSnapshot
 import app.dqxn.android.sdk.contracts.provider.ProviderPriority
 import app.dqxn.android.sdk.contracts.setup.SetupPageDefinition
 import com.google.common.truth.Truth.assertThat
+import dev.agentic.android.chaos.Fault
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -73,8 +73,8 @@ class ChaosProviderInterceptorTest {
   }
 
   @Test
-  fun `injectFault Kill terminates flow`() = runTest {
-    interceptor.injectFault("test-provider", ProviderFault.Kill)
+  fun `inject Kill terminates flow`() = runTest {
+    interceptor.inject("test-provider", Fault.Kill)
 
     val upstream = flow {
       emit(TestSnapshot(timestamp = 1L, value = 1))
@@ -87,8 +87,8 @@ class ChaosProviderInterceptorTest {
   }
 
   @Test
-  fun `injectFault Delay adds latency to emissions`() = runTest {
-    interceptor.injectFault("test-provider", ProviderFault.Delay(delayMs = 500))
+  fun `inject Delay adds latency to emissions`() = runTest {
+    interceptor.inject("test-provider", Fault.Delay(delayMs = 500))
 
     val upstream = flow { emit(TestSnapshot(timestamp = 1L, value = 1)) }
 
@@ -109,9 +109,9 @@ class ChaosProviderInterceptorTest {
   }
 
   @Test
-  fun `injectFault Error throws on collection`() = runTest {
+  fun `inject Error throws on collection`() = runTest {
     val exception = RuntimeException("chaos error")
-    interceptor.injectFault("test-provider", ProviderFault.Error(exception))
+    interceptor.inject("test-provider", Fault.Error(exception))
 
     val upstream = flow { emit(TestSnapshot(timestamp = 1L, value = 1)) }
 
@@ -123,9 +123,9 @@ class ChaosProviderInterceptorTest {
   }
 
   @Test
-  fun `injectFault ErrorOnNext throws on first emission`() = runTest {
+  fun `inject ErrorOnNext throws on first emission`() = runTest {
     val exception = RuntimeException("first emission error")
-    interceptor.injectFault("test-provider", ProviderFault.ErrorOnNext(exception))
+    interceptor.inject("test-provider", Fault.ErrorOnNext(exception))
 
     val upstream = flow {
       emit(TestSnapshot(timestamp = 1L, value = 1))
@@ -139,8 +139,8 @@ class ChaosProviderInterceptorTest {
   }
 
   @Test
-  fun `injectFault Stall never emits`() = runTest {
-    interceptor.injectFault("test-provider", ProviderFault.Stall)
+  fun `inject Stall never emits`() = runTest {
+    interceptor.inject("test-provider", Fault.Stall)
 
     val upstream = flow { emit(TestSnapshot(timestamp = 1L, value = 1)) }
 
@@ -157,20 +157,20 @@ class ChaosProviderInterceptorTest {
   }
 
   @Test
-  fun `injectFault Flap alternates emission windows`() = runTest {
-    interceptor.injectFault(
+  fun `inject Flap alternates emission windows`() = runTest {
+    interceptor.inject(
       "test-provider",
-      ProviderFault.Flap(onMillis = 1000, offMillis = 1000),
+      Fault.Flap(onMillis = 1000, offMillis = 1000),
     )
 
     val upstream = flow {
-      emit(TestSnapshot(timestamp = 1L, value = 1)) // at t=0 (on window)
+      emit(TestSnapshot(timestamp = 1L, value = 1))
       delay(500)
-      emit(TestSnapshot(timestamp = 2L, value = 2)) // at t=500 (still on)
+      emit(TestSnapshot(timestamp = 2L, value = 2))
       delay(600)
-      emit(TestSnapshot(timestamp = 3L, value = 3)) // at t=1100 (off window)
+      emit(TestSnapshot(timestamp = 3L, value = 3))
       delay(1000)
-      emit(TestSnapshot(timestamp = 4L, value = 4)) // at t=2100 (on window again)
+      emit(TestSnapshot(timestamp = 4L, value = 4))
     }
 
     val collected = mutableListOf<TestSnapshot>()
@@ -178,21 +178,17 @@ class ChaosProviderInterceptorTest {
       interceptor.intercept(provider, upstream).collect { collected.add(it) }
     }
 
-    // At t=0, first emission during on window
     runCurrent()
     assertThat(collected.map { it.value }).containsExactly(1)
 
-    // At t=500, second emission still in on window
     advanceTimeBy(500)
     runCurrent()
     assertThat(collected.map { it.value }).containsExactly(1, 2)
 
-    // At t=1100, third emission in off window -- should be dropped
     advanceTimeBy(600)
     runCurrent()
     assertThat(collected.map { it.value }).containsExactly(1, 2)
 
-    // At t=2100, fourth emission back in on window
     advanceTimeBy(1000)
     runCurrent()
     assertThat(collected.map { it.value }).containsExactly(1, 2, 4)
@@ -201,10 +197,10 @@ class ChaosProviderInterceptorTest {
   }
 
   @Test
-  fun `injectFault Corrupt transforms snapshot data`() = runTest {
-    interceptor.injectFault(
+  fun `inject Corrupt transforms snapshot data`() = runTest {
+    interceptor.inject(
       "test-provider",
-      ProviderFault.Corrupt { snapshot ->
+      Fault.Corrupt { snapshot ->
         val original = snapshot as TestSnapshot
         original.copy(value = original.value * 100)
       },
@@ -220,9 +216,9 @@ class ChaosProviderInterceptorTest {
   }
 
   @Test
-  fun `clearFault removes fault for specific provider`() = runTest {
-    interceptor.injectFault("test-provider", ProviderFault.Kill)
-    interceptor.clearFault("test-provider")
+  fun `clear removes fault for specific provider`() = runTest {
+    interceptor.inject("test-provider", Fault.Kill)
+    interceptor.clear("test-provider")
 
     val upstream = flow { emit(TestSnapshot(timestamp = 1L, value = 42)) }
 
@@ -234,23 +230,21 @@ class ChaosProviderInterceptorTest {
 
   @Test
   fun `clearAll removes all active faults`() = runTest {
-    interceptor.injectFault("provider-a", ProviderFault.Kill)
-    interceptor.injectFault("provider-b", ProviderFault.Stall)
+    interceptor.inject("provider-a", Fault.Kill)
+    interceptor.inject("provider-b", Fault.Stall)
     interceptor.clearAll()
 
-    assertThat(interceptor.getActiveFaults()).isEmpty()
+    assertThat(interceptor.activeFaults()).isEmpty()
   }
 
   @Test
-  fun `getActiveFaults returns current fault map`() {
-    val fault1 = ProviderFault.Kill
-    val fault2 = ProviderFault.Stall
-    interceptor.injectFault("provider-a", fault1)
-    interceptor.injectFault("provider-b", fault2)
+  fun `activeFaults returns current fault map`() {
+    interceptor.inject("provider-a", Fault.Kill)
+    interceptor.inject("provider-b", Fault.Stall)
 
-    val faults = interceptor.getActiveFaults()
+    val faults = interceptor.activeFaults()
     assertThat(faults).hasSize(2)
-    assertThat(faults["provider-a"]).isEqualTo(ProviderFault.Kill)
-    assertThat(faults["provider-b"]).isEqualTo(ProviderFault.Stall)
+    assertThat(faults["provider-a"]).isEqualTo(Fault.Kill)
+    assertThat(faults["provider-b"]).isEqualTo(Fault.Stall)
   }
 }

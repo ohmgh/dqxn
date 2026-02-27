@@ -12,9 +12,9 @@ class AgenticMainThreadBanDetectorTest {
     lint()
       .files(
         kotlin(
-            "src/main/kotlin/app/dqxn/android/core/agentic/PingHandler.kt",
+            "src/main/kotlin/app/dqxn/android/agentic/PingHandler.kt",
             """
-                    package app.dqxn.android.core.agentic
+                    package app.dqxn.android.agentic
                     import kotlinx.coroutines.Dispatchers
                     import kotlinx.coroutines.withContext
                     class PingHandler {
@@ -43,9 +43,9 @@ class AgenticMainThreadBanDetectorTest {
     lint()
       .files(
         kotlin(
-            "src/main/kotlin/app/dqxn/android/core/agentic/ListHandler.kt",
+            "src/main/kotlin/dev/agentic/runtime/ListHandler.kt",
             """
-                    package app.dqxn.android.core.agentic
+                    package dev.agentic.android.runtime
                     import kotlinx.coroutines.Dispatchers
                     import kotlinx.coroutines.withContext
                     class ListHandler {
@@ -71,9 +71,9 @@ class AgenticMainThreadBanDetectorTest {
     lint()
       .files(
         kotlin(
-            "src/main/kotlin/app/dqxn/android/core/agentic/DiagHandler.kt",
+            "src/main/kotlin/dev/agentic/runtime/DiagHandler.kt",
             """
-                    package app.dqxn.android.core.agentic
+                    package dev.agentic.android.runtime
                     import kotlinx.coroutines.Dispatchers
                     import kotlinx.coroutines.withContext
                     class DiagHandler {
@@ -97,9 +97,9 @@ class AgenticMainThreadBanDetectorTest {
     lint()
       .files(
         kotlin(
-            "src/main/kotlin/app/dqxn/android/core/agentic/DumpHandler.kt",
+            "src/main/kotlin/dev/agentic/runtime/DumpHandler.kt",
             """
-                    package app.dqxn.android.core.agentic
+                    package dev.agentic.android.runtime
                     import kotlinx.coroutines.Dispatchers
                     import kotlinx.coroutines.withContext
                     class DumpHandler {

@@ -1,10 +1,10 @@
 package app.dqxn.android.agentic.handlers
 
-import app.dqxn.android.core.agentic.AgenticCommand
-import app.dqxn.android.core.agentic.CommandHandler
-import app.dqxn.android.core.agentic.CommandParams
-import app.dqxn.android.core.agentic.CommandResult
-import app.dqxn.android.core.agentic.chaos.ChaosEngine
+import dev.agentic.android.runtime.AgenticCommand
+import dev.agentic.android.runtime.CommandHandler
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
+import dev.agentic.android.chaos.ChaosEngine
 import javax.inject.Inject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -45,7 +45,7 @@ constructor(
             for (fault in summary.injectedFaults) {
               add(
                 buildJsonObject {
-                  put("providerId", fault.providerId)
+                  put("targetId", fault.targetId)
                   put("faultType", fault.faultType)
                   put("description", fault.description)
                   put("atMs", fault.atMs)

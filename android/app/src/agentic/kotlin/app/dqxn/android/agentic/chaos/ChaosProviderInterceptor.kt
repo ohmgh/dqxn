@@ -1,9 +1,10 @@
-package app.dqxn.android.core.agentic.chaos
+package app.dqxn.android.agentic.chaos
 
-import app.dqxn.android.sdk.contracts.fault.ProviderFault
 import app.dqxn.android.sdk.contracts.provider.DataProvider
 import app.dqxn.android.sdk.contracts.provider.DataProviderInterceptor
 import app.dqxn.android.sdk.contracts.provider.DataSnapshot
+import dev.agentic.android.chaos.Fault
+import dev.agentic.android.chaos.FaultInjector
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -19,46 +20,46 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
-public class ChaosProviderInterceptor @Inject constructor() : DataProviderInterceptor {
+public class ChaosProviderInterceptor @Inject constructor() : DataProviderInterceptor, FaultInjector {
 
-  private val activeFaults = ConcurrentHashMap<String, ProviderFault>()
+  private val activeFaultsMap = ConcurrentHashMap<String, Fault>()
 
-  public fun injectFault(providerId: String, fault: ProviderFault) {
-    activeFaults[providerId] = fault
+  override fun inject(targetId: String, fault: Fault) {
+    activeFaultsMap[targetId] = fault
   }
 
-  public fun clearFault(providerId: String) {
-    activeFaults.remove(providerId)
+  override fun clear(targetId: String) {
+    activeFaultsMap.remove(targetId)
   }
 
-  public fun clearAll() {
-    activeFaults.clear()
+  override fun clearAll() {
+    activeFaultsMap.clear()
   }
 
-  public fun getActiveFaults(): Map<String, ProviderFault> = activeFaults.toMap()
+  override fun activeFaults(): Map<String, Fault> = activeFaultsMap.toMap()
 
   override fun <T : DataSnapshot> intercept(
     provider: DataProvider<T>,
     upstream: Flow<T>,
   ): Flow<T> {
-    val fault = activeFaults[provider.sourceId] ?: return upstream
+    val fault = activeFaultsMap[provider.sourceId] ?: return upstream
     return applyFault(upstream, fault)
   }
 
   private fun <T : DataSnapshot> applyFault(
     upstream: Flow<T>,
-    fault: ProviderFault,
+    fault: Fault,
   ): Flow<T> =
     when (fault) {
-      is ProviderFault.Kill -> flow { /* emit nothing, flow completes immediately */ }
-      is ProviderFault.Stall -> flow { awaitCancellation() }
-      is ProviderFault.Error -> flow { throw fault.exception }
-      is ProviderFault.Delay ->
+      is Fault.Kill -> flow { /* emit nothing, flow completes immediately */ }
+      is Fault.Stall -> flow { awaitCancellation() }
+      is Fault.Error -> flow { throw fault.exception }
+      is Fault.Delay ->
         upstream.transformLatest { value ->
           delay(fault.delayMs)
           emit(value)
         }
-      is ProviderFault.ErrorOnNext ->
+      is Fault.ErrorOnNext ->
         flow {
           var first = true
           upstream.collect { value ->
@@ -69,12 +70,12 @@ public class ChaosProviderInterceptor @Inject constructor() : DataProviderInterc
             emit(value)
           }
         }
-      is ProviderFault.Corrupt ->
+      is Fault.Corrupt ->
         upstream.transformLatest { value ->
           @Suppress("UNCHECKED_CAST")
           emit(fault.transform(value) as T)
         }
-      is ProviderFault.Flap ->
+      is Fault.Flap ->
         flow {
           coroutineScope {
             val passing = AtomicBoolean(true)

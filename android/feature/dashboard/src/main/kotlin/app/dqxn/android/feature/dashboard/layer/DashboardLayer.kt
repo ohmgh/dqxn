@@ -18,7 +18,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import app.dqxn.android.core.agentic.SemanticsOwnerHolder
+import dev.agentic.android.semantics.SemanticsOwnerHolder
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.feature.dashboard.binding.WidgetSlot

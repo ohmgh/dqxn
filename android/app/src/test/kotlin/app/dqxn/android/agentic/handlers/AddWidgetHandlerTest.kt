@@ -1,8 +1,8 @@
 package app.dqxn.android.agentic.handlers
 
 import app.cash.turbine.test
-import app.dqxn.android.core.agentic.CommandParams
-import app.dqxn.android.core.agentic.CommandResult
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
 import app.dqxn.android.feature.dashboard.command.DashboardCommand

@@ -1,8 +1,8 @@
 package app.dqxn.android.agentic.handlers
 
-import app.dqxn.android.core.agentic.CommandParams
-import app.dqxn.android.core.agentic.CommandResult
-import app.dqxn.android.core.agentic.chaos.ChaosProviderInterceptor
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
+import app.dqxn.android.agentic.chaos.ChaosProviderInterceptor
 import app.dqxn.android.sdk.observability.diagnostic.DiagnosticFileWriter
 import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotCapture
 import app.dqxn.android.sdk.observability.log.NoOpLogger

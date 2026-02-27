@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.dqxn.android.core.design.theme.BuiltInThemes
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
 import app.dqxn.android.feature.dashboard.command.DashboardCommandBus
-import app.dqxn.android.core.agentic.SemanticsOwnerHolder
+import dev.agentic.android.semantics.SemanticsOwnerHolder
 import app.dqxn.android.data.device.PairedDeviceStore
 import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator

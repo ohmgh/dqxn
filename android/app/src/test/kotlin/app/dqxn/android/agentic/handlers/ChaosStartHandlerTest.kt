@@ -1,9 +1,10 @@
 package app.dqxn.android.agentic.handlers
 
-import app.dqxn.android.core.agentic.CommandParams
-import app.dqxn.android.core.agentic.CommandResult
-import app.dqxn.android.core.agentic.chaos.ChaosEngine
-import app.dqxn.android.core.agentic.chaos.ChaosProviderInterceptor
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
+import dev.agentic.android.chaos.ChaosEngine
+import dev.agentic.android.chaos.ChaosProfileRegistry
+import app.dqxn.android.agentic.chaos.ChaosProviderInterceptor
 import app.dqxn.android.sdk.contracts.provider.DataProvider
 import app.dqxn.android.sdk.contracts.provider.DataSchema
 import app.dqxn.android.sdk.contracts.provider.DataSnapshot
@@ -47,7 +48,7 @@ class ChaosStartHandlerTest {
   }
 
   private val interceptor = ChaosProviderInterceptor()
-  private val engine = ChaosEngine(interceptor)
+  private val engine = ChaosEngine(interceptor, ChaosProfileRegistry())
   private val providers: Set<DataProvider<*>> = setOf(
     StubProvider("provider-a"),
     StubProvider("provider-b"),

@@ -7,6 +7,8 @@ pluginManagement {
   }
 }
 
+includeBuild("../../agentic")
+
 dependencyResolutionManagement {
   repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
   repositories {
@@ -37,12 +39,8 @@ include(":core:thermal")
 
 include(":core:firebase")
 
-include(":core:agentic")
-
 // Code generation (KSP, build-time only)
 include(":codegen:plugin")
-
-include(":codegen:agentic")
 
 // Data layer
 include(":data")

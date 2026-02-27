@@ -1,9 +1,9 @@
 package app.dqxn.android.agentic.handlers
 
-import app.dqxn.android.core.agentic.AgenticCommand
-import app.dqxn.android.core.agentic.CommandHandler
-import app.dqxn.android.core.agentic.CommandParams
-import app.dqxn.android.core.agentic.CommandResult
+import dev.agentic.android.runtime.AgenticCommand
+import dev.agentic.android.runtime.CommandHandler
+import dev.agentic.android.runtime.CommandParams
+import dev.agentic.android.runtime.CommandResult
 import app.dqxn.android.sdk.observability.metrics.MetricsCollector
 import javax.inject.Inject
 import kotlinx.serialization.json.buildJsonArray
