@@ -55,17 +55,12 @@ internal fun DataProviderSettingsContent(
     return
   }
 
-  val dataTypes =
-    remember(widgetSpec) { widgetSpec.compatibleSnapshots.map { it.simpleName ?: "Unknown" } }
-
   val allProviders =
     remember(widgetSpec) {
-      widgetSpec.compatibleSnapshots
-        .flatMap { snapshotType ->
-          val dataType = snapshotType.simpleName?.removeSuffix("Snapshot") ?: ""
-          dataProviderRegistry.findByDataType(dataType)
-        }
-        .distinctBy { it.sourceId }
+      val compatible = widgetSpec.compatibleSnapshots
+      dataProviderRegistry.getAll()
+        .filter { it.snapshotType in compatible }
+        .sortedBy { it.priority.ordinal }
     }
 
   if (allProviders.isEmpty()) {

@@ -333,11 +333,14 @@ class WidgetSettingsSheetTest {
     sourceId: String,
     displayName: String,
     dataType: String,
+    snapshotType: KClass<out DataSnapshot> = SpeedSnapshot::class,
   ): DataProvider<*> {
     val provider = mockk<DataProvider<DataSnapshot>>(relaxed = true)
     every { provider.sourceId } returns sourceId
     every { provider.displayName } returns displayName
     every { provider.dataType } returns dataType
+    @Suppress("UNCHECKED_CAST")
+    every { provider.snapshotType } returns (snapshotType as KClass<DataSnapshot>)
     every { provider.priority } returns ProviderPriority.DEVICE_SENSOR
     every { provider.isAvailable } returns true
     every { provider.setupSchema } returns emptyList()
