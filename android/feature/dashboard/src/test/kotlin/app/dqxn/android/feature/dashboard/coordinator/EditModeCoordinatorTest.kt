@@ -361,6 +361,60 @@ class EditModeCoordinatorTest {
     assertThat(coordinator.isInteractionAllowed("widget-1")).isTrue()
   }
 
+  // -- Viewport --
+
+  @Test
+  fun `updateViewport updates viewportDimensions`() {
+    coordinator.updateViewport(cols = 15, rows = 8)
+
+    val dims = coordinator.viewportDimensions.value
+    assertThat(dims.cols).isEqualTo(15)
+    assertThat(dims.rows).isEqualTo(8)
+  }
+
+  // -- Resize bounds --
+
+  @Test
+  fun `updateResize clamps to viewport max size`() {
+    coordinator.updateViewport(cols = 20, rows = 12)
+
+    coordinator.startResize(
+      widgetId = "w1",
+      handle = ResizeHandle.BOTTOM_RIGHT,
+      currentSize = GridSize(4, 4),
+      currentPosition = GridPosition(0, 0),
+    )
+
+    // Try to resize to 50x50 — should clamp to 20x12
+    coordinator.updateResize(deltaWidthUnits = 46, deltaHeightUnits = 46)
+
+    val resize = coordinator.resizeState.value!!
+    assertThat(resize.targetSize.widthUnits).isAtMost(20)
+    assertThat(resize.targetSize.heightUnits).isAtMost(12)
+  }
+
+  @Test
+  fun `updateResize TopLeft clamps non-negative origin`() {
+    coordinator.updateViewport(cols = 20, rows = 12)
+
+    coordinator.startResize(
+      widgetId = "w1",
+      handle = ResizeHandle.TOP_LEFT,
+      currentSize = GridSize(4, 4),
+      currentPosition = GridPosition(2, 2),
+    )
+
+    // Increase size by 10 each — position would go to (2-10, 2-10) = (-8, -8)
+    coordinator.updateResize(deltaWidthUnits = 10, deltaHeightUnits = 10)
+
+    val resize = coordinator.resizeState.value!!
+    assertThat(resize.targetPosition!!.col).isAtLeast(0)
+    assertThat(resize.targetPosition!!.row).isAtLeast(0)
+    // Size should be reduced by the overshoot
+    assertThat(resize.targetSize.widthUnits).isAtLeast(EditModeCoordinator.MIN_WIDGET_UNITS)
+    assertThat(resize.targetSize.heightUnits).isAtLeast(EditModeCoordinator.MIN_WIDGET_UNITS)
+  }
+
   // -- Status bar --
 
   @Test

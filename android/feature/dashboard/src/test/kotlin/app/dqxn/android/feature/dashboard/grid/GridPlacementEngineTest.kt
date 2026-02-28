@@ -86,16 +86,26 @@ class GridPlacementEngineTest {
   }
 
   @Test
-  fun `snapToGrid snaps to nearest 2-unit boundary`() {
-    // 48px / 16px grid unit = 3.0 raw units -> snaps to 2 (nearest even)
+  fun `snapToGrid snaps to nearest grid cell`() {
+    // 48px / 16px = 3.0 -> col=3
     val pos1 = engine.snapToGrid(pixelX = 48f, pixelY = 48f, gridUnitPx = 16f)
-    assertThat(pos1.col % 2).isEqualTo(0)
-    assertThat(pos1.row % 2).isEqualTo(0)
+    assertThat(pos1.col).isEqualTo(3)
+    assertThat(pos1.row).isEqualTo(3)
 
-    // 80px / 16px = 5.0 raw units -> snaps to 6 (nearest even, (5+1)/2*2 = 6)
+    // 80px / 16px = 5.0 -> col=5
     val pos2 = engine.snapToGrid(pixelX = 80f, pixelY = 80f, gridUnitPx = 16f)
-    assertThat(pos2.col % 2).isEqualTo(0)
-    assertThat(pos2.row % 2).isEqualTo(0)
+    assertThat(pos2.col).isEqualTo(5)
+    assertThat(pos2.row).isEqualTo(5)
+
+    // 24px / 16px = 1.5 -> rounds to 2
+    val pos3 = engine.snapToGrid(pixelX = 24f, pixelY = 24f, gridUnitPx = 16f)
+    assertThat(pos3.col).isEqualTo(2)
+    assertThat(pos3.row).isEqualTo(2)
+
+    // 20px / 16px = 1.25 -> rounds to 1
+    val pos4 = engine.snapToGrid(pixelX = 20f, pixelY = 20f, gridUnitPx = 16f)
+    assertThat(pos4.col).isEqualTo(1)
+    assertThat(pos4.row).isEqualTo(1)
   }
 
   @Test

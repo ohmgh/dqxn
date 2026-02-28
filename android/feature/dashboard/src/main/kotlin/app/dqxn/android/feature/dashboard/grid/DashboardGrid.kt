@@ -16,7 +16,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,12 +28,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -114,11 +123,11 @@ public fun DashboardGrid(
         val cols = (size.width / gridPx).toInt()
         val rows = (size.height / gridPx).toInt()
         val lineColor = Color.White.copy(alpha = 0.15f)
-        for (col in 0..cols step 2) {
+        for (col in 0..cols) {
           val x = col * gridPx
           drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
         }
-        for (row in 0..rows step 2) {
+        for (row in 0..rows) {
           val y = row * gridPx
           drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
         }
@@ -162,6 +171,8 @@ public fun DashboardGrid(
             val isActivelyManipulated = dragState?.widgetId == widget.instanceId ||
               resizeState?.widgetId == widget.instanceId
             val isFocused = editState.focusedWidgetId == widget.instanceId
+            val isResizingThisWidget = resizeState?.widgetId == widget.instanceId &&
+              resizeState.isResizing
 
             // Wiggle rotation for edit mode (F1.11) -- suppressed during active drag/resize
             val wiggleRotation =
@@ -184,9 +195,10 @@ public fun DashboardGrid(
                 0f
               }
 
-            // Bracket stroke pulse for edit mode (F1.11) -- only on focused widget
+            // Bracket stroke pulse for edit mode (F1.11) -- on focused or resizing widget
+            val showBrackets = isFocused || isResizingThisWidget
             val bracketStrokeWidth =
-              if (isEditMode && isFocused && !isReducedMotion) {
+              if (isEditMode && showBrackets && !isReducedMotion) {
                 val infiniteTransition =
                   rememberInfiniteTransition(label = "bracket_${widget.instanceId}")
                 val strokeWidth by
@@ -201,7 +213,7 @@ public fun DashboardGrid(
                     label = "bracket_stroke_${widget.instanceId}",
                   )
                 strokeWidth
-              } else if (isEditMode && isFocused) {
+              } else if (isEditMode && showBrackets) {
                 4f // Static midpoint for reduced motion
               } else {
                 0f // Not in edit mode
@@ -240,18 +252,26 @@ public fun DashboardGrid(
               )
 
             // Apply gesture handler
-            val widgetSpec = widgetRegistry.findByTypeId(widget.typeId)
+            val renderer = widgetRegistry.findByTypeId(widget.typeId)
+            val onWidgetTap: (() -> Unit)? = if (renderer != null && renderer.supportsTap) {
+              @Suppress("UNCHECKED_CAST")
+              val anySettings = widget.settings as kotlinx.collections.immutable.ImmutableMap<String, Any>
+              { renderer.onTap(widget.instanceId, anySettings) }
+            } else {
+              null
+            }
             val gestureModifier =
-              if (widgetSpec != null) {
+              if (renderer != null) {
                 with(widgetGestureHandler) {
                   Modifier.widgetGestures(
                     widgetId = widget.instanceId,
-                    widgetSpec = widgetSpec,
+                    widgetSpec = renderer,
                     currentPosition = widget.position,
                     currentSize = widget.size,
                     gridUnitPx = gridUnitPx,
                     viewportCols = viewportCols,
                     viewportRows = viewportRows,
+                    onWidgetTap = onWidgetTap,
                   )
                 }
               } else {
@@ -283,8 +303,8 @@ public fun DashboardGrid(
                   },
               )
 
-              // Corner brackets for edit mode (F1.11) -- only on focused widget
-              if (isEditMode && isFocused && bracketStrokeWidth > 0f) {
+              // Corner brackets for edit mode (F1.11) -- on focused or resizing widget
+              if (isEditMode && (isFocused || isResizingThisWidget) && bracketStrokeWidth > 0f) {
                 val bracketColor = LocalDashboardTheme.current.accentColor
 
                 Canvas(
@@ -362,6 +382,37 @@ public fun DashboardGrid(
                   drawLine(color, Offset(size.width, size.height - cornerRadiusPx - legLength), Offset(size.width, size.height - cornerRadiusPx), strokePx, cap)
                 }
               }
+
+              // Box resize handle nodes at 32dp (R2) -- only when focused, not during resize
+              if (isEditMode && isFocused && !isResizingThisWidget && renderer != null) {
+                for (handle in ResizeHandle.entries) {
+                  Box(
+                    modifier = Modifier
+                      .size(32.dp)
+                      .align(handle.toAlignment())
+                      .graphicsLayer {
+                        if (widgetDragState != null) {
+                          translationX = widgetDragState.currentOffsetX
+                          translationY = widgetDragState.currentOffsetY
+                        }
+                      }
+                      .pointerInput(widget.instanceId, handle) {
+                        awaitEachGesture {
+                          val down = awaitFirstDown(
+                            requireUnconsumed = false,
+                            pass = PointerEventPass.Initial,
+                          )
+                          down.consume()
+                          editModeCoordinator.startResize(
+                            widget.instanceId, handle, widget.size, widget.position, renderer,
+                          )
+                          awaitResizeEvents(handle, gridUnitPx, editModeCoordinator)
+                        }
+                      }
+                      .testTag("resize_handle_${handle.name}_${widget.instanceId}"),
+                  )
+                }
+              }
             }
           }
         }
@@ -391,6 +442,11 @@ public fun DashboardGrid(
     // Pre-compute toolbar gap outside of placement lambda
     val toolbarGapPx = 8.dp.roundToPx()
 
+    // Derive viewport from actual layout constraints and update coordinator
+    val derivedCols = (constraints.maxWidth / gridUnitPx).toInt()
+    val derivedRows = (constraints.maxHeight / gridUnitPx).toInt()
+    editModeCoordinator.updateViewport(derivedCols, derivedRows)
+
     // Custom MeasurePolicy: each widget measured with constraints from widget.size * GRID_UNIT_SIZE
     // If focus toolbar is present, it's the last measurable (index == visibleWidgets.size)
     val hasFocusToolbar = isEditMode && editState.focusedWidgetId != null &&
@@ -400,8 +456,16 @@ public fun DashboardGrid(
       measurables.mapIndexed { index, measurable ->
         if (index < visibleWidgets.size) {
           val widget = visibleWidgets[index]
-          val widthPx = (widget.size.widthUnits * gridUnitPx).roundToInt()
-          val heightPx = (widget.size.heightUnits * gridUnitPx).roundToInt()
+          // Use resize preview size when this widget is being resized
+          val effectiveSize = if (resizeState?.widgetId == widget.instanceId &&
+            resizeState.isResizing
+          ) {
+            resizeState.targetSize
+          } else {
+            widget.size
+          }
+          val widthPx = (effectiveSize.widthUnits * gridUnitPx).roundToInt()
+          val heightPx = (effectiveSize.heightUnits * gridUnitPx).roundToInt()
           measurable.measure(
             Constraints.fixed(
               width = widthPx.coerceAtLeast(0),
@@ -423,8 +487,16 @@ public fun DashboardGrid(
       placeables.forEachIndexed { index, placeable ->
         if (index < visibleWidgets.size) {
           val widget = visibleWidgets[index]
-          val x = (widget.position.col * gridUnitPx).roundToInt()
-          val y = (widget.position.row * gridUnitPx).roundToInt()
+          // Use resize preview position when this widget is being resized
+          val effectivePosition = if (resizeState?.widgetId == widget.instanceId &&
+            resizeState.isResizing && resizeState.targetPosition != null
+          ) {
+            resizeState.targetPosition
+          } else {
+            widget.position
+          }
+          val x = (effectivePosition.col * gridUnitPx).roundToInt()
+          val y = (effectivePosition.row * gridUnitPx).roundToInt()
           // Elevate focused/dragging/resizing widget above all others
           val isManipulated = dragState?.widgetId == widget.instanceId ||
             resizeState?.widgetId == widget.instanceId ||
@@ -443,10 +515,25 @@ public fun DashboardGrid(
         val focusedWidget = visibleWidgets.find { it.instanceId == editState.focusedWidgetId }
         if (focusedWidget != null) {
           val toolbarPlaceable = placeables[visibleWidgets.size]
-          val widgetX = (focusedWidget.position.col * gridUnitPx).roundToInt()
-          val widgetY = (focusedWidget.position.row * gridUnitPx).roundToInt()
+          // Use resize preview position/size if resizing
+          val toolbarPosition = if (resizeState?.widgetId == focusedWidget.instanceId &&
+            resizeState.isResizing && resizeState.targetPosition != null
+          ) {
+            resizeState.targetPosition
+          } else {
+            focusedWidget.position
+          }
+          val toolbarSize = if (resizeState?.widgetId == focusedWidget.instanceId &&
+            resizeState.isResizing
+          ) {
+            resizeState.targetSize
+          } else {
+            focusedWidget.size
+          }
+          val widgetX = (toolbarPosition.col * gridUnitPx).roundToInt()
+          val widgetY = (toolbarPosition.row * gridUnitPx).roundToInt()
           // Center toolbar above widget, offset by toolbar height + 8dp gap
-          val widgetWidthPx = (focusedWidget.size.widthUnits * gridUnitPx).roundToInt()
+          val widgetWidthPx = (toolbarSize.widthUnits * gridUnitPx).roundToInt()
           val toolbarX = widgetX + (widgetWidthPx - toolbarPlaceable.width) / 2
           val toolbarY = widgetY - toolbarPlaceable.height - toolbarGapPx
           toolbarPlaceable.placeRelative(
@@ -464,4 +551,42 @@ public fun DashboardGrid(
 public object DashboardGridConstants {
   /** Size of one grid unit in dp. Same as [GridConstants.GRID_UNIT_SIZE]. */
   public val GRID_UNIT_SIZE_DP: androidx.compose.ui.unit.Dp = GridConstants.GRID_UNIT_SIZE
+}
+
+/** Map [ResizeHandle] to [Alignment] for Box placement within a parent. */
+private fun ResizeHandle.toAlignment(): Alignment = when (this) {
+  ResizeHandle.TOP_LEFT -> Alignment.TopStart
+  ResizeHandle.TOP_RIGHT -> Alignment.TopEnd
+  ResizeHandle.BOTTOM_LEFT -> Alignment.BottomStart
+  ResizeHandle.BOTTOM_RIGHT -> Alignment.BottomEnd
+}
+
+/**
+ * Resize gesture tracking from a corner handle Box node. Accumulates pointer deltas, inverts
+ * for left/top handles, and updates the coordinator each frame.
+ */
+private suspend fun AwaitPointerEventScope.awaitResizeEvents(
+  handle: ResizeHandle,
+  gridUnitPx: Float,
+  coordinator: EditModeCoordinator,
+) {
+  var accX = 0f
+  var accY = 0f
+  while (true) {
+    val event = awaitPointerEvent(PointerEventPass.Initial)
+    val change = event.changes.firstOrNull() ?: break
+    if (change.changedToUp()) {
+      coordinator.endResize()
+      break
+    }
+    val pos = change.positionChange()
+    if (pos != Offset.Zero) {
+      change.consume()
+      val dx = if (handle == ResizeHandle.TOP_LEFT || handle == ResizeHandle.BOTTOM_LEFT) -pos.x else pos.x
+      val dy = if (handle == ResizeHandle.TOP_LEFT || handle == ResizeHandle.TOP_RIGHT) -pos.y else pos.y
+      accX += dx
+      accY += dy
+      coordinator.updateResize((accX / gridUnitPx).toInt(), (accY / gridUnitPx).toInt())
+    }
+  }
 }

@@ -23,6 +23,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** Viewport dimensions in grid units, derived from actual layout constraints. */
+@Immutable
+public data class ViewportDimensions(val cols: Int, val rows: Int)
+
 /**
  * Edit mode state: edit/focus flag, focused widget, and status bar visibility.
  *
@@ -86,6 +90,23 @@ constructor(
 
   /** Discrete edit mode state. */
   public val editState: StateFlow<EditState> = _editState.asStateFlow()
+
+  // -- Viewport dimensions --
+
+  private val _viewportDimensions: MutableStateFlow<ViewportDimensions> =
+    MutableStateFlow(ViewportDimensions(DEFAULT_VIEWPORT_COLS, DEFAULT_VIEWPORT_ROWS))
+
+  /** Viewport dimensions in grid units, derived from layout constraints. */
+  public val viewportDimensions: StateFlow<ViewportDimensions> = _viewportDimensions.asStateFlow()
+
+  /**
+   * Update the viewport dimensions from actual layout constraints. Called from the MeasurePolicy
+   * block each time layout occurs. [MutableStateFlow.value] set is thread-safe; one-frame lag is
+   * invisible.
+   */
+  public fun updateViewport(cols: Int, rows: Int) {
+    _viewportDimensions.value = ViewportDimensions(cols, rows)
+  }
 
   // -- Continuous gesture flows --
 
@@ -398,7 +419,7 @@ constructor(
     val actualDeltaHeight = newHeight - resizeOriginalSize.heightUnits
 
     // Position compensation for non-BottomRight handles
-    val targetPosition =
+    var targetPosition =
       when (resizeHandle) {
         ResizeHandle.TOP_LEFT ->
           GridPosition(
@@ -417,6 +438,23 @@ constructor(
           )
         ResizeHandle.BOTTOM_RIGHT -> null
       }
+
+    // Non-negative origin clamp (for handles that shift position)
+    if (targetPosition != null) {
+      if (targetPosition.col < 0) {
+        newWidth = (newWidth + targetPosition.col).coerceAtLeast(MIN_WIDGET_UNITS)
+        targetPosition = targetPosition.copy(col = 0)
+      }
+      if (targetPosition.row < 0) {
+        newHeight = (newHeight + targetPosition.row).coerceAtLeast(MIN_WIDGET_UNITS)
+        targetPosition = targetPosition.copy(row = 0)
+      }
+    }
+
+    // Viewport max size clamp
+    val viewport = _viewportDimensions.value
+    newWidth = newWidth.coerceAtMost(viewport.cols)
+    newHeight = newHeight.coerceAtMost(viewport.rows)
 
     _resizeState.value =
       ResizeUpdate(
@@ -508,5 +546,11 @@ constructor(
 
     /** Minimum widget size in grid units for resize operations. */
     public const val MIN_WIDGET_UNITS: Int = 2
+
+    /** Default viewport columns before first layout measure. */
+    internal const val DEFAULT_VIEWPORT_COLS: Int = 20
+
+    /** Default viewport rows before first layout measure. */
+    internal const val DEFAULT_VIEWPORT_ROWS: Int = 12
   }
 }

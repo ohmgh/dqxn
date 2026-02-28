@@ -84,17 +84,15 @@ constructor(
   }
 
   /**
-   * Snap pixel coordinates to the nearest 2-unit grid boundary using midpoint snap.
+   * Snap pixel coordinates to the nearest grid cell using midpoint snap.
    *
-   * Per replication advisory section 6: `roundToInt(pixelPos / gridUnitPx)` with 2-unit rounding.
+   * Per replication advisory section 6: `roundToInt(pixelPos / gridUnitPx)` for 1-unit nearest-cell
+   * snap.
    */
   public fun snapToGrid(pixelX: Float, pixelY: Float, gridUnitPx: Float): GridPosition {
     val rawCol = (pixelX / gridUnitPx).roundToInt()
     val rawRow = (pixelY / gridUnitPx).roundToInt()
-    // Snap to nearest 2-unit boundary
-    val snappedCol = ((rawCol + 1) / SNAP_UNIT) * SNAP_UNIT
-    val snappedRow = ((rawRow + 1) / SNAP_UNIT) * SNAP_UNIT
-    return GridPosition(col = snappedCol, row = snappedRow)
+    return GridPosition(col = rawCol, row = rawRow)
   }
 
   /**
@@ -230,6 +228,5 @@ constructor(
 
   private companion object {
     val TAG = LogTag("GridPlacement")
-    const val SNAP_UNIT: Int = 2
   }
 }

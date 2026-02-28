@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -295,6 +296,28 @@ class DashboardViewModelTest {
     advanceUntilIdle()
 
     verify { mocks.editModeCoordinator.enterEditMode() }
+  }
+
+  @Test
+  fun `dispatch OpenWidgetSettings emits navigation event`() = runTest {
+    val mocks = createMocks()
+    val vm = createViewModel(mocks)
+
+    // Start collecting before dispatching so the event isn't lost
+    var receivedEvent: DashboardNavigationEvent? = null
+    val job = launch {
+      vm.navigationEvents.collect { receivedEvent = it }
+    }
+    advanceUntilIdle()
+
+    vm.dispatch(DashboardCommand.OpenWidgetSettings("w42"))
+    advanceUntilIdle()
+
+    job.cancel()
+
+    assertThat(receivedEvent).isInstanceOf(DashboardNavigationEvent.OpenWidgetSettings::class.java)
+    assertThat((receivedEvent as DashboardNavigationEvent.OpenWidgetSettings).widgetId)
+      .isEqualTo("w42")
   }
 
   @Test

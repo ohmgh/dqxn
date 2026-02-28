@@ -78,6 +78,7 @@ public fun DashboardScreen(
   val banners by viewModel.notificationCoordinator.activeBanners.collectAsState()
   val dragState by viewModel.editModeCoordinator.dragState.collectAsState()
   val resizeState by viewModel.editModeCoordinator.resizeState.collectAsState()
+  val viewportDims by viewModel.editModeCoordinator.viewportDimensions.collectAsState()
 
   // Auto-hide bottom bar state (F1.9) -- starts hidden (old pattern)
   var isBarVisible by remember { mutableStateOf(false) }
@@ -107,6 +108,17 @@ public fun DashboardScreen(
     } else if (editState.isEditMode) {
       isBarVisible = true
       lastInteractionTime = System.currentTimeMillis()
+    }
+  }
+
+  // Navigation events (one-shot, e.g. widget settings)
+  LaunchedEffect(Unit) {
+    viewModel.navigationEvents.collect { event ->
+      when (event) {
+        is DashboardNavigationEvent.OpenWidgetSettings -> {
+          navController.navigate(WidgetSettingsRoute(widgetId = event.widgetId))
+        }
+      }
     }
   }
 
@@ -165,8 +177,8 @@ public fun DashboardScreen(
       ) { _ ->
         DashboardLayer(
           widgets = layoutState.widgets,
-          viewportCols = DEFAULT_VIEWPORT_COLS,
-          viewportRows = DEFAULT_VIEWPORT_ROWS,
+          viewportCols = viewportDims.cols,
+          viewportRows = viewportDims.rows,
           editState = editState,
           dragState = dragState,
           resizeState = resizeState,
@@ -256,9 +268,6 @@ public fun DashboardScreen(
     }
   }
 }
-
-private const val DEFAULT_VIEWPORT_COLS = 20
-private const val DEFAULT_VIEWPORT_ROWS = 12
 
 /**
  * Route pattern strings for type-safe navigation destination matching. Navigation Compose

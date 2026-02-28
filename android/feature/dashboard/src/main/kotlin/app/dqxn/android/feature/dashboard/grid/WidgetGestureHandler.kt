@@ -9,7 +9,6 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.unit.dp
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
@@ -26,11 +25,11 @@ import kotlin.math.abs
  * `detectDragGesturesAfterLongPress`).
  *
  * Gesture behavior:
- * - Non-edit mode: tap is a no-op (WidgetContentDispatcher handles functional taps). Long-press
- *   enters edit mode + focuses widget.
+ * - Non-edit mode: short tap invokes [onWidgetTap] if the renderer supports it. Long-press enters
+ *   edit mode + focuses widget.
  * - Edit mode, not focused: tap focuses widget.
- * - Edit mode, focused: drag via pointer events with 8px cancellation threshold. Resize via corner
- *   handles with immediate start.
+ * - Edit mode, focused: drag via pointer events with 8px cancellation threshold. Resize via
+ *   separate Box handle nodes (not handled here).
  *
  * `wasInEditModeAtStart` is captured at gesture start for consistent [PointerEventPass] selection
  * throughout the gesture.
@@ -60,6 +59,7 @@ constructor(
     gridUnitPx: Float,
     viewportCols: Int = 0,
     viewportRows: Int = 0,
+    onWidgetTap: (() -> Unit)? = null,
   ): Modifier =
     this.pointerInput(widgetId, widgetSpec, currentPosition, currentSize, gridUnitPx) {
       awaitEachGesture {
@@ -72,8 +72,8 @@ constructor(
         val isFocused = editModeCoordinator.editState.value.focusedWidgetId == widgetId
 
         if (!wasInEditModeAtStart) {
-          // Non-edit mode: long-press enters edit mode + focuses widget, short tap is no-op
-          awaitLongPressOrToggleFocus(widgetId)
+          // Non-edit mode: long-press enters edit mode + focuses widget, short tap invokes widget
+          awaitLongPressOrToggleFocus(widgetId, onWidgetTap)
           return@awaitEachGesture
         }
 
@@ -83,40 +83,24 @@ constructor(
           return@awaitEachGesture
         }
 
-        // Edit mode, focused: check for resize handle hit, then fall through to drag
-        val touchTarget = HANDLE_TOUCH_TARGET_DP.dp.toPx()
-        val widgetWidthPx = currentSize.widthUnits * gridUnitPx
-        val widgetHeightPx = currentSize.heightUnits * gridUnitPx
-        val hitHandle =
-          detectResizeHandle(down.position, widgetWidthPx, widgetHeightPx, touchTarget)
-
-        if (hitHandle != null) {
-          // Resize: immediate start, no long-press
-          editModeCoordinator.startResize(
-            widgetId,
-            hitHandle,
-            currentSize,
-            currentPosition,
-            widgetSpec,
-          )
-          awaitResizeEvents(hitHandle, gridUnitPx)
-          return@awaitEachGesture
-        }
-
+        // Edit mode, focused: resize handled by separate Box nodes.
         // Drag: long-press detection with 8px cancellation threshold
         awaitDragEvents(widgetId, currentPosition, currentSize, gridUnitPx, viewportCols, viewportRows, pass)
       }
     }
 
   /**
-   * Non-edit mode: long-press enters edit mode + focuses widget. Short tap is a no-op
-   * (WidgetContentDispatcher handles functional widget taps via separate Modifier.clickable).
+   * Non-edit mode: long-press enters edit mode + focuses widget. Short tap invokes [onWidgetTap]
+   * if the renderer supports it.
    *
    * Uses [AwaitPointerEventScope.withTimeoutOrNull] to detect stationary hold — a finger held
    * still produces zero pointer events after DOWN. Polls with [PointerEventPass.Final] to see
    * events after all handlers, matching old codebase behavior.
    */
-  private suspend fun AwaitPointerEventScope.awaitLongPressOrToggleFocus(widgetId: String) {
+  private suspend fun AwaitPointerEventScope.awaitLongPressOrToggleFocus(
+    widgetId: String,
+    onWidgetTap: (() -> Unit)? = null,
+  ) {
     val deadline = System.currentTimeMillis() + LONG_PRESS_TIMEOUT_MS
     var longPressTriggered = false
 
@@ -147,6 +131,9 @@ constructor(
       val change = event.changes.firstOrNull() ?: break
 
       if (change.changedToUp()) {
+        if (!longPressTriggered) {
+          onWidgetTap?.invoke()
+        }
         break
       }
 
@@ -252,79 +239,6 @@ constructor(
     }
   }
 
-  /**
-   * Resize gesture from a corner handle. Immediate start (no long-press). Touch targets 48dp per
-   * F1.7.
-   */
-  private suspend fun AwaitPointerEventScope.awaitResizeEvents(
-    handle: ResizeHandle,
-    gridUnitPx: Float,
-  ) {
-    var accumulatedDeltaX = 0f
-    var accumulatedDeltaY = 0f
-
-    while (true) {
-      val event = awaitPointerEvent(PointerEventPass.Initial)
-      val change = event.changes.firstOrNull() ?: break
-
-      if (change.changedToUp()) {
-        editModeCoordinator.endResize()
-        break
-      }
-
-      val posChange = change.positionChange()
-      if (posChange != Offset.Zero) {
-        change.consume()
-
-        // Invert deltas for left/top handles per replication advisory section 6
-        val dx =
-          when (handle) {
-            ResizeHandle.TOP_LEFT,
-            ResizeHandle.BOTTOM_LEFT -> -posChange.x
-            else -> posChange.x
-          }
-        val dy =
-          when (handle) {
-            ResizeHandle.TOP_LEFT,
-            ResizeHandle.TOP_RIGHT -> -posChange.y
-            else -> posChange.y
-          }
-
-        accumulatedDeltaX += dx
-        accumulatedDeltaY += dy
-
-        val deltaWidthUnits = (accumulatedDeltaX / gridUnitPx).toInt()
-        val deltaHeightUnits = (accumulatedDeltaY / gridUnitPx).toInt()
-
-        editModeCoordinator.updateResize(deltaWidthUnits, deltaHeightUnits)
-      }
-    }
-  }
-
-  /**
-   * Detect which resize handle (if any) was hit by the [tapPosition] within a widget of the given
-   * pixel dimensions. Returns null if no handle was hit.
-   */
-  internal fun detectResizeHandle(
-    tapPosition: Offset,
-    widgetWidthPx: Float,
-    widgetHeightPx: Float,
-    touchTargetPx: Float,
-  ): ResizeHandle? {
-    val inLeft = tapPosition.x < touchTargetPx
-    val inRight = tapPosition.x > widgetWidthPx - touchTargetPx
-    val inTop = tapPosition.y < touchTargetPx
-    val inBottom = tapPosition.y > widgetHeightPx - touchTargetPx
-
-    return when {
-      inTop && inLeft -> ResizeHandle.TOP_LEFT
-      inTop && inRight -> ResizeHandle.TOP_RIGHT
-      inBottom && inLeft -> ResizeHandle.BOTTOM_LEFT
-      inBottom && inRight -> ResizeHandle.BOTTOM_RIGHT
-      else -> null
-    }
-  }
-
   public companion object {
     /** Long-press threshold in milliseconds for drag initiation. */
     public const val LONG_PRESS_TIMEOUT_MS: Long = 400L
@@ -332,10 +246,7 @@ constructor(
     /** Movement threshold in pixels that cancels a pending long-press (scroll discrimination). */
     public const val DRAG_THRESHOLD_PX: Float = 8f
 
-    /** Visual handle size in dp. */
+    /** Visual handle size in dp (matches Box resize handle nodes). */
     public const val HANDLE_SIZE_DP: Float = 32f
-
-    /** Touch target size in dp for resize handles per F1.7. */
-    public const val HANDLE_TOUCH_TARGET_DP: Float = 48f
   }
 }

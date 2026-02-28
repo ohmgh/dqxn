@@ -40,7 +40,14 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+
+/** Navigation events emitted by [DashboardViewModel] for one-shot overlay navigation. */
+public sealed interface DashboardNavigationEvent {
+  public data class OpenWidgetSettings(val widgetId: String) : DashboardNavigationEvent
+}
 
 /**
  * Thin coordinator host that routes [DashboardCommand] to the correct coordinator.
@@ -84,6 +91,11 @@ constructor(
 ) : ViewModel() {
 
   private val commandChannel = Channel<DashboardCommand>(capacity = 64)
+
+  private val _navigationEvents = Channel<DashboardNavigationEvent>(capacity = Channel.BUFFERED)
+
+  /** One-shot navigation events for overlay navigation (e.g., widget settings). */
+  public val navigationEvents: Flow<DashboardNavigationEvent> = _navigationEvents.receiveAsFlow()
 
   /** All themes: free built-in themes first, then pack-provided themes. */
   val allThemes: ImmutableList<DashboardThemeDefinition> = run {
@@ -219,7 +231,7 @@ constructor(
         }
       }
       is DashboardCommand.OpenWidgetSettings -> {
-        // TODO: Route to widget settings overlay/route. Downstream phases wire actual navigation.
+        _navigationEvents.trySend(DashboardNavigationEvent.OpenWidgetSettings(command.widgetId))
         logger.info(TAG) { "OpenWidgetSettings: widgetId=${command.widgetId}" }
         recordSessionEvent(EventType.TAP, "widgetSettings=${command.widgetId}")
       }

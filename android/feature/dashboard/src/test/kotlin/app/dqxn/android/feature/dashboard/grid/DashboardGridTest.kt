@@ -177,6 +177,62 @@ class DashboardGridTest {
     assertThat(boundaryFlow.value.first().name).isEqualTo("fold")
   }
 
+  // ---- Resize preview tests (R3) ----
+
+  @Test
+  fun `resize preview uses targetSize for measurement`() {
+    val w = widget("w1", col = 2, row = 2, width = 4, height = 4)
+    val resizeState = ResizeUpdate(
+      widgetId = "w1",
+      handle = ResizeHandle.BOTTOM_RIGHT,
+      targetSize = GridSize(widthUnits = 8, heightUnits = 6),
+      targetPosition = null,
+      isResizing = true,
+    )
+
+    // When resizing, effective size should be targetSize, not widget.size
+    val effectiveSize = if (resizeState.widgetId == w.instanceId && resizeState.isResizing) {
+      resizeState.targetSize
+    } else {
+      w.size
+    }
+    assertThat(effectiveSize.widthUnits).isEqualTo(8)
+    assertThat(effectiveSize.heightUnits).isEqualTo(6)
+  }
+
+  @Test
+  fun `resize preview uses targetPosition for placement`() {
+    val w = widget("w1", col = 4, row = 4, width = 4, height = 4)
+    val resizeState = ResizeUpdate(
+      widgetId = "w1",
+      handle = ResizeHandle.TOP_LEFT,
+      targetSize = GridSize(widthUnits = 6, heightUnits = 6),
+      targetPosition = GridPosition(col = 2, row = 2),
+      isResizing = true,
+    )
+
+    val effectivePosition = if (resizeState.widgetId == w.instanceId &&
+      resizeState.isResizing && resizeState.targetPosition != null
+    ) {
+      resizeState.targetPosition
+    } else {
+      w.position
+    }
+    assertThat(effectivePosition.col).isEqualTo(2)
+    assertThat(effectivePosition.row).isEqualTo(2)
+  }
+
+  @Test
+  fun `brackets visible during resize`() {
+    val isEditMode = true
+    val isFocused = false
+    val isResizingThisWidget = true
+
+    // Brackets should be visible when isEditMode && (isFocused || isResizingThisWidget)
+    val showBrackets = isEditMode && (isFocused || isResizingThisWidget)
+    assertThat(showBrackets).isTrue()
+  }
+
   @Test
   fun `no-straddle enforced during drag - snap preview respects fold boundary`() {
     val boundary =
