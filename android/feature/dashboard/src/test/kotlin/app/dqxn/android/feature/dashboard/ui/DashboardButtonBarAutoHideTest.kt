@@ -44,6 +44,7 @@ class DashboardButtonBarAutoHideTest {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         DashboardButtonBar(
           isVisible = true,
+          isEditMode = false,
           onSettingsClick = {},
           onAddWidgetClick = {},
           onInteraction = {},
@@ -60,6 +61,7 @@ class DashboardButtonBarAutoHideTest {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         DashboardButtonBar(
           isVisible = false,
+          isEditMode = false,
           onSettingsClick = {},
           onAddWidgetClick = {},
           onInteraction = {},
@@ -76,6 +78,7 @@ class DashboardButtonBarAutoHideTest {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         DashboardButtonBar(
           isVisible = true,
+          isEditMode = false,
           onSettingsClick = {},
           onAddWidgetClick = {},
           onInteraction = {},
@@ -87,11 +90,12 @@ class DashboardButtonBarAutoHideTest {
   }
 
   @Test
-  fun `add widget FAB always present when visible`() {
+  fun `add widget FAB present only in edit mode`() {
     composeTestRule.setContent {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         DashboardButtonBar(
           isVisible = true,
+          isEditMode = true,
           onSettingsClick = {},
           onAddWidgetClick = {},
           onInteraction = {},

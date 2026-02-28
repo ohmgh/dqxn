@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import app.dqxn.android.feature.settings.overlay.OverlayScaffold
 import app.dqxn.android.feature.settings.overlay.OverlayType
+import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import kotlinx.collections.immutable.toImmutableList
 
 /**
@@ -40,6 +41,8 @@ public fun DiagnosticsScreen(
 ) {
   val providerStatuses by viewModel.providerStatuses.collectAsState()
   val isRecording by viewModel.isRecording.collectAsState()
+  val theme = LocalDashboardTheme.current
+  val dividerColor = theme.widgetBorderColor.copy(alpha = 0.3f)
 
   OverlayScaffold(
     title = "Diagnostics",
@@ -61,7 +64,7 @@ public fun DiagnosticsScreen(
         modifier = Modifier.heightIn(max = 300.dp),
       )
 
-      HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+      HorizontalDivider(color = dividerColor, modifier = Modifier.padding(vertical = 12.dp))
 
       // Session recording — bounded height so LazyColumn gets finite constraints
       SessionRecorderViewer(
@@ -73,7 +76,7 @@ public fun DiagnosticsScreen(
         modifier = Modifier.heightIn(max = 400.dp),
       )
 
-      HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+      HorizontalDivider(color = dividerColor, modifier = Modifier.padding(vertical = 12.dp))
 
       // Diagnostic snapshots — bounded height so LazyColumn gets finite constraints
       DiagnosticSnapshotViewer(
@@ -81,7 +84,7 @@ public fun DiagnosticsScreen(
         modifier = Modifier.heightIn(max = 400.dp),
       )
 
-      HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+      HorizontalDivider(color = dividerColor, modifier = Modifier.padding(vertical = 12.dp))
 
       // Observability metrics
       ObservabilityDashboard(

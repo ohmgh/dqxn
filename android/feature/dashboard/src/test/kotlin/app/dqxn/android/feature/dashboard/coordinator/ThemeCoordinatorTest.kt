@@ -37,8 +37,8 @@ class ThemeCoordinatorTest {
 
   private val isDarkActiveFlow = MutableStateFlow(false)
   private val autoSwitchModeFlow = MutableStateFlow(AutoSwitchMode.SYSTEM)
-  private val lightThemeIdFlow = MutableStateFlow("minimalist")
-  private val darkThemeIdFlow = MutableStateFlow("slate")
+  private val lightThemeIdFlow = MutableStateFlow("essentials:minimalist")
+  private val darkThemeIdFlow = MutableStateFlow("essentials:slate")
 
   private val mockEngine =
     mockk<ThemeAutoSwitchEngine>(relaxed = true) { every { isDarkActive } returns isDarkActiveFlow }
@@ -47,8 +47,8 @@ class ThemeCoordinatorTest {
     mockk<BuiltInThemes> {
       every { minimalist } returns MinimalistTheme
       every { slate } returns SlateTheme
-      every { resolveById("minimalist") } returns MinimalistTheme
-      every { resolveById("slate") } returns SlateTheme
+      every { resolveById("essentials:minimalist") } returns MinimalistTheme
+      every { resolveById("essentials:slate") } returns SlateTheme
       every { resolveById("nonexistent") } returns null
     }
 
@@ -131,10 +131,10 @@ class ThemeCoordinatorTest {
         coordinator.initialize(testScope)
         advance()
 
-        coordinator.handleSetTheme("slate")
+        coordinator.handleSetTheme("essentials:slate")
 
         assertThat(coordinator.themeState.value.currentTheme).isEqualTo(SlateTheme)
-        coVerify { mockPrefsRepo.setDarkThemeId("slate") }
+        coVerify { mockPrefsRepo.setDarkThemeId("essentials:slate") }
       }
 
     @Test

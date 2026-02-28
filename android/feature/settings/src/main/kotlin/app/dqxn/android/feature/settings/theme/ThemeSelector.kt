@@ -38,8 +38,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -119,6 +121,10 @@ public fun ThemeSelector(
   val pagerState = rememberPagerState(initialPage = 0) { 2 }
   val scope = rememberCoroutineScope()
 
+  // -- Optimistic local preview ID for instant card highlight on tap --
+  var localPreviewId by remember { mutableStateOf(previewTheme?.themeId) }
+  LaunchedEffect(previewTheme) { localPreviewId = previewTheme?.themeId }
+
   // -- Entitlement revocation: clear preview if previewing a revoked theme (F4.10) --
   val currentEntitlements by
     entitlementManager.entitlementChanges.collectAsState(
@@ -186,10 +192,13 @@ public fun ThemeSelector(
           0 ->
             ThemeGrid(
               themes = builtInThemes,
-              previewTheme = previewTheme,
+              localPreviewId = localPreviewId,
               entitlementManager = entitlementManager,
               customThemeCount = customThemeCount,
-              onTap = onPreviewTheme,
+              onTap = { themeItem ->
+                localPreviewId = themeItem.themeId
+                onPreviewTheme(themeItem)
+              },
               onLongPress = { themeItem ->
                 if (customThemeCount < MAX_CUSTOM_THEMES) onCloneToCustom(themeItem)
                 else onShowToast("Maximum $MAX_CUSTOM_THEMES custom themes reached")
@@ -204,10 +213,13 @@ public fun ThemeSelector(
           1 ->
             ThemeGrid(
               themes = customThemes,
-              previewTheme = previewTheme,
+              localPreviewId = localPreviewId,
               entitlementManager = entitlementManager,
               customThemeCount = customThemeCount,
-              onTap = onPreviewTheme,
+              onTap = { themeItem ->
+                localPreviewId = themeItem.themeId
+                onPreviewTheme(themeItem)
+              },
               onLongPress = { /* no clone for custom themes */},
               onApply = { themeItem, _ -> onApplyTheme(themeItem.themeId) },
               highlightColor = theme.highlightColor,
@@ -231,7 +243,7 @@ public fun ThemeSelector(
 @Composable
 private fun ThemeGrid(
   themes: List<DashboardThemeDefinition>,
-  previewTheme: DashboardThemeDefinition?,
+  localPreviewId: String?,
   entitlementManager: EntitlementManager,
   customThemeCount: Int,
   onTap: (DashboardThemeDefinition) -> Unit,
@@ -256,7 +268,7 @@ private fun ThemeGrid(
     modifier = modifier,
   ) {
     items(themes, key = { it.themeId }) { themeItem ->
-      val isSelected = previewTheme?.themeId == themeItem.themeId
+      val isSelected = localPreviewId == themeItem.themeId
       val isGated = !themeItem.requiredAnyEntitlement.isNullOrEmpty()
       val hasAccess =
         !isGated || themeItem.requiredAnyEntitlement!!.any { entitlementManager.hasEntitlement(it) }

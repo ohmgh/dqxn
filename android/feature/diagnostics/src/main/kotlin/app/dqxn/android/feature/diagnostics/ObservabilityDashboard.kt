@@ -9,14 +9,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.dqxn.android.core.design.token.DashboardTypography
 import app.dqxn.android.sdk.observability.metrics.MetricsSnapshot
+import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 
 /**
  * Simple text-based observability dashboard showing frame time metrics and jank percentage.
@@ -31,12 +32,16 @@ public fun ObservabilityDashboard(
   metricsSnapshot: MetricsSnapshot?,
   modifier: Modifier = Modifier,
 ) {
+  val theme = LocalDashboardTheme.current
+  val dividerColor = theme.widgetBorderColor.copy(alpha = 0.3f)
+
   Column(
     modifier = modifier.fillMaxSize().testTag("observability_dashboard").padding(16.dp),
   ) {
     Text(
       text = "Observability Metrics",
-      style = MaterialTheme.typography.headlineSmall,
+      style = DashboardTypography.title,
+      color = theme.primaryTextColor,
     )
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -44,8 +49,8 @@ public fun ObservabilityDashboard(
     if (metricsSnapshot == null || metricsSnapshot.totalFrameCount == 0L) {
       Text(
         text = "No metrics data available",
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = DashboardTypography.description,
+        color = theme.secondaryTextColor,
       )
       return
     }
@@ -53,7 +58,11 @@ public fun ObservabilityDashboard(
     val frameMetrics = computeFrameMetrics(metricsSnapshot)
 
     // Frame time percentiles
-    Text("Frame Times", style = MaterialTheme.typography.titleMedium)
+    Text(
+      text = "Frame Times",
+      style = DashboardTypography.itemTitle,
+      color = theme.primaryTextColor,
+    )
     Spacer(modifier = Modifier.height(8.dp))
 
     MetricRow(
@@ -72,7 +81,10 @@ public fun ObservabilityDashboard(
       testTag = "frame_time_p99",
     )
 
-    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+    HorizontalDivider(
+      color = dividerColor,
+      modifier = Modifier.padding(vertical = 12.dp),
+    )
 
     // Jank percentage
     MetricRow(
@@ -81,7 +93,10 @@ public fun ObservabilityDashboard(
       testTag = "jank_percent",
     )
 
-    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+    HorizontalDivider(
+      color = dividerColor,
+      modifier = Modifier.padding(vertical = 12.dp),
+    )
 
     // Memory usage
     val runtime = Runtime.getRuntime()
@@ -93,13 +108,16 @@ public fun ObservabilityDashboard(
       testTag = "memory_usage",
     )
 
-    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+    HorizontalDivider(
+      color = dividerColor,
+      modifier = Modifier.padding(vertical = 12.dp),
+    )
 
     // Total frame count
     Text(
       text = "Total frames: ${metricsSnapshot.totalFrameCount}",
-      style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = DashboardTypography.caption,
+      color = theme.secondaryTextColor,
     )
   }
 }
@@ -110,15 +128,21 @@ private fun MetricRow(
   value: String,
   testTag: String,
 ) {
+  val theme = LocalDashboardTheme.current
+
   Row(
     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag(testTag),
     horizontalArrangement = Arrangement.SpaceBetween,
   ) {
-    Text(text = label, style = MaterialTheme.typography.bodyMedium)
+    Text(
+      text = label,
+      style = DashboardTypography.description,
+      color = theme.primaryTextColor,
+    )
     Text(
       text = value,
-      style = MaterialTheme.typography.bodyMedium,
-      color = MaterialTheme.colorScheme.primary,
+      style = DashboardTypography.description,
+      color = theme.accentColor,
     )
   }
 }

@@ -22,6 +22,7 @@ import kotlin.math.abs
  * Behavior:
  * - Long-press (400ms with 8px cancellation): enter edit mode
  * - Tap in edit mode: exit edit mode
+ * - Tap in view mode: calls [onTapBlankSpace] (used for bottom bar toggle)
  */
 public class BlankSpaceGestureHandler
 @Inject
@@ -32,8 +33,13 @@ constructor(
   /**
    * Apply blank space gesture handling to this [Modifier]. Must be placed AFTER widget gesture
    * modifiers in the composition tree so widgets consume their events first.
+   *
+   * @param onTapBlankSpace Called when blank space is tapped in non-edit mode (short press, no
+   *   long-press triggered). Used by DashboardScreen for bottom bar toggle.
    */
-  public fun Modifier.blankSpaceGestures(): Modifier =
+  public fun Modifier.blankSpaceGestures(
+    onTapBlankSpace: () -> Unit = {},
+  ): Modifier =
     this.pointerInput(Unit) {
       awaitEachGesture {
         // Only fire on unconsumed events -- widgets consume theirs via down.consume()
@@ -47,8 +53,8 @@ constructor(
           return@awaitEachGesture
         }
 
-        // Non-edit mode: long-press to enter edit mode
-        awaitLongPress()
+        // Non-edit mode: long-press to enter edit mode, tap for callback
+        awaitLongPressOrTap(onTapBlankSpace)
       }
     }
 
@@ -67,35 +73,60 @@ constructor(
    * Long-press detection with 400ms threshold and 8px cancellation. Movement exceeding 8px before
    * the threshold expires cancels the gesture (scroll discrimination).
    *
-   * Uses elapsed time tracking rather than `coroutineScope` + `delay` because
-   * [AwaitPointerEventScope] is a restricted suspension scope.
+   * If pointer goes up before long-press triggers (and not cancelled by movement), calls
+   * [onTapBlankSpace] for bottom bar toggle.
+   *
+   * Uses [AwaitPointerEventScope.withTimeoutOrNull] to detect stationary hold — a finger held
+   * still produces zero pointer events, so elapsed-time checks between [awaitPointerEvent] calls
+   * never fire for a motionless press.
    */
-  private suspend fun AwaitPointerEventScope.awaitLongPress() {
-    val startTimeMs = System.currentTimeMillis()
+  private suspend fun AwaitPointerEventScope.awaitLongPressOrTap(
+    onTapBlankSpace: () -> Unit,
+  ) {
+    val deadline = System.currentTimeMillis() + LONG_PRESS_TIMEOUT_MS
     var longPressTriggered = false
 
     while (true) {
-      val event = awaitPointerEvent(PointerEventPass.Main)
-      val change = event.changes.firstOrNull() ?: break
+      val remainingMs = deadline - System.currentTimeMillis()
 
-      if (change.changedToUp()) {
-        break
-      }
-
-      val elapsedMs = System.currentTimeMillis() - startTimeMs
-
-      if (!longPressTriggered && elapsedMs >= LONG_PRESS_TIMEOUT_MS) {
+      // Check if timeout already expired (from processing previous events)
+      if (!longPressTriggered && remainingMs <= 0) {
         longPressTriggered = true
         editModeCoordinator.enterEditMode()
       }
 
-      val posChange = change.positionChange()
-      if (posChange != Offset.Zero && !longPressTriggered) {
+      // If long-press already triggered, just wait for UP to end gesture
+      val event = if (!longPressTriggered) {
+        withTimeoutOrNull(remainingMs.coerceAtLeast(0)) {
+          awaitPointerEvent(PointerEventPass.Main)
+        }
+      } else {
+        awaitPointerEvent(PointerEventPass.Main)
+      }
+
+      if (event == null) {
+        // Timeout with no pointer event → long press
+        longPressTriggered = true
+        editModeCoordinator.enterEditMode()
+        continue
+      }
+
+      val change = event.changes.firstOrNull() ?: break
+
+      if (change.changedToUp()) {
+        if (!longPressTriggered) {
+          onTapBlankSpace()
+        }
+        break
+      }
+
+      // Movement cancellation (only before long-press fires)
+      if (!longPressTriggered) {
+        val posChange = change.positionChange()
         if (
           abs(posChange.x) > CANCELLATION_THRESHOLD_PX ||
             abs(posChange.y) > CANCELLATION_THRESHOLD_PX
         ) {
-          // Movement exceeds threshold -- cancel
           break
         }
       }

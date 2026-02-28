@@ -32,8 +32,8 @@ class ThemeSelectorTest {
   private val containerTheme = createTheme("container", "Container", isDark = true)
 
   // -- Test themes --
-  private val freeTheme1 = createTheme("minimalist", "Minimalist")
-  private val freeTheme2 = createTheme("slate", "Slate")
+  private val freeTheme1 = createTheme("essentials:minimalist", "Minimalist")
+  private val freeTheme2 = createTheme("essentials:slate", "Slate")
   private val customTheme1 = createTheme("custom_100", "My Custom")
   private val premiumTheme1 = createTheme("neon", "Neon", requiredEntitlements = setOf("themes"))
   private val premiumTheme2 =
@@ -67,8 +67,8 @@ class ThemeSelectorTest {
     val sorted = sortThemes(allThemes)
 
     // Free themes first
-    assertThat(sorted[0].themeId).isEqualTo("slate")
-    assertThat(sorted[1].themeId).isEqualTo("minimalist")
+    assertThat(sorted[0].themeId).isEqualTo("essentials:slate")
+    assertThat(sorted[1].themeId).isEqualTo("essentials:minimalist")
     // Custom second
     assertThat(sorted[2].themeId).isEqualTo("custom_100")
     // Premium last
@@ -132,13 +132,13 @@ class ThemeSelectorTest {
     }
 
     composeTestRule
-      .onNodeWithTag("theme_card_minimalist", useUnmergedTree = true)
+      .onNodeWithTag("theme_card_essentials:minimalist", useUnmergedTree = true)
       .performLongClick()
 
     composeTestRule.waitForIdle()
 
     assertThat(clonedTheme).isNotNull()
-    assertThat(clonedTheme!!.themeId).isEqualTo("minimalist")
+    assertThat(clonedTheme!!.themeId).isEqualTo("essentials:minimalist")
   }
 
   // --- Disposal tests ---
@@ -293,7 +293,7 @@ class ThemeSelectorTest {
       }
     }
 
-    composeTestRule.onNodeWithTag("theme_dots_minimalist", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithTag("theme_dots_essentials:minimalist", useUnmergedTree = true).assertExists()
   }
 
   @Test

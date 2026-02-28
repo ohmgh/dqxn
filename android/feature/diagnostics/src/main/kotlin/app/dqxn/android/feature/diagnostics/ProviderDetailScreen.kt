@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -21,8 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.dqxn.android.core.design.token.DashboardTypography
 import app.dqxn.android.data.device.ConnectionEvent
 import app.dqxn.android.sdk.observability.health.ProviderStatus
+import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import kotlinx.collections.immutable.ImmutableList
 
 /**
@@ -42,6 +43,8 @@ public fun ProviderDetailScreen(
   onRetry: (String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  val theme = LocalDashboardTheme.current
+
   Column(
     modifier = modifier.fillMaxSize().testTag("provider_detail").padding(16.dp),
   ) {
@@ -49,16 +52,17 @@ public fun ProviderDetailScreen(
     if (providerStatus != null) {
       Text(
         text = providerStatus.displayName,
-        style = MaterialTheme.typography.headlineSmall,
+        style = DashboardTypography.title,
+        color = theme.primaryTextColor,
       )
       Text(
         text = if (providerStatus.isConnected) "Connected" else "Disconnected",
-        style = MaterialTheme.typography.bodyMedium,
+        style = DashboardTypography.description,
         color =
           if (providerStatus.isConnected) {
-            MaterialTheme.colorScheme.primary
+            theme.accentColor
           } else {
-            MaterialTheme.colorScheme.error
+            theme.errorColor
           },
       )
       Spacer(modifier = Modifier.height(16.dp))
@@ -72,8 +76,8 @@ public fun ProviderDetailScreen(
       ) {
         Text(
           text = "No connection events",
-          style = MaterialTheme.typography.bodyLarge,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = DashboardTypography.description,
+          color = theme.secondaryTextColor,
         )
       }
     } else {
@@ -86,7 +90,7 @@ public fun ProviderDetailScreen(
             index = index,
           )
           if (index < events.lastIndex) {
-            HorizontalDivider()
+            HorizontalDivider(color = theme.widgetBorderColor.copy(alpha = 0.3f))
           }
         }
       }
@@ -110,6 +114,8 @@ private fun ConnectionEventRow(
   event: ConnectionEvent,
   index: Int,
 ) {
+  val theme = LocalDashboardTheme.current
+
   Row(
     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("connection_event_$index"),
     horizontalArrangement = Arrangement.SpaceBetween,
@@ -117,18 +123,19 @@ private fun ConnectionEventRow(
     Column(modifier = Modifier.weight(1f)) {
       Text(
         text = formatTimestamp(event.timestamp),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = DashboardTypography.caption,
+        color = theme.secondaryTextColor,
       )
       Text(
         text = event.eventType,
-        style = MaterialTheme.typography.bodyMedium,
+        style = DashboardTypography.description,
+        color = theme.primaryTextColor,
       )
       if (event.details.isNotBlank()) {
         Text(
           text = event.details,
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = DashboardTypography.caption,
+          color = theme.secondaryTextColor,
         )
       }
     }

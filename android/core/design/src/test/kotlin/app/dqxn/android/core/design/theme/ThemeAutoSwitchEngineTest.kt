@@ -73,8 +73,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.LIGHT)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
       advance()
@@ -87,8 +87,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.DARK)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
       advance()
@@ -101,8 +101,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.SYSTEM)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
       advance()
@@ -126,8 +126,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.SYSTEM)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
       advance()
@@ -140,8 +140,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.SOLAR_AUTO)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
       advance()
@@ -154,8 +154,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.SOLAR_AUTO)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
 
@@ -171,8 +171,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.SOLAR_AUTO)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
 
@@ -188,8 +188,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.ILLUMINANCE_AUTO)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
       advance()
@@ -202,8 +202,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.ILLUMINANCE_AUTO)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
 
@@ -219,8 +219,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.ILLUMINANCE_AUTO)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
 
@@ -242,8 +242,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.DARK)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
       advance()
@@ -281,8 +281,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.ILLUMINANCE_AUTO)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
 
@@ -310,8 +310,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.DARK)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
       advance()
@@ -324,8 +324,8 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.LIGHT)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
-        darkThemeId = MutableStateFlow("slate"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
       advance()
@@ -338,7 +338,7 @@ class ThemeAutoSwitchEngineTest {
       val modeFlow = MutableStateFlow(AutoSwitchMode.DARK)
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
-        lightThemeId = MutableStateFlow("minimalist"),
+        lightThemeId = MutableStateFlow("essentials:minimalist"),
         darkThemeId = MutableStateFlow("nonexistent-theme"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
@@ -353,7 +353,7 @@ class ThemeAutoSwitchEngineTest {
       engine.bindPreferences(
         autoSwitchMode = modeFlow,
         lightThemeId = MutableStateFlow("nonexistent-theme"),
-        darkThemeId = MutableStateFlow("slate"),
+        darkThemeId = MutableStateFlow("essentials:slate"),
         illuminanceThreshold = MutableStateFlow(200f),
       )
       advance()

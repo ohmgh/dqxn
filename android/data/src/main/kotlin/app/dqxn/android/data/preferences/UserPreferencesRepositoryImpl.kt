@@ -140,8 +140,8 @@ constructor(
 
   private companion object {
     val DEFAULT_AUTO_SWITCH_MODE = AutoSwitchMode.SYSTEM
-    const val DEFAULT_LIGHT_THEME = "minimalist"
-    const val DEFAULT_DARK_THEME = "slate"
+    const val DEFAULT_LIGHT_THEME = "essentials:minimalist"
+    const val DEFAULT_DARK_THEME = "essentials:slate"
     const val DEFAULT_ILLUMINANCE_THRESHOLD = 100f
     const val DEFAULT_KEEP_SCREEN_ON = true
     const val DEFAULT_ORIENTATION_LOCK = "auto"

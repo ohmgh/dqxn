@@ -62,6 +62,7 @@ public fun DashboardLayer(
   reducedMotionHelper: ReducedMotionHelper,
   widgetGestureHandler: WidgetGestureHandler,
   blankSpaceGestureHandler: BlankSpaceGestureHandler,
+  onTapBlankSpace: () -> Unit,
   semanticsOwnerHolder: SemanticsOwnerHolder,
   userPreferencesRepository: UserPreferencesRepository,
   onCommand: (DashboardCommand) -> Unit,
@@ -166,6 +167,7 @@ public fun DashboardLayer(
       reducedMotionHelper = reducedMotionHelper,
       widgetGestureHandler = widgetGestureHandler,
       blankSpaceGestureHandler = blankSpaceGestureHandler,
+      onTapBlankSpace = onTapBlankSpace,
       onCommand = onCommand,
     )
   }

@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,7 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.dqxn.android.core.design.token.DashboardTypography
 import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotDto
+import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import kotlinx.collections.immutable.ImmutableList
 
 /** Snapshot filter types matching diagnostic pool categories plus ALL. */
@@ -48,6 +49,7 @@ public fun DiagnosticSnapshotViewer(
   snapshots: ImmutableList<DiagnosticSnapshotDto>,
   modifier: Modifier = Modifier,
 ) {
+  val theme = LocalDashboardTheme.current
   var selectedFilter by remember { mutableStateOf("ALL") }
   var expandedIndex by remember { mutableIntStateOf(-1) }
 
@@ -86,8 +88,8 @@ public fun DiagnosticSnapshotViewer(
       ) {
         Text(
           text = "No snapshots",
-          style = MaterialTheme.typography.bodyLarge,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = DashboardTypography.description,
+          color = theme.secondaryTextColor,
         )
       }
     } else {
@@ -100,7 +102,7 @@ public fun DiagnosticSnapshotViewer(
             modifier = Modifier.testTag("snapshot_row_$index"),
           )
           if (index < filteredSnapshots.lastIndex) {
-            HorizontalDivider()
+            HorizontalDivider(color = theme.widgetBorderColor.copy(alpha = 0.3f))
           }
         }
       }
@@ -115,45 +117,56 @@ private fun SnapshotRow(
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  val theme = LocalDashboardTheme.current
+
   Column(
     modifier = modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
   ) {
     Text(
       text = snapshot.triggerType,
-      style = MaterialTheme.typography.labelMedium,
-      color = MaterialTheme.colorScheme.primary,
+      style = DashboardTypography.buttonLabel,
+      color = theme.accentColor,
     )
     Text(
       text = formatTimestamp(snapshot.timestamp),
-      style = MaterialTheme.typography.labelSmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = DashboardTypography.caption,
+      color = theme.secondaryTextColor,
     )
     Text(
       text = snapshot.triggerDescription,
-      style = MaterialTheme.typography.bodySmall,
+      style = DashboardTypography.caption,
+      color = theme.primaryTextColor,
       maxLines = if (isExpanded) Int.MAX_VALUE else 1,
     )
 
     AnimatedVisibility(visible = isExpanded) {
       Column(modifier = Modifier.padding(top = 8.dp)) {
         if (snapshot.activeSpans.isNotEmpty()) {
-          Text("Active Spans:", style = MaterialTheme.typography.labelSmall)
+          Text(
+            text = "Active Spans:",
+            style = DashboardTypography.caption,
+            color = theme.primaryTextColor,
+          )
           snapshot.activeSpans.forEach { span ->
             Text(
               text = "  $span",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = DashboardTypography.caption,
+              color = theme.secondaryTextColor,
             )
           }
         }
         if (snapshot.logTail.isNotEmpty()) {
           Spacer(modifier = Modifier.height(4.dp))
-          Text("Log Tail:", style = MaterialTheme.typography.labelSmall)
+          Text(
+            text = "Log Tail:",
+            style = DashboardTypography.caption,
+            color = theme.primaryTextColor,
+          )
           snapshot.logTail.takeLast(10).forEach { log ->
             Text(
               text = "  $log",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = DashboardTypography.caption,
+              color = theme.secondaryTextColor,
             )
           }
         }
@@ -161,8 +174,8 @@ private fun SnapshotRow(
           Spacer(modifier = Modifier.height(4.dp))
           Text(
             text = "Trace: ${snapshot.agenticTraceId}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = DashboardTypography.caption,
+            color = theme.secondaryTextColor,
           )
         }
       }

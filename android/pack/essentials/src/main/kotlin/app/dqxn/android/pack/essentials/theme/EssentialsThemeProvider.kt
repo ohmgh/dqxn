@@ -23,7 +23,7 @@ public class EssentialsThemeProvider @Inject constructor() : ThemeProvider {
 
   override val packId: String = "essentials"
 
-  override fun getThemes(): List<ThemeSpec> = listOf(MINIMALIST_THEME, SLATE_THEME)
+  override fun getThemes(): List<ThemeSpec> = emptyList()
 
   internal companion object {
     /** Minimalist: clean light theme with subtle blues and warm grays. */

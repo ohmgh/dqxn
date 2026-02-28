@@ -46,8 +46,8 @@ constructor(
 
   // Internal mutable state for preference binding
   private val _autoSwitchMode = MutableStateFlow(AutoSwitchMode.SYSTEM)
-  private val _lightThemeId = MutableStateFlow("minimalist")
-  private val _darkThemeId = MutableStateFlow("slate")
+  private val _lightThemeId = MutableStateFlow("essentials:minimalist")
+  private val _darkThemeId = MutableStateFlow("essentials:slate")
   private val _illuminanceThreshold = MutableStateFlow(200f)
 
   // Late-binding sensor inputs -- null means no provider bound

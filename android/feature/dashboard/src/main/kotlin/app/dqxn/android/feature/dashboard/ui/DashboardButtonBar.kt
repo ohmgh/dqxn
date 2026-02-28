@@ -46,6 +46,7 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 @Composable
 public fun DashboardButtonBar(
   isVisible: Boolean,
+  isEditMode: Boolean,
   onSettingsClick: () -> Unit,
   onAddWidgetClick: () -> Unit,
   onInteraction: () -> Unit,
@@ -107,28 +108,34 @@ public fun DashboardButtonBar(
           )
         }
 
-        // Add Widget FAB (right, always visible)
-        FloatingActionButton(
-          onClick = {
-            onInteraction()
-            onAddWidgetClick()
-          },
-          modifier =
-            Modifier.size(56.dp).testTag("add_widget_button").semantics {
-              contentDescription = "Add widget"
-            },
-          shape = CircleShape,
-          containerColor = accentColor,
-          contentColor = accentContentColor,
-          elevation =
-            androidx.compose.material3.FloatingActionButtonDefaults.elevation(
-              defaultElevation = 6.dp,
-            ),
+        // Add Widget FAB (right, only in edit mode)
+        AnimatedVisibility(
+          visible = isEditMode,
+          enter = DashboardMotion.sheetEnter,
+          exit = DashboardMotion.sheetExit,
         ) {
-          Icon(
-            imageVector = Icons.Filled.Add,
-            contentDescription = "Add widget",
-          )
+          FloatingActionButton(
+            onClick = {
+              onInteraction()
+              onAddWidgetClick()
+            },
+            modifier =
+              Modifier.size(56.dp).testTag("add_widget_button").semantics {
+                contentDescription = "Add widget"
+              },
+            shape = CircleShape,
+            containerColor = accentColor,
+            contentColor = accentContentColor,
+            elevation =
+              androidx.compose.material3.FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+              ),
+          ) {
+            Icon(
+              imageVector = Icons.Filled.Add,
+              contentDescription = "Add widget",
+            )
+          }
         }
       }
     }

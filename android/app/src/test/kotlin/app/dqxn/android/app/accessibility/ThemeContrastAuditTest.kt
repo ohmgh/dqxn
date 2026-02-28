@@ -188,11 +188,11 @@ class ThemeContrastAuditTest {
     val widgetBgStops: List<Color>
 
     when (theme.themeId) {
-      "slate" -> {
+      "essentials:slate" -> {
         bgStops = listOf(Color(0xFF1A1A2E), Color(0xFF16213E))
-        widgetBgStops = listOf(Color(0xFF1E1E32), Color(0xFF1A1A2E))
+        widgetBgStops = listOf(Color(0xFF1E2A3A), Color(0xFF162032))
       }
-      "minimalist" -> {
+      "essentials:minimalist" -> {
         bgStops = listOf(Color(0xFFF5F5F5), Color(0xFFEEEEEE))
         widgetBgStops = listOf(Color.White, Color(0xFFFAFAFA))
       }

@@ -6,16 +6,17 @@ import androidx.compose.ui.graphics.Color
 /** Dark slate fallback theme. Used when no theme provider is available. */
 public val SlateTheme: DashboardThemeDefinition =
   DashboardThemeDefinition(
-    themeId = "slate",
+    themeId = "essentials:slate",
     displayName = "Slate",
     isDark = true,
-    primaryTextColor = Color.White,
-    secondaryTextColor = Color(0xFFB0B0B0),
+    packId = "essentials",
+    primaryTextColor = Color(0xFFE0E0E0),
+    secondaryTextColor = Color(0xFF9E9E9E),
     accentColor = Color(0xFF4FC3F7),
-    highlightColor = Color(0xFF4FC3F7),
-    widgetBorderColor = Color(0xFF424242),
+    highlightColor = Color(0xFF81D4FA),
+    widgetBorderColor = Color(0xFF37474F),
     backgroundBrush = Brush.verticalGradient(listOf(Color(0xFF1A1A2E), Color(0xFF16213E))),
-    widgetBackgroundBrush = Brush.verticalGradient(listOf(Color(0xFF1E1E32), Color(0xFF1A1A2E))),
+    widgetBackgroundBrush = Brush.verticalGradient(listOf(Color(0xFF1E2A3A), Color(0xFF162032))),
     errorColor = Color(0xFFEF5350),
     warningColor = Color(0xFFFFB74D),
     successColor = Color(0xFF66BB6A),
@@ -24,13 +25,14 @@ public val SlateTheme: DashboardThemeDefinition =
 /** Light minimalist theme. */
 public val MinimalistTheme: DashboardThemeDefinition =
   DashboardThemeDefinition(
-    themeId = "minimalist",
+    themeId = "essentials:minimalist",
     displayName = "Minimalist",
     isDark = false,
+    packId = "essentials",
     primaryTextColor = Color(0xFF212121),
     secondaryTextColor = Color(0xFF757575),
     accentColor = Color(0xFF1976D2),
-    highlightColor = Color(0xFF1976D2),
+    highlightColor = Color(0xFF42A5F5),
     widgetBorderColor = Color(0xFFE0E0E0),
     backgroundBrush = Brush.verticalGradient(listOf(Color(0xFFF5F5F5), Color(0xFFEEEEEE))),
     widgetBackgroundBrush = Brush.verticalGradient(listOf(Color.White, Color(0xFFFAFAFA))),

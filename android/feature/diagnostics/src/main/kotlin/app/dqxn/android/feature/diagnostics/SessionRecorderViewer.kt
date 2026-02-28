@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +25,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.dqxn.android.core.design.token.DashboardTypography
 import app.dqxn.android.sdk.observability.session.SessionEvent
+import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import java.text.NumberFormat
 import kotlinx.collections.immutable.ImmutableList
 
@@ -48,6 +49,7 @@ public fun SessionRecorderViewer(
   onClear: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  val theme = LocalDashboardTheme.current
   val numberFormat = NumberFormat.getNumberInstance()
 
   Column(
@@ -91,8 +93,8 @@ public fun SessionRecorderViewer(
     // Event count
     Text(
       text = "${numberFormat.format(events.size)} / ${numberFormat.format(maxEvents)} events",
-      style = MaterialTheme.typography.labelMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = DashboardTypography.buttonLabel,
+      color = theme.secondaryTextColor,
       modifier = Modifier.testTag("event_count"),
     )
 
@@ -106,8 +108,8 @@ public fun SessionRecorderViewer(
       ) {
         Text(
           text = "No session events",
-          style = MaterialTheme.typography.bodyLarge,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = DashboardTypography.description,
+          color = theme.secondaryTextColor,
         )
       }
     } else {
@@ -128,6 +130,8 @@ private fun SessionEventRow(
   event: SessionEvent,
   modifier: Modifier = Modifier,
 ) {
+  val theme = LocalDashboardTheme.current
+
   Row(
     modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -135,19 +139,19 @@ private fun SessionEventRow(
   ) {
     Text(
       text = formatTimestamp(event.timestamp),
-      style = MaterialTheme.typography.labelSmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = DashboardTypography.caption,
+      color = theme.secondaryTextColor,
     )
     Text(
       text = event.type.name,
-      style = MaterialTheme.typography.labelMedium,
-      color = MaterialTheme.colorScheme.primary,
+      style = DashboardTypography.buttonLabel,
+      color = theme.accentColor,
     )
     if (event.details.isNotBlank()) {
       Text(
         text = event.details,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = DashboardTypography.caption,
+        color = theme.secondaryTextColor,
         modifier = Modifier.weight(1f),
       )
     }

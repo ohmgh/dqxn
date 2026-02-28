@@ -55,7 +55,7 @@ class UserPreferencesRepositoryTest {
   fun `default lightThemeId is minimalist`() =
     testScope.runTest {
       repo.lightThemeId.test {
-        assertThat(awaitItem()).isEqualTo("minimalist")
+        assertThat(awaitItem()).isEqualTo("essentials:minimalist")
         cancelAndIgnoreRemainingEvents()
       }
     }
@@ -64,7 +64,7 @@ class UserPreferencesRepositoryTest {
   fun `default darkThemeId is slate`() =
     testScope.runTest {
       repo.darkThemeId.test {
-        assertThat(awaitItem()).isEqualTo("slate")
+        assertThat(awaitItem()).isEqualTo("essentials:slate")
         cancelAndIgnoreRemainingEvents()
       }
     }
@@ -126,7 +126,7 @@ class UserPreferencesRepositoryTest {
   fun `setLightThemeId updates flow`() =
     testScope.runTest {
       repo.lightThemeId.test {
-        assertThat(awaitItem()).isEqualTo("minimalist")
+        assertThat(awaitItem()).isEqualTo("essentials:minimalist")
 
         repo.setLightThemeId("custom-light")
         assertThat(awaitItem()).isEqualTo("custom-light")
@@ -139,7 +139,7 @@ class UserPreferencesRepositoryTest {
   fun `setDarkThemeId updates flow`() =
     testScope.runTest {
       repo.darkThemeId.test {
-        assertThat(awaitItem()).isEqualTo("slate")
+        assertThat(awaitItem()).isEqualTo("essentials:slate")
 
         repo.setDarkThemeId("custom-dark")
         assertThat(awaitItem()).isEqualTo("custom-dark")
@@ -264,11 +264,11 @@ class UserPreferencesRepositoryTest {
         cancelAndIgnoreRemainingEvents()
       }
       repo.lightThemeId.test {
-        assertThat(awaitItem()).isEqualTo("minimalist")
+        assertThat(awaitItem()).isEqualTo("essentials:minimalist")
         cancelAndIgnoreRemainingEvents()
       }
       repo.darkThemeId.test {
-        assertThat(awaitItem()).isEqualTo("slate")
+        assertThat(awaitItem()).isEqualTo("essentials:slate")
         cancelAndIgnoreRemainingEvents()
       }
       repo.keepScreenOn.test {

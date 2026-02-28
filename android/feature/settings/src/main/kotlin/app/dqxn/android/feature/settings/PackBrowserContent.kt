@@ -30,6 +30,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,9 +76,12 @@ public fun PackBrowserContent(
   val theme = LocalDashboardTheme.current
   val allWidgets = remember(widgetRegistry) { widgetRegistry.getAll() }
   val allProviders = remember(dataProviderRegistry) { dataProviderRegistry.getAll() }
+  val currentEntitlements by entitlementManager.entitlementChanges.collectAsState(
+    initial = entitlementManager.getActiveEntitlements()
+  )
 
   val packInfos: List<PackInfo> =
-    remember(allWidgets, allProviders, allThemes) {
+    remember(allWidgets, allProviders, allThemes, currentEntitlements) {
       // Collect all unique pack IDs from widgets, providers, and themes
       val widgetsByPack = allWidgets.groupBy { it.typeId.substringBefore(':') }
       val providersByPack = allProviders.groupBy { it.sourceId.substringBefore(':') }

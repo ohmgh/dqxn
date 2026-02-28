@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -25,7 +24,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.dqxn.android.core.design.token.DashboardTypography
 import app.dqxn.android.sdk.observability.health.ProviderStatus
+import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import kotlinx.collections.immutable.ImmutableList
 
 /** Staleness threshold in milliseconds. Providers not updated in this window show a warning. */
@@ -48,6 +49,8 @@ public fun ProviderHealthDashboard(
   onProviderClick: (String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  val theme = LocalDashboardTheme.current
+
   if (statuses.isEmpty()) {
     Box(
       modifier = modifier.fillMaxSize().testTag("provider_health_list"),
@@ -55,8 +58,8 @@ public fun ProviderHealthDashboard(
     ) {
       Text(
         text = "No providers registered",
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = DashboardTypography.description,
+        color = theme.secondaryTextColor,
       )
     }
     return
@@ -81,6 +84,7 @@ private fun ProviderStatusRow(
   currentTimeMs: Long,
   onClick: () -> Unit,
 ) {
+  val theme = LocalDashboardTheme.current
   val elapsed = currentTimeMs - status.lastUpdateTimestamp
   val isStale = elapsed > STALENESS_THRESHOLD_MS
 
@@ -109,7 +113,8 @@ private fun ProviderStatusRow(
       Column {
         Text(
           text = status.displayName,
-          style = MaterialTheme.typography.bodyLarge,
+          style = DashboardTypography.description,
+          color = theme.primaryTextColor,
         )
         Text(
           text =
@@ -118,12 +123,12 @@ private fun ProviderStatusRow(
             } else {
               formatElapsed(elapsed)
             },
-          style = MaterialTheme.typography.bodySmall,
+          style = DashboardTypography.caption,
           color =
             if (status.errorDescription != null) {
-              MaterialTheme.colorScheme.error
+              theme.errorColor
             } else {
-              MaterialTheme.colorScheme.onSurfaceVariant
+              theme.secondaryTextColor
             },
         )
       }
