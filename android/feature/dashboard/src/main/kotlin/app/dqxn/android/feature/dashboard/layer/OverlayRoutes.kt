@@ -27,7 +27,10 @@ import kotlinx.serialization.Serializable
  * Uses [ExitTransition.None] / [EnterTransition.None] per replication advisory section 2 (jankless
  * preview navigation): widget preview stays visible beneath child overlays.
  */
-@Serializable public data class WidgetSettingsRoute(val widgetId: String)
+@Serializable public data class WidgetSettingsRoute(
+  val widgetId: String,
+  val typeId: String = widgetId,
+)
 
 /**
  * Provider setup wizard overlay -- paginated setup flow for a specific provider.

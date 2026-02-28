@@ -65,6 +65,7 @@ public fun DashboardLayer(
   onTapBlankSpace: () -> Unit,
   semanticsOwnerHolder: SemanticsOwnerHolder,
   userPreferencesRepository: UserPreferencesRepository,
+  editingWidgetId: String? = null,
   onCommand: (DashboardCommand) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -168,6 +169,7 @@ public fun DashboardLayer(
       widgetGestureHandler = widgetGestureHandler,
       blankSpaceGestureHandler = blankSpaceGestureHandler,
       onTapBlankSpace = onTapBlankSpace,
+      editingWidgetId = editingWidgetId,
       onCommand = onCommand,
     )
   }

@@ -86,6 +86,7 @@ public fun DashboardGrid(
   widgetGestureHandler: WidgetGestureHandler,
   blankSpaceGestureHandler: BlankSpaceGestureHandler,
   onTapBlankSpace: () -> Unit,
+  editingWidgetId: String? = null,
   onCommand: (app.dqxn.android.feature.dashboard.command.DashboardCommand) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -109,6 +110,11 @@ public fun DashboardGrid(
   // Edit mode wiggle animation
   val isEditMode = editState.isEditMode
   val isReducedMotion = reducedMotionHelper.isReducedMotion
+
+  // Container dimensions for preview centering (computed from viewport grid dims)
+  val containerWidthPx = viewportCols * gridUnitPx
+  val containerHeightPx = viewportRows * gridUnitPx
+  val isSettingsOpen = editingWidgetId != null
 
   val currentOnTapBlankSpace by rememberUpdatedState(onTapBlankSpace)
   val blankSpaceModifier = with(blankSpaceGestureHandler) {
@@ -174,9 +180,9 @@ public fun DashboardGrid(
             val isResizingThisWidget = resizeState?.widgetId == widget.instanceId &&
               resizeState.isResizing
 
-            // Wiggle rotation for edit mode (F1.11) -- suppressed during active drag/resize
+            // Wiggle rotation for edit mode (F1.11) -- suppressed during active drag/resize or settings open
             val wiggleRotation =
-              if (isEditMode && !isReducedMotion && !isActivelyManipulated) {
+              if (isEditMode && !isReducedMotion && !isActivelyManipulated && !isSettingsOpen) {
                 val infiniteTransition =
                   rememberInfiniteTransition(label = "wiggle_${widget.instanceId}")
                 val rotation by
@@ -236,20 +242,76 @@ public fun DashboardGrid(
                 label = "lift_scale_${widget.instanceId}",
               )
 
-            // settingsAlpha: dim non-focused widgets when a widget is focused (F1.8)
+            // Preview state per widget
+            val isBeingEdited = editingWidgetId == widget.instanceId
+
+            // settingsAlpha: fade out non-edited widgets when settings open, dim non-focused in edit mode
             val settingsAlpha by
               animateFloatAsState(
-                targetValue =
-                  if (editState.focusedWidgetId != null &&
-                    editState.focusedWidgetId != widget.instanceId
-                  ) {
-                    0.5f
-                  } else {
-                    1f
-                  },
-                animationSpec = tween(300),
+                targetValue = when {
+                  isSettingsOpen && !isBeingEdited -> 0f
+                  isSettingsOpen && isBeingEdited -> 1f
+                  editState.focusedWidgetId != null &&
+                    editState.focusedWidgetId != widget.instanceId -> 0.5f
+                  else -> 1f
+                },
+                animationSpec = if (isBeingEdited) snap() else tween(300),
                 label = "settings_alpha_${widget.instanceId}",
               )
+
+            // Preview centering: translate edited widget to center of peek zone
+            val previewFraction = 0.38f
+            val peekHeightPx = containerHeightPx * previewFraction
+            val peekCenterY = peekHeightPx / 2f
+
+            val focusTranslationX by animateFloatAsState(
+              targetValue = if (isBeingEdited) {
+                val widgetW = widget.size.widthUnits * gridUnitPx
+                (containerWidthPx - widgetW) / 2f - (widget.position.col * gridUnitPx)
+              } else {
+                0f
+              },
+              animationSpec = spring(
+                stiffness = Spring.StiffnessLow,
+                dampingRatio = Spring.DampingRatioNoBouncy,
+              ),
+              label = "focus_tx_${widget.instanceId}",
+            )
+
+            val focusTranslationY by animateFloatAsState(
+              targetValue = if (isBeingEdited) {
+                val widgetH = widget.size.heightUnits * gridUnitPx
+                val originalCenterY = (widget.position.row * gridUnitPx) + (widgetH / 2f)
+                peekCenterY - originalCenterY
+              } else {
+                0f
+              },
+              animationSpec = spring(
+                stiffness = Spring.StiffnessLow,
+                dampingRatio = Spring.DampingRatioNoBouncy,
+              ),
+              label = "focus_ty_${widget.instanceId}",
+            )
+
+            // Scale down if widget exceeds peek zone
+            val focusScale by animateFloatAsState(
+              targetValue = if (isBeingEdited) {
+                val widgetW = widget.size.widthUnits * gridUnitPx
+                val widgetH = widget.size.heightUnits * gridUnitPx
+                if (widgetW > containerWidthPx || widgetH > peekHeightPx) {
+                  minOf(containerWidthPx / widgetW, peekHeightPx / widgetH)
+                } else {
+                  1f
+                }
+              } else {
+                1f
+              },
+              animationSpec = spring(
+                stiffness = Spring.StiffnessLow,
+                dampingRatio = Spring.DampingRatioNoBouncy,
+              ),
+              label = "focus_scale_${widget.instanceId}",
+            )
 
             // Apply gesture handler
             val renderer = widgetRegistry.findByTypeId(widget.typeId)
@@ -293,12 +355,15 @@ public fun DashboardGrid(
                       translationX = widgetDragState.currentOffsetX
                       translationY = widgetDragState.currentOffsetY
                     }
+                    // Preview centering offset
+                    translationX += focusTranslationX
+                    translationY += focusTranslationY
                     // Edit mode wiggle
                     rotationZ = wiggleRotation
-                    // Drag lift scale
-                    scaleX = liftScale
-                    scaleY = liftScale
-                    // Dim non-focused widgets (F1.8)
+                    // Drag lift scale * preview scale
+                    scaleX = liftScale * focusScale
+                    scaleY = liftScale * focusScale
+                    // Dim non-focused widgets (F1.8) / fade out when settings open
                     alpha = settingsAlpha
                   },
               )
@@ -497,11 +562,16 @@ public fun DashboardGrid(
           }
           val x = (effectivePosition.col * gridUnitPx).roundToInt()
           val y = (effectivePosition.row * gridUnitPx).roundToInt()
-          // Elevate focused/dragging/resizing widget above all others
+          // Elevate focused/dragging/resizing/editing widget above all others
           val isManipulated = dragState?.widgetId == widget.instanceId ||
             resizeState?.widgetId == widget.instanceId ||
             editState.focusedWidgetId == widget.instanceId
-          val zIndex = if (isManipulated) Float.MAX_VALUE - 1f else widget.zIndex.toFloat()
+          val isBeingEdited = editingWidgetId == widget.instanceId
+          val zIndex = when {
+            isBeingEdited -> 1000f
+            isManipulated -> Float.MAX_VALUE - 1f
+            else -> widget.zIndex.toFloat()
+          }
           placeable.placeRelative(
             x = x,
             y = y,

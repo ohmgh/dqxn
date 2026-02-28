@@ -116,7 +116,9 @@ public fun DashboardScreen(
     viewModel.navigationEvents.collect { event ->
       when (event) {
         is DashboardNavigationEvent.OpenWidgetSettings -> {
-          navController.navigate(WidgetSettingsRoute(widgetId = event.widgetId))
+          navController.navigate(
+            WidgetSettingsRoute(widgetId = event.widgetId, typeId = event.typeId),
+          )
         }
       }
     }
@@ -195,6 +197,7 @@ public fun DashboardScreen(
           },
           semanticsOwnerHolder = viewModel.semanticsOwnerHolder,
           userPreferencesRepository = viewModel.userPreferencesRepository,
+          editingWidgetId = editingWidgetId,
           onCommand = onCommand,
         )
       }

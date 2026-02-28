@@ -24,6 +24,12 @@ public sealed interface DashboardCommand {
     override val traceId: String? = null,
   ) : DashboardCommand
 
+  /** Add a widget by type ID — instance construction delegated to the ViewModel/coordinator. */
+  public data class AddWidgetByTypeId(
+    val typeId: String,
+    override val traceId: String? = null,
+  ) : DashboardCommand
+
   public data class RemoveWidget(
     val widgetId: String,
     override val traceId: String? = null,

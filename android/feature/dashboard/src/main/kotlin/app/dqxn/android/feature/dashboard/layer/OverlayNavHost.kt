@@ -111,7 +111,10 @@ public fun OverlayNavHost(
         widgetRegistry = widgetRegistry,
         entitlementManager = entitlementManager,
         onSelectWidget = { typeId ->
-          navController.navigate(WidgetSettingsRoute(widgetId = typeId))
+          onCommand(DashboardCommand.AddWidgetByTypeId(typeId))
+          navController.navigate(EmptyRoute) {
+            popUpTo<WidgetPickerRoute> { inclusive = true }
+          }
         },
         onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
       )
@@ -213,7 +216,7 @@ public fun OverlayNavHost(
         onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
       ) {
         WidgetSettingsSheet(
-          widgetTypeId = route.widgetId,
+          widgetTypeId = route.typeId,
           widgetRegistry = widgetRegistry,
           dataProviderRegistry = dataProviderRegistry,
           providerSettingsStore = providerSettingsStore,

@@ -35,6 +35,12 @@ import app.dqxn.android.sdk.observability.session.SessionEventEmitter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.agentic.android.semantics.SemanticsOwnerHolder
 import javax.inject.Inject
+import app.dqxn.android.data.layout.DashboardWidgetInstance
+import app.dqxn.android.data.layout.GridPosition
+import app.dqxn.android.data.layout.GridSize
+import app.dqxn.android.sdk.contracts.widget.WidgetContext
+import app.dqxn.android.sdk.contracts.widget.WidgetStyle
+import java.util.UUID
 import kotlin.system.measureTimeMillis
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -46,7 +52,10 @@ import kotlinx.coroutines.launch
 
 /** Navigation events emitted by [DashboardViewModel] for one-shot overlay navigation. */
 public sealed interface DashboardNavigationEvent {
-  public data class OpenWidgetSettings(val widgetId: String) : DashboardNavigationEvent
+  public data class OpenWidgetSettings(
+    val widgetId: String,
+    val typeId: String,
+  ) : DashboardNavigationEvent
 }
 
 /**
@@ -201,6 +210,34 @@ constructor(
         widgetBindingCoordinator.bind(command.widget)
         recordSessionEvent(EventType.WIDGET_ADD, "widgetId=${command.widget.instanceId}")
       }
+      is DashboardCommand.AddWidgetByTypeId -> {
+        val renderer = widgetRegistry.findByTypeId(command.typeId)
+        if (renderer != null) {
+          val defaults = renderer.getDefaults(WidgetContext.DEFAULT)
+          val instanceId = UUID.randomUUID().toString()
+          val instance = DashboardWidgetInstance(
+            instanceId = instanceId,
+            typeId = command.typeId,
+            position = GridPosition(0, 0),
+            size = GridSize(defaults.widthUnits, defaults.heightUnits),
+            style = WidgetStyle.Default,
+            settings = kotlinx.collections.immutable.persistentMapOf(),
+            dataSourceBindings = kotlinx.collections.immutable.persistentMapOf(),
+            zIndex = 0,
+          )
+          layoutCoordinator.handleAddWidget(instance)
+          widgetBindingCoordinator.bind(instance)
+          _navigationEvents.trySend(
+            DashboardNavigationEvent.OpenWidgetSettings(
+              widgetId = instanceId,
+              typeId = command.typeId,
+            ),
+          )
+          recordSessionEvent(EventType.WIDGET_ADD, "widgetId=$instanceId typeId=${command.typeId}")
+        } else {
+          logger.warn(TAG) { "AddWidgetByTypeId: unknown typeId=${command.typeId}" }
+        }
+      }
       is DashboardCommand.RemoveWidget -> {
         widgetBindingCoordinator.unbind(command.widgetId)
         layoutCoordinator.handleRemoveWidget(command.widgetId)
@@ -231,7 +268,16 @@ constructor(
         }
       }
       is DashboardCommand.OpenWidgetSettings -> {
-        _navigationEvents.trySend(DashboardNavigationEvent.OpenWidgetSettings(command.widgetId))
+        // Resolve typeId from widget instance on canvas
+        val widget = layoutCoordinator.layoutState.value.widgets
+          .find { it.instanceId == command.widgetId }
+        val typeId = widget?.typeId ?: command.widgetId
+        _navigationEvents.trySend(
+          DashboardNavigationEvent.OpenWidgetSettings(
+            widgetId = command.widgetId,
+            typeId = typeId,
+          ),
+        )
         logger.info(TAG) { "OpenWidgetSettings: widgetId=${command.widgetId}" }
         recordSessionEvent(EventType.TAP, "widgetSettings=${command.widgetId}")
       }
