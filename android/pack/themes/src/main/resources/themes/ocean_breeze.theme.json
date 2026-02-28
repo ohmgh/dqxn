@@ -14,7 +14,7 @@
   "backgroundGradient": {
     "type": "VERTICAL",
     "stops": [
-      { "color": "#FF004C75", "position": 0.0 },
+      { "color": "#FF004D76", "position": 0.0 },
       { "color": "#FF023E8A", "position": 0.5 },
       { "color": "#FF03045E", "position": 1.0 }
     ]

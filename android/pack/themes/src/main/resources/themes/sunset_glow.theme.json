@@ -5,11 +5,14 @@
   "colors": {
     "primary": "#3E2723",
     "secondary": "#5D4037",
-    "accent": "#7B1A00",
+    "accent": "#6D2600",
     "highlight": "#A78BFA",
     "background": "#FF7B54",
     "surface": "#FFD56F",
-    "onSurface": "#FF5722"
+    "onSurface": "#FF5722",
+    "error": "#C62828",
+    "warning": "#E65100",
+    "success": "#2E7D32"
   },
   "backgroundGradient": {
     "type": "VERTICAL",

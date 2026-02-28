@@ -9,7 +9,10 @@
     "highlight": "#34D399",
     "background": "#FFD8E4",
     "surface": "#F3E5F5",
-    "onSurface": "#6750A4"
+    "onSurface": "#6750A4",
+    "error": "#D32F2F",
+    "warning": "#F57C00",
+    "success": "#388E3C"
   },
   "backgroundGradient": {
     "type": "VERTICAL",

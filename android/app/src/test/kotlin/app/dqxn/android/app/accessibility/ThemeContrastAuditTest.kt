@@ -189,12 +189,12 @@ class ThemeContrastAuditTest {
 
     when (theme.themeId) {
       "essentials:slate" -> {
-        bgStops = listOf(Color(0xFF1A1A2E), Color(0xFF16213E))
-        widgetBgStops = listOf(Color(0xFF1E2A3A), Color(0xFF162032))
+        bgStops = listOf(Color(0xFF2C3E50), Color(0xFF1A252F))
+        widgetBgStops = listOf(Color(0x25FFFFFF), Color(0x0AFFFFFF))
       }
       "essentials:minimalist" -> {
-        bgStops = listOf(Color(0xFFF5F5F5), Color(0xFFEEEEEE))
-        widgetBgStops = listOf(Color.White, Color(0xFFFAFAFA))
+        bgStops = listOf(Color(0xFFF0F2F5), Color(0xFFE2E4E7))
+        widgetBgStops = listOf(Color(0xFFFFFFFF), Color(0xFFF5F5F7))
       }
       else -> error("Unknown free theme: ${theme.themeId}")
     }

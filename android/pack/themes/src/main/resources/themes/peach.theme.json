@@ -3,13 +3,16 @@
   "name": "Peach",
   "isDark": false,
   "colors": {
-    "primary": "#A52A00",
-    "secondary": "#BF360C",
-    "accent": "#A52A00",
+    "primary": "#4E2700",
+    "secondary": "#6D3A00",
+    "accent": "#BF360C",
     "highlight": "#A78BFA",
     "background": "#FFF3E0",
     "surface": "#FFE0B2",
-    "onSurface": "#FF9800"
+    "onSurface": "#FF9800",
+    "error": "#D32F2F",
+    "warning": "#E65100",
+    "success": "#388E3C"
   },
   "backgroundGradient": {
     "type": "VERTICAL",
