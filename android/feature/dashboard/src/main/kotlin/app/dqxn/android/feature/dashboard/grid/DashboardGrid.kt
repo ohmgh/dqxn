@@ -19,7 +19,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,6 +48,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.feature.dashboard.binding.WidgetSlot
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
@@ -340,141 +343,166 @@ public fun DashboardGrid(
                 Modifier
               }
 
-            Box {
-              WidgetSlot(
-                widget = widget,
-                widgetBindingCoordinator = widgetBindingCoordinator,
-                widgetRegistry = widgetRegistry,
-                editModeCoordinator = editModeCoordinator,
-                resizeState = resizeState,
-                onCommand = onCommand,
-                modifier =
-                  gestureModifier.graphicsLayer {
-                    // Drag offset via graphicsLayer (NOT Modifier.offset)
-                    if (widgetDragState != null) {
-                      translationX = widgetDragState.currentOffsetX
-                      translationY = widgetDragState.currentOffsetY
-                    }
-                    // Preview centering offset
-                    translationX += focusTranslationX
-                    translationY += focusTranslationY
-                    // Edit mode wiggle
-                    rotationZ = wiggleRotation
-                    // Drag lift scale * preview scale
-                    scaleX = liftScale * focusScale
-                    scaleY = liftScale * focusScale
-                    // Dim non-focused widgets (F1.8) / fade out when settings open
-                    alpha = settingsAlpha
-                  },
-              )
+            // Edit mode overlay gate — matches old codebase derivedStateOf:
+            // all edit visuals (brackets, toolbar, handles) hidden when settings open
+            val showEditModeUI = isEditMode && !isSettingsOpen
 
-              // Corner brackets for edit mode (F1.11) -- on focused or resizing widget
-              if (isEditMode && (isFocused || isResizingThisWidget) && bracketStrokeWidth > 0f) {
-                val bracketColor = LocalDashboardTheme.current.accentColor
-
-                Canvas(
-                  modifier =
-                    Modifier.matchParentSize()
-                      .graphicsLayer {
-                        // Apply same drag offset so brackets follow widget
-                        if (widgetDragState != null) {
-                          translationX = widgetDragState.currentOffsetX
-                          translationY = widgetDragState.currentOffsetY
-                        }
-                        scaleX = liftScale
-                        scaleY = liftScale
-                      }
-                      .testTag("bracket_${widget.instanceId}"),
-                ) {
-                  val strokePx = bracketStrokeWidth.dp.toPx()
-                  val bracketLengthPx = 32.dp.toPx()
-                  val cornerRadiusPx = bracketLengthPx / 4f // 8dp arc
-                  val legLength = bracketLengthPx / 2f - cornerRadiusPx // 8dp straight
-                  val arcDiameter = cornerRadiusPx * 2f
-                  val color = bracketColor
-                  val cap = StrokeCap.Round
-
-                  // Top-left corner: arc + legs
-                  drawArc(
-                    color = color,
-                    startAngle = 180f,
-                    sweepAngle = 90f,
-                    useCenter = false,
-                    topLeft = Offset(0f, 0f),
-                    size = Size(arcDiameter, arcDiameter),
-                    style = Stroke(width = strokePx, cap = cap),
-                  )
-                  drawLine(color, Offset(cornerRadiusPx, 0f), Offset(cornerRadiusPx + legLength, 0f), strokePx, cap)
-                  drawLine(color, Offset(0f, cornerRadiusPx), Offset(0f, cornerRadiusPx + legLength), strokePx, cap)
-
-                  // Top-right corner: arc + legs
-                  drawArc(
-                    color = color,
-                    startAngle = 270f,
-                    sweepAngle = 90f,
-                    useCenter = false,
-                    topLeft = Offset(size.width - arcDiameter, 0f),
-                    size = Size(arcDiameter, arcDiameter),
-                    style = Stroke(width = strokePx, cap = cap),
-                  )
-                  drawLine(color, Offset(size.width - cornerRadiusPx - legLength, 0f), Offset(size.width - cornerRadiusPx, 0f), strokePx, cap)
-                  drawLine(color, Offset(size.width, cornerRadiusPx), Offset(size.width, cornerRadiusPx + legLength), strokePx, cap)
-
-                  // Bottom-left corner: arc + legs
-                  drawArc(
-                    color = color,
-                    startAngle = 90f,
-                    sweepAngle = 90f,
-                    useCenter = false,
-                    topLeft = Offset(0f, size.height - arcDiameter),
-                    size = Size(arcDiameter, arcDiameter),
-                    style = Stroke(width = strokePx, cap = cap),
-                  )
-                  drawLine(color, Offset(cornerRadiusPx, size.height), Offset(cornerRadiusPx + legLength, size.height), strokePx, cap)
-                  drawLine(color, Offset(0f, size.height - cornerRadiusPx - legLength), Offset(0f, size.height - cornerRadiusPx), strokePx, cap)
-
-                  // Bottom-right corner: arc + legs
-                  drawArc(
-                    color = color,
-                    startAngle = 0f,
-                    sweepAngle = 90f,
-                    useCenter = false,
-                    topLeft = Offset(size.width - arcDiameter, size.height - arcDiameter),
-                    size = Size(arcDiameter, arcDiameter),
-                    style = Stroke(width = strokePx, cap = cap),
-                  )
-                  drawLine(color, Offset(size.width - cornerRadiusPx - legLength, size.height), Offset(size.width - cornerRadiusPx, size.height), strokePx, cap)
-                  drawLine(color, Offset(size.width, size.height - cornerRadiusPx - legLength), Offset(size.width, size.height - cornerRadiusPx), strokePx, cap)
+            // Outer Box: gesture modifier here so brackets/handles are CHILDREN, not siblings.
+            // Old codebase: gesture on outer Box, content in inner Offscreen Box, overlay as siblings.
+            // Pointer pass ordering (handles Main, body Final) only works in parent-child hierarchy.
+            Box(
+              modifier = gestureModifier.graphicsLayer {
+                // Drag offset via graphicsLayer (NOT Modifier.offset)
+                if (widgetDragState != null) {
+                  translationX = widgetDragState.currentOffsetX
+                  translationY = widgetDragState.currentOffsetY
                 }
+                // Preview centering offset
+                translationX += focusTranslationX
+                translationY += focusTranslationY
+                // Edit mode wiggle
+                rotationZ = wiggleRotation
+                // Drag lift scale * preview scale
+                scaleX = liftScale * focusScale
+                scaleY = liftScale * focusScale
+                // Dim non-focused widgets (F1.8) / fade out when settings open
+                alpha = settingsAlpha
+                // Don't clip — allows toolbar/brackets to render outside widget bounds
+                clip = false
+              },
+            ) {
+              // Widget content in separate Offscreen layer to prevent transparency artifacts.
+              // Edit controls are OUTSIDE this layer so they render above widget bounds.
+              Box(
+                modifier = Modifier
+                  .matchParentSize()
+                  .graphicsLayer {
+                    compositingStrategy =
+                      androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                  },
+              ) {
+                WidgetSlot(
+                  widget = widget,
+                  widgetBindingCoordinator = widgetBindingCoordinator,
+                  widgetRegistry = widgetRegistry,
+                  editModeCoordinator = editModeCoordinator,
+                  resizeState = resizeState,
+                  onCommand = onCommand,
+                )
               }
 
-              // Box resize handle nodes at 32dp (R2) -- only when focused, not during resize
-              if (isEditMode && isFocused && !isResizingThisWidget && renderer != null) {
-                for (handle in ResizeHandle.entries) {
-                  Box(
+              // All edit mode overlay elements gated by showEditModeUI (old codebase pattern)
+              if (showEditModeUI) {
+                // Corner brackets (F1.11) -- on focused or resizing widget
+                if ((isFocused || isResizingThisWidget) && bracketStrokeWidth > 0f) {
+                  val bracketColor = LocalDashboardTheme.current.accentColor
+
+                  Canvas(
                     modifier = Modifier
-                      .size(32.dp)
-                      .align(handle.toAlignment())
-                      .graphicsLayer {
-                        if (widgetDragState != null) {
-                          translationX = widgetDragState.currentOffsetX
-                          translationY = widgetDragState.currentOffsetY
+                      .matchParentSize()
+                      .testTag("bracket_${widget.instanceId}"),
+                  ) {
+                    val strokePx = bracketStrokeWidth.dp.toPx()
+                    val bracketLengthPx = 32.dp.toPx()
+                    val cornerRadiusPx = bracketLengthPx / 4f // 8dp arc
+                    val legLength = bracketLengthPx / 2f - cornerRadiusPx // 8dp straight
+                    val arcDiameter = cornerRadiusPx * 2f
+                    val color = bracketColor
+                    val cap = StrokeCap.Round
+
+                    // Top-left corner: arc + legs
+                    drawArc(
+                      color = color,
+                      startAngle = 180f,
+                      sweepAngle = 90f,
+                      useCenter = false,
+                      topLeft = Offset(0f, 0f),
+                      size = Size(arcDiameter, arcDiameter),
+                      style = Stroke(width = strokePx, cap = cap),
+                    )
+                    drawLine(color, Offset(cornerRadiusPx, 0f), Offset(cornerRadiusPx + legLength, 0f), strokePx, cap)
+                    drawLine(color, Offset(0f, cornerRadiusPx), Offset(0f, cornerRadiusPx + legLength), strokePx, cap)
+
+                    // Top-right corner: arc + legs
+                    drawArc(
+                      color = color,
+                      startAngle = 270f,
+                      sweepAngle = 90f,
+                      useCenter = false,
+                      topLeft = Offset(size.width - arcDiameter, 0f),
+                      size = Size(arcDiameter, arcDiameter),
+                      style = Stroke(width = strokePx, cap = cap),
+                    )
+                    drawLine(color, Offset(size.width - cornerRadiusPx - legLength, 0f), Offset(size.width - cornerRadiusPx, 0f), strokePx, cap)
+                    drawLine(color, Offset(size.width, cornerRadiusPx), Offset(size.width, cornerRadiusPx + legLength), strokePx, cap)
+
+                    // Bottom-left corner: arc + legs
+                    drawArc(
+                      color = color,
+                      startAngle = 90f,
+                      sweepAngle = 90f,
+                      useCenter = false,
+                      topLeft = Offset(0f, size.height - arcDiameter),
+                      size = Size(arcDiameter, arcDiameter),
+                      style = Stroke(width = strokePx, cap = cap),
+                    )
+                    drawLine(color, Offset(cornerRadiusPx, size.height), Offset(cornerRadiusPx + legLength, size.height), strokePx, cap)
+                    drawLine(color, Offset(0f, size.height - cornerRadiusPx - legLength), Offset(0f, size.height - cornerRadiusPx), strokePx, cap)
+
+                    // Bottom-right corner: arc + legs
+                    drawArc(
+                      color = color,
+                      startAngle = 0f,
+                      sweepAngle = 90f,
+                      useCenter = false,
+                      topLeft = Offset(size.width - arcDiameter, size.height - arcDiameter),
+                      size = Size(arcDiameter, arcDiameter),
+                      style = Stroke(width = strokePx, cap = cap),
+                    )
+                    drawLine(color, Offset(size.width - cornerRadiusPx - legLength, size.height), Offset(size.width - cornerRadiusPx, size.height), strokePx, cap)
+                    drawLine(color, Offset(size.width, size.height - cornerRadiusPx - legLength), Offset(size.width, size.height - cornerRadiusPx), strokePx, cap)
+                  }
+                }
+
+                // Resize handles at 32dp — only when focused or resizing (old codebase pattern)
+                if ((isFocused || isResizingThisWidget) && renderer != null) {
+                  for (handle in ResizeHandle.entries) {
+                    Box(
+                      modifier = Modifier
+                        .size(32.dp)
+                        .align(handle.toAlignment())
+                        .pointerInput(widget.instanceId, handle) {
+                          awaitEachGesture {
+                            val down = awaitFirstDown(
+                              requireUnconsumed = false,
+                              pass = PointerEventPass.Main,
+                            )
+                            down.consume()
+                            editModeCoordinator.startResize(
+                              widget.instanceId, handle, widget.size, widget.position, renderer,
+                            )
+                            awaitResizeEvents(handle, gridUnitPx, editModeCoordinator)
+                          }
                         }
-                      }
-                      .pointerInput(widget.instanceId, handle) {
-                        awaitEachGesture {
-                          val down = awaitFirstDown(
-                            requireUnconsumed = false,
-                            pass = PointerEventPass.Initial,
-                          )
-                          down.consume()
-                          editModeCoordinator.startResize(
-                            widget.instanceId, handle, widget.size, widget.position, renderer,
-                          )
-                          awaitResizeEvents(handle, gridUnitPx, editModeCoordinator)
-                        }
-                      }
-                      .testTag("resize_handle_${handle.name}_${widget.instanceId}"),
+                        .testTag("resize_handle_${handle.name}_${widget.instanceId}"),
+                    )
+                  }
+                }
+
+                // Focus toolbar (F1.8) — inside widget Box, positioned above/below via unbounded overflow.
+                // Old codebase: AnimatedVisibility inside widget Box, wrapContentSize(unbounded = true).
+                if (isFocused && !isResizingThisWidget) {
+                  FocusOverlayToolbar(
+                    widgetId = widget.instanceId,
+                    onDelete = { onCommand(DashboardCommand.RemoveWidget(widget.instanceId)) },
+                    onSettings = {
+                      onCommand(DashboardCommand.OpenWidgetSettings(widget.instanceId))
+                    },
+                    modifier = Modifier
+                      .align(Alignment.TopCenter)
+                      .wrapContentSize(unbounded = true)
+                      .offset(y = (-48).dp) // 40dp button + 8dp gap
+                      .zIndex(10f),
                   )
                 }
               }
@@ -483,19 +511,6 @@ public fun DashboardGrid(
         }
       }
 
-      // Focus overlay toolbar (F1.8) -- rendered after all widgets = highest z-index
-      if (isEditMode && editState.focusedWidgetId != null) {
-        val focusedWidget = visibleWidgets.find { it.instanceId == editState.focusedWidgetId }
-        if (focusedWidget != null) {
-          FocusOverlayToolbar(
-            widgetId = focusedWidget.instanceId,
-            onDelete = { onCommand(DashboardCommand.RemoveWidget(focusedWidget.instanceId)) },
-            onSettings = {
-              onCommand(DashboardCommand.OpenWidgetSettings(focusedWidget.instanceId))
-            },
-          )
-        }
-      }
     },
     modifier =
       modifier
@@ -504,19 +519,12 @@ public fun DashboardGrid(
         .then(blankSpaceModifier)
         .then(gridOverlayModifier),
   ) { measurables, constraints ->
-    // Pre-compute toolbar gap outside of placement lambda
-    val toolbarGapPx = 8.dp.roundToPx()
-
     // Derive viewport from actual layout constraints and update coordinator
     val derivedCols = (constraints.maxWidth / gridUnitPx).toInt()
     val derivedRows = (constraints.maxHeight / gridUnitPx).toInt()
     editModeCoordinator.updateViewport(derivedCols, derivedRows)
 
     // Custom MeasurePolicy: each widget measured with constraints from widget.size * GRID_UNIT_SIZE
-    // If focus toolbar is present, it's the last measurable (index == visibleWidgets.size)
-    val hasFocusToolbar = isEditMode && editState.focusedWidgetId != null &&
-      visibleWidgets.any { it.instanceId == editState.focusedWidgetId }
-
     val placeables =
       measurables.mapIndexed { index, measurable ->
         if (index < visibleWidgets.size) {
@@ -537,9 +545,6 @@ public fun DashboardGrid(
               height = heightPx.coerceAtLeast(0),
             ),
           )
-        } else if (hasFocusToolbar && index == visibleWidgets.size) {
-          // Focus toolbar: measure with wrap content
-          measurable.measure(Constraints())
         } else {
           return@Layout layout(0, 0) {}
         }
@@ -576,40 +581,6 @@ public fun DashboardGrid(
             x = x,
             y = y,
             zIndex = zIndex,
-          )
-        }
-      }
-
-      // Place focus toolbar above the focused widget at highest z-index
-      if (hasFocusToolbar && placeables.size > visibleWidgets.size) {
-        val focusedWidget = visibleWidgets.find { it.instanceId == editState.focusedWidgetId }
-        if (focusedWidget != null) {
-          val toolbarPlaceable = placeables[visibleWidgets.size]
-          // Use resize preview position/size if resizing
-          val toolbarPosition = if (resizeState?.widgetId == focusedWidget.instanceId &&
-            resizeState.isResizing && resizeState.targetPosition != null
-          ) {
-            resizeState.targetPosition
-          } else {
-            focusedWidget.position
-          }
-          val toolbarSize = if (resizeState?.widgetId == focusedWidget.instanceId &&
-            resizeState.isResizing
-          ) {
-            resizeState.targetSize
-          } else {
-            focusedWidget.size
-          }
-          val widgetX = (toolbarPosition.col * gridUnitPx).roundToInt()
-          val widgetY = (toolbarPosition.row * gridUnitPx).roundToInt()
-          // Center toolbar above widget, offset by toolbar height + 8dp gap
-          val widgetWidthPx = (toolbarSize.widthUnits * gridUnitPx).roundToInt()
-          val toolbarX = widgetX + (widgetWidthPx - toolbarPlaceable.width) / 2
-          val toolbarY = widgetY - toolbarPlaceable.height - toolbarGapPx
-          toolbarPlaceable.placeRelative(
-            x = toolbarX.coerceAtLeast(0),
-            y = toolbarY.coerceAtLeast(0),
-            zIndex = Float.MAX_VALUE, // Above all widgets
           )
         }
       }

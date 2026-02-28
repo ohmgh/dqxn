@@ -26,9 +26,9 @@ import kotlin.math.abs
  *
  * Gesture behavior:
  * - Non-edit mode: short tap invokes [onWidgetTap] if the renderer supports it. Long-press enters
- *   edit mode + focuses widget.
+ *   edit mode + focuses widget, then continues to drag if finger moves without lifting.
  * - Edit mode, not focused: tap focuses widget.
- * - Edit mode, focused: drag via pointer events with 8px cancellation threshold. Resize via
+ * - Edit mode, focused: immediate drag on movement (no second long-press gate). Resize via
  *   separate Box handle nodes (not handled here).
  *
  * `wasInEditModeAtStart` is captured at gesture start for consistent [PointerEventPass] selection
@@ -64,6 +64,9 @@ constructor(
     this.pointerInput(widgetId, widgetSpec, currentPosition, currentSize, gridUnitPx) {
       awaitEachGesture {
         val wasInEditModeAtStart = editModeCoordinator.editState.value.isEditMode
+        // Use Initial pass in edit mode to intercept before widget's internal click handlers.
+        // Use Main pass otherwise to not interfere with normal widget interaction.
+        // Old codebase: Initial in edit mode, Main otherwise.
         val pass = if (wasInEditModeAtStart) PointerEventPass.Initial else PointerEventPass.Main
 
         val down = awaitFirstDown(requireUnconsumed = false, pass = pass)
@@ -72,26 +75,45 @@ constructor(
         val isFocused = editModeCoordinator.editState.value.focusedWidgetId == widgetId
 
         if (!wasInEditModeAtStart) {
-          // Non-edit mode: long-press enters edit mode + focuses widget, short tap invokes widget
-          awaitLongPressOrToggleFocus(widgetId, onWidgetTap)
-          return@awaitEachGesture
-        }
-
-        if (!isFocused) {
+          // Non-edit mode: long-press enters edit mode + focuses widget.
+          // Returns CONTINUE_TO_DRAG if long-press fired and finger is still down.
+          val result = awaitLongPressOrToggleFocus(widgetId, onWidgetTap)
+          if (result != LongPressResult.CONTINUE_TO_DRAG) return@awaitEachGesture
+          // Fall through to immediate drag tracking (finger still held after long-press)
+        } else if (!isFocused) {
           // Edit mode, not focused: tap to focus
           awaitUpAndFocus(widgetId)
           return@awaitEachGesture
         }
 
-        // Edit mode, focused: resize handled by separate Box nodes.
-        // Drag: long-press detection with 8px cancellation threshold
-        awaitDragEvents(widgetId, currentPosition, currentSize, gridUnitPx, viewportCols, viewportRows, pass)
+        // Edit mode, focused (or just entered via long-press): immediate drag on movement.
+        // Uses Final pass so resize handles (children, Main pass) process events first.
+        awaitDragEvents(
+          widgetId, currentPosition, currentSize, gridUnitPx,
+          viewportCols, viewportRows, PointerEventPass.Final,
+        )
       }
     }
+
+  /** Result of the long-press detection phase. */
+  private enum class LongPressResult {
+    /** Short tap detected — invoke widget tap action. */
+    TAP,
+    /** Long-press fired and finger lifted — edit mode entered, no drag. */
+    LONG_PRESS_UP,
+    /** Long-press fired and finger moved — caller should continue to drag tracking. */
+    CONTINUE_TO_DRAG,
+    /** Gesture cancelled (e.g., movement before long-press threshold). */
+    CANCELLED,
+  }
 
   /**
    * Non-edit mode: long-press enters edit mode + focuses widget. Short tap invokes [onWidgetTap]
    * if the renderer supports it.
+   *
+   * Returns [LongPressResult.CONTINUE_TO_DRAG] when long-press fires and the finger subsequently
+   * moves, allowing the caller to fall through to drag tracking in the same gesture (no finger
+   * lift required).
    *
    * Uses [AwaitPointerEventScope.withTimeoutOrNull] to detect stationary hold — a finger held
    * still produces zero pointer events after DOWN. Polls with [PointerEventPass.Final] to see
@@ -100,7 +122,7 @@ constructor(
   private suspend fun AwaitPointerEventScope.awaitLongPressOrToggleFocus(
     widgetId: String,
     onWidgetTap: (() -> Unit)? = null,
-  ) {
+  ): LongPressResult {
     val deadline = System.currentTimeMillis() + LONG_PRESS_TIMEOUT_MS
     var longPressTriggered = false
 
@@ -111,6 +133,7 @@ constructor(
         longPressTriggered = true
         editModeCoordinator.enterEditMode()
         editModeCoordinator.focusWidget(widgetId)
+        haptics.dragStart()
       }
 
       val event = if (!longPressTriggered) {
@@ -125,24 +148,30 @@ constructor(
         longPressTriggered = true
         editModeCoordinator.enterEditMode()
         editModeCoordinator.focusWidget(widgetId)
+        haptics.dragStart()
         continue
       }
 
-      val change = event.changes.firstOrNull() ?: break
+      val change = event.changes.firstOrNull() ?: return LongPressResult.CANCELLED
 
       if (change.changedToUp()) {
-        if (!longPressTriggered) {
+        return if (!longPressTriggered) {
           onWidgetTap?.invoke()
+          LongPressResult.TAP
+        } else {
+          LongPressResult.LONG_PRESS_UP
         }
-        break
       }
 
-      // Movement cancellation (only before long-press fires)
+      val posChange = change.positionChange()
       if (!longPressTriggered) {
-        val posChange = change.positionChange()
+        // Movement cancellation (only before long-press fires)
         if (abs(posChange.x) > DRAG_THRESHOLD_PX || abs(posChange.y) > DRAG_THRESHOLD_PX) {
-          break
+          return LongPressResult.CANCELLED
         }
+      } else if (posChange != Offset.Zero) {
+        // Long-press already fired and finger moved — transition to drag
+        return LongPressResult.CONTINUE_TO_DRAG
       }
     }
   }
@@ -159,11 +188,16 @@ constructor(
   }
 
   /**
-   * Drag gesture with long-press detection and 8px cancellation threshold per replication advisory
-   * section 6.
+   * Drag tracking for a focused widget in edit mode.
    *
-   * Uses [AwaitPointerEventScope.withTimeoutOrNull] to detect stationary hold — a finger held
-   * still produces zero pointer events after DOWN.
+   * Uses [PointerEventPass.Final] so resize handle children (on [PointerEventPass.Main]) process
+   * events first. Checks [PointerEvent.changes.any { it.pressed }] instead of [changedToUp] so
+   * consumed events from resize handles don't falsely trigger pointer-up handling.
+   *
+   * When a resize is active (coordinator's resizeState is non-null), drag processing is suppressed
+   * — matching old codebase behavior where `isResizing` gates the long-press/drag path.
+   *
+   * Tap (pointer up with no drag and no resize) exits edit mode per old codebase behavior.
    */
   private suspend fun AwaitPointerEventScope.awaitDragEvents(
     widgetId: String,
@@ -174,67 +208,46 @@ constructor(
     viewportRows: Int,
     pass: PointerEventPass,
   ) {
-    var longPressTriggered = false
     var totalDrag = Offset.Zero
-    val deadline = System.currentTimeMillis() + LONG_PRESS_TIMEOUT_MS
+    var dragStarted = false
 
     while (true) {
-      val remainingMs = deadline - System.currentTimeMillis()
+      val event = awaitPointerEvent(pass)
+      val anyPressed = event.changes.any { it.pressed }
 
-      if (!longPressTriggered && remainingMs <= 0) {
-        longPressTriggered = true
-        haptics.dragStart()
-      }
-
-      val event = if (!longPressTriggered) {
-        withTimeoutOrNull(remainingMs.coerceAtLeast(0)) {
-          awaitPointerEvent(pass)
-        }
-      } else {
-        awaitPointerEvent(pass)
-      }
-
-      if (event == null) {
-        longPressTriggered = true
-        haptics.dragStart()
-        continue
-      }
-
-      val change = event.changes.firstOrNull() ?: break
-
-      if (change.changedToUp()) {
-        if (longPressTriggered && editModeCoordinator.dragState.value != null) {
+      if (!anyPressed) {
+        // Pointer released
+        if (dragStarted && editModeCoordinator.dragState.value != null) {
           editModeCoordinator.endDrag(gridUnitPx)
-        } else if (!longPressTriggered) {
-          // Short tap in edit mode on focused widget -- exit edit mode entirely (old codebase behavior)
+        } else if (!dragStarted && editModeCoordinator.resizeState.value == null) {
+          // Tap on focused widget with no drag/resize — exit edit mode (old codebase behavior)
           editModeCoordinator.exitEditMode()
         }
         break
       }
 
+      // Skip drag processing when resize is active (handle children own the gesture)
+      if (editModeCoordinator.resizeState.value != null) continue
+
+      val change = event.changes.firstOrNull() ?: break
       val posChange = change.positionChange()
       if (posChange != Offset.Zero) {
         totalDrag += posChange
-
-        if (!longPressTriggered) {
-          if (abs(totalDrag.x) > DRAG_THRESHOLD_PX || abs(totalDrag.y) > DRAG_THRESHOLD_PX) {
-            break // Movement cancels before long-press
-          }
-        } else {
-          change.consume()
-          if (editModeCoordinator.dragState.value == null) {
-            editModeCoordinator.startDrag(
-              widgetId,
-              currentPosition.col,
-              currentPosition.row,
-              widgetWidthUnits = currentSize.widthUnits,
-              widgetHeightUnits = currentSize.heightUnits,
-              viewportCols = viewportCols,
-              viewportRows = viewportRows,
-            )
-          }
-          editModeCoordinator.updateDrag(totalDrag.x, totalDrag.y, gridUnitPx)
+        change.consume()
+        if (!dragStarted) {
+          dragStarted = true
+          haptics.dragStart()
+          editModeCoordinator.startDrag(
+            widgetId,
+            currentPosition.col,
+            currentPosition.row,
+            widgetWidthUnits = currentSize.widthUnits,
+            widgetHeightUnits = currentSize.heightUnits,
+            viewportCols = viewportCols,
+            viewportRows = viewportRows,
+          )
         }
+        editModeCoordinator.updateDrag(totalDrag.x, totalDrag.y, gridUnitPx)
       }
     }
   }
