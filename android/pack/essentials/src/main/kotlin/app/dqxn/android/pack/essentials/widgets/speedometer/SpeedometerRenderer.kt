@@ -5,18 +5,20 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -150,22 +152,48 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
     modifier: Modifier,
   ) {
     val widgetData = LocalWidgetData.current
-    val speed by remember { derivedStateOf { widgetData.snapshot<SpeedSnapshot>() } }
-    val acceleration by remember { derivedStateOf { widgetData.snapshot<AccelerationSnapshot>() } }
-    val speedLimit by remember { derivedStateOf { widgetData.snapshot<SpeedLimitSnapshot>() } }
 
-    val currentSpeedMps = speed?.speedMps ?: 0f
-    val currentSpeedKph = currentSpeedMps * MPS_TO_KPH
-    val gaugeMax = computeGaugeMax(currentSpeedKph)
-    val arcAngle = computeArcAngle(currentSpeedKph, gaugeMax)
+    // Keep as State<T> (no `by`) — reads deferred to draw phase
+    val speedState: State<SpeedSnapshot?> = remember {
+      derivedStateOf { widgetData.snapshot<SpeedSnapshot>() }
+    }
+    val accelerationState: State<AccelerationSnapshot?> = remember {
+      derivedStateOf { widgetData.snapshot<AccelerationSnapshot>() }
+    }
+    val speedLimitState: State<SpeedLimitSnapshot?> = remember {
+      derivedStateOf { widgetData.snapshot<SpeedLimitSnapshot>() }
+    }
 
-    val accelValue = acceleration?.acceleration ?: 0f
-    val accelSegments = computeAccelerationSegments(accelValue, MAX_ACCELERATION)
+    // Derived computations as State<T> for draw-phase deferral
+    val arcAngleState: State<Float> = remember {
+      derivedStateOf {
+        val speed = speedState.value
+        val currentSpeedKph = (speed?.speedMps ?: 0f) * MPS_TO_KPH
+        val gaugeMax = computeGaugeMax(currentSpeedKph)
+        computeArcAngle(currentSpeedKph, gaugeMax)
+      }
+    }
 
-    // NF40: Speed limit warning state
-    val limitKph = speedLimit?.speedLimitKph
-    val isAmber = limitKph != null && currentSpeedKph > limitKph + AMBER_OFFSET_KPH
-    val isRed = limitKph != null && currentSpeedKph > limitKph + RED_OFFSET_KPH
+    val accelSegmentsState: State<Int> = remember {
+      derivedStateOf {
+        val accelValue = accelerationState.value?.acceleration ?: 0f
+        computeAccelerationSegments(accelValue, MAX_ACCELERATION)
+      }
+    }
+
+    val warningState: State<WarningLevel> = remember {
+      derivedStateOf {
+        val speed = speedState.value
+        val limit = speedLimitState.value
+        val currentSpeedKph = (speed?.speedMps ?: 0f) * MPS_TO_KPH
+        val limitKph = limit?.speedLimitKph
+        when {
+          limitKph != null && currentSpeedKph > limitKph + RED_OFFSET_KPH -> WarningLevel.RED
+          limitKph != null && currentSpeedKph > limitKph + AMBER_OFFSET_KPH -> WarningLevel.AMBER
+          else -> WarningLevel.NONE
+        }
+      }
+    }
 
     // Pulsing animation for NF40 warning
     val infiniteTransition = rememberInfiniteTransition(label = "speedLimitPulse")
@@ -181,117 +209,168 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
         label = "pulseAlpha",
       )
 
+    // Remember warning triangle path — reset geometry each draw, but no allocation
+    val warningTrianglePath = remember { Path() }
+
     Box(modifier = modifier.fillMaxSize()) {
-      Canvas(modifier = Modifier.fillMaxSize()) {
-        val centerX = size.width / 2f
-        val centerY = size.height / 2f
-        val radius = minOf(size.width, size.height) / 2f * 0.85f
-        val strokeWidthPx = 6.dp.toPx()
+      Spacer(
+        modifier =
+          Modifier.fillMaxSize().drawWithCache {
+            val centerX = size.width / 2f
+            val centerY = size.height / 2f
+            val radius = minOf(size.width, size.height) / 2f * 0.85f
+            val strokeWidthPx = 6.dp.toPx()
 
-        // NF40: Warning background
-        if (isAmber || isRed) {
-          val bgColor =
-            if (isRed) {
-              Color.Red.copy(alpha = 0.15f)
-            } else {
-              COLOR_AMBER.copy(alpha = 0.15f)
-            }
-          drawCircle(
-            color = bgColor,
-            radius = radius * 1.05f,
-            center = Offset(centerX, centerY),
-          )
-        }
+            // Cached Stroke objects (only recalculated on size change)
+            val trackStroke = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+            val speedStroke = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+            val accelStroke = Stroke(width = strokeWidthPx * 0.6f, cap = StrokeCap.Butt)
+            val borderStroke = Stroke(width = 3.dp.toPx())
+            val arcSize = Size(radius * 2, radius * 2)
+            val arcTopLeft = Offset(centerX - radius, centerY - radius)
+            val accelRadius = radius - strokeWidthPx * 2.5f
+            val accelSize = Size(accelRadius * 2, accelRadius * 2)
+            val accelTopLeft = Offset(centerX - accelRadius, centerY - accelRadius)
+            val segmentSweep = ARC_SWEEP / ACCEL_SEGMENT_COUNT
 
-        // NF40: Pulsing border
-        if (isAmber || isRed) {
-          val borderColor =
-            if (isRed) {
-              Color.Red.copy(alpha = pulseAlpha)
-            } else {
-              COLOR_AMBER.copy(alpha = pulseAlpha)
-            }
-          drawCircle(
-            color = borderColor,
-            radius = radius * 1.05f,
-            center = Offset(centerX, centerY),
-            style = Stroke(width = 3.dp.toPx()),
-          )
-        }
+            // Pre-compute tick mark geometry
+            val tickRadius = radius + strokeWidthPx
+            val majorTickLen = strokeWidthPx
+            val minorTickLen = strokeWidthPx * 0.5f
+            val majorTickWidth = 2.dp.toPx()
+            val minorTickWidth = 1.dp.toPx()
 
-        // Background track arc (270 degrees, from 135 to 405)
-        drawArc(
-          color = Color.Gray.copy(alpha = 0.3f),
-          startAngle = ARC_START_ANGLE,
-          sweepAngle = ARC_SWEEP,
-          useCenter = false,
-          topLeft = Offset(centerX - radius, centerY - radius),
-          size = Size(radius * 2, radius * 2),
-          style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
-        )
-
-        // Speed arc
-        if (arcAngle > 0f) {
-          drawArc(
-            color = COLOR_SPEED_ARC,
-            startAngle = ARC_START_ANGLE,
-            sweepAngle = arcAngle,
-            useCenter = false,
-            topLeft = Offset(centerX - radius, centerY - radius),
-            size = Size(radius * 2, radius * 2),
-            style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
-          )
-        }
-
-        // 12-segment acceleration arc
-        if (accelSegments != 0) {
-          val accelRadius = radius - strokeWidthPx * 2.5f
-          val segmentSweep = ARC_SWEEP / ACCEL_SEGMENT_COUNT
-          val segmentGap = 2f
-          val fillCount = abs(accelSegments)
-          val segmentColor = if (accelSegments > 0) COLOR_ACCEL_POSITIVE else COLOR_ACCEL_NEGATIVE
-
-          for (i in 0 until fillCount) {
-            val segStart = ARC_START_ANGLE + i * segmentSweep + segmentGap / 2
-            val segSweep = segmentSweep - segmentGap
-            drawArc(
-              color = segmentColor,
-              startAngle = segStart,
-              sweepAngle = segSweep,
-              useCenter = false,
-              topLeft = Offset(centerX - accelRadius, centerY - accelRadius),
-              size = Size(accelRadius * 2, accelRadius * 2),
-              style = Stroke(width = strokeWidthPx * 0.6f, cap = StrokeCap.Butt),
+            data class TickGeom(
+              val startX: Float,
+              val startY: Float,
+              val endX: Float,
+              val endY: Float,
+              val isMajor: Boolean,
             )
-          }
-        }
 
-        // Tick marks
-        val tickRadius = radius + strokeWidthPx
-        val majorTickLen = strokeWidthPx
-        val minorTickLen = strokeWidthPx * 0.5f
+            val ticks = buildList {
+              for (i in 0..TICK_COUNT) {
+                val angle = ARC_START_ANGLE + (ARC_SWEEP * i / TICK_COUNT)
+                val isMajor = i % (TICK_COUNT / 6) == 0
+                val tickLen = if (isMajor) majorTickLen else minorTickLen
+                val radAngle = Math.toRadians(angle.toDouble())
+                val cosA = cos(radAngle).toFloat()
+                val sinA = sin(radAngle).toFloat()
+                add(
+                  TickGeom(
+                    startX = centerX + (tickRadius - tickLen) * cosA,
+                    startY = centerY + (tickRadius - tickLen) * sinA,
+                    endX = centerX + tickRadius * cosA,
+                    endY = centerY + tickRadius * sinA,
+                    isMajor = isMajor,
+                  ),
+                )
+              }
+            }
 
-        for (i in 0..TICK_COUNT) {
-          val angle = ARC_START_ANGLE + (ARC_SWEEP * i / TICK_COUNT)
-          val isMajor = i % (TICK_COUNT / 6) == 0
-          val tickLen = if (isMajor) majorTickLen else minorTickLen
-          val radAngle = Math.toRadians(angle.toDouble())
+            // Cached color copies
+            val trackColor = Color.Gray.copy(alpha = 0.3f)
+            val tickMinorColor = TICK_MINOR_COLOR
 
-          val startX = centerX + (tickRadius - tickLen) * cos(radAngle).toFloat()
-          val startY = centerY + (tickRadius - tickLen) * sin(radAngle).toFloat()
-          val endX = centerX + tickRadius * cos(radAngle).toFloat()
-          val endY = centerY + tickRadius * sin(radAngle).toFloat()
+            onDrawBehind {
+              // Read state values in draw phase — only invalidates draw, not recomposition
+              val warning = warningState.value
+              val arcAngle = arcAngleState.value
+              val accelSegments = accelSegmentsState.value
 
-          drawLine(
-            color = if (isMajor) Color.White else Color.White.copy(alpha = 0.5f),
-            start = Offset(startX, startY),
-            end = Offset(endX, endY),
-            strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx(),
-          )
-        }
-      }
+              // NF40: Warning background
+              if (warning != WarningLevel.NONE) {
+                val bgColor =
+                  if (warning == WarningLevel.RED) {
+                    WARNING_BG_RED
+                  } else {
+                    WARNING_BG_AMBER
+                  }
+                drawCircle(
+                  color = bgColor,
+                  radius = radius * 1.05f,
+                  center = Offset(centerX, centerY),
+                )
+              }
+
+              // NF40: Pulsing border
+              if (warning != WarningLevel.NONE) {
+                val borderColor =
+                  if (warning == WarningLevel.RED) {
+                    Color.Red.copy(alpha = pulseAlpha)
+                  } else {
+                    COLOR_AMBER.copy(alpha = pulseAlpha)
+                  }
+                drawCircle(
+                  color = borderColor,
+                  radius = radius * 1.05f,
+                  center = Offset(centerX, centerY),
+                  style = borderStroke,
+                )
+              }
+
+              // Background track arc
+              drawArc(
+                color = trackColor,
+                startAngle = ARC_START_ANGLE,
+                sweepAngle = ARC_SWEEP,
+                useCenter = false,
+                topLeft = arcTopLeft,
+                size = arcSize,
+                style = trackStroke,
+              )
+
+              // Speed arc
+              if (arcAngle > 0f) {
+                drawArc(
+                  color = COLOR_SPEED_ARC,
+                  startAngle = ARC_START_ANGLE,
+                  sweepAngle = arcAngle,
+                  useCenter = false,
+                  topLeft = arcTopLeft,
+                  size = arcSize,
+                  style = speedStroke,
+                )
+              }
+
+              // 12-segment acceleration arc
+              if (accelSegments != 0) {
+                val segmentGap = 2f
+                val fillCount = abs(accelSegments)
+                val segmentColor =
+                  if (accelSegments > 0) COLOR_ACCEL_POSITIVE else COLOR_ACCEL_NEGATIVE
+
+                for (i in 0 until fillCount) {
+                  val segStart = ARC_START_ANGLE + i * segmentSweep + segmentGap / 2
+                  val segSweep = segmentSweep - segmentGap
+                  drawArc(
+                    color = segmentColor,
+                    startAngle = segStart,
+                    sweepAngle = segSweep,
+                    useCenter = false,
+                    topLeft = accelTopLeft,
+                    size = accelSize,
+                    style = accelStroke,
+                  )
+                }
+              }
+
+              // Tick marks from cached geometry
+              for (tick in ticks) {
+                drawLine(
+                  color = if (tick.isMajor) Color.White else tickMinorColor,
+                  start = Offset(tick.startX, tick.startY),
+                  end = Offset(tick.endX, tick.endY),
+                  strokeWidth = if (tick.isMajor) majorTickWidth else minorTickWidth,
+                )
+              }
+            }
+          },
+      )
 
       // Speed text overlay
+      val speed = speedState.value
+      val currentSpeedKph = (speed?.speedMps ?: 0f) * MPS_TO_KPH
       val numberFormat = remember { NumberFormat.getInstance(Locale.getDefault()) }
       val displaySpeed = currentSpeedKph.roundToInt()
       val unitLabel = detectSpeedUnitLabel()
@@ -305,38 +384,40 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
 
       Text(
         text = unitLabel,
-        color = Color.White.copy(alpha = 0.7f),
+        color = UNIT_LABEL_COLOR,
         fontSize = 14.sp,
         modifier = Modifier.align(Alignment.Center).padding(top = 48.dp),
       )
 
       // NF40: Warning triangle icon (Canvas-drawn to avoid material-icons-extended dependency)
-      if (isAmber || isRed) {
-        val warningColor = if (isRed) Color.Red else COLOR_AMBER
-        Canvas(
-          modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).requiredSize(24.dp),
-        ) {
-          val trianglePath =
-            Path().apply {
-              moveTo(size.width / 2f, 0f)
-              lineTo(size.width, size.height)
-              lineTo(0f, size.height)
-              close()
-            }
-          drawPath(trianglePath, color = warningColor)
-          drawLine(
-            color = Color.White,
-            start = Offset(size.width / 2f, size.height * 0.3f),
-            end = Offset(size.width / 2f, size.height * 0.6f),
-            strokeWidth = 2.dp.toPx(),
-            cap = StrokeCap.Round,
-          )
-          drawCircle(
-            color = Color.White,
-            radius = 1.5.dp.toPx(),
-            center = Offset(size.width / 2f, size.height * 0.75f),
-          )
-        }
+      val warning = warningState.value
+      if (warning != WarningLevel.NONE) {
+        val warningColor = if (warning == WarningLevel.RED) Color.Red else COLOR_AMBER
+        Spacer(
+          modifier =
+            Modifier.align(Alignment.TopEnd).padding(8.dp).requiredSize(24.dp).drawWithCache {
+              onDrawBehind {
+                warningTrianglePath.reset()
+                warningTrianglePath.moveTo(size.width / 2f, 0f)
+                warningTrianglePath.lineTo(size.width, size.height)
+                warningTrianglePath.lineTo(0f, size.height)
+                warningTrianglePath.close()
+                drawPath(warningTrianglePath, color = warningColor)
+                drawLine(
+                  color = Color.White,
+                  start = Offset(size.width / 2f, size.height * 0.3f),
+                  end = Offset(size.width / 2f, size.height * 0.6f),
+                  strokeWidth = 2.dp.toPx(),
+                  cap = StrokeCap.Round,
+                )
+                drawCircle(
+                  color = Color.White,
+                  radius = 1.5.dp.toPx(),
+                  center = Offset(size.width / 2f, size.height * 0.75f),
+                )
+              }
+            },
+        )
       }
     }
   }
@@ -380,6 +461,12 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
     val COLOR_ACCEL_POSITIVE = Color(0xFF66BB6A)
     val COLOR_ACCEL_NEGATIVE = Color(0xFFEF5350)
 
+    // Pre-computed color copies (no per-frame allocation)
+    val TICK_MINOR_COLOR = Color.White.copy(alpha = 0.5f)
+    val UNIT_LABEL_COLOR = Color.White.copy(alpha = 0.7f)
+    val WARNING_BG_RED = Color.Red.copy(alpha = 0.15f)
+    val WARNING_BG_AMBER = COLOR_AMBER.copy(alpha = 0.15f)
+
     /**
      * Auto-scaling gauge maximum using stepped thresholds. Each threshold covers a speed range; the
      * next threshold kicks in when the current max is exceeded.
@@ -409,6 +496,13 @@ public class SpeedometerRenderer @Inject constructor() : WidgetRenderer {
       return (ratio * ACCEL_SEGMENT_COUNT).roundToInt()
     }
   }
+}
+
+/** Warning level for NF40 speed limit feedback. */
+private enum class WarningLevel {
+  NONE,
+  AMBER,
+  RED,
 }
 
 /** Speed unit selection for the speedometer widget. */

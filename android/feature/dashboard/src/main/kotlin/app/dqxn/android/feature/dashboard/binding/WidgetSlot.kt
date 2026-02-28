@@ -3,6 +3,7 @@ package app.dqxn.android.feature.dashboard.binding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -26,7 +27,12 @@ import app.dqxn.android.sdk.ui.LocalWidgetPreviewUnits
 import app.dqxn.android.sdk.ui.PreviewGridSize
 import app.dqxn.android.sdk.ui.UnknownWidgetPlaceholder
 import app.dqxn.android.sdk.ui.widget.LocalWidgetData
+import app.dqxn.android.sdk.ui.widget.LocalWidgetScope
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 
 /**
  * Error boundary composable wrapping each widget's [WidgetRenderer.Render] call.
@@ -36,12 +42,11 @@ import kotlinx.collections.immutable.persistentMapOf
  *    (F2.13).
  * 2. Collects per-widget data via [WidgetBindingCoordinator.widgetData] with `collectAsState()`
  *    (Layer 0, NOT collectAsStateWithLifecycle per CLAUDE.md).
- * 3. Provides data via [CompositionLocalProvider] with [LocalWidgetData] and
- *    [LocalWidgetPreviewUnits].
- * 4. Error boundary via render error state. On crash ->
- *    [WidgetErrorFallback] + [DashboardCommand.WidgetCrash] reported. Compose does not support
- *    try-catch around composable calls, so the error state is tracked via [WidgetStatusCache] and
- *    binding coordinator crash reporting.
+ * 3. Provides data via [CompositionLocalProvider] with [LocalWidgetData],
+ *    [LocalWidgetPreviewUnits], and [LocalWidgetScope].
+ * 4. Error boundary via [SafeDrawModifier] catching draw-phase exceptions and per-widget
+ *    [CoroutineScope] with [SupervisorJob] + [CoroutineExceptionHandler] for coroutine crashes.
+ *    Both paths set [hasRenderError] and dispatch [DashboardCommand.WidgetCrash].
  * 5. Gates interactive actions via [EditModeCoordinator.isInteractionAllowed] (F2.18).
  * 6. Applies accessibility semantics from [WidgetRenderer.accessibilityDescription] (F2.19).
  * 7. Renders status overlay from [WidgetStatusCache] (F3.14).
@@ -101,10 +106,46 @@ public fun WidgetSlot(
       null
     }
 
-  // Error boundary state (F2.14). Compose does not support try-catch around @Composable calls.
-  // Render errors are tracked via this state flag. The binding coordinator's crash reporting
-  // (via WidgetCrash command) handles the upstream error pipeline.
+  // Error boundary state (F2.14).
   var hasRenderError by remember { mutableStateOf(false) }
+
+  // Per-widget CoroutineScope with SupervisorJob + CoroutineExceptionHandler.
+  // Crash in one widget's coroutine does not cancel siblings. Exceptions set hasRenderError
+  // and dispatch WidgetCrash command for SafeModeManager counting.
+  val widgetScope = remember(widget.instanceId) {
+    CoroutineScope(
+      SupervisorJob() +
+        CoroutineExceptionHandler { _, throwable ->
+          hasRenderError = true
+          onCommand(
+            DashboardCommand.WidgetCrash(
+              widgetId = widget.instanceId,
+              typeId = widget.typeId,
+              throwable = throwable,
+            ),
+          )
+        },
+    )
+  }
+
+  // Cancel widget scope when widget leaves composition
+  DisposableEffect(widget.instanceId) {
+    onDispose { widgetScope.cancel() }
+  }
+
+  // Draw-phase error callback — sets the error flag and dispatches crash command
+  val onDrawError = remember(widget.instanceId) {
+    { e: Exception ->
+      hasRenderError = true
+      onCommand(
+        DashboardCommand.WidgetCrash(
+          widgetId = widget.instanceId,
+          typeId = widget.typeId,
+          throwable = e,
+        ),
+      )
+    }
+  }
 
   Box(
     modifier =
@@ -133,13 +174,16 @@ public fun WidgetSlot(
         CompositionLocalProvider(
           LocalWidgetData provides widgetData,
           LocalWidgetPreviewUnits provides previewUnits,
+          LocalWidgetScope provides widgetScope,
         ) {
-          renderer.Render(
-            isEditMode = !isInteractionAllowed,
-            style = widget.style,
-            settings = persistentMapOf(),
-            modifier = Modifier,
-          )
+          Box(modifier = Modifier.safeWidgetDraw(onDrawError)) {
+            renderer.Render(
+              isEditMode = !isInteractionAllowed,
+              style = widget.style,
+              settings = persistentMapOf(),
+              modifier = Modifier,
+            )
+          }
         }
       }
 

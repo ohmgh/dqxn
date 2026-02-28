@@ -1,18 +1,18 @@
 package app.dqxn.android.pack.essentials.widgets.clock
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import app.dqxn.android.pack.essentials.snapshots.TimeSnapshot
 import app.dqxn.android.sdk.contracts.annotation.DashboardWidget
 import app.dqxn.android.sdk.contracts.provider.DataSnapshot
@@ -79,7 +79,8 @@ public class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
     modifier: Modifier,
   ) {
     val widgetData = LocalWidgetData.current
-    val handAngles by remember {
+    // Keep as State<T> (no `by`) so reads can be deferred to draw phase
+    val handAnglesState: State<HandAngles?> = remember {
       derivedStateOf {
         val snapshot = widgetData.snapshot<TimeSnapshot>()
         snapshot?.let { extractAngles(it, settings) }
@@ -87,65 +88,93 @@ public class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
     }
 
     val showTickMarks = settings["showTickMarks"] as? Boolean ?: true
+
+    // Capture theme colors at composition scope — drawWithCache auto-invalidates when these change
     val onSurface = MaterialTheme.colorScheme.onSurface
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
-    val primary = MaterialTheme.colorScheme.primary
     val error = MaterialTheme.colorScheme.error
 
-    Canvas(
-      modifier = modifier.fillMaxSize().aspectRatio(1f),
-    ) {
-      val radius = min(size.width, size.height) / 2f
-      val center = Offset(size.width / 2f, size.height / 2f)
+    Spacer(
+      modifier =
+        modifier.fillMaxSize().aspectRatio(1f).drawWithCache {
+          val radius = min(size.width, size.height) / 2f
+          val center = Offset(size.width / 2f, size.height / 2f)
 
-      if (showTickMarks) {
-        drawTickMarks(center, radius, onSurface, onSurfaceVariant)
-      }
+          // Pre-compute tick geometry (only recalculated on size change)
+          val tickData =
+            if (showTickMarks) {
+              buildList {
+                for (i in 0 until 60) {
+                  val angle = i * 6f
+                  val isMajor = i % 5 == 0
+                  val innerRadius = if (isMajor) radius * 0.85f else radius * 0.9f
+                  val strokeWidth = if (isMajor) radius * 0.025f else radius * 0.012f
+                  val angleRad = Math.toRadians((angle - 90).toDouble())
+                  val cosA = cos(angleRad).toFloat()
+                  val sinA = sin(angleRad).toFloat()
+                  add(
+                    TickMark(
+                      start = Offset(center.x + innerRadius * cosA, center.y + innerRadius * sinA),
+                      end =
+                        Offset(
+                          center.x + radius * 0.95f * cosA,
+                          center.y + radius * 0.95f * sinA,
+                        ),
+                      strokeWidth = strokeWidth,
+                      isMajor = isMajor,
+                    ),
+                  )
+                }
+              }
+            } else {
+              emptyList()
+            }
 
-      val angles = handAngles
-      if (angles != null) {
-        // Hour hand
-        drawHand(
-          center = center,
-          angle = angles.hourAngle,
-          length = radius * 0.5f,
-          strokeWidth = radius * 0.06f,
-          color = onSurface,
-        )
+          // Pre-compute minor tick color (alpha copy cached, not per-frame)
+          val minorTickColor = onSurfaceVariant.copy(alpha = 0.5f)
+          val emptyDotColor = onSurfaceVariant.copy(alpha = 0.38f)
 
-        // Minute hand
-        drawHand(
-          center = center,
-          angle = angles.minuteAngle,
-          length = radius * 0.75f,
-          strokeWidth = radius * 0.04f,
-          color = onSurface,
-        )
+          onDrawBehind {
+            // Draw tick marks from cached geometry
+            for (tick in tickData) {
+              drawLine(
+                color = if (tick.isMajor) onSurface else minorTickColor,
+                start = tick.start,
+                end = tick.end,
+                strokeWidth = tick.strokeWidth,
+                cap = StrokeCap.Round,
+              )
+            }
 
-        // Second hand
-        drawHand(
-          center = center,
-          angle = angles.secondAngle,
-          length = radius * 0.85f,
-          strokeWidth = radius * 0.02f,
-          color = error,
-        )
+            // Read hand angles in draw phase — only triggers draw invalidation, not recomposition
+            val angles = handAnglesState.value
+            if (angles != null) {
+              // Hour hand
+              drawHand(center, angles.hourAngle, radius * 0.5f, radius * 0.06f, onSurface)
 
-        // Center dot
-        drawCircle(
-          color = onSurface,
-          radius = radius * 0.04f,
-          center = center,
-        )
-      } else {
-        // No data: draw empty face with tick marks only
-        drawCircle(
-          color = onSurfaceVariant.copy(alpha = 0.38f),
-          radius = radius * 0.04f,
-          center = center,
-        )
-      }
-    }
+              // Minute hand
+              drawHand(center, angles.minuteAngle, radius * 0.75f, radius * 0.04f, onSurface)
+
+              // Second hand
+              drawHand(center, angles.secondAngle, radius * 0.85f, radius * 0.02f, error)
+
+              // Center dot
+              drawCircle(
+                color = onSurface,
+                radius = radius * 0.04f,
+                center = center,
+              )
+            } else {
+              // No data: empty face indicator
+              drawCircle(
+                color = emptyDotColor,
+                radius = radius * 0.04f,
+                center = center,
+              )
+            }
+          }
+        },
+    )
   }
 
   override fun accessibilityDescription(data: WidgetData): String {
@@ -166,6 +195,14 @@ public class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
     val secondAngle: Float,
   )
 
+  /** Cached tick mark geometry — computed once per size change in drawWithCache. */
+  private data class TickMark(
+    val start: Offset,
+    val end: Offset,
+    val strokeWidth: Float,
+    val isMajor: Boolean,
+  )
+
   private fun extractAngles(
     snapshot: TimeSnapshot,
     settings: ImmutableMap<String, Any>,
@@ -183,60 +220,6 @@ public class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
     )
   }
 
-  private fun DrawScope.drawTickMarks(
-    center: Offset,
-    radius: Float,
-    majorColor: Color,
-    minorColor: Color,
-  ) {
-    for (i in 0 until 60) {
-      val angle = i * 6f
-      val isMajor = i % 5 == 0
-      val innerRadius = if (isMajor) radius * 0.85f else radius * 0.9f
-      val strokeWidth = if (isMajor) radius * 0.025f else radius * 0.012f
-      val color = if (isMajor) majorColor else minorColor.copy(alpha = 0.5f)
-      val angleRad = Math.toRadians((angle - 90).toDouble())
-
-      drawLine(
-        color = color,
-        start =
-          Offset(
-            center.x + (innerRadius * cos(angleRad)).toFloat(),
-            center.y + (innerRadius * sin(angleRad)).toFloat(),
-          ),
-        end =
-          Offset(
-            center.x + (radius * 0.95f * cos(angleRad)).toFloat(),
-            center.y + (radius * 0.95f * sin(angleRad)).toFloat(),
-          ),
-        strokeWidth = strokeWidth,
-        cap = StrokeCap.Round,
-      )
-    }
-  }
-
-  private fun DrawScope.drawHand(
-    center: Offset,
-    angle: Float,
-    length: Float,
-    strokeWidth: Float,
-    color: Color,
-  ) {
-    val angleRad = Math.toRadians((angle - 90).toDouble())
-    val end =
-      Offset(
-        center.x + (length * cos(angleRad)).toFloat(),
-        center.y + (length * sin(angleRad)).toFloat(),
-      )
-    drawLine(
-      color = color,
-      start = center,
-      end = end,
-      strokeWidth = strokeWidth,
-      cap = StrokeCap.Round,
-    )
-  }
-
   companion object {
     /** Hour hand angle: (hour % 12 + minute / 60f) * 30f degrees. */
     internal fun computeHourHandAngle(hour: Int, minute: Int, second: Int): Float =
@@ -249,4 +232,27 @@ public class ClockAnalogRenderer @Inject constructor() : WidgetRenderer {
     /** Second hand angle: second * 6f degrees. */
     internal fun computeSecondHandAngle(second: Int): Float = second * 6f
   }
+}
+
+/** Draw a clock hand from center at the given angle. Used in onDrawBehind. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHand(
+  center: Offset,
+  angle: Float,
+  length: Float,
+  strokeWidth: Float,
+  color: Color,
+) {
+  val angleRad = Math.toRadians((angle - 90).toDouble())
+  val end =
+    Offset(
+      center.x + (length * cos(angleRad)).toFloat(),
+      center.y + (length * sin(angleRad)).toFloat(),
+    )
+  drawLine(
+    color = color,
+    start = center,
+    end = end,
+    strokeWidth = strokeWidth,
+    cap = StrokeCap.Round,
+  )
 }

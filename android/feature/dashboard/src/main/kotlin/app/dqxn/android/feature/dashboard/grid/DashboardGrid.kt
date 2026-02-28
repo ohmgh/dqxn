@@ -61,6 +61,9 @@ import app.dqxn.android.sdk.ui.widget.GridConstants
 import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableList
 
+/** Pre-computed grid overlay line color (avoids per-frame Color.copy allocation). */
+private val GRID_LINE_COLOR = Color.White.copy(alpha = 0.15f)
+
 /**
  * Dashboard grid composable rendering widgets via custom [Layout] + MeasurePolicy.
  *
@@ -131,7 +134,7 @@ public fun DashboardGrid(
         val gridPx = gridUnitPx
         val cols = (size.width / gridPx).toInt()
         val rows = (size.height / gridPx).toInt()
-        val lineColor = Color.White.copy(alpha = 0.15f)
+        val lineColor = GRID_LINE_COLOR
         for (col in 0..cols) {
           val x = col * gridPx
           drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)

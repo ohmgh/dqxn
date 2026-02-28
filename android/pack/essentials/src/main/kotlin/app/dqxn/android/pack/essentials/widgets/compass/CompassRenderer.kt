@@ -1,12 +1,13 @@
 package app.dqxn.android.pack.essentials.widgets.compass
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -42,7 +43,8 @@ import kotlinx.collections.immutable.ImmutableMap
  * cardinal labels) rotates by `-bearing` degrees so the current heading always points to the top.
  * Optionally shows tilt indicators for pitch and roll.
  *
- * Canvas-based with remembered draw objects for zero per-frame allocation.
+ * Uses `drawWithCache` for size-dependent geometry (tick positions, Paint objects) and defers
+ * data-dependent reads (bearing, pitch, roll) to the draw phase via `State<T>.value`.
  */
 @DashboardWidget(typeId = "essentials:compass", displayName = "Compass")
 public class CompassRenderer @Inject constructor() : WidgetRenderer {
@@ -90,10 +92,11 @@ public class CompassRenderer @Inject constructor() : WidgetRenderer {
     modifier: Modifier,
   ) {
     val widgetData = LocalWidgetData.current
-    val orientation by remember { derivedStateOf { widgetData.snapshot<OrientationSnapshot>() } }
-    val bearing = orientation?.bearing ?: 0f
-    val pitch = orientation?.pitch ?: 0f
-    val roll = orientation?.roll ?: 0f
+
+    // Keep as State<T> (no `by`) — reads deferred to draw phase
+    val orientationState: State<OrientationSnapshot?> = remember {
+      derivedStateOf { widgetData.snapshot<OrientationSnapshot>() }
+    }
 
     val showTickMarks = settings["showTickMarks"] as? Boolean ?: true
     val showCardinalLabels = settings["showCardinalLabels"] as? Boolean ?: true
@@ -101,33 +104,164 @@ public class CompassRenderer @Inject constructor() : WidgetRenderer {
 
     val needlePath = remember { Path() }
 
-    Canvas(modifier = modifier.fillMaxSize()) {
-      val centerX = size.width / 2f
-      val centerY = size.height / 2f
-      val radius = min(centerX, centerY) * 0.9f
+    Spacer(
+      modifier =
+        modifier.fillMaxSize().drawWithCache {
+          val centerX = size.width / 2f
+          val centerY = size.height / 2f
+          val radius = min(centerX, centerY) * 0.9f
 
-      drawCircle(
-        color = Color.White.copy(alpha = 0.3f),
-        radius = radius,
-        center = Offset(centerX, centerY),
-        style = Stroke(width = 2f),
-      )
+          // Pre-compute tick mark geometry (only on size change)
+          data class TickGeom(
+            val startX: Float,
+            val startY: Float,
+            val endX: Float,
+            val endY: Float,
+            val isMajor: Boolean,
+          )
 
-      rotate(degrees = -bearing, pivot = Offset(centerX, centerY)) {
-        if (showTickMarks) {
-          drawTickMarks(centerX, centerY, radius)
-        }
-        if (showCardinalLabels) {
-          drawCardinalLabels(centerX, centerY, radius)
-        }
-      }
+          val ticks =
+            if (showTickMarks) {
+              buildList {
+                for (deg in 0 until 360 step 10) {
+                  val isMajor = deg % 30 == 0
+                  val tickLength = if (isMajor) radius * 0.1f else radius * 0.05f
+                  val tickWidth = if (isMajor) 2f else 1f
+                  val angleRad = (deg - 90f) * PI.toFloat() / 180f
+                  val startRadius = radius - tickLength
+                  val cosA = cos(angleRad)
+                  val sinA = sin(angleRad)
+                  add(
+                    TickGeom(
+                      startX = centerX + startRadius * cosA,
+                      startY = centerY + startRadius * sinA,
+                      endX = centerX + radius * cosA,
+                      endY = centerY + radius * sinA,
+                      isMajor = isMajor,
+                    ),
+                  )
+                }
+              }
+            } else {
+              emptyList()
+            }
 
-      drawNeedle(needlePath, centerX, centerY, radius)
+          // Pre-compute cardinal label positions
+          data class CardinalLabelGeom(val label: String, val x: Float, val y: Float, val isNorth: Boolean)
 
-      if (showTiltIndicators) {
-        drawTiltIndicators(centerX, centerY, radius, pitch, roll)
-      }
-    }
+          val labelRadius = radius * 0.75f
+          val cardinalLabels =
+            if (showCardinalLabels) {
+              CARDINAL_LABELS.map { (label, deg) ->
+                val angleRad = (deg - 90f) * PI.toFloat() / 180f
+                CardinalLabelGeom(
+                  label = label,
+                  x = centerX + labelRadius * cos(angleRad),
+                  y = centerY + labelRadius * sin(angleRad),
+                  isNorth = label == "N",
+                )
+              }
+            } else {
+              emptyList()
+            }
+
+          // Create native Paint objects here (cached, recreated only on size change when textSize
+          // depends on radius)
+          val labelPaint =
+            if (showCardinalLabels) {
+              android.graphics.Paint().apply {
+                color = android.graphics.Color.WHITE
+                textAlign = android.graphics.Paint.Align.CENTER
+                textSize = radius * 0.15f
+                isAntiAlias = true
+                isFakeBoldText = true
+              }
+            } else {
+              null
+            }
+          val nLabelPaint =
+            if (showCardinalLabels && labelPaint != null) {
+              android.graphics.Paint(labelPaint).apply {
+                color = android.graphics.Color.RED
+              }
+            } else {
+              null
+            }
+
+          // Needle geometry
+          val needleLength = radius * 0.6f
+          val needleWidth = radius * 0.06f
+
+          // Tilt indicator geometry
+          val indicatorRadius = radius * 0.3f
+
+          onDrawBehind {
+            // Read orientation in draw phase — only triggers draw invalidation, not recomposition
+            val orientation = orientationState.value
+            val bearing = orientation?.bearing ?: 0f
+            val pitch = orientation?.pitch ?: 0f
+            val roll = orientation?.roll ?: 0f
+
+            // Circle outline
+            drawCircle(
+              color = CIRCLE_OUTLINE_COLOR,
+              radius = radius,
+              center = Offset(centerX, centerY),
+              style = Stroke(width = 2f),
+            )
+
+            // Rotating dial
+            rotate(degrees = -bearing, pivot = Offset(centerX, centerY)) {
+              // Tick marks
+              for (tick in ticks) {
+                drawLine(
+                  color = Color.White,
+                  start = Offset(tick.startX, tick.startY),
+                  end = Offset(tick.endX, tick.endY),
+                  strokeWidth = if (tick.isMajor) 2f else 1f,
+                )
+              }
+
+              // Cardinal labels
+              if (labelPaint != null && nLabelPaint != null) {
+                drawIntoCanvas { canvas ->
+                  for (cl in cardinalLabels) {
+                    canvas.nativeCanvas.drawText(
+                      cl.label,
+                      cl.x,
+                      cl.y + labelPaint.textSize / 3f,
+                      if (cl.isNorth) nLabelPaint else labelPaint,
+                    )
+                  }
+                }
+              }
+            }
+
+            // Stationary needle
+            drawNeedle(needlePath, centerX, centerY, needleLength, needleWidth)
+
+            // Tilt indicators
+            if (showTiltIndicators) {
+              val pitchOffset = (pitch / 90f) * indicatorRadius
+              drawLine(
+                color = TILT_PITCH_COLOR,
+                start = Offset(centerX - indicatorRadius, centerY + pitchOffset),
+                end = Offset(centerX + indicatorRadius, centerY + pitchOffset),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+              )
+              val rollOffset = (roll / 90f) * indicatorRadius
+              drawLine(
+                color = TILT_ROLL_COLOR,
+                start = Offset(centerX + rollOffset, centerY - indicatorRadius),
+                end = Offset(centerX + rollOffset, centerY + indicatorRadius),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+              )
+            }
+          }
+        },
+    )
   }
 
   override fun accessibilityDescription(data: WidgetData): String {
@@ -144,6 +278,14 @@ public class CompassRenderer @Inject constructor() : WidgetRenderer {
   override fun onTap(widgetId: String, settings: ImmutableMap<String, Any>): Boolean = false
 
   companion object {
+    // Pre-computed color copies
+    private val CIRCLE_OUTLINE_COLOR = Color.White.copy(alpha = 0.3f)
+    internal val NEEDLE_SOUTH_COLOR = Color.White.copy(alpha = 0.7f)
+    private val TILT_PITCH_COLOR = Color.Cyan.copy(alpha = 0.6f)
+    private val TILT_ROLL_COLOR = Color.Yellow.copy(alpha = 0.6f)
+
+    private val CARDINAL_LABELS = listOf("N" to 0f, "E" to 90f, "S" to 180f, "W" to 270f)
+
     internal fun getCardinalDirection(bearing: Float): String {
       val normalized = ((bearing % 360f) + 360f) % 360f
       return when {
@@ -160,89 +302,30 @@ public class CompassRenderer @Inject constructor() : WidgetRenderer {
   }
 }
 
-private fun DrawScope.drawTickMarks(centerX: Float, centerY: Float, radius: Float) {
-  for (deg in 0 until 360 step 10) {
-    val isMajor = deg % 30 == 0
-    val tickLength = if (isMajor) radius * 0.1f else radius * 0.05f
-    val tickWidth = if (isMajor) 2f else 1f
-    val angleRad = (deg - 90f) * PI.toFloat() / 180f
-    val startRadius = radius - tickLength
-    drawLine(
-      color = Color.White,
-      start = Offset(centerX + startRadius * cos(angleRad), centerY + startRadius * sin(angleRad)),
-      end = Offset(centerX + radius * cos(angleRad), centerY + radius * sin(angleRad)),
-      strokeWidth = tickWidth,
-    )
-  }
-}
-
-private fun DrawScope.drawCardinalLabels(centerX: Float, centerY: Float, radius: Float) {
-  val labels = listOf("N" to 0f, "E" to 90f, "S" to 180f, "W" to 270f)
-  val labelRadius = radius * 0.75f
-  drawIntoCanvas { canvas ->
-    val paint =
-      android.graphics.Paint().apply {
-        color = android.graphics.Color.WHITE
-        textAlign = android.graphics.Paint.Align.CENTER
-        textSize = radius * 0.15f
-        isAntiAlias = true
-        isFakeBoldText = true
-      }
-    val nPaint = android.graphics.Paint(paint).apply { color = android.graphics.Color.RED }
-    for ((label, deg) in labels) {
-      val angleRad = (deg - 90f) * PI.toFloat() / 180f
-      val x = centerX + labelRadius * cos(angleRad)
-      val y = centerY + labelRadius * sin(angleRad)
-      canvas.nativeCanvas.drawText(
-        label,
-        x,
-        y + paint.textSize / 3f,
-        if (label == "N") nPaint else paint
-      )
-    }
-  }
-}
-
-private fun DrawScope.drawNeedle(path: Path, centerX: Float, centerY: Float, radius: Float) {
-  val needleLength = radius * 0.6f
-  val needleWidth = radius * 0.06f
+/** Draw compass needle (north red, south white, center dot). Reuses [path] to avoid allocation. */
+private fun DrawScope.drawNeedle(
+  path: Path,
+  centerX: Float,
+  centerY: Float,
+  needleLength: Float,
+  needleWidth: Float,
+) {
+  // North (up) — red
   path.reset()
   path.moveTo(centerX, centerY - needleLength)
   path.lineTo(centerX - needleWidth, centerY)
   path.lineTo(centerX + needleWidth, centerY)
   path.close()
   drawPath(path, color = Color.Red)
+
+  // South (down) — white translucent
   path.reset()
   path.moveTo(centerX, centerY + needleLength)
   path.lineTo(centerX - needleWidth, centerY)
   path.lineTo(centerX + needleWidth, centerY)
   path.close()
-  drawPath(path, color = Color.White.copy(alpha = 0.7f))
-  drawCircle(color = Color.White, radius = needleWidth, center = Offset(centerX, centerY))
-}
+  drawPath(path, color = CompassRenderer.NEEDLE_SOUTH_COLOR)
 
-private fun DrawScope.drawTiltIndicators(
-  centerX: Float,
-  centerY: Float,
-  radius: Float,
-  pitch: Float,
-  roll: Float,
-) {
-  val indicatorRadius = radius * 0.3f
-  val pitchOffset = (pitch / 90f) * indicatorRadius
-  drawLine(
-    color = Color.Cyan.copy(alpha = 0.6f),
-    start = Offset(centerX - indicatorRadius, centerY + pitchOffset),
-    end = Offset(centerX + indicatorRadius, centerY + pitchOffset),
-    strokeWidth = 2f,
-    cap = StrokeCap.Round,
-  )
-  val rollOffset = (roll / 90f) * indicatorRadius
-  drawLine(
-    color = Color.Yellow.copy(alpha = 0.6f),
-    start = Offset(centerX + rollOffset, centerY - indicatorRadius),
-    end = Offset(centerX + rollOffset, centerY + indicatorRadius),
-    strokeWidth = 2f,
-    cap = StrokeCap.Round,
-  )
+  // Center dot
+  drawCircle(color = Color.White, radius = needleWidth, center = Offset(centerX, centerY))
 }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -35,13 +36,16 @@ internal fun BatteryIcon(
   val outlineColor = MaterialTheme.colorScheme.onSurface
   val chargingColor = MaterialTheme.colorScheme.tertiary
 
+  // Reused Path for charging bolt — avoids per-frame allocation
+  val boltPath = remember { Path() }
+
   Canvas(modifier = modifier.size(size)) {
     drawBatteryOutline(outlineColor)
     if (level != null) {
       drawBatteryFill(level, fillColor)
     }
     if (isCharging) {
-      drawChargingBolt(chargingColor)
+      drawChargingBolt(boltPath, chargingColor)
     }
   }
 }
@@ -95,22 +99,20 @@ private fun DrawScope.drawBatteryFill(level: Int, color: Color) {
   )
 }
 
-private fun DrawScope.drawChargingBolt(color: Color) {
+private fun DrawScope.drawChargingBolt(path: Path, color: Color) {
   val cx = size.width / 2f
   val cy = size.height / 2f
   val boltWidth = size.width * 0.2f
   val boltHeight = size.height * 0.35f
 
-  val path =
-    Path().apply {
-      // Lightning bolt shape
-      moveTo(cx + boltWidth * 0.1f, cy - boltHeight / 2f)
-      lineTo(cx - boltWidth * 0.5f, cy + boltHeight * 0.05f)
-      lineTo(cx, cy + boltHeight * 0.05f)
-      lineTo(cx - boltWidth * 0.1f, cy + boltHeight / 2f)
-      lineTo(cx + boltWidth * 0.5f, cy - boltHeight * 0.05f)
-      lineTo(cx, cy - boltHeight * 0.05f)
-      close()
-    }
+  path.reset()
+  // Lightning bolt shape
+  path.moveTo(cx + boltWidth * 0.1f, cy - boltHeight / 2f)
+  path.lineTo(cx - boltWidth * 0.5f, cy + boltHeight * 0.05f)
+  path.lineTo(cx, cy + boltHeight * 0.05f)
+  path.lineTo(cx - boltWidth * 0.1f, cy + boltHeight / 2f)
+  path.lineTo(cx + boltWidth * 0.5f, cy - boltHeight * 0.05f)
+  path.lineTo(cx, cy - boltHeight * 0.05f)
+  path.close()
   drawPath(path, color)
 }

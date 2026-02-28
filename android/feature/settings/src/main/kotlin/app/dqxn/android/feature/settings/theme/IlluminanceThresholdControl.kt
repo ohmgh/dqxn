@@ -1,12 +1,12 @@
 package app.dqxn.android.feature.settings.theme
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -20,9 +20,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
@@ -104,7 +104,7 @@ public fun IlluminanceThresholdControl(
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
             .testTag("illuminance_canvas"),
       ) {
-        Canvas(
+        Spacer(
           modifier =
             Modifier.matchParentSize()
               .pointerInput(enabled) {
@@ -124,37 +124,45 @@ public fun IlluminanceThresholdControl(
                       .coerceIn(0f, 1f)
                   onThresholdChanged(positionToLux(fraction))
                 }
+              }
+              .drawWithCache {
+                val w = size.width
+                val h = size.height
+                val usableWidth = w - 2 * EDGE_PAD_PX
+                // Cached: gradient brush and dash path effect (recreated only on size change)
+                val gradientBrush = Brush.horizontalGradient(listOf(darkColor, lightColor))
+                val lineStrokeWidth = 2.dp.toPx()
+                val dashEffect =
+                  PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()), 0f)
+
+                onDrawBehind {
+                  // 1. Dark→light gradient background
+                  drawRect(brush = gradientBrush)
+
+                  // 2. Current lux solid vertical line
+                  if (currentLux != null) {
+                    val currentPos = luxToPosition(currentLux)
+                    val cx = EDGE_PAD_PX + currentPos * usableWidth
+                    drawLine(
+                      color = currentLuxLineColor,
+                      start = Offset(cx, 0f),
+                      end = Offset(cx, h),
+                      strokeWidth = lineStrokeWidth,
+                    )
+                  }
+
+                  // 3. Threshold dashed vertical line
+                  val tx = EDGE_PAD_PX + position * usableWidth
+                  drawLine(
+                    color = thresholdLineColor,
+                    start = Offset(tx, 0f),
+                    end = Offset(tx, h),
+                    strokeWidth = lineStrokeWidth,
+                    pathEffect = dashEffect,
+                  )
+                }
               },
-        ) {
-          val w = size.width
-          val h = size.height
-          val usableWidth = w - 2 * EDGE_PAD_PX
-
-          // 1. Dark→light gradient background
-          drawRect(brush = Brush.horizontalGradient(listOf(darkColor, lightColor)))
-
-          // 2. Current lux solid vertical line
-          if (currentLux != null) {
-            val currentPos = luxToPosition(currentLux)
-            val cx = EDGE_PAD_PX + currentPos * usableWidth
-            drawLine(
-              color = currentLuxLineColor,
-              start = Offset(cx, 0f),
-              end = Offset(cx, h),
-              strokeWidth = 2.dp.toPx(),
-            )
-          }
-
-          // 3. Threshold dashed vertical line
-          val tx = EDGE_PAD_PX + position * usableWidth
-          drawLine(
-            color = thresholdLineColor,
-            start = Offset(tx, 0f),
-            end = Offset(tx, h),
-            strokeWidth = 2.dp.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()), 0f),
-          )
-        }
+        )
       }
 
       Icon(

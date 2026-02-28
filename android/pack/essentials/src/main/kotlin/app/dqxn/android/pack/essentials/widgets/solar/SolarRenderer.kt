@@ -1,16 +1,19 @@
 package app.dqxn.android.pack.essentials.widgets.solar
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -58,10 +61,8 @@ public enum class ArcSize {
  * - [SolarDisplayMode.NEXT_EVENT]: Countdown to next sunrise or sunset.
  * - [SolarDisplayMode.SUNRISE_SUNSET]: Both times displayed.
  * - [SolarDisplayMode.ARC]: Full 24h circular arc with dawn/day/dusk/night color bands plus
- *   sun/moon marker at current position.
- *
- * Arc rendering uses `drawWithCache` semantics -- the arc background recalculates only when
- * sunrise/sunset change, not every frame.
+ *   sun/moon marker at current position. Uses `drawWithCache` for arc band geometry (recalculated
+ *   on size change) and defers marker position reads to the draw phase.
  */
 @DashboardWidget(typeId = "essentials:solar", displayName = "Solar")
 public class SolarRenderer @Inject constructor() : WidgetRenderer {
@@ -123,7 +124,13 @@ public class SolarRenderer @Inject constructor() : WidgetRenderer {
     modifier: Modifier,
   ) {
     val widgetData = LocalWidgetData.current
-    val solar = widgetData.snapshot<SolarSnapshot>()
+
+    // State<T> (no `by`) — deferred to draw phase for ARC mode
+    val solarState: State<SolarSnapshot?> = remember {
+      derivedStateOf { widgetData.snapshot<SolarSnapshot>() }
+    }
+
+    val solar = solarState.value
     val displayMode = (settings["displayMode"] as? SolarDisplayMode) ?: SolarDisplayMode.NEXT_EVENT
     val arcSize = (settings["arcSize"] as? ArcSize) ?: ArcSize.MEDIUM
 
@@ -135,7 +142,8 @@ public class SolarRenderer @Inject constructor() : WidgetRenderer {
     when (displayMode) {
       SolarDisplayMode.NEXT_EVENT -> NextEventContent(solar = solar, modifier = modifier)
       SolarDisplayMode.SUNRISE_SUNSET -> SunriseSunsetContent(solar = solar, modifier = modifier)
-      SolarDisplayMode.ARC -> ArcContent(solar = solar, arcSize = arcSize, modifier = modifier)
+      SolarDisplayMode.ARC ->
+        ArcContent(solar = solar, arcSize = arcSize, solarState = solarState, modifier = modifier)
     }
   }
 
@@ -307,7 +315,12 @@ private fun SunriseSunsetContent(solar: SolarSnapshot, modifier: Modifier) {
 }
 
 @Composable
-private fun ArcContent(solar: SolarSnapshot, arcSize: ArcSize, modifier: Modifier) {
+private fun ArcContent(
+  solar: SolarSnapshot,
+  arcSize: ArcSize,
+  solarState: State<SolarSnapshot?>,
+  modifier: Modifier,
+) {
   val currentTime = remember { System.currentTimeMillis() }
   val sunriseMillis = solar.sunriseEpochMillis
   val sunsetMillis = solar.sunsetEpochMillis
@@ -339,84 +352,102 @@ private fun ArcContent(solar: SolarSnapshot, arcSize: ArcSize, modifier: Modifie
     ((currentTime - dayStartMillis).toFloat() / (24f * 3600f * 1000f)).coerceIn(0f, 1f)
 
   val sunPosition = SolarRenderer.computeSunPosition(currentTime, sunriseMillis, sunsetMillis)
-  val onSurface = MaterialTheme.colorScheme.onSurface
 
-  Canvas(modifier = modifier.fillMaxSize().padding(8.dp)) {
-    val arcStrokePx = arcStrokeWidth.toPx()
-    val padding = arcStrokePx / 2f
-    val arcRect = Size(size.width - arcStrokePx, size.height - arcStrokePx)
-    val arcTopLeft = Offset(padding, padding)
+  Spacer(
+    modifier =
+      modifier.fillMaxSize().padding(8.dp).drawWithCache {
+        val arcStrokePx = arcStrokeWidth.toPx()
+        val padding = arcStrokePx / 2f
+        val arcRect = Size(size.width - arcStrokePx, size.height - arcStrokePx)
+        val arcTopLeft = Offset(padding, padding)
 
-    // Night band (full circle background)
-    drawArc(
-      color = SolarRenderer.NIGHT_COLOR,
-      startAngle = SolarRenderer.ARC_START_ANGLE,
-      sweepAngle = SolarRenderer.ARC_SWEEP_ANGLE,
-      useCenter = false,
-      topLeft = arcTopLeft,
-      size = arcRect,
-      style = Stroke(width = arcStrokePx),
-    )
+        // Cached Stroke (one instance, reused for all arc bands)
+        val arcStroke = Stroke(width = arcStrokePx)
 
-    // Dawn band
-    val dawnStartAngle = SolarRenderer.ARC_START_ANGLE + dawnStartFraction * 360f
-    val dawnSweep = (sunriseFraction - dawnStartFraction) * 360f
-    if (dawnSweep > 0f) {
-      drawArc(
-        color = SolarRenderer.DAWN_COLOR,
-        startAngle = dawnStartAngle,
-        sweepAngle = dawnSweep,
-        useCenter = false,
-        topLeft = arcTopLeft,
-        size = arcRect,
-        style = Stroke(width = arcStrokePx),
-      )
-    }
+        // Pre-compute arc band angles (only change when sunrise/sunset data changes, not per frame)
+        val dawnStartAngle = SolarRenderer.ARC_START_ANGLE + dawnStartFraction * 360f
+        val dawnSweep = (sunriseFraction - dawnStartFraction) * 360f
+        val dayStartAngle = SolarRenderer.ARC_START_ANGLE + sunriseFraction * 360f
+        val daySweep = (sunsetFraction - sunriseFraction) * 360f
+        val duskStartAngle = SolarRenderer.ARC_START_ANGLE + sunsetFraction * 360f
+        val duskSweep = (duskEndFraction - sunsetFraction) * 360f
 
-    // Day band
-    val dayStartAngle = SolarRenderer.ARC_START_ANGLE + sunriseFraction * 360f
-    val daySweep = (sunsetFraction - sunriseFraction) * 360f
-    if (daySweep > 0f) {
-      drawArc(
-        color = SolarRenderer.DAY_COLOR,
-        startAngle = dayStartAngle,
-        sweepAngle = daySweep,
-        useCenter = false,
-        topLeft = arcTopLeft,
-        size = arcRect,
-        style = Stroke(width = arcStrokePx),
-      )
-    }
+        // Marker geometry
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val markerArcRadius = (size.width - arcStrokePx) / 2f
+        val markerRadius = arcStrokePx * 0.6f
 
-    // Dusk band
-    val duskStartAngle = SolarRenderer.ARC_START_ANGLE + sunsetFraction * 360f
-    val duskSweep = (duskEndFraction - sunsetFraction) * 360f
-    if (duskSweep > 0f) {
-      drawArc(
-        color = SolarRenderer.DUSK_COLOR,
-        startAngle = duskStartAngle,
-        sweepAngle = duskSweep,
-        useCenter = false,
-        topLeft = arcTopLeft,
-        size = arcRect,
-        style = Stroke(width = arcStrokePx),
-      )
-    }
+        onDrawBehind {
+          // Night band (full circle background)
+          drawArc(
+            color = SolarRenderer.NIGHT_COLOR,
+            startAngle = SolarRenderer.ARC_START_ANGLE,
+            sweepAngle = SolarRenderer.ARC_SWEEP_ANGLE,
+            useCenter = false,
+            topLeft = arcTopLeft,
+            size = arcRect,
+            style = arcStroke,
+          )
 
-    // Sun/moon marker at current position
-    val markerAngle =
-      SolarRenderer.ARC_START_ANGLE + currentFraction * SolarRenderer.ARC_SWEEP_ANGLE
-    val markerAngleRad = Math.toRadians(markerAngle.toDouble())
-    val cx = size.width / 2f
-    val cy = size.height / 2f
-    val radius = (size.width - arcStrokePx) / 2f
-    val markerX = cx + radius * cos(markerAngleRad).toFloat()
-    val markerY = cy + radius * sin(markerAngleRad).toFloat()
-    val markerRadius = arcStrokePx * 0.6f
+          // Dawn band
+          if (dawnSweep > 0f) {
+            drawArc(
+              color = SolarRenderer.DAWN_COLOR,
+              startAngle = dawnStartAngle,
+              sweepAngle = dawnSweep,
+              useCenter = false,
+              topLeft = arcTopLeft,
+              size = arcRect,
+              style = arcStroke,
+            )
+          }
 
-    val markerColor = if (solar.isDaytime) SolarRenderer.DAY_COLOR else Color.White
-    drawCircle(color = markerColor, radius = markerRadius, center = Offset(markerX, markerY))
-  }
+          // Day band
+          if (daySweep > 0f) {
+            drawArc(
+              color = SolarRenderer.DAY_COLOR,
+              startAngle = dayStartAngle,
+              sweepAngle = daySweep,
+              useCenter = false,
+              topLeft = arcTopLeft,
+              size = arcRect,
+              style = arcStroke,
+            )
+          }
+
+          // Dusk band
+          if (duskSweep > 0f) {
+            drawArc(
+              color = SolarRenderer.DUSK_COLOR,
+              startAngle = duskStartAngle,
+              sweepAngle = duskSweep,
+              useCenter = false,
+              topLeft = arcTopLeft,
+              size = arcRect,
+              style = arcStroke,
+            )
+          }
+
+          // Sun/moon marker at current position
+          val markerAngle =
+            SolarRenderer.ARC_START_ANGLE + currentFraction * SolarRenderer.ARC_SWEEP_ANGLE
+          val markerAngleRad = Math.toRadians(markerAngle.toDouble())
+          val markerX = cx + markerArcRadius * cos(markerAngleRad).toFloat()
+          val markerY = cy + markerArcRadius * sin(markerAngleRad).toFloat()
+
+          // Read latest solar state for isDaytime check in draw phase
+          val currentSolar = solarState.value
+          val markerColor =
+            if (currentSolar?.isDaytime == true) SolarRenderer.DAY_COLOR else Color.White
+          drawCircle(
+            color = markerColor,
+            radius = markerRadius,
+            center = Offset(markerX, markerY),
+          )
+        }
+      },
+  )
 }
 
 /** Formats epoch millis to a locale-appropriate time string (e.g., "6:45 AM"). */
