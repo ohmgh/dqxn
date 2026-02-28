@@ -26,7 +26,8 @@ import kotlin.math.abs
  * `detectDragGesturesAfterLongPress`).
  *
  * Gesture behavior:
- * - Non-edit mode: tap focuses widget (if unfocused) or unfocuses (if focused). No drag/resize.
+ * - Non-edit mode: tap is a no-op (WidgetContentDispatcher handles functional taps). Long-press
+ *   enters edit mode + focuses widget.
  * - Edit mode, not focused: tap focuses widget.
  * - Edit mode, focused: drag via pointer events with 8px cancellation threshold. Resize via corner
  *   handles with immediate start.
@@ -65,17 +66,13 @@ constructor(
         val wasInEditModeAtStart = editModeCoordinator.editState.value.isEditMode
         val pass = if (wasInEditModeAtStart) PointerEventPass.Initial else PointerEventPass.Main
 
-        val down = awaitFirstDown(requireUnconsumed = !wasInEditModeAtStart, pass = pass)
-
-        // In edit mode, consume immediately to prevent blank space handler from firing
-        if (wasInEditModeAtStart) {
-          down.consume()
-        }
+        val down = awaitFirstDown(requireUnconsumed = false, pass = pass)
+        down.consume()
 
         val isFocused = editModeCoordinator.editState.value.focusedWidgetId == widgetId
 
         if (!wasInEditModeAtStart) {
-          // Non-edit mode: short tap toggles focus, long-press enters edit mode + focuses widget
+          // Non-edit mode: long-press enters edit mode + focuses widget, short tap is no-op
           awaitLongPressOrToggleFocus(widgetId)
           return@awaitEachGesture
         }
@@ -112,11 +109,12 @@ constructor(
     }
 
   /**
-   * Non-edit mode: long-press enters edit mode + focuses widget. Short tap toggles focus.
-   * Mirrors old codebase behavior: long-press on widget → enterEditMode() + focusWidget(widgetId).
+   * Non-edit mode: long-press enters edit mode + focuses widget. Short tap is a no-op
+   * (WidgetContentDispatcher handles functional widget taps via separate Modifier.clickable).
    *
    * Uses [AwaitPointerEventScope.withTimeoutOrNull] to detect stationary hold — a finger held
-   * still produces zero pointer events after DOWN.
+   * still produces zero pointer events after DOWN. Polls with [PointerEventPass.Final] to see
+   * events after all handlers, matching old codebase behavior.
    */
   private suspend fun AwaitPointerEventScope.awaitLongPressOrToggleFocus(widgetId: String) {
     val deadline = System.currentTimeMillis() + LONG_PRESS_TIMEOUT_MS
@@ -127,22 +125,20 @@ constructor(
 
       if (!longPressTriggered && remainingMs <= 0) {
         longPressTriggered = true
-        haptics.dragStart()
         editModeCoordinator.enterEditMode()
         editModeCoordinator.focusWidget(widgetId)
       }
 
       val event = if (!longPressTriggered) {
         withTimeoutOrNull(remainingMs.coerceAtLeast(0)) {
-          awaitPointerEvent(PointerEventPass.Main)
+          awaitPointerEvent(PointerEventPass.Final)
         }
       } else {
-        awaitPointerEvent(PointerEventPass.Main)
+        awaitPointerEvent(PointerEventPass.Final)
       }
 
       if (event == null) {
         longPressTriggered = true
-        haptics.dragStart()
         editModeCoordinator.enterEditMode()
         editModeCoordinator.focusWidget(widgetId)
         continue
@@ -151,15 +147,6 @@ constructor(
       val change = event.changes.firstOrNull() ?: break
 
       if (change.changedToUp()) {
-        if (!longPressTriggered) {
-          // Short tap: toggle focus
-          val currentFocus = editModeCoordinator.editState.value.focusedWidgetId
-          if (currentFocus == widgetId) {
-            editModeCoordinator.focusWidget(null)
-          } else {
-            editModeCoordinator.focusWidget(widgetId)
-          }
-        }
         break
       }
 

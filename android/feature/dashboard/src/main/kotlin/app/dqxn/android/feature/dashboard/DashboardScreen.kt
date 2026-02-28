@@ -9,6 +9,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -92,8 +93,12 @@ public fun DashboardScreen(
     }
   }
 
-  // Edit mode forces bar visible
-  LaunchedEffect(editState.isEditMode) { if (editState.isEditMode) isBarVisible = true }
+  // Edit mode forces bar visible — snapshotFlow observes state changes directly,
+  // independent of recomposition scoping
+  LaunchedEffect(Unit) {
+    snapshotFlow { editState.isEditMode }
+      .collect { isEdit -> if (isEdit) isBarVisible = true }
+  }
 
   // Drag/resize hides bar; restore when gesture ends in edit mode
   LaunchedEffect(dragState, resizeState) {

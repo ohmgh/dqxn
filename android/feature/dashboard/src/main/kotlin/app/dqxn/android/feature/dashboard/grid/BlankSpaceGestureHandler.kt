@@ -11,13 +11,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import app.dqxn.android.feature.dashboard.coordinator.EditModeCoordinator
 import javax.inject.Inject
-import kotlin.math.abs
 
 /**
  * Gesture handler for blank (empty) canvas areas.
  *
- * Uses `requireUnconsumed = true` on [awaitFirstDown] so widget gesture handlers consume their
- * events first -- this handler only fires on genuinely blank areas.
+ * Uses [PointerEventPass.Final] on [awaitFirstDown] so it sees events AFTER both
+ * [HorizontalPager][androidx.compose.foundation.pager.HorizontalPager] (parent, Initial pass) and
+ * widget gesture handlers (children, Main pass) have processed. Checks [isConsumed] to skip events
+ * already claimed by widgets — blank space events arrive unconsumed on Final pass because no widget
+ * child consumed them on Main.
  *
  * Behavior:
  * - Long-press (400ms with 8px cancellation): enter edit mode
@@ -31,8 +33,8 @@ constructor(
 ) {
 
   /**
-   * Apply blank space gesture handling to this [Modifier]. Must be placed AFTER widget gesture
-   * modifiers in the composition tree so widgets consume their events first.
+   * Apply blank space gesture handling to this [Modifier]. Applied on the grid Layout (parent of
+   * widget composables). Uses Final pass so widgets consume on Main pass first.
    *
    * @param onTapBlankSpace Called when blank space is tapped in non-edit mode (short press, no
    *   long-press triggered). Used by DashboardScreen for bottom bar toggle.
@@ -42,8 +44,15 @@ constructor(
   ): Modifier =
     this.pointerInput(Unit) {
       awaitEachGesture {
-        // Only fire on unconsumed events -- widgets consume theirs via down.consume()
-        val down = awaitFirstDown(requireUnconsumed = true, pass = PointerEventPass.Main)
+        // Final pass: sees events after pager (Initial) and widgets (Main) have processed.
+        // requireUnconsumed = false so pager's Initial-pass consumption doesn't block us.
+
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Final)
+
+        // If a widget child consumed this event on Main pass, skip -- not blank space.
+        if (down.isConsumed) {
+          return@awaitEachGesture
+        }
 
         val isEditMode = editModeCoordinator.editState.value.isEditMode
 
@@ -61,7 +70,7 @@ constructor(
   /** Wait for pointer up and exit edit mode. */
   private suspend fun AwaitPointerEventScope.awaitUpAndExitEditMode() {
     while (true) {
-      val event = awaitPointerEvent(PointerEventPass.Main)
+      val event = awaitPointerEvent(PointerEventPass.Final)
       if (event.changes.all { it.changedToUp() }) {
         editModeCoordinator.exitEditMode()
         break
@@ -85,6 +94,7 @@ constructor(
   ) {
     val deadline = System.currentTimeMillis() + LONG_PRESS_TIMEOUT_MS
     var longPressTriggered = false
+    var totalDragDistance = 0f
 
     while (true) {
       val remainingMs = deadline - System.currentTimeMillis()
@@ -98,10 +108,10 @@ constructor(
       // If long-press already triggered, just wait for UP to end gesture
       val event = if (!longPressTriggered) {
         withTimeoutOrNull(remainingMs.coerceAtLeast(0)) {
-          awaitPointerEvent(PointerEventPass.Main)
+          awaitPointerEvent(PointerEventPass.Final)
         }
       } else {
-        awaitPointerEvent(PointerEventPass.Main)
+        awaitPointerEvent(PointerEventPass.Final)
       }
 
       if (event == null) {
@@ -120,13 +130,11 @@ constructor(
         break
       }
 
-      // Movement cancellation (only before long-press fires)
+      // Movement cancellation (only before long-press fires) — cumulative distance
       if (!longPressTriggered) {
         val posChange = change.positionChange()
-        if (
-          abs(posChange.x) > CANCELLATION_THRESHOLD_PX ||
-            abs(posChange.y) > CANCELLATION_THRESHOLD_PX
-        ) {
+        totalDragDistance += posChange.getDistance()
+        if (totalDragDistance > CANCELLATION_THRESHOLD_PX) {
           break
         }
       }

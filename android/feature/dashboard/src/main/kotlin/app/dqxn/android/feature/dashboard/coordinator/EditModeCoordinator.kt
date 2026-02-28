@@ -54,6 +54,7 @@ public data class WidgetAnimationState(
  * [resizeState]) as separate nullable StateFlows. All drag/resize data uses pixel offsets for
  * `graphicsLayer` — grid snapping happens only on gesture completion.
  */
+@dagger.hilt.android.scopes.ViewModelScoped
 public class EditModeCoordinator
 @Inject
 constructor(
