@@ -1,8 +1,6 @@
 package app.dqxn.android.feature.dashboard
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -97,9 +95,14 @@ public fun DashboardScreen(
   // Edit mode forces bar visible
   LaunchedEffect(editState.isEditMode) { if (editState.isEditMode) isBarVisible = true }
 
-  // Drag/resize hides bar
+  // Drag/resize hides bar; restore when gesture ends in edit mode
   LaunchedEffect(dragState, resizeState) {
-    if (dragState != null || resizeState != null) isBarVisible = false
+    if (dragState != null || resizeState != null) {
+      isBarVisible = false
+    } else if (editState.isEditMode) {
+      isBarVisible = true
+      lastInteractionTime = System.currentTimeMillis()
+    }
   }
 
   // First-run onboarding check (nullable while DataStore value is loading)
@@ -169,6 +172,10 @@ public fun DashboardScreen(
           reducedMotionHelper = viewModel.reducedMotionHelper,
           widgetGestureHandler = viewModel.widgetGestureHandler,
           blankSpaceGestureHandler = viewModel.blankSpaceGestureHandler,
+          onTapBlankSpace = {
+            lastInteractionTime = System.currentTimeMillis()
+            isBarVisible = !isBarVisible
+          },
           semanticsOwnerHolder = viewModel.semanticsOwnerHolder,
           userPreferencesRepository = viewModel.userPreferencesRepository,
           onCommand = onCommand,
@@ -184,28 +191,14 @@ public fun DashboardScreen(
         },
       )
 
-      // Layer 0.8: Bottom bar (floats over canvas, tap toggles in view mode)
+      // Layer 0.8: Bottom bar (floats over canvas)
       Box(
-        modifier =
-          Modifier.fillMaxSize()
-            .clickable(
-              indication = null,
-              interactionSource = remember { MutableInteractionSource() },
-              onClick = {
-                if (editState.isEditMode) {
-                  // Tap canvas in edit mode: exit edit mode
-                  onCommand(DashboardCommand.ExitEditMode)
-                } else {
-                  // Tap canvas in view mode: toggle bar visibility
-                  lastInteractionTime = System.currentTimeMillis()
-                  isBarVisible = !isBarVisible
-                }
-              },
-            ),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter,
       ) {
         DashboardButtonBar(
           isVisible = isBarVisible,
+          isEditMode = editState.isEditMode,
           onSettingsClick = { navController.navigate(SettingsRoute) },
           onAddWidgetClick = { navController.navigate(WidgetPickerRoute) },
           onInteraction = {

@@ -57,6 +57,8 @@ constructor(
     currentPosition: GridPosition,
     currentSize: GridSize,
     gridUnitPx: Float,
+    viewportCols: Int = 0,
+    viewportRows: Int = 0,
   ): Modifier =
     this.pointerInput(widgetId, widgetSpec, currentPosition, currentSize, gridUnitPx) {
       awaitEachGesture {
@@ -73,8 +75,8 @@ constructor(
         val isFocused = editModeCoordinator.editState.value.focusedWidgetId == widgetId
 
         if (!wasInEditModeAtStart) {
-          // Non-edit mode: wait for up, then toggle focus
-          awaitUpAndToggleFocus(widgetId)
+          // Non-edit mode: short tap toggles focus, long-press enters edit mode + focuses widget
+          awaitLongPressOrToggleFocus(widgetId)
           return@awaitEachGesture
         }
 
@@ -105,25 +107,68 @@ constructor(
         }
 
         // Drag: long-press detection with 8px cancellation threshold
-        awaitDragEvents(widgetId, currentPosition, gridUnitPx, pass)
+        awaitDragEvents(widgetId, currentPosition, currentSize, gridUnitPx, viewportCols, viewportRows, pass)
       }
     }
 
   /**
-   * Non-edit mode: wait for pointer up, then toggle focus. Uses `requireUnconsumed = true` so
-   * widget Clickable actions still fire.
+   * Non-edit mode: long-press enters edit mode + focuses widget. Short tap toggles focus.
+   * Mirrors old codebase behavior: long-press on widget → enterEditMode() + focusWidget(widgetId).
+   *
+   * Uses [AwaitPointerEventScope.withTimeoutOrNull] to detect stationary hold — a finger held
+   * still produces zero pointer events after DOWN.
    */
-  private suspend fun AwaitPointerEventScope.awaitUpAndToggleFocus(widgetId: String) {
+  private suspend fun AwaitPointerEventScope.awaitLongPressOrToggleFocus(widgetId: String) {
+    val deadline = System.currentTimeMillis() + LONG_PRESS_TIMEOUT_MS
+    var longPressTriggered = false
+
     while (true) {
-      val event = awaitPointerEvent(PointerEventPass.Main)
-      if (event.changes.all { it.changedToUp() }) {
-        val currentFocus = editModeCoordinator.editState.value.focusedWidgetId
-        if (currentFocus == widgetId) {
-          editModeCoordinator.focusWidget(null)
-        } else {
-          editModeCoordinator.focusWidget(widgetId)
+      val remainingMs = deadline - System.currentTimeMillis()
+
+      if (!longPressTriggered && remainingMs <= 0) {
+        longPressTriggered = true
+        haptics.dragStart()
+        editModeCoordinator.enterEditMode()
+        editModeCoordinator.focusWidget(widgetId)
+      }
+
+      val event = if (!longPressTriggered) {
+        withTimeoutOrNull(remainingMs.coerceAtLeast(0)) {
+          awaitPointerEvent(PointerEventPass.Main)
+        }
+      } else {
+        awaitPointerEvent(PointerEventPass.Main)
+      }
+
+      if (event == null) {
+        longPressTriggered = true
+        haptics.dragStart()
+        editModeCoordinator.enterEditMode()
+        editModeCoordinator.focusWidget(widgetId)
+        continue
+      }
+
+      val change = event.changes.firstOrNull() ?: break
+
+      if (change.changedToUp()) {
+        if (!longPressTriggered) {
+          // Short tap: toggle focus
+          val currentFocus = editModeCoordinator.editState.value.focusedWidgetId
+          if (currentFocus == widgetId) {
+            editModeCoordinator.focusWidget(null)
+          } else {
+            editModeCoordinator.focusWidget(widgetId)
+          }
         }
         break
+      }
+
+      // Movement cancellation (only before long-press fires)
+      if (!longPressTriggered) {
+        val posChange = change.positionChange()
+        if (abs(posChange.x) > DRAG_THRESHOLD_PX || abs(posChange.y) > DRAG_THRESHOLD_PX) {
+          break
+        }
       }
     }
   }
@@ -143,57 +188,78 @@ constructor(
    * Drag gesture with long-press detection and 8px cancellation threshold per replication advisory
    * section 6.
    *
-   * Long-press is detected by tracking elapsed time between pointer events rather than launching a
-   * coroutine timeout (restricted suspension scope does not allow `coroutineScope`).
+   * Uses [AwaitPointerEventScope.withTimeoutOrNull] to detect stationary hold — a finger held
+   * still produces zero pointer events after DOWN.
    */
   private suspend fun AwaitPointerEventScope.awaitDragEvents(
     widgetId: String,
     currentPosition: GridPosition,
+    currentSize: GridSize,
     gridUnitPx: Float,
+    viewportCols: Int,
+    viewportRows: Int,
     pass: PointerEventPass,
   ) {
     var longPressTriggered = false
     var totalDrag = Offset.Zero
-    var cancelled = false
-    val startTimeMs = System.currentTimeMillis()
+    val deadline = System.currentTimeMillis() + LONG_PRESS_TIMEOUT_MS
 
     while (true) {
-      val event = awaitPointerEvent(pass)
+      val remainingMs = deadline - System.currentTimeMillis()
+
+      if (!longPressTriggered && remainingMs <= 0) {
+        longPressTriggered = true
+        haptics.dragStart()
+      }
+
+      val event = if (!longPressTriggered) {
+        withTimeoutOrNull(remainingMs.coerceAtLeast(0)) {
+          awaitPointerEvent(pass)
+        }
+      } else {
+        awaitPointerEvent(pass)
+      }
+
+      if (event == null) {
+        longPressTriggered = true
+        haptics.dragStart()
+        continue
+      }
+
       val change = event.changes.firstOrNull() ?: break
 
       if (change.changedToUp()) {
         if (longPressTriggered && editModeCoordinator.dragState.value != null) {
           editModeCoordinator.endDrag(gridUnitPx)
-        } else if (!cancelled && !longPressTriggered) {
-          // Short tap in edit mode on focused widget -- unfocus
-          editModeCoordinator.focusWidget(null)
+        } else if (!longPressTriggered) {
+          // Short tap in edit mode on focused widget -- exit edit mode entirely (old codebase behavior)
+          editModeCoordinator.exitEditMode()
         }
         break
       }
 
-      val elapsedMs = System.currentTimeMillis() - startTimeMs
       val posChange = change.positionChange()
-
-      if (!longPressTriggered && !cancelled && elapsedMs >= LONG_PRESS_TIMEOUT_MS) {
-        longPressTriggered = true
-        haptics.dragStart()
-      }
-
       if (posChange != Offset.Zero) {
         totalDrag += posChange
 
-        if (!longPressTriggered && !cancelled) {
-          // Check cancellation threshold before long-press fires
+        if (!longPressTriggered) {
           if (abs(totalDrag.x) > DRAG_THRESHOLD_PX || abs(totalDrag.y) > DRAG_THRESHOLD_PX) {
-            cancelled = true
-            break
+            break // Movement cancels before long-press
           }
-        } else if (longPressTriggered) {
+        } else {
           change.consume()
           if (editModeCoordinator.dragState.value == null) {
-            editModeCoordinator.startDrag(widgetId, currentPosition.col, currentPosition.row)
+            editModeCoordinator.startDrag(
+              widgetId,
+              currentPosition.col,
+              currentPosition.row,
+              widgetWidthUnits = currentSize.widthUnits,
+              widgetHeightUnits = currentSize.heightUnits,
+              viewportCols = viewportCols,
+              viewportRows = viewportRows,
+            )
           }
-          editModeCoordinator.updateDrag(totalDrag.x, totalDrag.y)
+          editModeCoordinator.updateDrag(totalDrag.x, totalDrag.y, gridUnitPx)
         }
       }
     }

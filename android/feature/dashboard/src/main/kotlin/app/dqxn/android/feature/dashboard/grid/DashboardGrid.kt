@@ -16,14 +16,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -77,6 +76,7 @@ public fun DashboardGrid(
   reducedMotionHelper: ReducedMotionHelper,
   widgetGestureHandler: WidgetGestureHandler,
   blankSpaceGestureHandler: BlankSpaceGestureHandler,
+  onTapBlankSpace: () -> Unit,
   onCommand: (app.dqxn.android.feature.dashboard.command.DashboardCommand) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -101,7 +101,10 @@ public fun DashboardGrid(
   val isEditMode = editState.isEditMode
   val isReducedMotion = reducedMotionHelper.isReducedMotion
 
-  val blankSpaceModifier = with(blankSpaceGestureHandler) { Modifier.blankSpaceGestures() }
+  val currentOnTapBlankSpace by rememberUpdatedState(onTapBlankSpace)
+  val blankSpaceModifier = with(blankSpaceGestureHandler) {
+    Modifier.blankSpaceGestures(onTapBlankSpace = { currentOnTapBlankSpace() })
+  }
 
   // Visual grid overlay during drag (F1.20)
   val gridOverlayModifier =
@@ -156,10 +159,13 @@ public fun DashboardGrid(
           ) {
             // Per-widget graphicsLayer for isolated RenderNode (NF1)
             val widgetDragState = if (dragState?.widgetId == widget.instanceId) dragState else null
+            val isActivelyManipulated = dragState?.widgetId == widget.instanceId ||
+              resizeState?.widgetId == widget.instanceId
+            val isFocused = editState.focusedWidgetId == widget.instanceId
 
-            // Wiggle rotation for edit mode (F1.11)
+            // Wiggle rotation for edit mode (F1.11) -- suppressed during active drag/resize
             val wiggleRotation =
-              if (isEditMode && !isReducedMotion) {
+              if (isEditMode && !isReducedMotion && !isActivelyManipulated) {
                 val infiniteTransition =
                   rememberInfiniteTransition(label = "wiggle_${widget.instanceId}")
                 val rotation by
@@ -178,9 +184,9 @@ public fun DashboardGrid(
                 0f
               }
 
-            // Bracket stroke pulse for edit mode (F1.11) -- Canvas-drawn, NOT scale
+            // Bracket stroke pulse for edit mode (F1.11) -- only on focused widget
             val bracketStrokeWidth =
-              if (isEditMode && !isReducedMotion) {
+              if (isEditMode && isFocused && !isReducedMotion) {
                 val infiniteTransition =
                   rememberInfiniteTransition(label = "bracket_${widget.instanceId}")
                 val strokeWidth by
@@ -195,7 +201,7 @@ public fun DashboardGrid(
                     label = "bracket_stroke_${widget.instanceId}",
                   )
                 strokeWidth
-              } else if (isEditMode) {
+              } else if (isEditMode && isFocused) {
                 4f // Static midpoint for reduced motion
               } else {
                 0f // Not in edit mode
@@ -233,25 +239,6 @@ public fun DashboardGrid(
                 label = "settings_alpha_${widget.instanceId}",
               )
 
-            // Focus tap handler: in edit mode, tap toggles focus (F2.18)
-            val isFocused = editState.focusedWidgetId == widget.instanceId
-            val focusClickModifier =
-              if (isEditMode) {
-                Modifier.clickable(
-                  indication = null,
-                  interactionSource = remember { MutableInteractionSource() },
-                  onClick = {
-                    if (isFocused) {
-                      editModeCoordinator.focusWidget(null) // Unfocus
-                    } else {
-                      editModeCoordinator.focusWidget(widget.instanceId) // Focus
-                    }
-                  },
-                )
-              } else {
-                Modifier
-              }
-
             // Apply gesture handler
             val widgetSpec = widgetRegistry.findByTypeId(widget.typeId)
             val gestureModifier =
@@ -263,13 +250,15 @@ public fun DashboardGrid(
                     currentPosition = widget.position,
                     currentSize = widget.size,
                     gridUnitPx = gridUnitPx,
+                    viewportCols = viewportCols,
+                    viewportRows = viewportRows,
                   )
                 }
               } else {
                 Modifier
               }
 
-            Box(modifier = focusClickModifier) {
+            Box {
               WidgetSlot(
                 widget = widget,
                 widgetBindingCoordinator = widgetBindingCoordinator,
@@ -294,8 +283,8 @@ public fun DashboardGrid(
                   },
               )
 
-              // Corner brackets for edit mode (F1.11)
-              if (isEditMode && bracketStrokeWidth > 0f) {
+              // Corner brackets for edit mode (F1.11) -- only on focused widget
+              if (isEditMode && isFocused && bracketStrokeWidth > 0f) {
                 val bracketColor = LocalDashboardTheme.current.accentColor
 
                 Canvas(
@@ -436,10 +425,15 @@ public fun DashboardGrid(
           val widget = visibleWidgets[index]
           val x = (widget.position.col * gridUnitPx).roundToInt()
           val y = (widget.position.row * gridUnitPx).roundToInt()
+          // Elevate focused/dragging/resizing widget above all others
+          val isManipulated = dragState?.widgetId == widget.instanceId ||
+            resizeState?.widgetId == widget.instanceId ||
+            editState.focusedWidgetId == widget.instanceId
+          val zIndex = if (isManipulated) Float.MAX_VALUE - 1f else widget.zIndex.toFloat()
           placeable.placeRelative(
             x = x,
             y = y,
-            zIndex = widget.zIndex.toFloat(),
+            zIndex = zIndex,
           )
         }
       }

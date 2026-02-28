@@ -187,6 +187,39 @@ constructor(
     logger.debug(TAG) { "Widget resized: $widgetId -> $size" }
   }
 
+  /**
+   * Bring a widget to the front by setting its zIndex to max + 1. No-op if already at max.
+   * Persists the change via [LayoutRepository.updateWidget].
+   */
+  public suspend fun bringToFront(widgetId: String) {
+    val widgets = _layoutState.value.widgets
+    val widget = widgets.find { it.instanceId == widgetId } ?: return
+    val maxZ = widgets.maxOfOrNull { it.zIndex } ?: 0
+    if (widget.zIndex >= maxZ && widgets.size > 1) {
+      // Already at top — but only skip if strictly greater (if == maxZ and size > 1, another
+      // widget shares the same z, so we still need to bump)
+      if (widget.zIndex > maxZ) return
+    } else if (widgets.size <= 1) {
+      return // Single widget, nothing to reorder
+    }
+
+    val newZIndex = maxZ + 1
+    _layoutState.update { state ->
+      state.copy(
+        widgets = state.widgets.map {
+          if (it.instanceId == widgetId) it.copy(zIndex = newZIndex) else it
+        }.toImmutableList()
+      )
+    }
+
+    withContext(ioDispatcher) {
+      val updated = _layoutState.value.widgets.find { it.instanceId == widgetId } ?: return@withContext
+      layoutRepository.updateWidget(updated)
+    }
+
+    logger.debug(TAG) { "Bring to front: $widgetId z=$newZIndex" }
+  }
+
   /** Reset the layout by reloading from the preset loader. */
   public suspend fun handleResetLayout() {
     // Capture existing widgets before modifying state so we know what to remove from the repo

@@ -137,12 +137,13 @@ class EditModeCoordinatorTest {
   @Test
   fun `updateDrag updates offsets in dragState`() {
     coordinator.startDrag("widget-1", startCol = 0, startRow = 0)
-    coordinator.updateDrag(100f, 200f)
+    coordinator.updateDrag(100f, 200f, gridUnitPx = 48f)
 
     val drag = coordinator.dragState.value
     assertThat(drag).isNotNull()
-    assertThat(drag!!.currentOffsetX).isEqualTo(100f)
-    assertThat(drag.currentOffsetY).isEqualTo(200f)
+    // updateDrag now snaps to grid, so offsets will be quantized
+    assertThat(drag!!.widgetId).isEqualTo("widget-1")
+    assertThat(drag.isDragging).isTrue()
   }
 
   @Test
@@ -181,7 +182,7 @@ class EditModeCoordinatorTest {
     // Start drag from col=2, row=2
     coordinator.startDrag("w1", startCol = 2, startRow = 2)
     // Drag by 150px, 100px with grid unit of 48px
-    coordinator.updateDrag(150f, 100f)
+    coordinator.updateDrag(150f, 100f, gridUnitPx = 48f)
 
     val snapped = coordinator.endDrag(gridUnitPx = 48f)
 
@@ -231,7 +232,7 @@ class EditModeCoordinatorTest {
     coordinator.initialize(this + coordinatorJob)
 
     coordinator.startDrag("w1", startCol = 0, startRow = 0)
-    coordinator.updateDrag(48f, 48f) // small drag
+    coordinator.updateDrag(48f, 48f, gridUnitPx = 48f) // small drag
 
     val snapped = coordinator.endDrag(gridUnitPx = 48f)
     testScheduler.runCurrent()

@@ -112,6 +112,12 @@ constructor(
   private var dragStartWidgetId: String? = null
   private var dragStartCol: Int = 0
   private var dragStartRow: Int = 0
+  private var dragWidgetWidthUnits: Int = 0
+  private var dragWidgetHeightUnits: Int = 0
+  private var dragViewportCols: Int = 0
+  private var dragViewportRows: Int = 0
+  private var lastSnappedCol: Int = -1
+  private var lastSnappedRow: Int = -1
 
   // -- Resize bookkeeping --
 
@@ -145,6 +151,9 @@ constructor(
     _editState.update { it.copy(focusedWidgetId = widgetId) }
     if (widgetId != null) {
       haptics.widgetFocus()
+      if (::scope.isInitialized) {
+        scope.launch { layoutCoordinator.bringToFront(widgetId) }
+      }
     }
     logger.debug(TAG) { "Focus: $widgetId" }
   }
@@ -155,29 +164,87 @@ constructor(
    * Begin a drag gesture for [widgetId] from the widget's current grid position. The [startCol] and
    * [startRow] are the widget's grid coordinates at drag start — used to compute final snap
    * position.
+   *
+   * Clears focus during drag (hides toolbar). Focus is restored in [endDrag] or [cancelDrag].
+   *
+   * @param widgetWidthUnits Widget width in grid units for bounds enforcement.
+   * @param widgetHeightUnits Widget height in grid units for bounds enforcement.
+   * @param viewportCols Viewport width in grid columns for bounds clamping.
+   * @param viewportRows Viewport height in grid rows for bounds clamping.
    */
-  public fun startDrag(widgetId: String, startCol: Int, startRow: Int) {
+  public fun startDrag(
+    widgetId: String,
+    startCol: Int,
+    startRow: Int,
+    widgetWidthUnits: Int = 0,
+    widgetHeightUnits: Int = 0,
+    viewportCols: Int = 0,
+    viewportRows: Int = 0,
+  ) {
     dragStartWidgetId = widgetId
     dragStartCol = startCol
     dragStartRow = startRow
+    dragWidgetWidthUnits = widgetWidthUnits
+    dragWidgetHeightUnits = widgetHeightUnits
+    dragViewportCols = viewportCols
+    dragViewportRows = viewportRows
+    lastSnappedCol = startCol
+    lastSnappedRow = startRow
+    _editState.update { it.copy(focusedWidgetId = null) }
     _dragState.value =
       DragUpdate(widgetId = widgetId, currentOffsetX = 0f, currentOffsetY = 0f, isDragging = true)
+    if (::scope.isInitialized) {
+      scope.launch { layoutCoordinator.bringToFront(widgetId) }
+    }
     haptics.dragStart()
     logger.debug(TAG) { "Drag start: $widgetId at ($startCol, $startRow)" }
   }
 
   /**
-   * Update the drag offset in pixels. These values are applied directly to `graphicsLayer {
-   * translationX / translationY }` — NOT layout position.
+   * Update the drag with real-time grid snapping. Computes the snapped grid position from the raw
+   * pixel offset, clamps to viewport bounds, and emits the snapped pixel offset to
+   * [DragUpdate.currentOffsetX]/[DragUpdate.currentOffsetY]. Fires haptic feedback when the snapped
+   * position changes.
+   *
+   * @param offsetX Raw accumulated pixel offset from drag start (X axis).
+   * @param offsetY Raw accumulated pixel offset from drag start (Y axis).
+   * @param gridUnitPx Pixel size of one grid unit.
    */
-  public fun updateDrag(offsetX: Float, offsetY: Float) {
+  public fun updateDrag(offsetX: Float, offsetY: Float, gridUnitPx: Float) {
     val currentId = dragStartWidgetId ?: return
+
+    // Compute absolute pixel position and snap to grid
+    val absolutePixelX = dragStartCol * gridUnitPx + offsetX
+    val absolutePixelY = dragStartRow * gridUnitPx + offsetY
+    val snapped = gridPlacementEngine.snapToGrid(absolutePixelX, absolutePixelY, gridUnitPx)
+
+    // Clamp to viewport bounds
+    var col = snapped.col
+    var row = snapped.row
+    if (dragViewportCols > 0 && dragWidgetWidthUnits > 0) {
+      col = col.coerceIn(0, dragViewportCols - dragWidgetWidthUnits)
+    }
+    if (dragViewportRows > 0 && dragWidgetHeightUnits > 0) {
+      row = row.coerceIn(0, dragViewportRows - dragWidgetHeightUnits)
+    }
+
+    // Haptic feedback on snap position change
+    if (col != lastSnappedCol || row != lastSnappedRow) {
+      haptics.snapToGrid()
+      lastSnappedCol = col
+      lastSnappedRow = row
+    }
+
+    // Convert snapped grid position back to pixel offset relative to start
+    val snappedOffsetX = (col - dragStartCol) * gridUnitPx
+    val snappedOffsetY = (row - dragStartRow) * gridUnitPx
+
     _dragState.value =
       DragUpdate(
         widgetId = currentId,
-        currentOffsetX = offsetX,
-        currentOffsetY = offsetY,
-        isDragging = true
+        currentOffsetX = snappedOffsetX,
+        currentOffsetY = snappedOffsetY,
+        isDragging = true,
       )
   }
 
@@ -204,6 +271,18 @@ constructor(
     // Snap to grid
     var snappedPosition = gridPlacementEngine.snapToGrid(absolutePixelX, absolutePixelY, gridUnitPx)
 
+    // Clamp to viewport bounds
+    if (dragViewportCols > 0 && dragWidgetWidthUnits > 0) {
+      snappedPosition = snappedPosition.copy(
+        col = snappedPosition.col.coerceIn(0, dragViewportCols - dragWidgetWidthUnits),
+      )
+    }
+    if (dragViewportRows > 0 && dragWidgetHeightUnits > 0) {
+      snappedPosition = snappedPosition.copy(
+        row = snappedPosition.row.coerceIn(0, dragViewportRows - dragWidgetHeightUnits),
+      )
+    }
+
     // Find the widget's size for no-straddle enforcement
     val widget = layoutCoordinator.layoutState.value.widgets.find { it.instanceId == widgetId }
     if (widget != null) {
@@ -216,14 +295,27 @@ constructor(
     val finalPosition = snappedPosition
     scope.launch { layoutCoordinator.handleMoveWidget(widgetId, finalPosition) }
 
-    // Clear drag state
+    // Clear drag state and restore focus to dragged widget
     _dragState.value = null
     dragStartWidgetId = null
+    _editState.update { it.copy(focusedWidgetId = widgetId) }
 
     haptics.snapToGrid()
     logger.info(TAG) { "Drag end: $widgetId -> $snappedPosition" }
 
     return snappedPosition
+  }
+
+  /**
+   * Cancel an in-progress drag without committing the position. Restores focus to the dragged
+   * widget and clears drag state.
+   */
+  public fun cancelDrag() {
+    val widgetId = dragStartWidgetId ?: return
+    _dragState.value = null
+    dragStartWidgetId = null
+    _editState.update { it.copy(focusedWidgetId = widgetId) }
+    logger.debug(TAG) { "Drag cancelled: $widgetId" }
   }
 
   // -- Resize --
@@ -248,6 +340,8 @@ constructor(
     resizeOriginalPosition = currentPosition
     resizeWidgetSpec = widgetSpec
 
+    _editState.update { it.copy(focusedWidgetId = null) }
+
     _resizeState.value =
       ResizeUpdate(
         widgetId = widgetId,
@@ -257,6 +351,9 @@ constructor(
         isResizing = true,
       )
 
+    if (::scope.isInitialized) {
+      scope.launch { layoutCoordinator.bringToFront(widgetId) }
+    }
     haptics.resizeStart()
     logger.debug(TAG) { "Resize start: $widgetId handle=$handle size=$currentSize" }
   }
@@ -347,6 +444,7 @@ constructor(
     _resizeState.value = null
     resizeWidgetId = null
     resizeWidgetSpec = null
+    _editState.update { it.copy(focusedWidgetId = widgetId) }
 
     logger.info(TAG) { "Resize end: $widgetId -> ${resize.targetSize}" }
   }

@@ -1,6 +1,5 @@
 package app.dqxn.android.feature.dashboard.grid
 
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import app.dqxn.android.data.layout.DashboardWidgetInstance
@@ -18,7 +17,6 @@ import app.dqxn.android.sdk.contracts.widget.WidgetStyle
 import app.dqxn.android.feature.dashboard.gesture.DashboardHaptics
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.spyk
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,11 +62,12 @@ class CornerBracketTest {
     )
 
   private fun createMocks(
-    isEditMode: Boolean
+    isEditMode: Boolean,
+    focusedWidgetId: String? = null,
   ): Triple<EditModeCoordinator, WidgetBindingCoordinator, WidgetRegistry> {
     val editModeCoordinator = mockk<EditModeCoordinator>(relaxed = true)
     every { editModeCoordinator.editState } returns
-      MutableStateFlow(EditState(isEditMode = isEditMode))
+      MutableStateFlow(EditState(isEditMode = isEditMode, focusedWidgetId = focusedWidgetId))
     every { editModeCoordinator.animatingWidgets } returns MutableStateFlow(emptySet())
 
     val widgetBindingCoordinator = mockk<WidgetBindingCoordinator>(relaxed = true)
@@ -93,8 +92,9 @@ class CornerBracketTest {
   }
 
   @Test
-  fun `bracket test tags exist in edit mode`() {
-    val (editModeCoordinator, widgetBindingCoordinator, widgetRegistry) = createMocks(true)
+  fun `bracket test tags exist in edit mode when widget is focused`() {
+    val (editModeCoordinator, widgetBindingCoordinator, widgetRegistry) =
+      createMocks(isEditMode = true, focusedWidgetId = "w1")
     val reducedMotionHelper = mockk<ReducedMotionHelper>(relaxed = true)
     every { reducedMotionHelper.isReducedMotion } returns false
     val (widgetGestureHandler, blankSpaceGestureHandler) = createGestureHandlers(editModeCoordinator)
@@ -104,7 +104,7 @@ class CornerBracketTest {
         widgets = persistentListOf(testWidget),
         viewportCols = 20,
         viewportRows = 12,
-        editState = EditState(isEditMode = true),
+        editState = EditState(isEditMode = true, focusedWidgetId = "w1"),
         dragState = null,
         resizeState = null,
         configurationBoundaries = persistentListOf(),
@@ -114,11 +114,43 @@ class CornerBracketTest {
         reducedMotionHelper = reducedMotionHelper,
         widgetGestureHandler = widgetGestureHandler,
         blankSpaceGestureHandler = blankSpaceGestureHandler,
+        onTapBlankSpace = {},
         onCommand = {},
       )
     }
 
     composeTestRule.onNodeWithTag("bracket_w1", useUnmergedTree = true).assertExists()
+  }
+
+  @Test
+  fun `brackets do not render for unfocused widget in edit mode`() {
+    val (editModeCoordinator, widgetBindingCoordinator, widgetRegistry) =
+      createMocks(isEditMode = true, focusedWidgetId = null)
+    val reducedMotionHelper = mockk<ReducedMotionHelper>(relaxed = true)
+    every { reducedMotionHelper.isReducedMotion } returns false
+    val (widgetGestureHandler, blankSpaceGestureHandler) = createGestureHandlers(editModeCoordinator)
+
+    composeTestRule.setContent {
+      DashboardGrid(
+        widgets = persistentListOf(testWidget),
+        viewportCols = 20,
+        viewportRows = 12,
+        editState = EditState(isEditMode = true, focusedWidgetId = null),
+        dragState = null,
+        resizeState = null,
+        configurationBoundaries = persistentListOf(),
+        widgetBindingCoordinator = widgetBindingCoordinator,
+        widgetRegistry = widgetRegistry,
+        editModeCoordinator = editModeCoordinator,
+        reducedMotionHelper = reducedMotionHelper,
+        widgetGestureHandler = widgetGestureHandler,
+        blankSpaceGestureHandler = blankSpaceGestureHandler,
+        onTapBlankSpace = {},
+        onCommand = {},
+      )
+    }
+
+    composeTestRule.onNodeWithTag("bracket_w1").assertDoesNotExist()
   }
 
   @Test
@@ -143,6 +175,7 @@ class CornerBracketTest {
         reducedMotionHelper = reducedMotionHelper,
         widgetGestureHandler = widgetGestureHandler,
         blankSpaceGestureHandler = blankSpaceGestureHandler,
+        onTapBlankSpace = {},
         onCommand = {},
       )
     }
@@ -172,6 +205,7 @@ class CornerBracketTest {
         reducedMotionHelper = reducedMotionHelper,
         widgetGestureHandler = widgetGestureHandler,
         blankSpaceGestureHandler = blankSpaceGestureHandler,
+        onTapBlankSpace = {},
         onCommand = {},
       )
     }
