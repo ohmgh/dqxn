@@ -234,6 +234,7 @@ public fun DashboardScreen(
         widgetRegistry = viewModel.widgetRegistry,
         dataProviderRegistry = viewModel.dataProviderRegistry,
         providerSettingsStore = viewModel.providerSettingsStore,
+        widgetStyleStore = viewModel.widgetStyleStore,
         entitlementManager = viewModel.entitlementManager,
         setupEvaluator = viewModel.setupEvaluator,
         pairedDeviceStore = viewModel.pairedDeviceStore,

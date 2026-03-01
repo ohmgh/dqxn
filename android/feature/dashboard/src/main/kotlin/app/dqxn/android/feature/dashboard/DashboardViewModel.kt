@@ -38,6 +38,7 @@ import javax.inject.Inject
 import app.dqxn.android.data.layout.DashboardWidgetInstance
 import app.dqxn.android.data.layout.GridPosition
 import app.dqxn.android.data.layout.GridSize
+import app.dqxn.android.data.style.WidgetStyleStore
 import app.dqxn.android.sdk.contracts.widget.WidgetContext
 import app.dqxn.android.sdk.contracts.widget.WidgetStyle
 import java.util.UUID
@@ -90,6 +91,7 @@ constructor(
   val entitlementManager: EntitlementManager,
   val setupEvaluator: SetupEvaluator,
   val pairedDeviceStore: PairedDeviceStore,
+  val widgetStyleStore: WidgetStyleStore,
   val builtInThemes: BuiltInThemes,
   private val themeProviders: Set<@JvmSuppressWildcards ThemeProvider>,
   private val savedStateHandle: SavedStateHandle,

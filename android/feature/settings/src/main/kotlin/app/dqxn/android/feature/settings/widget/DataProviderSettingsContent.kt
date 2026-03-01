@@ -1,5 +1,6 @@
 package app.dqxn.android.feature.settings.widget
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -35,12 +37,29 @@ import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
 
 /**
- * Data source selection tab.
+ * Provider selection state for visual differentiation.
+ */
+private enum class ProviderSelectionState {
+  /** Provider requires setup before it can be used. */
+  DISABLED,
+
+  /** Provider is currently active for this widget. */
+  SELECTED,
+
+  /** Provider is available but not currently active. */
+  UNSELECTED,
+}
+
+/**
+ * Data source selection tab with three-state provider cards.
  *
- * Shows available providers via [DataProviderRegistry.findByDataType]. Current provider highlighted
- * with accent color. Provider cards show: name, data type, connection status indicator, priority
- * badge. Providers with setup requirements show "Setup Required" badge; tap navigates via
- * [onNavigateToSetup].
+ * Shows available providers via [DataProviderRegistry.getAll]. Visual states per old codebase:
+ * - Disabled: `secondary @ 0.03f` bg, `secondary @ 0.1f` border, content alpha 0.4
+ * - Selected: `accent @ 0.15f` bg, `accent` 2dp border
+ * - Unselected: `secondary @ 0.05f` bg, `secondary @ 0.2f` 1dp border
+ *
+ * Provider cards show: connection status dot, name, data type, priority badge. Providers with
+ * setup requirements show "Setup Required" badge; tap navigates via [onNavigateToSetup].
  */
 @Composable
 internal fun DataProviderSettingsContent(
@@ -48,6 +67,8 @@ internal fun DataProviderSettingsContent(
   dataProviderRegistry: DataProviderRegistry,
   theme: DashboardThemeDefinition,
   onNavigateToSetup: (String) -> Unit,
+  selectedSourceIds: Set<String> = emptySet(),
+  onProviderSelected: ((String) -> Unit)? = null,
   modifier: Modifier = Modifier,
 ) {
   if (widgetSpec == null) {
@@ -77,11 +98,34 @@ internal fun DataProviderSettingsContent(
         .testTag("data_provider_settings_content"),
     verticalArrangement = Arrangement.spacedBy(DashboardSpacing.ItemGap),
   ) {
+    Text(
+      text = stringResource(R.string.widget_info_select_data_source),
+      style = DashboardTypography.description,
+      color = theme.secondaryTextColor,
+    )
+
     allProviders.forEach { provider ->
+      val hasSetup = provider.setupSchema.isNotEmpty()
+      val requiresSetup = hasSetup && !provider.isAvailable
+      val isSelected = provider.sourceId in selectedSourceIds
+
+      val state = when {
+        requiresSetup -> ProviderSelectionState.DISABLED
+        isSelected -> ProviderSelectionState.SELECTED
+        else -> ProviderSelectionState.UNSELECTED
+      }
+
       ProviderCard(
         provider = provider,
+        state = state,
         theme = theme,
-        onNavigateToSetup = onNavigateToSetup,
+        onClick = {
+          if (requiresSetup) {
+            onNavigateToSetup(provider.sourceId)
+          } else {
+            onProviderSelected?.invoke(provider.sourceId)
+          }
+        },
       )
     }
   }
@@ -90,12 +134,34 @@ internal fun DataProviderSettingsContent(
 @Composable
 private fun ProviderCard(
   provider: DataProvider<*>,
+  state: ProviderSelectionState,
   theme: DashboardThemeDefinition,
-  onNavigateToSetup: (String) -> Unit,
+  onClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val hasSetup = provider.setupSchema.isNotEmpty()
   val shape = RoundedCornerShape(CardSize.MEDIUM.cornerRadius)
+
+  val backgroundColor = when (state) {
+    ProviderSelectionState.DISABLED -> theme.secondaryTextColor.copy(alpha = 0.03f)
+    ProviderSelectionState.SELECTED -> theme.accentColor.copy(alpha = 0.15f)
+    ProviderSelectionState.UNSELECTED -> theme.secondaryTextColor.copy(alpha = 0.05f)
+  }
+
+  val borderColor = when (state) {
+    ProviderSelectionState.DISABLED -> theme.secondaryTextColor.copy(alpha = 0.1f)
+    ProviderSelectionState.SELECTED -> theme.accentColor
+    ProviderSelectionState.UNSELECTED -> theme.secondaryTextColor.copy(alpha = 0.2f)
+  }
+
+  val borderWidth = when (state) {
+    ProviderSelectionState.SELECTED -> 2.dp
+    else -> 1.dp
+  }
+
+  val contentAlpha = when (state) {
+    ProviderSelectionState.DISABLED -> 0.4f
+    else -> 1.0f
+  }
 
   Row(
     modifier =
@@ -103,13 +169,10 @@ private fun ProviderCard(
         .fillMaxWidth()
         .sizeIn(minHeight = 76.dp)
         .clip(shape)
-        .border(1.dp, theme.widgetBorderColor.copy(alpha = 0.3f), shape)
-        .clickable {
-          if (hasSetup) {
-            onNavigateToSetup(provider.sourceId)
-          }
-        }
-        .padding(DashboardSpacing.ItemGap)
+        .background(backgroundColor, shape)
+        .border(borderWidth, borderColor, shape)
+        .clickable(onClick = onClick)
+        .padding(DashboardSpacing.CardInternalPadding)
         .testTag("provider_card_${provider.sourceId}"),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(DashboardSpacing.ItemGap),
@@ -117,7 +180,9 @@ private fun ProviderCard(
     // Connection status dot
     ConnectionStatusDot(isAvailable = provider.isAvailable, theme = theme)
 
-    Column(modifier = Modifier.weight(1f)) {
+    Column(
+      modifier = Modifier.weight(1f).alpha(contentAlpha),
+    ) {
       Text(
         text = provider.displayName,
         style = DashboardTypography.itemTitle,
@@ -131,10 +196,14 @@ private fun ProviderCard(
     }
 
     // Priority badge
-    PriorityBadge(priority = provider.priority, theme = theme)
+    PriorityBadge(
+      priority = provider.priority,
+      theme = theme,
+      modifier = Modifier.alpha(contentAlpha),
+    )
 
     // Setup required badge
-    if (hasSetup) {
+    if (provider.setupSchema.isNotEmpty() && !provider.isAvailable) {
       Text(
         text = stringResource(R.string.provider_setup_required),
         style = DashboardTypography.caption,
@@ -159,9 +228,7 @@ private fun ConnectionStatusDot(
       modifier
         .size(8.dp)
         .clip(CircleShape)
-        .then(
-          Modifier.border(8.dp, color, CircleShape),
-        )
+        .background(color)
         .testTag(if (isAvailable) "status_connected" else "status_disconnected"),
   )
 }

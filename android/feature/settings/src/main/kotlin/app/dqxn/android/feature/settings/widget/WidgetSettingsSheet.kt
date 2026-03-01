@@ -1,20 +1,24 @@
 package app.dqxn.android.feature.settings.widget
 
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import app.dqxn.android.feature.settings.R
+import androidx.compose.ui.unit.dp
+import app.dqxn.android.data.style.WidgetStyleStore
 import app.dqxn.android.feature.settings.SettingNavigation
 import app.dqxn.android.feature.settings.overlay.OverlayScaffold
 import app.dqxn.android.feature.settings.overlay.OverlayType
@@ -28,12 +32,15 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import kotlinx.coroutines.launch
 
 /**
- * 3-tab widget settings sheet wrapping [OverlayScaffold].
+ * 3-page widget settings sheet with titlebar-integrated pager icons.
  *
- * Tabs:
- * - **Feature** (tab 0): Widget-specific settings via [FeatureSettingsContent].
- * - **Data Source** (tab 1): Provider selection via [DataProviderSettingsContent].
- * - **Info** (tab 2): Widget info, issues, disclaimers via [WidgetInfoContent].
+ * Pages:
+ * - **Settings** (page 0): Feature + style settings via [SettingsPageContent].
+ * - **Data Source** (page 1): Provider selection via [DataProviderSettingsContent].
+ * - **Info** (page 2): Widget info, issues, disclaimers via [WidgetInfoContent].
+ *
+ * Navigation: Icon buttons (Settings, Extension, Info) in the title bar's actions slot.
+ * Active icon = `accentColor`, inactive = `accentColor @ 0.4f`.
  *
  * Uses [OverlayType.Preview] per replication advisory section 1. Dismissal via [onDismiss] callback
  * (not popBackStack).
@@ -41,9 +48,11 @@ import kotlinx.coroutines.launch
 @Composable
 public fun WidgetSettingsSheet(
   widgetTypeId: String,
+  widgetInstanceId: String,
   widgetRegistry: WidgetRegistry,
   dataProviderRegistry: DataProviderRegistry,
   providerSettingsStore: ProviderSettingsStore,
+  widgetStyleStore: WidgetStyleStore,
   entitlementManager: EntitlementManager,
   onDismiss: () -> Unit,
   onNavigate: (SettingNavigation) -> Unit,
@@ -54,101 +63,94 @@ public fun WidgetSettingsSheet(
   val widgetSpec = widgetRegistry.findByTypeId(widgetTypeId)
   val theme = LocalDashboardTheme.current
 
+  val pagerState = rememberPagerState(initialPage = PAGE_SETTINGS, pageCount = { PAGE_COUNT })
+  val scope = rememberCoroutineScope()
+
   OverlayScaffold(
     title = widgetSpec?.displayName ?: widgetTypeId,
     overlayType = OverlayType.Preview,
     onBack = onDismiss,
     modifier = modifier.fillMaxSize(),
+    actions = {
+      PagerIconActions(
+        pagerState = pagerState,
+        theme = theme,
+        onPageSelected = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
+      )
+    },
   ) {
-    WidgetSettingsTabPager(
-      widgetTypeId = widgetTypeId,
-      widgetSpec = widgetSpec,
-      dataProviderRegistry = dataProviderRegistry,
-      providerSettingsStore = providerSettingsStore,
-      entitlementManager = entitlementManager,
-      theme = theme,
-      onNavigate = onNavigate,
-      onNavigateToSetup = onNavigateToSetup,
-    )
-  }
-}
-
-@Composable
-private fun WidgetSettingsTabPager(
-  widgetTypeId: String,
-  widgetSpec: WidgetRenderer?,
-  dataProviderRegistry: DataProviderRegistry,
-  providerSettingsStore: ProviderSettingsStore,
-  entitlementManager: EntitlementManager,
-  theme: DashboardThemeDefinition,
-  onNavigate: (SettingNavigation) -> Unit,
-  onNavigateToSetup: (String) -> Unit,
-) {
-  val tabTitles =
-    listOf(
-      stringResource(R.string.widget_settings_tab_feature),
-      stringResource(R.string.widget_settings_tab_data_source),
-      stringResource(R.string.widget_settings_tab_info),
-    )
-
-  val pagerState = rememberPagerState(pageCount = { tabTitles.size })
-  val scope = rememberCoroutineScope()
-
-  Column {
-    SecondaryTabRow(
-      selectedTabIndex = pagerState.currentPage,
-      containerColor = Color.Transparent,
-      contentColor = theme.accentColor,
-      modifier = Modifier.fillMaxWidth().testTag("widget_settings_tab_row"),
-    ) {
-      tabTitles.forEachIndexed { index, title ->
-        Tab(
-          selected = pagerState.currentPage == index,
-          onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-          text = {
-            Text(
-              text = title,
-              color =
-                if (pagerState.currentPage == index) theme.accentColor
-                else theme.secondaryTextColor,
-            )
-          },
-          modifier = Modifier.testTag("widget_settings_tab_$index"),
-        )
-      }
-    }
-
     HorizontalPager(
       state = pagerState,
       modifier = Modifier.fillMaxSize().testTag("widget_settings_pager"),
     ) { page ->
       when (page) {
-        TAB_FEATURE ->
-          FeatureSettingsContent(
+        PAGE_SETTINGS ->
+          SettingsPageContent(
             widgetSpec = widgetSpec,
+            widgetInstanceId = widgetInstanceId,
             providerSettingsStore = providerSettingsStore,
+            widgetStyleStore = widgetStyleStore,
             entitlementManager = entitlementManager,
             theme = theme,
             onNavigate = onNavigate,
           )
-        TAB_DATA_SOURCE ->
+        PAGE_DATA_SOURCE ->
           DataProviderSettingsContent(
             widgetSpec = widgetSpec,
             dataProviderRegistry = dataProviderRegistry,
             theme = theme,
             onNavigateToSetup = onNavigateToSetup,
           )
-        TAB_INFO ->
+        PAGE_INFO ->
           WidgetInfoContent(
             widgetTypeId = widgetTypeId,
             widgetSpec = widgetSpec,
             theme = theme,
+            onNavigateToPackBrowser = onNavigateToPackBrowser,
           )
       }
     }
   }
 }
 
-private const val TAB_FEATURE = 0
-private const val TAB_DATA_SOURCE = 1
-private const val TAB_INFO = 2
+/**
+ * Pager icon buttons placed in the title bar's actions slot.
+ *
+ * Active icon: `accentColor` (full opacity). Inactive: `accentColor @ 0.4f`.
+ * Icons: Settings (page 0), Extension (page 1), Info (page 2).
+ */
+@Composable
+private fun PagerIconActions(
+  pagerState: PagerState,
+  theme: DashboardThemeDefinition,
+  onPageSelected: (Int) -> Unit,
+) {
+  val icons = listOf(
+    Icons.Default.Settings to "Settings",
+    Icons.Default.Extension to "Data Source",
+    Icons.Default.Info to "Info",
+  )
+
+  icons.forEachIndexed { index, (icon, contentDesc) ->
+    val isActive = pagerState.currentPage == index
+    IconButton(
+      onClick = { onPageSelected(index) },
+      modifier = Modifier.testTag("widget_settings_icon_$index"),
+    ) {
+      Icon(
+        imageVector = icon,
+        contentDescription = contentDesc,
+        tint =
+          if (isActive) theme.accentColor
+          else theme.accentColor.copy(alpha = 0.4f),
+        modifier = Modifier.size(24.dp),
+      )
+    }
+  }
+  Spacer(modifier = Modifier.width(4.dp))
+}
+
+private const val PAGE_SETTINGS = 0
+private const val PAGE_DATA_SOURCE = 1
+private const val PAGE_INFO = 2
+private const val PAGE_COUNT = 3

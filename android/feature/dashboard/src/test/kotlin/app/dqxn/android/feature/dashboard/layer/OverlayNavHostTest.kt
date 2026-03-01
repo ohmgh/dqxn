@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.navigation.compose.rememberNavController
 import app.dqxn.android.data.device.PairedDeviceStore
+import app.dqxn.android.data.style.WidgetStyleStore
 import app.dqxn.android.feature.dashboard.coordinator.ThemeCoordinator
 import app.dqxn.android.feature.dashboard.coordinator.ThemeState
 import app.dqxn.android.feature.settings.main.MainSettingsViewModel
@@ -75,6 +76,8 @@ class OverlayNavHostTest {
 
   private val mockPairedDeviceStore = mockk<PairedDeviceStore>(relaxed = true)
 
+  private val mockWidgetStyleStore = mockk<WidgetStyleStore>(relaxed = true)
+
   private val mockMainSettingsViewModel =
     mockk<MainSettingsViewModel>(relaxed = true).also {
       every { it.analyticsConsent } returns MutableStateFlow(false)
@@ -110,6 +113,7 @@ class OverlayNavHostTest {
           widgetRegistry = mockWidgetRegistry,
           dataProviderRegistry = mockDataProviderRegistry,
           providerSettingsStore = mockProviderSettingsStore,
+          widgetStyleStore = mockWidgetStyleStore,
           entitlementManager = mockEntitlementManager,
           setupEvaluator = mockSetupEvaluator,
           pairedDeviceStore = mockPairedDeviceStore,
@@ -142,6 +146,7 @@ class OverlayNavHostTest {
           widgetRegistry = mockWidgetRegistry,
           dataProviderRegistry = mockDataProviderRegistry,
           providerSettingsStore = mockProviderSettingsStore,
+          widgetStyleStore = mockWidgetStyleStore,
           entitlementManager = mockEntitlementManager,
           setupEvaluator = mockSetupEvaluator,
           pairedDeviceStore = mockPairedDeviceStore,
@@ -177,6 +182,7 @@ class OverlayNavHostTest {
           widgetRegistry = mockWidgetRegistry,
           dataProviderRegistry = mockDataProviderRegistry,
           providerSettingsStore = mockProviderSettingsStore,
+          widgetStyleStore = mockWidgetStyleStore,
           entitlementManager = mockEntitlementManager,
           setupEvaluator = mockSetupEvaluator,
           pairedDeviceStore = mockPairedDeviceStore,
@@ -212,6 +218,7 @@ class OverlayNavHostTest {
           widgetRegistry = mockWidgetRegistry,
           dataProviderRegistry = mockDataProviderRegistry,
           providerSettingsStore = mockProviderSettingsStore,
+          widgetStyleStore = mockWidgetStyleStore,
           entitlementManager = mockEntitlementManager,
           setupEvaluator = mockSetupEvaluator,
           pairedDeviceStore = mockPairedDeviceStore,
@@ -264,6 +271,7 @@ class OverlayNavHostTest {
           widgetRegistry = mockWidgetRegistry,
           dataProviderRegistry = mockDataProviderRegistry,
           providerSettingsStore = mockProviderSettingsStore,
+          widgetStyleStore = mockWidgetStyleStore,
           entitlementManager = mockEntitlementManager,
           setupEvaluator = mockSetupEvaluator,
           pairedDeviceStore = mockPairedDeviceStore,

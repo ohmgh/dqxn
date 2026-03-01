@@ -8,21 +8,16 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import app.dqxn.android.data.style.WidgetStyleStore
 import app.dqxn.android.feature.settings.SettingNavigation
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import app.dqxn.android.sdk.contracts.provider.DataProvider
 import app.dqxn.android.sdk.contracts.provider.DataSnapshot
-import app.dqxn.android.sdk.contracts.provider.DataSchema
 import app.dqxn.android.sdk.contracts.provider.ProviderPriority
 import app.dqxn.android.sdk.contracts.registry.DataProviderRegistry
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
 import app.dqxn.android.sdk.contracts.settings.ProviderSettingsStore
 import app.dqxn.android.sdk.contracts.settings.SettingDefinition
-import app.dqxn.android.sdk.contracts.setup.InfoStyle
-import app.dqxn.android.sdk.contracts.setup.SetupPageDefinition
-import app.dqxn.android.sdk.contracts.widget.WidgetContext
-import app.dqxn.android.sdk.contracts.widget.WidgetData
-import app.dqxn.android.sdk.contracts.widget.WidgetDefaults
 import app.dqxn.android.sdk.contracts.widget.WidgetRenderer
 import app.dqxn.android.sdk.contracts.widget.WidgetStyle
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
@@ -30,8 +25,6 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import io.mockk.every
 import io.mockk.mockk
 import kotlin.reflect.KClass
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.flow.Flow
@@ -66,63 +59,76 @@ class WidgetSettingsSheetTest {
       override val entitlementChanges: Flow<Set<String>> = emptyFlow()
     }
 
-  // --- Tab navigation tests ---
+  // --- Pager icon navigation tests ---
 
   @Test
-  fun `renders 3 tabs with correct titles`() {
+  fun `renders pager icons in title bar`() {
     val widgetSpec = createTestWidget("essentials:clock-digital", "Digital Clock")
     val widgetRegistry = createWidgetRegistry(widgetSpec)
 
     setContent(widgetRegistry)
 
-    composeTestRule.onNodeWithText("Feature").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Data Source").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Info").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("widget_settings_icon_0").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("widget_settings_icon_1").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("widget_settings_icon_2").assertIsDisplayed()
   }
 
   @Test
-  fun `tab row renders with correct test tag`() {
+  fun `pager renders with correct test tag`() {
     val widgetSpec = createTestWidget("essentials:clock-digital", "Digital Clock")
     val widgetRegistry = createWidgetRegistry(widgetSpec)
 
     setContent(widgetRegistry)
 
-    composeTestRule.onNodeWithTag("widget_settings_tab_row").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("widget_settings_pager").assertIsDisplayed()
   }
 
   @Test
-  fun `clicking Data Source tab switches to tab 1`() {
-    val widgetSpec = createTestWidget("essentials:clock-digital", "Digital Clock")
+  fun `clicking Data Source icon switches to page 1`() {
+    val widgetSpec =
+      createTestWidget(
+        typeId = "essentials:speedometer",
+        displayName = "Speedometer",
+        compatibleSnapshots = setOf(SpeedSnapshot::class),
+      )
     val widgetRegistry = createWidgetRegistry(widgetSpec)
+    val provider = createTestProvider("essentials:gps-speed", "GPS Speed", "Speed")
+    val dataProviderRegistry =
+      object : DataProviderRegistry {
+        override fun getAll(): Set<DataProvider<*>> = setOf(provider)
+        override fun findByDataType(dataType: String): List<DataProvider<*>> =
+          if (dataType == "Speed") listOf(provider) else emptyList()
+        override fun getFiltered(entitlementCheck: (String) -> Boolean): Set<DataProvider<*>> =
+          setOf(provider)
+      }
 
-    setContent(widgetRegistry)
+    setContent(widgetRegistry, dataProviderRegistry = dataProviderRegistry)
 
-    // Click Data Source tab
-    composeTestRule.onNodeWithText("Data Source").performClick()
+    // Click Data Source icon (index 1)
+    composeTestRule.onNodeWithTag("widget_settings_icon_1").performClick()
     composeTestRule.waitForIdle()
 
-    // Tab 1 should be selected -- verify via the tab_1 test tag
-    composeTestRule.onNodeWithTag("widget_settings_tab_1").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("data_provider_settings_content").assertIsDisplayed()
   }
 
   @Test
-  fun `clicking Info tab switches to tab 2`() {
+  fun `clicking Info icon switches to page 2`() {
     val widgetSpec = createTestWidget("essentials:clock-digital", "Digital Clock")
     val widgetRegistry = createWidgetRegistry(widgetSpec)
 
     setContent(widgetRegistry)
 
-    // Click Info tab
-    composeTestRule.onNodeWithText("Info").performClick()
+    // Click Info icon (index 2)
+    composeTestRule.onNodeWithTag("widget_settings_icon_2").performClick()
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag("widget_settings_tab_2").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("widget_info_content").assertIsDisplayed()
   }
 
   // --- Schema rendering test ---
 
   @Test
-  fun `Feature tab renders BooleanSetting from widget schema`() {
+  fun `Settings page renders BooleanSetting from widget schema`() {
     val widgetSpec =
       createTestWidget(
         typeId = "essentials:compass",
@@ -141,12 +147,25 @@ class WidgetSettingsSheetTest {
 
     setContent(widgetRegistry, providerSettingsStore = providerSettingsStore)
 
-    // Feature tab is tab 0 (default), so BooleanSetting should render
+    // Settings page is page 0 (default), so BooleanSetting should render
     composeTestRule.onNodeWithText("Show Degrees").assertIsDisplayed()
   }
 
   @Test
-  fun `Feature tab renders EnumSetting from widget schema`() {
+  fun `Settings page renders style settings`() {
+    val widgetSpec = createTestWidget("essentials:compass", "Compass")
+    val widgetRegistry = createWidgetRegistry(widgetSpec)
+
+    setContent(widgetRegistry)
+
+    // Style settings should appear on the same page
+    composeTestRule.onNodeWithText("Surface").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Glow Effect").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Outline").assertIsDisplayed()
+  }
+
+  @Test
+  fun `Settings page renders EnumSetting from widget schema`() {
     val widgetSpec =
       createTestWidget(
         typeId = "essentials:compass",
@@ -172,7 +191,7 @@ class WidgetSettingsSheetTest {
   // --- Provider listing test ---
 
   @Test
-  fun `Data Source tab shows providers when navigated`() {
+  fun `Data Source page shows providers when navigated`() {
     val widgetSpec =
       createTestWidget(
         typeId = "essentials:speedometer",
@@ -195,8 +214,8 @@ class WidgetSettingsSheetTest {
 
     setContent(widgetRegistry, dataProviderRegistry = dataProviderRegistry)
 
-    // Navigate to Data Source tab
-    composeTestRule.onNodeWithText("Data Source").performClick()
+    // Navigate to Data Source page via icon
+    composeTestRule.onNodeWithTag("widget_settings_icon_1").performClick()
     composeTestRule.waitForIdle()
 
     // Both providers should render
@@ -204,17 +223,17 @@ class WidgetSettingsSheetTest {
     composeTestRule.onNodeWithText("OBD Speed").assertIsDisplayed()
   }
 
-  // --- Speed disclaimer test ---
+  // --- Info page tests ---
 
   @Test
-  fun `Info tab shows speed disclaimer for speedometer widget`() {
+  fun `Info page shows speed disclaimer for speedometer widget`() {
     val widgetSpec = createTestWidget("essentials:speedometer", "Speedometer")
     val widgetRegistry = createWidgetRegistry(widgetSpec)
 
     setContent(widgetRegistry)
 
-    // Navigate to Info tab
-    composeTestRule.onNodeWithText("Info").performClick()
+    // Navigate to Info page via icon
+    composeTestRule.onNodeWithTag("widget_settings_icon_2").performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithTag("widget_info_speed_disclaimer").assertIsDisplayed()
@@ -222,17 +241,48 @@ class WidgetSettingsSheetTest {
   }
 
   @Test
-  fun `Info tab does not show speed disclaimer for non-speed widget`() {
+  fun `Info page does not show speed disclaimer for non-speed widget`() {
     val widgetSpec = createTestWidget("essentials:compass", "Compass")
     val widgetRegistry = createWidgetRegistry(widgetSpec)
 
     setContent(widgetRegistry)
 
-    // Navigate to Info tab
-    composeTestRule.onNodeWithText("Info").performClick()
+    // Navigate to Info page via icon
+    composeTestRule.onNodeWithTag("widget_settings_icon_2").performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithTag("widget_info_speed_disclaimer").assertDoesNotExist()
+  }
+
+  @Test
+  fun `Info page shows pack card`() {
+    val widgetSpec = createTestWidget("essentials:clock-digital", "Digital Clock")
+    val widgetRegistry = createWidgetRegistry(widgetSpec)
+
+    setContent(widgetRegistry)
+
+    // Navigate to Info page
+    composeTestRule.onNodeWithTag("widget_settings_icon_2").performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag("widget_info_pack_card").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Essentials").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Tap for pack info").assertIsDisplayed()
+  }
+
+  @Test
+  fun `Info page shows All Systems Go card`() {
+    val widgetSpec = createTestWidget("essentials:clock-digital", "Digital Clock")
+    val widgetRegistry = createWidgetRegistry(widgetSpec)
+
+    setContent(widgetRegistry)
+
+    // Navigate to Info page
+    composeTestRule.onNodeWithTag("widget_settings_icon_2").performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag("widget_info_all_systems_go").assertIsDisplayed()
+    composeTestRule.onNodeWithText("All Systems Go").assertIsDisplayed()
   }
 
   // --- Helpers ---
@@ -252,9 +302,11 @@ class WidgetSettingsSheetTest {
       CompositionLocalProvider(LocalDashboardTheme provides testTheme) {
         WidgetSettingsSheet(
           widgetTypeId = widgetTypeId,
+          widgetInstanceId = "test-instance-1",
           widgetRegistry = widgetRegistry,
           dataProviderRegistry = dataProviderRegistry,
           providerSettingsStore = providerSettingsStore,
+          widgetStyleStore = createWidgetStyleStore(),
           entitlementManager = freeEntitlementManager,
           onDismiss = {},
           onNavigate = {},
@@ -326,6 +378,16 @@ class WidgetSettingsSheetTest {
       override fun getAllProviderSettings(): Flow<Map<String, Map<String, String>>> =
         flowOf(emptyMap())
 
+      override suspend fun clearAll() {}
+    }
+
+  private fun createWidgetStyleStore(): WidgetStyleStore =
+    object : WidgetStyleStore {
+      override fun getStyle(instanceId: String): Flow<WidgetStyle> =
+        flowOf(WidgetStyle.Default)
+      override suspend fun setStyle(instanceId: String, style: WidgetStyle) {}
+      override suspend fun removeStyle(instanceId: String) {}
+      override fun getAllStyles(): Flow<Map<String, WidgetStyle>> = flowOf(emptyMap())
       override suspend fun clearAll() {}
     }
 

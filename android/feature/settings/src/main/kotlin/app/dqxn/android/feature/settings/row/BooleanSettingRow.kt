@@ -8,7 +8,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.dqxn.android.sdk.contracts.settings.SettingDefinition
 import app.dqxn.android.sdk.ui.theme.DashboardThemeDefinition
@@ -41,11 +40,11 @@ internal fun BooleanSettingRow(
       onCheckedChange = { onValueChanged(definition.key, !currentValue) },
       colors =
         SwitchDefaults.colors(
-          checkedThumbColor = theme.primaryTextColor,
-          checkedTrackColor = theme.accentColor,
+          checkedThumbColor = theme.accentColor,
+          checkedTrackColor = theme.accentColor.copy(alpha = 0.5f),
           uncheckedThumbColor = theme.secondaryTextColor,
-          uncheckedTrackColor = Color.Transparent,
-          uncheckedBorderColor = theme.widgetBorderColor.copy(alpha = 0.3f),
+          uncheckedTrackColor = theme.secondaryTextColor.copy(alpha = 0.3f),
+          uncheckedBorderColor = theme.secondaryTextColor.copy(alpha = 0.3f),
         ),
     )
   }

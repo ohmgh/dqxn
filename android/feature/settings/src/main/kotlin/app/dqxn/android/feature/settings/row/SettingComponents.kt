@@ -52,7 +52,7 @@ internal fun SettingLabel(
       Text(
         text = description,
         style = DashboardTypography.description,
-        color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
+        color = theme.secondaryTextColor.copy(alpha = TextEmphasis.Medium),
         modifier = Modifier.padding(top = DashboardSpacing.SpaceXXS),
       )
     }
@@ -79,23 +79,25 @@ internal fun SelectionChip(
       Text(
         text = text,
         style = DashboardTypography.buttonLabel,
-        color = if (isSelected) theme.primaryTextColor else theme.secondaryTextColor,
+        color = if (isSelected) theme.accentColor else theme.secondaryTextColor,
       )
     },
     shape = RoundedCornerShape(CardSize.SMALL.cornerRadius),
     colors =
       FilterChipDefaults.filterChipColors(
         selectedContainerColor = theme.accentColor.copy(alpha = 0.2f),
-        selectedLabelColor = theme.primaryTextColor,
-        containerColor = Color.Transparent,
+        selectedLabelColor = theme.accentColor,
+        containerColor = theme.secondaryTextColor.copy(alpha = 0.1f),
         labelColor = theme.secondaryTextColor,
       ),
     border =
       FilterChipDefaults.filterChipBorder(
         enabled = true,
         selected = isSelected,
-        borderColor = theme.widgetBorderColor.copy(alpha = 0.3f),
+        borderColor = theme.secondaryTextColor.copy(alpha = 0.3f),
         selectedBorderColor = theme.accentColor,
+        selectedBorderWidth = 2.dp,
+        borderWidth = 1.dp,
       ),
     modifier = modifier.defaultMinSize(minHeight = 76.dp),
   )

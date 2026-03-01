@@ -21,6 +21,11 @@
   <string name="widget_info_issues">Issues</string>
   <string name="widget_info_no_issues">No issues</string>
   <string name="widget_info_speed_disclaimer">Speed readings are estimates derived from GPS or device sensors. Do not rely on this display for legal speed compliance or safety-critical decisions. Always refer to your vehicle\'s calibrated speedometer.</string>
+  <string name="widget_info_status_header">STATUS</string>
+  <string name="widget_info_tap_pack_info">Tap for pack info</string>
+  <string name="widget_info_all_systems_go">All Systems Go</string>
+  <string name="widget_info_running_smoothly">Widget is running smoothly</string>
+  <string name="widget_info_select_data_source">Select data source for each type:</string>
 
   <!-- WidgetPicker -->
   <string name="widget_picker_title">Add Widget</string>

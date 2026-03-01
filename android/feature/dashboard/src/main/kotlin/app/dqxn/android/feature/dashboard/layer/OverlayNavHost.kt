@@ -19,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import app.dqxn.android.core.design.motion.DashboardMotion
 import app.dqxn.android.data.device.PairedDeviceStore
+import app.dqxn.android.data.style.WidgetStyleStore
 import app.dqxn.android.feature.dashboard.command.DashboardCommand
 import app.dqxn.android.feature.dashboard.coordinator.ThemeCoordinator
 import app.dqxn.android.feature.diagnostics.DiagnosticsScreen
@@ -76,6 +77,7 @@ public fun OverlayNavHost(
   widgetRegistry: WidgetRegistry,
   dataProviderRegistry: DataProviderRegistry,
   providerSettingsStore: ProviderSettingsStore,
+  widgetStyleStore: WidgetStyleStore,
   entitlementManager: EntitlementManager,
   setupEvaluator: SetupEvaluator,
   pairedDeviceStore: PairedDeviceStore,
@@ -217,9 +219,11 @@ public fun OverlayNavHost(
       ) {
         WidgetSettingsSheet(
           widgetTypeId = route.typeId,
+          widgetInstanceId = route.widgetId,
           widgetRegistry = widgetRegistry,
           dataProviderRegistry = dataProviderRegistry,
           providerSettingsStore = providerSettingsStore,
+          widgetStyleStore = widgetStyleStore,
           entitlementManager = entitlementManager,
           onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
           onNavigate = { _ ->
