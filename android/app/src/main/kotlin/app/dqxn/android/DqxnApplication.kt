@@ -1,6 +1,7 @@
 package app.dqxn.android
 
 import android.app.Application
+import app.dqxn.android.core.design.theme.ThemeAutoSwitchEngine
 import app.dqxn.android.data.preferences.UserPreferencesRepository
 import app.dqxn.android.sdk.analytics.AnalyticsTracker
 import app.dqxn.android.sdk.observability.crash.CrashEvidenceWriter
@@ -29,10 +30,31 @@ public class DqxnApplication : Application() {
     fun userPreferencesRepository(): UserPreferencesRepository
   }
 
+  @EntryPoint
+  @InstallIn(SingletonComponent::class)
+  internal interface ThemeEntryPoint {
+    fun themeAutoSwitchEngine(): ThemeAutoSwitchEngine
+
+    fun userPreferencesRepository(): UserPreferencesRepository
+  }
+
   override fun onCreate() {
     super.onCreate()
+    bindThemePreferences()
     initializeAnalyticsConsent()
     installCrashHandler()
+  }
+
+  private fun bindThemePreferences() {
+    val entryPoint = EntryPointAccessors.fromApplication(this, ThemeEntryPoint::class.java)
+    val engine = entryPoint.themeAutoSwitchEngine()
+    val prefs = entryPoint.userPreferencesRepository()
+    engine.bindPreferences(
+      autoSwitchMode = prefs.autoSwitchMode,
+      lightThemeId = prefs.lightThemeId,
+      darkThemeId = prefs.darkThemeId,
+      illuminanceThreshold = prefs.illuminanceThreshold,
+    )
   }
 
   /**

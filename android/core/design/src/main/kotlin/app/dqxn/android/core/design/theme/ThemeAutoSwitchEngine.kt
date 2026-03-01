@@ -13,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,7 +49,7 @@ constructor(
   private val _autoSwitchMode = MutableStateFlow(AutoSwitchMode.SYSTEM)
   private val _lightThemeId = MutableStateFlow("essentials:minimalist")
   private val _darkThemeId = MutableStateFlow("essentials:slate")
-  private val _illuminanceThreshold = MutableStateFlow(200f)
+  private val _illuminanceThreshold = MutableStateFlow(100f)
 
   // Late-binding sensor inputs -- null means no provider bound
   private val _illuminanceFlow = MutableStateFlow<Float?>(null)
@@ -69,10 +70,10 @@ constructor(
    * [MutableStateFlow].
    */
   public fun bindPreferences(
-    autoSwitchMode: StateFlow<AutoSwitchMode>,
-    lightThemeId: StateFlow<String>,
-    darkThemeId: StateFlow<String>,
-    illuminanceThreshold: StateFlow<Float>,
+    autoSwitchMode: Flow<AutoSwitchMode>,
+    lightThemeId: Flow<String>,
+    darkThemeId: Flow<String>,
+    illuminanceThreshold: Flow<Float>,
   ) {
     scope.launch { autoSwitchMode.collect { _autoSwitchMode.value = it } }
     scope.launch { lightThemeId.collect { _lightThemeId.value = it } }
