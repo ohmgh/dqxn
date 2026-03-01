@@ -1,10 +1,12 @@
 package app.dqxn.android.feature.dashboard.layer
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.res.stringResource
@@ -52,7 +54,7 @@ import kotlinx.coroutines.launch
  * Route table: 11 type-safe routes via `@Serializable` route classes in [OverlayRoutes.kt]:
  * - [EmptyRoute] -- no overlay (Layer 0 visible)
  * - [WidgetPickerRoute] -- widget selection grid, hub transitions
- * - [SettingsRoute] -- main settings, source-varying transitions
+ * - [SettingsRoute] -- main settings, hub transitions with source-varying exit/popEnter
  * - [WidgetSettingsRoute] -- per-widget settings, preview transitions with None exit/popEnter
  * - [SetupRoute] -- provider setup wizard, hub transitions
  * - [AutoSwitchModeRoute] -- auto-switch mode selector, preview transitions
@@ -96,6 +98,10 @@ public fun OverlayNavHost(
     modifier = modifier,
     enterTransition = { EnterTransition.None },
     exitTransition = { ExitTransition.None },
+    // Pop defaults match old codebase — ensures programmatic popBackStack() always animates
+    // even if a per-route override is missing or route pattern matching falls through.
+    popEnterTransition = { fadeIn() },
+    popExitTransition = { slideOutVertically { it } },
   ) {
     // Empty start destination -- no overlay visible
     composable<EmptyRoute> {
@@ -122,13 +128,13 @@ public fun OverlayNavHost(
       )
     }
 
-    // Main settings -- source-varying transitions per replication advisory section 4
+    // Main settings -- hub overlay with source-varying exit/popEnter transitions
     // Exit/popEnter adapt based on navigation target/source:
-    //   -> ThemeSelector: fadeOut(100ms) / fadeIn(150ms) (smooth cross-fade)
-    //   -> Diagnostics/Onboarding: None (hub overlay covers)
-    //   -> default: previewExit / previewEnter
+    //   -> ThemeSelector/AutoSwitchMode: fadeOut(100ms) / fadeIn(150ms) (smooth cross-fade)
+    //   -> Diagnostics/Onboarding/PackBrowser: None (hub overlay covers)
+    //   -> default: hubExit / hubEnter
     composable<SettingsRoute>(
-      enterTransition = { DashboardMotion.previewEnter },
+      enterTransition = { DashboardMotion.hubEnter },
       exitTransition = {
         val target = targetState.destination.route ?: ""
         when {
@@ -137,7 +143,7 @@ public fun OverlayNavHost(
           target.contains(DIAGNOSTICS_ROUTE_PATTERN) -> ExitTransition.None
           target.contains(ONBOARDING_ROUTE_PATTERN) -> ExitTransition.None
           target.contains(PACK_BROWSER_ROUTE_PATTERN) -> ExitTransition.None
-          else -> DashboardMotion.previewExit
+          else -> DashboardMotion.hubExit
         }
       },
       popEnterTransition = {
@@ -148,10 +154,10 @@ public fun OverlayNavHost(
           source.contains(DIAGNOSTICS_ROUTE_PATTERN) -> EnterTransition.None
           source.contains(ONBOARDING_ROUTE_PATTERN) -> EnterTransition.None
           source.contains(PACK_BROWSER_ROUTE_PATTERN) -> EnterTransition.None
-          else -> DashboardMotion.previewEnter
+          else -> DashboardMotion.hubEnter
         }
       },
-      popExitTransition = { DashboardMotion.previewExit },
+      popExitTransition = { DashboardMotion.hubExit },
     ) {
       // Clear preview theme on settings enter (advisory section 3 race fix)
       LaunchedEffect(Unit) { onCommand(DashboardCommand.PreviewTheme(null)) }
@@ -162,46 +168,45 @@ public fun OverlayNavHost(
 
       val themeState by themeCoordinator.themeState.collectAsState()
 
-      PreviewOverlay(
-        previewFraction = 0.15f,
-        onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
-      ) {
-        MainSettings(
-          analyticsConsent = analyticsConsent,
-          showStatusBar = showStatusBar,
-          keepScreenOn = keepScreenOn,
-          lightThemeName = themeState.lightTheme.displayName,
-          darkThemeName = themeState.darkTheme.displayName,
-          packCount = widgetRegistry.getAll().map { it.typeId.substringBefore(':') }.toSet().size,
-          themeCount = allThemes.size,
-          widgetCount = widgetRegistry.getAll().size,
-          providerCount = dataProviderRegistry.getAll().size,
-          autoSwitchModeDescription = themeState.autoSwitchMode.name.lowercase().replace('_', ' ')
-            .replaceFirstChar { it.uppercase() },
-          versionName = "1.0",
-          onSetAnalyticsConsent = mainSettingsViewModel::setAnalyticsConsent,
-          onSetShowStatusBar = mainSettingsViewModel::setShowStatusBar,
-          onSetKeepScreenOn = mainSettingsViewModel::setKeepScreenOn,
-          onDeleteAllData = mainSettingsViewModel::deleteAllData,
-          onNavigateToThemeMode = {
-            navController.navigate(AutoSwitchModeRoute)
-          },
-          onNavigateToLightTheme = {
-            onCommand(DashboardCommand.PreviewTheme(themeState.lightTheme))
-            navController.navigate(ThemeSelectorRoute(isDark = false))
-          },
-          onNavigateToDarkTheme = {
-            onCommand(DashboardCommand.PreviewTheme(themeState.darkTheme))
-            navController.navigate(ThemeSelectorRoute(isDark = true))
-          },
-          onNavigateToDashPacks = {
-            navController.navigate(PackBrowserRoute)
-          },
-          onNavigateToDiagnostics = { navController.navigate(DiagnosticsRoute) },
-          onResetDash = { onCommand(DashboardCommand.ResetLayout) },
-          onClose = { navController.popBackStack(EmptyRoute, inclusive = false) },
-        )
-      }
+      MainSettings(
+        analyticsConsent = analyticsConsent,
+        showStatusBar = showStatusBar,
+        keepScreenOn = keepScreenOn,
+        lightThemeName = themeState.lightTheme.displayName,
+        darkThemeName = themeState.darkTheme.displayName,
+        packCount = (
+          widgetRegistry.getAll().map { it.typeId.substringBefore(':') } +
+            dataProviderRegistry.getAll().map { it.sourceId.substringBefore(':') } +
+            allThemes.mapNotNull { it.packId }
+          ).toSet().size,
+        themeCount = allThemes.size,
+        widgetCount = widgetRegistry.getAll().size,
+        providerCount = dataProviderRegistry.getAll().size,
+        autoSwitchModeDescription = themeState.autoSwitchMode.name.lowercase().replace('_', ' ')
+          .replaceFirstChar { it.uppercase() },
+        versionName = "1.0",
+        onSetAnalyticsConsent = mainSettingsViewModel::setAnalyticsConsent,
+        onSetShowStatusBar = mainSettingsViewModel::setShowStatusBar,
+        onSetKeepScreenOn = mainSettingsViewModel::setKeepScreenOn,
+        onDeleteAllData = mainSettingsViewModel::deleteAllData,
+        onNavigateToThemeMode = {
+          navController.navigate(AutoSwitchModeRoute)
+        },
+        onNavigateToLightTheme = {
+          onCommand(DashboardCommand.PreviewTheme(themeState.lightTheme))
+          navController.navigate(ThemeSelectorRoute(isDark = false))
+        },
+        onNavigateToDarkTheme = {
+          onCommand(DashboardCommand.PreviewTheme(themeState.darkTheme))
+          navController.navigate(ThemeSelectorRoute(isDark = true))
+        },
+        onNavigateToDashPacks = {
+          navController.navigate(PackBrowserRoute)
+        },
+        onNavigateToDiagnostics = { navController.navigate(DiagnosticsRoute) },
+        onResetDash = { onCommand(DashboardCommand.ResetLayout) },
+        onClose = { navController.popBackStack(EmptyRoute, inclusive = false) },
+      )
     }
 
     // Widget settings -- ExitTransition.None / EnterTransition.None per advisory section 2
@@ -212,10 +217,12 @@ public fun OverlayNavHost(
       popExitTransition = { DashboardMotion.previewExit },
     ) { backStackEntry ->
       val route = backStackEntry.toRoute<WidgetSettingsRoute>()
+      val handleDismiss = { navController.popBackStack(EmptyRoute, inclusive = false); Unit }
 
+      BackHandler { handleDismiss() }
       PreviewOverlay(
         previewFraction = 0.38f,
-        onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
+        onDismiss = handleDismiss,
       ) {
         WidgetSettingsSheet(
           widgetTypeId = route.typeId,
@@ -225,7 +232,7 @@ public fun OverlayNavHost(
           providerSettingsStore = providerSettingsStore,
           widgetStyleStore = widgetStyleStore,
           entitlementManager = entitlementManager,
-          onDismiss = { navController.popBackStack(EmptyRoute, inclusive = false) },
+          onDismiss = handleDismiss,
           onNavigate = { _ ->
             // Sub-navigation for pickers -- Phase 11
           },
@@ -272,15 +279,17 @@ public fun OverlayNavHost(
       popExitTransition = { DashboardMotion.previewExit },
     ) {
       val themeState by themeCoordinator.themeState.collectAsState()
+      val handleDismiss = { navController.popBackStack(); Unit }
 
+      BackHandler { handleDismiss() }
       PreviewOverlay(
         previewFraction = 0.15f,
-        onDismiss = { navController.popBackStack() },
+        onDismiss = handleDismiss,
       ) {
         OverlayScaffold(
           title = stringResource(SettingsR.string.main_settings_theme_mode),
           overlayType = OverlayType.Preview,
-          onBack = { navController.popBackStack() },
+          onBack = handleDismiss,
         ) {
           AutoSwitchModeContent(
             selectedMode = themeState.autoSwitchMode,
@@ -320,13 +329,15 @@ public fun OverlayNavHost(
     ) { backStackEntry ->
       val route = backStackEntry.toRoute<ThemeSelectorRoute>()
       val themeState by themeCoordinator.themeState.collectAsState()
+      // Unified dismiss — DisposableEffect in ThemeSelector handles preview cleanup on disposal,
+      // so we only popBackStack here. No pre-pop state changes that could cause recomposition
+      // races that skip the NavHost pop exit animation.
+      val handleDismiss = { navController.popBackStack(); Unit }
 
+      BackHandler { handleDismiss() }
       PreviewOverlay(
         previewFraction = 0.15f,
-        onDismiss = {
-          onCommand(DashboardCommand.PreviewTheme(null))
-          navController.popBackStack()
-        },
+        onDismiss = handleDismiss,
       ) {
         ThemeSelector(
           allThemes = allThemes,
@@ -359,7 +370,7 @@ public fun OverlayNavHost(
             navController.navigate(ThemeStudioRoute(themeId = null))
           },
           onShowToast = onShowToast,
-          onBack = { navController.popBackStack() },
+          onBack = handleDismiss,
         )
       }
     }
@@ -374,13 +385,12 @@ public fun OverlayNavHost(
     ) { backStackEntry ->
       val route = backStackEntry.toRoute<ThemeStudioRoute>()
       val existingTheme = allThemes.firstOrNull { it.themeId == route.themeId }
+      val handleDismiss = { navController.popBackStack(); Unit }
 
+      BackHandler { handleDismiss() }
       PreviewOverlay(
         previewFraction = 0.15f,
-        onDismiss = {
-          onCommand(DashboardCommand.PreviewTheme(null))
-          navController.popBackStack()
-        },
+        onDismiss = handleDismiss,
       ) {
         ThemeStudio(
           existingTheme = existingTheme,
@@ -393,7 +403,7 @@ public fun OverlayNavHost(
             navController.popBackStack()
           },
           onClearPreview = { onCommand(DashboardCommand.PreviewTheme(null)) },
-          onClose = { navController.popBackStack() },
+          onClose = handleDismiss,
         )
       }
     }

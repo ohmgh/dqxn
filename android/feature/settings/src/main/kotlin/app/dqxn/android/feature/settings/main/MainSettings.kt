@@ -323,6 +323,7 @@ private fun SettingsItemRow(
         .fillMaxWidth()
         .sizeIn(minHeight = 76.dp)
         .clickable(onClick = onClick)
+        .padding(vertical = DashboardSpacing.SpaceXS)
         .testTag(testTag),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(DashboardSpacing.SpaceM),
@@ -373,6 +374,7 @@ private fun ResetDashRow(
         .fillMaxWidth()
         .sizeIn(minHeight = 76.dp)
         .clickable(onClick = onClick)
+        .padding(vertical = DashboardSpacing.SpaceXS)
         .testTag("main_settings_reset_dash"),
     verticalAlignment = Alignment.CenterVertically,
   ) {
@@ -418,6 +420,7 @@ private fun ToggleRow(
         .fillMaxWidth()
         .sizeIn(minHeight = 76.dp)
         .clickable { onCheckedChange(!checked) }
+        .padding(vertical = DashboardSpacing.SpaceXS)
         .testTag(testTag),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
@@ -463,6 +466,7 @@ private fun AnalyticsToggleRow(
         .fillMaxWidth()
         .sizeIn(minHeight = 76.dp)
         .clickable { onToggle(!checked) }
+        .padding(vertical = DashboardSpacing.SpaceXS)
         .testTag("main_settings_analytics"),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
@@ -507,6 +511,7 @@ private fun NavigationRow(
         .fillMaxWidth()
         .sizeIn(minHeight = 76.dp)
         .clickable(onClick = onClick)
+        .padding(vertical = DashboardSpacing.SpaceXS)
         .testTag(testTag),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
