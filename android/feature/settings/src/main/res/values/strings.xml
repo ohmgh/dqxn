@@ -47,10 +47,12 @@
   <string name="main_settings_status_bar">Show Status Bar</string>
   <string name="main_settings_orientation_lock">Orientation Lock</string>
   <string name="main_settings_keep_screen_on">Keep Screen On</string>
+  <string name="main_settings_keep_screen_on_subtitle">Prevent display from sleeping</string>
   <string name="main_settings_dash_packs">Dash Packs</string>
   <string name="main_settings_analytics_consent">Analytics</string>
   <string name="main_settings_analytics_description">Help improve DQXN by sharing anonymous usage data</string>
   <string name="main_settings_diagnostics">Diagnostics</string>
+  <string name="main_settings_diagnostics_subtitle">Logs, metrics, and debug info</string>
   <string name="main_settings_delete_all_data">Delete All Data</string>
   <string name="main_settings_delete_all_description">Remove all settings, layouts, paired devices, and analytics data</string>
 

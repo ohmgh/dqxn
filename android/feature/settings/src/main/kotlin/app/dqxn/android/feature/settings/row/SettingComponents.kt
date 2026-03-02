@@ -40,7 +40,7 @@ internal fun SettingLabel(
 ) {
   Column(
     modifier =
-      modifier.defaultMinSize(minHeight = 76.dp).padding(vertical = DashboardSpacing.SpaceXS),
+      modifier,
     verticalArrangement = Arrangement.Center,
   ) {
     Text(

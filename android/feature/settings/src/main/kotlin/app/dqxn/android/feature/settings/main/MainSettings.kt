@@ -15,12 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.LightMode
@@ -116,6 +114,7 @@ public fun MainSettings(
           Modifier.fillMaxSize()
             .verticalScroll(rememberScrollState())
             .testTag("main_settings_content"),
+        verticalArrangement = Arrangement.spacedBy(DashboardSpacing.SectionGap),
       ) {
         // 1. About App Banner
         AboutAppBanner(versionName = versionName, theme = theme)
@@ -130,7 +129,6 @@ public fun MainSettings(
           icon = Icons.Default.Dashboard,
           accentColor = theme.accentColor,
           theme = theme,
-          showArrow = true,
           onClick = onNavigateToDashPacks,
           testTag = "main_settings_dash_packs",
         )
@@ -138,15 +136,14 @@ public fun MainSettings(
         SectionDivider(theme = theme)
 
         // 3. Theme Items Group (4dp spacing between)
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(DashboardSpacing.SpaceXXS)) {
           SettingsItemRow(
             label = stringResource(R.string.main_settings_theme_mode),
             subtitle = autoSwitchModeDescription,
             icon = Icons.Default.SettingsBrightness,
             accentColor = theme.accentColor,
             theme = theme,
-            showArrow = true,
-            onClick = onNavigateToThemeMode,
+              onClick = onNavigateToThemeMode,
             testTag = "main_settings_theme_mode",
           )
           SettingsItemRow(
@@ -155,8 +152,7 @@ public fun MainSettings(
             icon = Icons.Default.LightMode,
             accentColor = theme.accentColor,
             theme = theme,
-            showArrow = true,
-            onClick = onNavigateToLightTheme,
+              onClick = onNavigateToLightTheme,
             testTag = "main_settings_light_theme",
           )
           SettingsItemRow(
@@ -165,8 +161,7 @@ public fun MainSettings(
             icon = Icons.Default.DarkMode,
             accentColor = theme.accentColor,
             theme = theme,
-            showArrow = true,
-            onClick = onNavigateToDarkTheme,
+              onClick = onNavigateToDarkTheme,
             testTag = "main_settings_dark_theme",
           )
         }
@@ -174,46 +169,54 @@ public fun MainSettings(
         SectionDivider(theme = theme)
 
         // 4. Show Status Bar + Keep Screen On
-        ToggleRow(
-          label = stringResource(R.string.main_settings_status_bar),
-          subtitle = stringResource(R.string.main_settings_status_bar_subtitle),
-          checked = showStatusBar,
-          onCheckedChange = onSetShowStatusBar,
-          theme = theme,
-          testTag = "main_settings_status_bar",
-        )
-        ToggleRow(
-          label = stringResource(R.string.main_settings_keep_screen_on),
-          checked = keepScreenOn,
-          onCheckedChange = onSetKeepScreenOn,
-          theme = theme,
-          testTag = "main_settings_keep_screen_on",
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(DashboardSpacing.SpaceXXS)) {
+          ToggleRow(
+            label = stringResource(R.string.main_settings_status_bar),
+            subtitle = stringResource(R.string.main_settings_status_bar_subtitle),
+            checked = showStatusBar,
+            onCheckedChange = onSetShowStatusBar,
+            theme = theme,
+            testTag = "main_settings_status_bar",
+          )
+          ToggleRow(
+            label = stringResource(R.string.main_settings_keep_screen_on),
+            subtitle = stringResource(R.string.main_settings_keep_screen_on_subtitle),
+            checked = keepScreenOn,
+            onCheckedChange = onSetKeepScreenOn,
+            theme = theme,
+            testTag = "main_settings_keep_screen_on",
+          )
+        }
 
         SectionDivider(theme = theme)
 
         // 5. Analytics + Diagnostics
-        AnalyticsToggleRow(
-          checked = analyticsConsent,
-          onToggle = { enabled ->
-            if (enabled) showAnalyticsDialog = true else onSetAnalyticsConsent(false)
-          },
-          theme = theme,
-        )
-        NavigationRow(
-          label = stringResource(R.string.main_settings_diagnostics),
-          theme = theme,
-          onClick = onNavigateToDiagnostics,
-          testTag = "main_settings_diagnostics",
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(DashboardSpacing.SpaceXXS)) {
+          AnalyticsToggleRow(
+            checked = analyticsConsent,
+            onToggle = { enabled ->
+              if (enabled) showAnalyticsDialog = true else onSetAnalyticsConsent(false)
+            },
+            theme = theme,
+          )
+          NavigationRow(
+            label = stringResource(R.string.main_settings_diagnostics),
+            subtitle = stringResource(R.string.main_settings_diagnostics_subtitle),
+            theme = theme,
+            onClick = onNavigateToDiagnostics,
+            testTag = "main_settings_diagnostics",
+          )
+        }
 
         SectionDivider(theme = theme)
 
         // 6. Destructive actions
-        ResetDashRow(theme = theme, onClick = onResetDash)
-        DeleteAllDataButton(theme = theme, onClick = { showDeleteDialog = true })
+        Column(verticalArrangement = Arrangement.spacedBy(DashboardSpacing.SpaceXXS)) {
+          ResetDashRow(theme = theme, onClick = onResetDash)
+          DeleteAllDataButton(theme = theme, onClick = { showDeleteDialog = true })
+        }
 
-        Spacer(modifier = Modifier.height(DashboardSpacing.SpaceXL))
+        Spacer(modifier = Modifier.height(DashboardSpacing.SpaceL))
       }
     }
 
@@ -312,7 +315,6 @@ private fun SettingsItemRow(
   icon: ImageVector,
   accentColor: Color,
   theme: DashboardThemeDefinition,
-  showArrow: Boolean = false,
   onClick: () -> Unit,
   testTag: String,
   modifier: Modifier = Modifier,
@@ -321,7 +323,6 @@ private fun SettingsItemRow(
     modifier =
       modifier
         .fillMaxWidth()
-        .sizeIn(minHeight = 76.dp)
         .clickable(onClick = onClick)
         .padding(vertical = DashboardSpacing.SpaceXS)
         .testTag(testTag),
@@ -352,13 +353,6 @@ private fun SettingsItemRow(
         maxLines = 1,
       )
     }
-    if (showArrow) {
-      Icon(
-        Icons.Filled.ChevronRight,
-        null,
-        tint = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium)
-      )
-    }
   }
 }
 
@@ -368,25 +362,29 @@ private fun ResetDashRow(
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  Row(
+  val shape = RoundedCornerShape(CardSize.SMALL.cornerRadius)
+
+  Box(
     modifier =
       modifier
         .fillMaxWidth()
-        .sizeIn(minHeight = 76.dp)
+        .clip(shape)
+        .background(SemanticColors.Error.copy(alpha = 0.1f))
         .clickable(onClick = onClick)
         .padding(vertical = DashboardSpacing.SpaceXS)
+        .semantics { role = Role.Button }
         .testTag("main_settings_reset_dash"),
-    verticalAlignment = Alignment.CenterVertically,
+    contentAlignment = Alignment.Center,
   ) {
-    Column(modifier = Modifier.weight(1f)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
       Text(
         text = stringResource(R.string.main_settings_reset_dash),
-        style = DashboardTypography.itemTitle,
+        style = DashboardTypography.primaryButtonLabel,
         color = SemanticColors.Error,
       )
       Text(
         text = stringResource(R.string.main_settings_reset_dash_subtitle),
-        style = DashboardTypography.description,
+        style = DashboardTypography.caption,
         color = SemanticColors.Error.copy(alpha = TextEmphasis.Medium),
       )
     }
@@ -418,7 +416,6 @@ private fun ToggleRow(
     modifier =
       modifier
         .fillMaxWidth()
-        .sizeIn(minHeight = 76.dp)
         .clickable { onCheckedChange(!checked) }
         .padding(vertical = DashboardSpacing.SpaceXS)
         .testTag(testTag),
@@ -464,7 +461,6 @@ private fun AnalyticsToggleRow(
     modifier =
       modifier
         .fillMaxWidth()
-        .sizeIn(minHeight = 76.dp)
         .clickable { onToggle(!checked) }
         .padding(vertical = DashboardSpacing.SpaceXS)
         .testTag("main_settings_analytics"),
@@ -503,29 +499,33 @@ private fun NavigationRow(
   theme: DashboardThemeDefinition,
   onClick: () -> Unit,
   testTag: String,
+  subtitle: String? = null,
   modifier: Modifier = Modifier,
 ) {
   Row(
     modifier =
       modifier
         .fillMaxWidth()
-        .sizeIn(minHeight = 76.dp)
         .clickable(onClick = onClick)
         .padding(vertical = DashboardSpacing.SpaceXS)
         .testTag(testTag),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    Text(
-      text = label,
-      style = DashboardTypography.itemTitle,
-      color = theme.primaryTextColor,
-    )
-    Icon(
-      imageVector = Icons.Filled.ChevronRight,
-      contentDescription = null,
-      tint = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
-    )
+    Column(modifier = Modifier.weight(1f)) {
+      Text(
+        text = label,
+        style = DashboardTypography.itemTitle,
+        color = theme.primaryTextColor,
+      )
+      if (subtitle != null) {
+        Text(
+          text = subtitle,
+          style = DashboardTypography.description,
+          color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
+        )
+      }
+    }
   }
 }
 
@@ -541,10 +541,10 @@ private fun DeleteAllDataButton(
     modifier =
       modifier
         .fillMaxWidth()
-        .sizeIn(minHeight = 76.dp)
         .clip(shape)
         .background(SemanticColors.Error.copy(alpha = 0.1f))
         .clickable(onClick = onClick)
+        .padding(vertical = DashboardSpacing.SpaceXS)
         .semantics { role = Role.Button }
         .testTag("main_settings_delete_all"),
     contentAlignment = Alignment.Center,

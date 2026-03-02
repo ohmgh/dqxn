@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -124,10 +125,20 @@ public fun OverlayScaffold(
           .clip(shape)
           .background(theme.backgroundBrush, shape)
           .then(
-            if (overlayType == OverlayType.Hub) {
-              val insets = WindowInsets.systemBarsIgnoringVisibility.asPaddingValues()
-              Modifier.padding(top = insets.calculateTopPadding())
-            } else Modifier
+            when (overlayType) {
+              OverlayType.Hub -> {
+                val insets = WindowInsets.systemBarsIgnoringVisibility.asPaddingValues()
+                Modifier.padding(
+                  top = insets.calculateTopPadding(),
+                  bottom = insets.calculateBottomPadding() + 16.dp,
+                )
+              }
+              OverlayType.Preview -> {
+                val insets = WindowInsets.navigationBarsIgnoringVisibility.asPaddingValues()
+                Modifier.padding(bottom = insets.calculateBottomPadding() + 16.dp)
+              }
+              OverlayType.Confirmation -> Modifier
+            }
           ),
     ) {
       OverlayTitleBar(title = title, onBack = onBack, actions = actions)

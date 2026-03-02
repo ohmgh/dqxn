@@ -3,11 +3,15 @@ package app.dqxn.android.feature.dashboard.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -43,6 +47,7 @@ import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
  * Auto-hides after [AUTO_HIDE_DELAY_MS] inactivity via [LaunchedEffect] + [delay].
  * Tap to reveal. Floats over canvas (no layout shift).
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 public fun DashboardButtonBar(
   isVisible: Boolean,
@@ -72,12 +77,14 @@ public fun DashboardButtonBar(
             onClick = onInteraction,
           ),
     ) {
+      val navBarBottom =
+        WindowInsets.navigationBarsIgnoringVisibility.asPaddingValues().calculateBottomPadding()
       Row(
         modifier =
           Modifier.fillMaxWidth()
             .align(Alignment.BottomCenter)
             .padding(
-              bottom = DashboardSpacing.SpaceXL,
+              bottom = navBarBottom + DashboardSpacing.SpaceS,
               start = DashboardSpacing.SpaceL,
               end = DashboardSpacing.SpaceL,
             ),
