@@ -251,16 +251,11 @@ public fun DashboardGrid(
             // Preview state per widget
             val isBeingEdited = editingWidgetId == widget.instanceId
 
-            // settingsAlpha: fade out non-edited widgets when settings open, dim non-focused in edit mode
+            // settingsAlpha: fade out non-edited widgets when settings open
+            // Old codebase: dim only when settings sheet is open, NOT on mere focus tap
             val settingsAlpha by
               animateFloatAsState(
-                targetValue = when {
-                  isSettingsOpen && !isBeingEdited -> 0f
-                  isSettingsOpen && isBeingEdited -> 1f
-                  editState.focusedWidgetId != null &&
-                    editState.focusedWidgetId != widget.instanceId -> 0.5f
-                  else -> 1f
-                },
+                targetValue = if (isSettingsOpen && !isBeingEdited) 0f else 1f,
                 animationSpec = if (isBeingEdited) snap() else tween(300),
                 label = "settings_alpha_${widget.instanceId}",
               )
@@ -493,19 +488,26 @@ public fun DashboardGrid(
                 }
 
                 // Focus toolbar (F1.8) — inside widget Box, positioned above/below via unbounded overflow.
-                // Old codebase: AnimatedVisibility inside widget Box, wrapContentSize(unbounded = true).
-                if (isFocused && !isResizingThisWidget) {
+                // Old codebase: AnimatedVisibility with fadeIn+scaleIn / fadeOut+scaleOut.
+                // Positioning modifiers on AnimatedVisibility (direct Box child) so
+                // ParentDataModifier (align) reaches the parent and wrapContentSize
+                // doesn't collapse the measured size during animation.
+                AnimatedVisibility(
+                  visible = isFocused && !isResizingThisWidget,
+                  enter = fadeIn(tween(150)) + scaleIn(initialScale = 0.8f, animationSpec = tween(150)),
+                  exit = fadeOut(tween(100)) + scaleOut(targetScale = 0.8f, animationSpec = tween(100)),
+                  modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .wrapContentSize(unbounded = true)
+                    .offset(y = (-48).dp) // 40dp button + 8dp gap
+                    .zIndex(10f),
+                ) {
                   FocusOverlayToolbar(
                     widgetId = widget.instanceId,
                     onDelete = { onCommand(DashboardCommand.RemoveWidget(widget.instanceId)) },
                     onSettings = {
                       onCommand(DashboardCommand.OpenWidgetSettings(widget.instanceId))
                     },
-                    modifier = Modifier
-                      .align(Alignment.TopCenter)
-                      .wrapContentSize(unbounded = true)
-                      .offset(y = (-48).dp) // 40dp button + 8dp gap
-                      .zIndex(10f),
                   )
                 }
               }
