@@ -1,8 +1,12 @@
 package app.dqxn.android
 
+import android.content.SharedPreferences
 import app.cash.turbine.test
 import app.dqxn.android.sdk.contracts.entitlement.EntitlementManager
 import com.google.common.truth.Truth.assertThat
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -10,7 +14,18 @@ import org.junit.jupiter.api.Test
 @Tag("fast")
 class StubEntitlementManagerTest {
 
-  private val manager = StubEntitlementManager()
+  private val store = mutableMapOf<String, Set<String>>()
+  private val editor = mockk<SharedPreferences.Editor>(relaxed = true) {
+    every { putStringSet(any(), any()) } answers {
+      store[firstArg()] = secondArg()
+      this@mockk
+    }
+  }
+  private val prefs = mockk<SharedPreferences> {
+    every { getStringSet(any(), any()) } answers { store[firstArg()] }
+    every { edit() } returns editor
+  }
+  private val manager = StubEntitlementManager(prefs)
 
   @Test
   fun `initial state has free entitlement only`() {
@@ -91,5 +106,29 @@ class StubEntitlementManagerTest {
   fun `implements EntitlementManager interface`() {
     val entitlementManager: EntitlementManager = manager
     assertThat(entitlementManager).isNotNull()
+  }
+
+  @Test
+  fun `simulateGrant persists to SharedPreferences`() {
+    manager.simulateGrant("themes")
+    assertThat(store["stub_entitlements"]).containsExactly("free", "themes")
+  }
+
+  @Test
+  fun `new instance restores persisted entitlements`() {
+    manager.simulateGrant("themes")
+    manager.simulateGrant("plus")
+
+    val restored = StubEntitlementManager(prefs)
+    assertThat(restored.getActiveEntitlements()).containsExactly("free", "themes", "plus")
+  }
+
+  @Test
+  fun `reset clears persisted entitlements`() {
+    manager.simulateGrant("themes")
+    manager.reset()
+
+    val restored = StubEntitlementManager(prefs)
+    assertThat(restored.getActiveEntitlements()).containsExactly("free")
   }
 }

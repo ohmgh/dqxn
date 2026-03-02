@@ -57,7 +57,9 @@ public abstract class AppModule {
 
     @Provides
     @Singleton
-    public fun provideEntitlementManager(): EntitlementManager = StubEntitlementManager()
+    public fun provideEntitlementManager(
+      prefs: SharedPreferences,
+    ): EntitlementManager = StubEntitlementManager(prefs)
 
     @Provides
     @Singleton

@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -14,8 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
+import app.dqxn.android.core.design.token.DashboardSpacing
 import app.dqxn.android.core.design.token.DashboardTypography
+import app.dqxn.android.core.design.token.TextEmphasis
 import app.dqxn.android.sdk.observability.metrics.MetricsSnapshot
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 
@@ -33,24 +33,24 @@ public fun ObservabilityDashboard(
   modifier: Modifier = Modifier,
 ) {
   val theme = LocalDashboardTheme.current
-  val dividerColor = theme.widgetBorderColor.copy(alpha = 0.3f)
+  val dividerColor = theme.widgetBorderColor.copy(alpha = TextEmphasis.Disabled)
 
   Column(
-    modifier = modifier.fillMaxSize().testTag("observability_dashboard").padding(16.dp),
+    modifier = modifier.fillMaxWidth().testTag("observability_dashboard"),
   ) {
     Text(
-      text = "Observability Metrics",
-      style = DashboardTypography.title,
-      color = theme.primaryTextColor,
+      text = "FRAME METRICS",
+      style = DashboardTypography.sectionHeader,
+      color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
     )
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(DashboardSpacing.SpaceM))
 
     if (metricsSnapshot == null || metricsSnapshot.totalFrameCount == 0L) {
       Text(
         text = "No metrics data available",
         style = DashboardTypography.description,
-        color = theme.secondaryTextColor,
+        color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
       )
       return
     }
@@ -63,7 +63,7 @@ public fun ObservabilityDashboard(
       style = DashboardTypography.itemTitle,
       color = theme.primaryTextColor,
     )
-    Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(DashboardSpacing.SpaceXS))
 
     MetricRow(
       label = "P50",
@@ -83,7 +83,7 @@ public fun ObservabilityDashboard(
 
     HorizontalDivider(
       color = dividerColor,
-      modifier = Modifier.padding(vertical = 12.dp),
+      modifier = Modifier.padding(vertical = DashboardSpacing.SpaceS),
     )
 
     // Jank percentage
@@ -95,7 +95,7 @@ public fun ObservabilityDashboard(
 
     HorizontalDivider(
       color = dividerColor,
-      modifier = Modifier.padding(vertical = 12.dp),
+      modifier = Modifier.padding(vertical = DashboardSpacing.SpaceS),
     )
 
     // Memory usage
@@ -110,14 +110,14 @@ public fun ObservabilityDashboard(
 
     HorizontalDivider(
       color = dividerColor,
-      modifier = Modifier.padding(vertical = 12.dp),
+      modifier = Modifier.padding(vertical = DashboardSpacing.SpaceS),
     )
 
     // Total frame count
     Text(
       text = "Total frames: ${metricsSnapshot.totalFrameCount}",
       style = DashboardTypography.caption,
-      color = theme.secondaryTextColor,
+      color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
     )
   }
 }
@@ -131,7 +131,8 @@ private fun MetricRow(
   val theme = LocalDashboardTheme.current
 
   Row(
-    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag(testTag),
+    modifier =
+      Modifier.fillMaxWidth().padding(vertical = DashboardSpacing.SpaceXXS).testTag(testTag),
     horizontalArrangement = Arrangement.SpaceBetween,
   ) {
     Text(

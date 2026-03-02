@@ -8,13 +8,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,8 +26,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
+import app.dqxn.android.core.design.token.DashboardSpacing
 import app.dqxn.android.core.design.token.DashboardTypography
+import app.dqxn.android.core.design.token.TextEmphasis
 import app.dqxn.android.sdk.observability.diagnostic.DiagnosticSnapshotDto
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import kotlinx.collections.immutable.ImmutableList
@@ -63,37 +64,43 @@ public fun DiagnosticSnapshotViewer(
     }
 
   Column(
-    modifier = modifier.fillMaxSize().testTag("snapshot_viewer").padding(16.dp),
+    modifier = modifier.fillMaxWidth().testTag("snapshot_viewer"),
   ) {
     // Filter chips
     FlowRow(
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      horizontalArrangement = Arrangement.spacedBy(DashboardSpacing.SpaceXS),
     ) {
       SNAPSHOT_FILTER_TYPES.forEach { filterType ->
         FilterChip(
           selected = selectedFilter == filterType,
           onClick = { selectedFilter = filterType },
           label = { Text(filterType) },
+          colors =
+            FilterChipDefaults.filterChipColors(
+              selectedContainerColor = theme.accentColor.copy(alpha = 0.15f),
+              selectedLabelColor = theme.accentColor,
+              labelColor = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
+            ),
           modifier = Modifier.testTag("snapshot_filter_$filterType"),
         )
       }
     }
 
-    Spacer(modifier = Modifier.height(12.dp))
+    Spacer(modifier = Modifier.height(DashboardSpacing.SpaceS))
 
     if (filteredSnapshots.isEmpty()) {
       Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
       ) {
         Text(
           text = "No snapshots",
           style = DashboardTypography.description,
-          color = theme.secondaryTextColor,
+          color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
         )
       }
     } else {
-      LazyColumn(modifier = Modifier.fillMaxSize()) {
+      LazyColumn(modifier = Modifier.fillMaxWidth()) {
         itemsIndexed(filteredSnapshots) { index, snapshot ->
           SnapshotRow(
             snapshot = snapshot,
@@ -102,7 +109,9 @@ public fun DiagnosticSnapshotViewer(
             modifier = Modifier.testTag("snapshot_row_$index"),
           )
           if (index < filteredSnapshots.lastIndex) {
-            HorizontalDivider(color = theme.widgetBorderColor.copy(alpha = 0.3f))
+            HorizontalDivider(
+              color = theme.widgetBorderColor.copy(alpha = TextEmphasis.Disabled),
+            )
           }
         }
       }
@@ -120,7 +129,8 @@ private fun SnapshotRow(
   val theme = LocalDashboardTheme.current
 
   Column(
-    modifier = modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
+    modifier =
+      modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = DashboardSpacing.SpaceXS),
   ) {
     Text(
       text = snapshot.triggerType,
@@ -130,7 +140,7 @@ private fun SnapshotRow(
     Text(
       text = formatTimestamp(snapshot.timestamp),
       style = DashboardTypography.caption,
-      color = theme.secondaryTextColor,
+      color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
     )
     Text(
       text = snapshot.triggerDescription,
@@ -140,7 +150,7 @@ private fun SnapshotRow(
     )
 
     AnimatedVisibility(visible = isExpanded) {
-      Column(modifier = Modifier.padding(top = 8.dp)) {
+      Column(modifier = Modifier.padding(top = DashboardSpacing.SpaceXS)) {
         if (snapshot.activeSpans.isNotEmpty()) {
           Text(
             text = "Active Spans:",
@@ -151,12 +161,12 @@ private fun SnapshotRow(
             Text(
               text = "  $span",
               style = DashboardTypography.caption,
-              color = theme.secondaryTextColor,
+              color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
             )
           }
         }
         if (snapshot.logTail.isNotEmpty()) {
-          Spacer(modifier = Modifier.height(4.dp))
+          Spacer(modifier = Modifier.height(DashboardSpacing.SpaceXXS))
           Text(
             text = "Log Tail:",
             style = DashboardTypography.caption,
@@ -166,16 +176,16 @@ private fun SnapshotRow(
             Text(
               text = "  $log",
               style = DashboardTypography.caption,
-              color = theme.secondaryTextColor,
+              color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
             )
           }
         }
         if (snapshot.agenticTraceId != null) {
-          Spacer(modifier = Modifier.height(4.dp))
+          Spacer(modifier = Modifier.height(DashboardSpacing.SpaceXXS))
           Text(
             text = "Trace: ${snapshot.agenticTraceId}",
             style = DashboardTypography.caption,
-            color = theme.secondaryTextColor,
+            color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
           )
         }
       }

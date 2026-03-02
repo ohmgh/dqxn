@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,10 +20,12 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.dqxn.android.core.design.token.DashboardSpacing
 import app.dqxn.android.core.design.token.DashboardTypography
+import app.dqxn.android.core.design.token.SemanticColors
+import app.dqxn.android.core.design.token.TextEmphasis
 import app.dqxn.android.sdk.observability.health.ProviderStatus
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import kotlinx.collections.immutable.ImmutableList
@@ -53,20 +54,20 @@ public fun ProviderHealthDashboard(
 
   if (statuses.isEmpty()) {
     Box(
-      modifier = modifier.fillMaxSize().testTag("provider_health_list"),
+      modifier = modifier.fillMaxWidth().testTag("provider_health_list"),
       contentAlignment = Alignment.Center,
     ) {
       Text(
         text = "No providers registered",
         style = DashboardTypography.description,
-        color = theme.secondaryTextColor,
+        color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
       )
     }
     return
   }
 
   LazyColumn(
-    modifier = modifier.fillMaxSize().testTag("provider_health_list"),
+    modifier = modifier.fillMaxWidth().testTag("provider_health_list"),
   ) {
     items(statuses, key = { it.providerId }) { status ->
       ProviderStatusRow(
@@ -92,7 +93,7 @@ private fun ProviderStatusRow(
     modifier =
       Modifier.fillMaxWidth()
         .clickable(onClick = onClick)
-        .padding(horizontal = 16.dp, vertical = 12.dp)
+        .padding(vertical = DashboardSpacing.SpaceS)
         .testTag("provider_row_${status.providerId}"),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.SpaceBetween,
@@ -106,10 +107,10 @@ private fun ProviderStatusRow(
         modifier =
           Modifier.size(10.dp)
             .clip(CircleShape)
-            .background(if (status.isConnected) Color.Green else Color.Red)
+            .background(if (status.isConnected) SemanticColors.Success else SemanticColors.Error)
             .testTag("connection_indicator_${status.providerId}"),
       )
-      Spacer(modifier = Modifier.width(12.dp))
+      Spacer(modifier = Modifier.width(DashboardSpacing.SpaceS))
       Column {
         Text(
           text = status.displayName,
@@ -128,7 +129,7 @@ private fun ProviderStatusRow(
             if (status.errorDescription != null) {
               theme.errorColor
             } else {
-              theme.secondaryTextColor
+              theme.primaryTextColor.copy(alpha = TextEmphasis.Medium)
             },
         )
       }
@@ -137,7 +138,7 @@ private fun ProviderStatusRow(
     if (isStale) {
       Text(
         text = "\u26A0", // Warning sign
-        color = Color(0xFFFFA000), // Amber
+        color = SemanticColors.Warning,
         modifier = Modifier.testTag("staleness_indicator_${status.providerId}"),
       )
     }

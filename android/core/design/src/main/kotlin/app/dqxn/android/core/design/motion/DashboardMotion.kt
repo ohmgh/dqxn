@@ -10,9 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.unit.IntOffset
 
@@ -28,7 +26,6 @@ import androidx.compose.ui.unit.IntOffset
  * - [expandEnter]/[expandExit] -- Vertical expand for collapsible sections
  * - [dialogScrimEnter]/[dialogScrimExit] -- Fade for dialog route scrim
  * - [dialogEnter]/[dialogExit] -- Scale + fade for dialog card content
- * - PackBrowser source-dependent transitions
  *
  * Duration asymmetry pattern: enter is typically 200ms, exit 150ms.
  */
@@ -37,8 +34,7 @@ public object DashboardMotion {
   // Internal Spring Specs
 
   /**
-   * Standard spring -- subtle overshoot, moderate speed. Used by sheet, expand, dialog,
-   * packBrowser.
+   * Standard spring -- subtle overshoot, moderate speed. Used by sheet, expand, dialog.
    */
   private val standardSpring = spring<Float>(dampingRatio = 0.65f, stiffness = 300f)
 
@@ -110,31 +106,4 @@ public object DashboardMotion {
   /** Dialog content exit: scale to 90% + fade out (used by ConfirmationDialog). */
   public val dialogExit: ExitTransition =
     scaleOut(targetScale = 0.9f, animationSpec = tween(150)) + fadeOut(tween(150))
-
-  // PackBrowser Source-Dependent Transitions
-  //
-  // PackBrowser animates differently depending on navigation origin:
-  //   - From Settings: horizontal slide-over (feels like pushing a stack)
-  //   - From WidgetInfo: crossfade (shared element card morph is primary)
-  //   - Default: simple crossfade (fallback)
-
-  /** PackBrowser enter from Settings -- horizontal slide-over with spring. */
-  public val packBrowserEnterFromSettings: EnterTransition =
-    slideInHorizontally(standardSpringInt) { it } + fadeIn(tween(200))
-
-  /** PackBrowser enter from WidgetInfo -- minimal crossfade (shared element drives). */
-  public val packBrowserEnterFromWidgetInfo: EnterTransition = fadeIn(tween(300))
-
-  /** PackBrowser enter default -- simple crossfade fallback. */
-  public val packBrowserEnterDefault: EnterTransition = fadeIn(tween(200))
-
-  /** PackBrowser pop exit to Settings -- slide out to right. */
-  public val packBrowserPopExitToSettings: ExitTransition =
-    slideOutHorizontally(tween(200)) { it } + fadeOut(tween(200))
-
-  /** PackBrowser pop exit to WidgetInfo -- minimal crossfade (shared element drives). */
-  public val packBrowserPopExitToWidgetInfo: ExitTransition = fadeOut(tween(300))
-
-  /** PackBrowser pop exit default -- simple crossfade fallback. */
-  public val packBrowserPopExitDefault: ExitTransition = fadeOut(tween(200))
 }

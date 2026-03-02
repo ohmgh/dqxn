@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,8 +20,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
+import app.dqxn.android.core.design.token.DashboardSpacing
 import app.dqxn.android.core.design.token.DashboardTypography
+import app.dqxn.android.core.design.token.TextEmphasis
 import app.dqxn.android.data.device.ConnectionEvent
 import app.dqxn.android.sdk.observability.health.ProviderStatus
 import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
@@ -46,7 +48,8 @@ public fun ProviderDetailScreen(
   val theme = LocalDashboardTheme.current
 
   Column(
-    modifier = modifier.fillMaxSize().testTag("provider_detail").padding(16.dp),
+    modifier =
+      modifier.fillMaxSize().testTag("provider_detail").padding(DashboardSpacing.SpaceM),
   ) {
     // Header
     if (providerStatus != null) {
@@ -60,12 +63,12 @@ public fun ProviderDetailScreen(
         style = DashboardTypography.description,
         color =
           if (providerStatus.isConnected) {
-            theme.accentColor
+            theme.successColor
           } else {
             theme.errorColor
           },
       )
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(DashboardSpacing.SpaceM))
     }
 
     // Event log
@@ -77,7 +80,7 @@ public fun ProviderDetailScreen(
         Text(
           text = "No connection events",
           style = DashboardTypography.description,
-          color = theme.secondaryTextColor,
+          color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
         )
       }
     } else {
@@ -90,7 +93,9 @@ public fun ProviderDetailScreen(
             index = index,
           )
           if (index < events.lastIndex) {
-            HorizontalDivider(color = theme.widgetBorderColor.copy(alpha = 0.3f))
+            HorizontalDivider(
+              color = theme.widgetBorderColor.copy(alpha = TextEmphasis.Disabled),
+            )
           }
         }
       }
@@ -98,9 +103,10 @@ public fun ProviderDetailScreen(
 
     // Retry button
     if (providerStatus != null) {
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(DashboardSpacing.SpaceM))
       Button(
         onClick = { onRetry(providerStatus.providerId) },
+        colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor),
         modifier = Modifier.fillMaxWidth().testTag("retry_button"),
       ) {
         Text(text = "Retry Connection")
@@ -117,14 +123,17 @@ private fun ConnectionEventRow(
   val theme = LocalDashboardTheme.current
 
   Row(
-    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("connection_event_$index"),
+    modifier =
+      Modifier.fillMaxWidth()
+        .padding(vertical = DashboardSpacing.SpaceXS)
+        .testTag("connection_event_$index"),
     horizontalArrangement = Arrangement.SpaceBetween,
   ) {
     Column(modifier = Modifier.weight(1f)) {
       Text(
         text = formatTimestamp(event.timestamp),
         style = DashboardTypography.caption,
-        color = theme.secondaryTextColor,
+        color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
       )
       Text(
         text = event.eventType,
@@ -135,7 +144,7 @@ private fun ConnectionEventRow(
         Text(
           text = event.details,
           style = DashboardTypography.caption,
-          color = theme.secondaryTextColor,
+          color = theme.primaryTextColor.copy(alpha = TextEmphasis.Medium),
         )
       }
     }
