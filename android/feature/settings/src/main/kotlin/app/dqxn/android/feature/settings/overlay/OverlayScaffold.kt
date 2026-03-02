@@ -17,11 +17,14 @@ import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -78,6 +81,9 @@ public fun OverlayScaffold(
   val theme = LocalDashboardTheme.current
   val cornerRadius = CardSize.LARGE.cornerRadius
   val shape = overlayType.toShape(cornerRadius)
+  val configuration = LocalConfiguration.current
+  val isWideScreen = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE ||
+    configuration.screenWidthDp > 600
 
   // No AnimatedVisibility wrapper — NavHost route transitions handle all enter/exit animations.
   // A scaffold-level AnimatedVisibility would conflict with NavHost transitions (double-animation
@@ -85,8 +91,8 @@ public fun OverlayScaffold(
   Box(
     modifier = Modifier.fillMaxSize(),
     contentAlignment = when (overlayType) {
-      OverlayType.Hub -> Alignment.Center
-      OverlayType.Preview -> Alignment.BottomCenter
+      OverlayType.Hub -> if (isWideScreen) Alignment.CenterStart else Alignment.Center
+      OverlayType.Preview -> if (isWideScreen) Alignment.BottomStart else Alignment.BottomCenter
       OverlayType.Confirmation -> Alignment.Center
     },
   ) {
@@ -122,7 +128,7 @@ public fun OverlayScaffold(
         contentModifier
           .testTag("overlay_scaffold_${overlayType.name.lowercase()}")
           .then(borderModifier)
-          .clip(shape)
+          .shadow(elevation = 1.dp, shape = shape)
           .background(theme.backgroundBrush, shape)
           .then(
             when (overlayType) {

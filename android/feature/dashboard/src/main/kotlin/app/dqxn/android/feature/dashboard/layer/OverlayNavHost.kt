@@ -128,42 +128,12 @@ public fun OverlayNavHost(
       )
     }
 
-    // Main settings -- hub overlay with source-varying exit/popEnter transitions
-    // Exit/popEnter adapt based on navigation target/source:
-    //   -> ThemeSelector/AutoSwitchMode: fadeOut(100ms) / fadeIn(150ms) (smooth cross-fade)
-    //   -> Diagnostics/Onboarding/PackBrowser: None (hub overlay covers)
-    //   -> default: hubExit / hubEnter
+    // Main settings -- bottom slide (preview transitions)
     composable<SettingsRoute>(
-      enterTransition = { DashboardMotion.hubEnter },
-      exitTransition = {
-        // Subsheet routes: previewExit (slide down) so interruption reversal produces a
-        // slide-up, matching the popEnterTransition (previewEnter). fadeOut/None reversals
-        // produce a subtle fade-in that isn't perceived as an entry animation.
-        val target = targetState.destination.route ?: ""
-        when {
-          target.contains(THEME_SELECTOR_ROUTE_PATTERN) -> DashboardMotion.previewExit
-          target.contains(AUTO_SWITCH_MODE_ROUTE_PATTERN) -> DashboardMotion.previewExit
-          target.contains(DIAGNOSTICS_ROUTE_PATTERN) -> DashboardMotion.previewExit
-          target.contains(ONBOARDING_ROUTE_PATTERN) -> DashboardMotion.previewExit
-          target.contains(PACK_BROWSER_ROUTE_PATTERN) -> DashboardMotion.previewExit
-          else -> DashboardMotion.hubExit
-        }
-      },
-      popEnterTransition = {
-        val source = initialState.destination.route ?: ""
-        when {
-          // Subsheet routes: slideIn from bottom so Settings enters off-screen, avoiding
-          // z-order occlusion of the subsheet's exit animation (AnimatedContent draws
-          // pop-enter target on top; fadeIn would occlude in-place, slideIn doesn't).
-          source.contains(THEME_SELECTOR_ROUTE_PATTERN) -> DashboardMotion.previewEnter
-          source.contains(AUTO_SWITCH_MODE_ROUTE_PATTERN) -> DashboardMotion.previewEnter
-          source.contains(DIAGNOSTICS_ROUTE_PATTERN) -> DashboardMotion.previewEnter
-          source.contains(ONBOARDING_ROUTE_PATTERN) -> DashboardMotion.previewEnter
-          source.contains(PACK_BROWSER_ROUTE_PATTERN) -> DashboardMotion.previewEnter
-          else -> DashboardMotion.hubEnter
-        }
-      },
-      popExitTransition = { DashboardMotion.hubExit },
+      enterTransition = { DashboardMotion.previewEnter },
+      exitTransition = { DashboardMotion.previewExit },
+      popEnterTransition = { DashboardMotion.previewEnter },
+      popExitTransition = { DashboardMotion.previewExit },
     ) {
       // Clear preview theme on settings enter (advisory section 3 race fix)
       LaunchedEffect(Unit) { onCommand(DashboardCommand.PreviewTheme(null)) }
@@ -277,11 +247,11 @@ public fun OverlayNavHost(
       }
     }
 
-    // Auto-switch mode selector -- preview transitions
+    // Auto-switch mode selector -- preview transitions (vertical slide)
     composable<AutoSwitchModeRoute>(
       enterTransition = { DashboardMotion.previewEnter },
       exitTransition = { DashboardMotion.previewExit },
-      popEnterTransition = { fadeIn(tween(150)) },
+      popEnterTransition = { DashboardMotion.previewEnter },
       popExitTransition = { DashboardMotion.previewExit },
     ) {
       val themeState by themeCoordinator.themeState.collectAsState()
@@ -310,9 +280,7 @@ public fun OverlayNavHost(
       }
     }
 
-    // Theme selector -- preview transitions with CRITICAL popEnter override
-    // popEnter uses fadeIn(150ms) NOT previewEnter to prevent double-slide when returning
-    // from a theme sub-screen (replication advisory section 4)
+    // Theme selector -- preview transitions (vertical slide)
     // exitTransition source-varying: fadeOut to ThemeStudio (sub-screen cross-fade),
     // previewExit otherwise
     composable<ThemeSelectorRoute>(
@@ -328,7 +296,7 @@ public fun OverlayNavHost(
         val source = initialState.destination.route ?: ""
         when {
           source.contains(THEME_STUDIO_ROUTE_PATTERN) -> fadeIn(tween(150))
-          else -> fadeIn(tween(150))
+          else -> DashboardMotion.previewEnter
         }
       },
       popExitTransition = { DashboardMotion.previewExit },
@@ -414,24 +382,23 @@ public fun OverlayNavHost(
       }
     }
 
-    // Pack browser -- hub transitions matching diagnostics sheet pattern
-    // PackBrowserContent wraps itself in OverlayScaffold(Hub), no PreviewOverlay needed
+    // Pack browser -- start-edge transitions (settings sub-sheet)
     // From WidgetSettings: minimal crossfade so shared element card morph drives the transition
     composable<PackBrowserRoute>(
       enterTransition = {
         val source = initialState.destination.route ?: ""
         when {
           source.contains(WIDGET_SETTINGS_ROUTE_PATTERN) -> fadeIn(tween(300))
-          else -> DashboardMotion.hubEnter
+          else -> DashboardMotion.startEnter
         }
       },
-      exitTransition = { DashboardMotion.hubExit },
-      popEnterTransition = { DashboardMotion.hubEnter },
+      exitTransition = { DashboardMotion.startExit },
+      popEnterTransition = { DashboardMotion.startEnter },
       popExitTransition = {
         val target = targetState.destination.route ?: ""
         when {
           target.contains(WIDGET_SETTINGS_ROUTE_PATTERN) -> fadeOut(tween(300))
-          else -> DashboardMotion.hubExit
+          else -> DashboardMotion.startExit
         }
       },
     ) {
@@ -448,24 +415,24 @@ public fun OverlayNavHost(
       )
     }
 
-    // Diagnostics -- hub transition (scale + fade)
+    // Diagnostics -- start-edge transitions (settings sub-sheet)
     composable<DiagnosticsRoute>(
-      enterTransition = { DashboardMotion.hubEnter },
-      exitTransition = { DashboardMotion.hubExit },
-      popEnterTransition = { DashboardMotion.hubEnter },
-      popExitTransition = { DashboardMotion.hubExit },
+      enterTransition = { DashboardMotion.startEnter },
+      exitTransition = { DashboardMotion.startExit },
+      popEnterTransition = { DashboardMotion.startEnter },
+      popExitTransition = { DashboardMotion.startExit },
     ) {
       DiagnosticsScreen(
         onClose = { navController.popBackStack() },
       )
     }
 
-    // Onboarding -- hub transition (scale + fade)
+    // Onboarding -- start-edge transitions (settings sub-sheet)
     composable<OnboardingRoute>(
-      enterTransition = { DashboardMotion.hubEnter },
-      exitTransition = { DashboardMotion.hubExit },
-      popEnterTransition = { DashboardMotion.hubEnter },
-      popExitTransition = { DashboardMotion.hubExit },
+      enterTransition = { DashboardMotion.startEnter },
+      exitTransition = { DashboardMotion.startExit },
+      popEnterTransition = { DashboardMotion.startEnter },
+      popExitTransition = { DashboardMotion.startExit },
     ) {
       val onboardingViewModel: OnboardingViewModel = hiltViewModel()
       val scope = rememberCoroutineScope()

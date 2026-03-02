@@ -32,6 +32,7 @@ import app.dqxn.android.feature.dashboard.grid.DragUpdate
 import app.dqxn.android.feature.dashboard.grid.ResizeUpdate
 import app.dqxn.android.feature.dashboard.grid.WidgetGestureHandler
 import app.dqxn.android.sdk.contracts.registry.WidgetRegistry
+import app.dqxn.android.sdk.ui.theme.LocalDashboardTheme
 import dev.agentic.android.semantics.SemanticsOwnerHolder
 import kotlinx.collections.immutable.ImmutableList
 
@@ -125,8 +126,9 @@ public fun DashboardLayer(
     }
   }
 
-  // Status bar toggle (F1.2)
-  DisposableEffect(editState.showStatusBar) {
+  // Status bar toggle (F1.2) + foreground contrast keyed on theme darkness
+  val isDarkTheme = LocalDashboardTheme.current.isDark
+  DisposableEffect(editState.showStatusBar, isDarkTheme) {
     val activity = context as? Activity ?: return@DisposableEffect onDispose {}
     val window = activity.window
     val controller = WindowCompat.getInsetsController(window, view)
@@ -137,6 +139,8 @@ public fun DashboardLayer(
       controller.systemBarsBehavior =
         WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
+    controller.isAppearanceLightStatusBars = !isDarkTheme
+    controller.isAppearanceLightNavigationBars = !isDarkTheme
     onDispose {}
   }
 

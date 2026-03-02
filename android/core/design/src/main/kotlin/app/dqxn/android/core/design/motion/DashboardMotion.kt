@@ -10,7 +10,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.unit.IntOffset
 
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.IntOffset
  * Provides pre-composed enter/exit transitions for each overlay type:
  * - [sheetEnter]/[sheetExit] -- Bottom-up slide for button bars and sheets
  * - [hubEnter]/[hubExit] -- Scale + fade for fullscreen hub overlays
+ * - [startEnter]/[startExit] -- Horizontal slide from start edge for settings sub-sheets
  * - [previewEnter]/[previewExit] -- Vertical slide for preview sheets
  * - [expandEnter]/[expandExit] -- Vertical expand for collapsible sections
  * - [dialogScrimEnter]/[dialogScrimExit] -- Fade for dialog route scrim
@@ -67,6 +70,17 @@ public object DashboardMotion {
   /** Hub exit: fade out + scale to 95%. */
   public val hubExit: ExitTransition =
     fadeOut(tween(150)) + scaleOut(targetScale = 0.95f, animationSpec = tween(150))
+
+  // Start-Edge Transitions (horizontal slide from start)
+  // Used by: Settings sub-sheets (ThemeSelector, AutoSwitchMode, Diagnostics, Onboarding, PackBrowser)
+
+  /** Start enter: slide in from start edge with spring + fade in. */
+  public val startEnter: EnterTransition =
+    slideInHorizontally(previewSpring) { -it } + fadeIn(tween(200))
+
+  /** Start exit: slide out to start edge + fade out. */
+  public val startExit: ExitTransition =
+    slideOutHorizontally(tween(200)) { -it } + fadeOut(tween(150))
 
   // Preview Transitions (vertical slide with fade)
   // Used by: Settings, ThemeModeSelector, ThemeSelector, ThemeEditor
